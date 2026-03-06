@@ -1,0 +1,907 @@
+-- Farmwise Multi-Tenant Database Schema for Supabase
+-- Run this in Supabase SQL Editor to set up your database
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Enable PostGIS for geographic data
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- System Admins (superadmin access)
+CREATE TABLE IF NOT EXISTS system_admins (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Organizations (multi-tenant)
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  subscription_status TEXT DEFAULT 'trial' CHECK (subscription_status IN ('active', 'trial', 'suspended', 'cancelled')),
+  logo_url TEXT,
+  settings JSONB DEFAULT '{}',
+  commodities TEXT[] DEFAULT ARRAY['cocoa'],
+  subscription_tier TEXT DEFAULT 'starter',
+  feature_flags JSONB DEFAULT '{"financing": false, "api_access": false, "advanced_mapping": false, "satellite_overlays": false}',
+  agent_seat_limit INTEGER DEFAULT 5,
+  monthly_collection_limit INTEGER DEFAULT 1000,
+  data_region TEXT DEFAULT 'default',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Profiles (user profiles linked to organizations)
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent')),
+  full_name TEXT NOT NULL,
+  avatar_url TEXT,
+  assigned_state TEXT,
+  assigned_lga TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Nigerian States
+CREATE TABLE IF NOT EXISTS states (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL UNIQUE
+);
+
+-- Local Government Areas
+CREATE TABLE IF NOT EXISTS lgas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  state_id UUID NOT NULL REFERENCES states(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  UNIQUE(state_id, name)
+);
+
+-- Villages/Communities
+CREATE TABLE IF NOT EXISTS villages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lga_id UUID NOT NULL REFERENCES lgas(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  UNIQUE(lga_id, name)
+);
+
+-- Farms
+CREATE TABLE IF NOT EXISTS farms (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farmer_name TEXT NOT NULL,
+  farmer_id TEXT,
+  phone TEXT,
+  state_id UUID REFERENCES states(id),
+  lga_id UUID REFERENCES lgas(id),
+  village_id UUID REFERENCES villages(id),
+  community TEXT NOT NULL,
+  boundary JSONB,
+  boundary_geo geography(POLYGON, 4326),
+  area_hectares DECIMAL(10,2),
+  compliance_status TEXT DEFAULT 'pending' CHECK (compliance_status IN ('pending', 'approved', 'rejected')),
+  compliance_notes TEXT,
+  legality_doc_url TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Bags (with hybrid batch link)
+CREATE TABLE IF NOT EXISTS bags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  serial TEXT NOT NULL,
+  status TEXT DEFAULT 'unused' CHECK (status IN ('unused', 'collected', 'processed')),
+  collection_batch_id UUID, -- FK added after collection_batches table exists
+  weight DECIMAL(10,2),
+  grade TEXT CHECK (grade IN ('A', 'B', 'C')),
+  is_compliant BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(org_id, serial)
+);
+
+-- Collection Batches (parent container for bags collected in one session)
+CREATE TABLE IF NOT EXISTS collection_batches (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id),
+  agent_id UUID NOT NULL REFERENCES profiles(id),
+  status TEXT DEFAULT 'collecting' CHECK (status IN ('collecting', 'completed', 'aggregated', 'shipped')),
+  total_weight DECIMAL(10,2) DEFAULT 0,
+  bag_count INTEGER DEFAULT 0,
+  notes TEXT,
+  local_id TEXT, -- For offline sync: unique ID generated on device
+  collected_at TIMESTAMPTZ DEFAULT NOW(),
+  synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Collections (legacy - keeping for backward compatibility)
+CREATE TABLE IF NOT EXISTS collections (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  bag_id UUID NOT NULL REFERENCES bags(id),
+  farm_id UUID NOT NULL REFERENCES farms(id),
+  agent_id UUID NOT NULL REFERENCES auth.users(id),
+  batch_id UUID REFERENCES collection_batches(id), -- Link to parent batch
+  weight DECIMAL(10,2) NOT NULL,
+  grade TEXT DEFAULT 'A' CHECK (grade IN ('A', 'B', 'C')),
+  notes TEXT,
+  collected_at TIMESTAMPTZ DEFAULT NOW(),
+  synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Agent Sync Status (tracks device connectivity for admin dashboard)
+CREATE TABLE IF NOT EXISTS agent_sync_status (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  agent_id UUID NOT NULL REFERENCES profiles(id),
+  device_id TEXT, -- Unique device identifier
+  last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+  pending_batches INTEGER DEFAULT 0,
+  pending_bags INTEGER DEFAULT 0,
+  app_version TEXT,
+  is_online BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agent_id, device_id)
+);
+
+-- Compliance Files (for document storage)
+CREATE TABLE IF NOT EXISTS compliance_files (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id),
+  file_type TEXT NOT NULL CHECK (file_type IN ('land_title', 'id_card', 'photo', 'other')),
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  uploaded_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- DDS Exports
+CREATE TABLE IF NOT EXISTS dds_exports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  geojson JSONB NOT NULL,
+  export_date TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_profiles_org_id ON profiles(org_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_farms_org_id ON farms(org_id);
+CREATE INDEX IF NOT EXISTS idx_bags_org_id ON bags(org_id);
+CREATE INDEX IF NOT EXISTS idx_bags_serial ON bags(serial);
+CREATE INDEX IF NOT EXISTS idx_bags_batch_id ON bags(collection_batch_id);
+CREATE INDEX IF NOT EXISTS idx_collections_org_id ON collections(org_id);
+CREATE INDEX IF NOT EXISTS idx_collections_bag_id ON collections(bag_id);
+CREATE INDEX IF NOT EXISTS idx_collections_farm_id ON collections(farm_id);
+CREATE INDEX IF NOT EXISTS idx_collections_batch_id ON collections(batch_id);
+CREATE INDEX IF NOT EXISTS idx_collection_batches_org_id ON collection_batches(org_id);
+CREATE INDEX IF NOT EXISTS idx_collection_batches_farm_id ON collection_batches(farm_id);
+CREATE INDEX IF NOT EXISTS idx_collection_batches_agent_id ON collection_batches(agent_id);
+CREATE INDEX IF NOT EXISTS idx_collection_batches_status ON collection_batches(status);
+CREATE INDEX IF NOT EXISTS idx_agent_sync_status_org_id ON agent_sync_status(org_id);
+CREATE INDEX IF NOT EXISTS idx_agent_sync_status_agent_id ON agent_sync_status(agent_id);
+CREATE INDEX IF NOT EXISTS idx_lgas_state_id ON lgas(state_id);
+CREATE INDEX IF NOT EXISTS idx_villages_lga_id ON villages(lga_id);
+
+-- Spatial index for PostGIS farm boundaries
+CREATE INDEX IF NOT EXISTS idx_farms_boundary_geo ON farms USING GIST (boundary_geo);
+
+-- Function to sync JSONB boundary to PostGIS geography column
+CREATE OR REPLACE FUNCTION sync_farm_boundary_geo()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.boundary IS NOT NULL AND NEW.boundary->>'type' = 'Polygon' THEN
+    BEGIN
+      NEW.boundary_geo = ST_GeogFromGeoJSON(NEW.boundary::text);
+      NEW.area_hectares = ROUND((ST_Area(NEW.boundary_geo) / 10000)::numeric, 2);
+    EXCEPTION WHEN OTHERS THEN
+      NEW.boundary_geo = NULL;
+      NEW.area_hectares = NULL;
+    END;
+  ELSE
+    NEW.boundary_geo = NULL;
+    NEW.area_hectares = NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER sync_farm_boundary BEFORE INSERT OR UPDATE ON farms
+  FOR EACH ROW EXECUTE FUNCTION sync_farm_boundary_geo();
+
+-- Row Level Security Policies
+
+-- Enable RLS on all tables
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE farms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE collection_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_sync_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE compliance_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dds_exports ENABLE ROW LEVEL SECURITY;
+
+-- System admins policy helper function
+-- SET search_path = '' prevents RLS from applying to queries in this function
+CREATE OR REPLACE FUNCTION is_system_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.system_admins WHERE user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+-- Get user's org_id helper function
+-- SET search_path = '' prevents RLS from applying to queries in this function
+CREATE OR REPLACE FUNCTION get_user_org_id()
+RETURNS UUID AS $$
+BEGIN
+  RETURN (SELECT org_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+-- Organizations policies
+CREATE POLICY "Users can view their organization" ON organizations
+  FOR SELECT USING (id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "System admins can manage organizations" ON organizations
+  FOR ALL USING (is_system_admin());
+
+-- Profiles policies
+CREATE POLICY "Users can view profiles in their org" ON profiles
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+-- Users can only update safe fields (full_name, avatar_url, assigned_state, assigned_lga)
+-- They CANNOT change org_id, role, or user_id to prevent org hopping and privilege escalation
+CREATE POLICY "Users can update their own profile safely" ON profiles
+  FOR UPDATE USING (user_id = auth.uid())
+  WITH CHECK (
+    user_id = auth.uid() 
+    AND org_id = get_user_org_id()
+    AND role = (SELECT role FROM profiles WHERE user_id = auth.uid())
+  );
+
+-- Admins can manage profiles in their org (including role changes within their org)
+CREATE POLICY "Admins can manage profiles in their org" ON profiles
+  FOR ALL USING (
+    org_id = get_user_org_id() 
+    AND EXISTS (SELECT 1 FROM profiles p2 WHERE p2.user_id = auth.uid() AND p2.role = 'admin')
+  )
+  WITH CHECK (
+    org_id = get_user_org_id()
+  );
+
+CREATE POLICY "System admins can manage all profiles" ON profiles
+  FOR ALL USING (is_system_admin());
+
+-- System admins policies
+CREATE POLICY "System admins can view system_admins" ON system_admins
+  FOR SELECT USING (is_system_admin());
+
+-- Farms policies
+CREATE POLICY "Users can view farms in their org" ON farms
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Users can create farms in their org" ON farms
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+CREATE POLICY "Admins can manage farms in their org" ON farms
+  FOR ALL USING (
+    org_id = get_user_org_id() 
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all farms" ON farms
+  FOR ALL USING (is_system_admin());
+
+-- Bags policies
+CREATE POLICY "Users can view bags in their org" ON bags
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage bags in their org" ON bags
+  FOR ALL USING (
+    org_id = get_user_org_id() 
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all bags" ON bags
+  FOR ALL USING (is_system_admin());
+
+-- Collections policies
+CREATE POLICY "Users can view collections in their org" ON collections
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Agents can create collections" ON collections
+  FOR INSERT WITH CHECK (org_id = get_user_org_id() AND agent_id = auth.uid());
+
+CREATE POLICY "System admins can manage all collections" ON collections
+  FOR ALL USING (is_system_admin());
+
+-- Collection Batches policies
+CREATE POLICY "Users can view batches in their org" ON collection_batches
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Agents can create batches" ON collection_batches
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+CREATE POLICY "Agents can update their own batches" ON collection_batches
+  FOR UPDATE USING (
+    org_id = get_user_org_id() 
+    AND agent_id = (SELECT id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Admins can manage batches in their org" ON collection_batches
+  FOR ALL USING (
+    org_id = get_user_org_id() 
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all batches" ON collection_batches
+  FOR ALL USING (is_system_admin());
+
+-- Agent Sync Status policies
+CREATE POLICY "Agents can view their own sync status" ON agent_sync_status
+  FOR SELECT USING (
+    agent_id = (SELECT id FROM profiles WHERE user_id = auth.uid())
+    OR org_id = get_user_org_id()
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Agents can update their own sync status" ON agent_sync_status
+  FOR ALL USING (agent_id = (SELECT id FROM profiles WHERE user_id = auth.uid()));
+
+CREATE POLICY "Admins can view sync status in their org" ON agent_sync_status
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "System admins can manage all sync status" ON agent_sync_status
+  FOR ALL USING (is_system_admin());
+
+-- Compliance files policies
+CREATE POLICY "Users can view compliance files in their org" ON compliance_files
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Users can upload compliance files in their org" ON compliance_files
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+CREATE POLICY "System admins can manage all compliance files" ON compliance_files
+  FOR ALL USING (is_system_admin());
+
+-- DDS exports policies
+CREATE POLICY "Users can view dds exports in their org" ON dds_exports
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can create dds exports" ON dds_exports
+  FOR INSERT WITH CHECK (
+    org_id = get_user_org_id() 
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all dds exports" ON dds_exports
+  FOR ALL USING (is_system_admin());
+
+-- Updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply updated_at triggers
+CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_farms_updated_at BEFORE UPDATE ON farms
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_collection_batches_updated_at BEFORE UPDATE ON collection_batches
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_agent_sync_status_updated_at BEFORE UPDATE ON agent_sync_status
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Add FK constraint for bags.collection_batch_id after collection_batches table exists
+ALTER TABLE bags 
+  ADD CONSTRAINT fk_bags_collection_batch 
+  FOREIGN KEY (collection_batch_id) 
+  REFERENCES collection_batches(id) ON DELETE SET NULL;
+
+-- ============================================
+-- SAAS MULTI-TENANCY & COMPLIANCE ENGINE
+-- ============================================
+
+-- Add SaaS columns to organizations
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter' 
+  CHECK (subscription_tier IN ('starter', 'professional', 'enterprise'));
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS feature_flags JSONB DEFAULT '{
+  "satellite_overlays": false,
+  "advanced_mapping": false,
+  "financing": false,
+  "api_access": false
+}';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS agent_seat_limit INTEGER DEFAULT 5;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS monthly_collection_limit INTEGER DEFAULT 1000;
+
+-- Add consent and commodity fields to farms
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS commodity TEXT DEFAULT 'cocoa';
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS consent_timestamp TIMESTAMPTZ;
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS consent_photo_url TEXT;
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS consent_signature TEXT;
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS conflict_status VARCHAR(20) DEFAULT 'none';
+
+-- Add yield flag field to collection_batches
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS yield_flag_reason TEXT;
+
+-- Crop Standards table for yield validation
+CREATE TABLE IF NOT EXISTS crop_standards (
+  id SERIAL PRIMARY KEY,
+  commodity TEXT NOT NULL,
+  region TEXT NOT NULL DEFAULT 'nigeria',
+  avg_yield_per_hectare DECIMAL(10,2) NOT NULL,
+  unit TEXT DEFAULT 'kg',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(commodity, region)
+);
+
+-- Seed crop standards data
+INSERT INTO crop_standards (commodity, region, avg_yield_per_hectare, unit)
+VALUES 
+  ('cocoa', 'nigeria', 400.00, 'kg'),
+  ('cashew', 'nigeria', 800.00, 'kg'),
+  ('ginger', 'nigeria', 2500.00, 'kg'),
+  ('palm_kernel', 'nigeria', 1200.00, 'kg'),
+  ('rubber', 'nigeria', 1500.00, 'kg')
+ON CONFLICT (commodity, region) DO NOTHING;
+
+-- Farm Conflicts table for spatial conflict detection
+CREATE TABLE IF NOT EXISTS farm_conflicts (
+  id SERIAL PRIMARY KEY,
+  farm_a_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_b_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  overlap_ratio DECIMAL(5,4),
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
+  resolved_by UUID REFERENCES auth.users(id),
+  resolution_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ,
+  UNIQUE(farm_a_id, farm_b_id)
+);
+
+-- Yield validation trigger function
+CREATE OR REPLACE FUNCTION validate_batch_yield()
+RETURNS TRIGGER AS $$
+DECLARE
+  farm_area DECIMAL;
+  farm_commodity TEXT;
+  expected_yield DECIMAL;
+  threshold DECIMAL;
+BEGIN
+  -- Get farm details
+  SELECT area_hectares, commodity INTO farm_area, farm_commodity
+  FROM farms WHERE id = NEW.farm_id;
+  
+  -- Skip if no farm area or commodity
+  IF farm_area IS NULL OR farm_commodity IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Get average yield for commodity
+  SELECT avg_yield_per_hectare INTO expected_yield
+  FROM crop_standards 
+  WHERE commodity = LOWER(farm_commodity) 
+  LIMIT 1;
+  
+  IF expected_yield IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Calculate threshold (120% of expected yield)
+  threshold := farm_area * expected_yield * 1.2;
+  
+  -- Flag if weight exceeds threshold
+  IF NEW.total_weight > threshold THEN
+    NEW.status := 'flagged_for_review';
+    NEW.yield_flag_reason := format(
+      'Weight %.0fkg exceeds 120%% of expected yield (%.0fkg) for %.2f ha of %s',
+      NEW.total_weight, threshold, farm_area, farm_commodity
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create yield validation trigger
+DROP TRIGGER IF EXISTS trigger_validate_batch_yield ON collection_batches;
+CREATE TRIGGER trigger_validate_batch_yield
+  BEFORE INSERT OR UPDATE OF total_weight ON collection_batches
+  FOR EACH ROW EXECUTE FUNCTION validate_batch_yield();
+
+-- Farm boundary overlap detection trigger
+CREATE OR REPLACE FUNCTION check_farm_overlap()
+RETURNS TRIGGER AS $$
+DECLARE
+  conflict_farm RECORD;
+  overlap_pct DECIMAL;
+BEGIN
+  IF NEW.boundary_geo IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Find farms with overlapping boundaries in same org
+  FOR conflict_farm IN
+    SELECT id, boundary_geo
+    FROM farms
+    WHERE id != NEW.id
+      AND org_id = NEW.org_id
+      AND boundary_geo IS NOT NULL
+      AND ST_Intersects(NEW.boundary_geo::geometry, boundary_geo::geometry)
+  LOOP
+    -- Calculate overlap ratio
+    overlap_pct := ST_Area(ST_Intersection(NEW.boundary_geo::geometry, conflict_farm.boundary_geo::geometry)) /
+                   NULLIF(ST_Area(ST_Union(NEW.boundary_geo::geometry, conflict_farm.boundary_geo::geometry)), 0);
+    
+    -- Record conflict if overlap > 10%
+    IF overlap_pct > 0.10 THEN
+      INSERT INTO farm_conflicts (farm_a_id, farm_b_id, overlap_ratio, status)
+      VALUES (LEAST(NEW.id, conflict_farm.id), GREATEST(NEW.id, conflict_farm.id), overlap_pct, 'pending')
+      ON CONFLICT (farm_a_id, farm_b_id) DO UPDATE SET overlap_ratio = EXCLUDED.overlap_ratio;
+      
+      -- Mark farm with conflict status
+      NEW.conflict_status := 'detected';
+    END IF;
+  END LOOP;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create farm overlap trigger
+DROP TRIGGER IF EXISTS trigger_check_farm_overlap ON farms;
+CREATE TRIGGER trigger_check_farm_overlap
+  AFTER INSERT OR UPDATE OF boundary_geo ON farms
+  FOR EACH ROW EXECUTE FUNCTION check_farm_overlap();
+
+-- Farmer Performance Ledger view for performance analytics
+CREATE OR REPLACE VIEW farmer_performance_ledger AS
+SELECT 
+  f.id AS farm_id,
+  f.farmer_name,
+  f.org_id,
+  f.community,
+  f.area_hectares,
+  f.commodity,
+  COALESCE(SUM(b.weight), 0) AS total_delivery_kg,
+  COUNT(DISTINCT cb.id) AS total_batches,
+  COUNT(b.id) AS total_bags,
+  ROUND(AVG(CASE 
+    WHEN b.grade = 'A' THEN 4 
+    WHEN b.grade = 'B' THEN 3 
+    WHEN b.grade = 'C' THEN 2 
+    WHEN b.grade = 'D' THEN 1 
+    ELSE 2.5 
+  END), 2) AS avg_grade_score,
+  MAX(cb.created_at) AS last_delivery_date,
+  CASE 
+    WHEN COUNT(DISTINCT DATE_TRUNC('month', cb.created_at)) >= 6 THEN 'high'
+    WHEN COUNT(DISTINCT DATE_TRUNC('month', cb.created_at)) >= 3 THEN 'medium'
+    ELSE 'low'
+  END AS delivery_frequency,
+  f.consent_timestamp IS NOT NULL AS has_consent
+FROM farms f
+LEFT JOIN collection_batches cb ON cb.farm_id = f.id
+LEFT JOIN bags b ON b.collection_batch_id = cb.id
+GROUP BY f.id, f.farmer_name, f.org_id, f.community, f.area_hectares, f.commodity, f.consent_timestamp;
+
+-- Enable RLS on new tables
+ALTER TABLE crop_standards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE farm_conflicts ENABLE ROW LEVEL SECURITY;
+
+-- Crop standards policies (read-only for all authenticated)
+CREATE POLICY "Anyone can view crop standards" ON crop_standards
+  FOR SELECT USING (true);
+
+-- Farm conflicts policies
+CREATE POLICY "Users can view conflicts in their org" ON farm_conflicts
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM farms WHERE id = farm_a_id AND org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Admins can manage conflicts in their org" ON farm_conflicts
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM farms WHERE id = farm_a_id AND org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all conflicts" ON farm_conflicts
+  FOR ALL USING (is_system_admin());
+
+-- ============================================
+-- FINISHED GOODS PEDIGREE SYSTEM
+-- For EU TRACES compliance and market verification
+-- ============================================
+
+-- Processing Runs (factory processing sessions)
+CREATE TABLE IF NOT EXISTS processing_runs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  run_code TEXT NOT NULL,
+  facility_name TEXT NOT NULL,
+  facility_location TEXT,
+  commodity TEXT NOT NULL,
+  input_weight_kg DECIMAL(12,2) NOT NULL,
+  output_weight_kg DECIMAL(12,2),
+  recovery_rate DECIMAL(5,2),
+  standard_recovery_rate DECIMAL(5,2) DEFAULT 41.6,
+  mass_balance_valid BOOLEAN DEFAULT true,
+  mass_balance_variance DECIMAL(5,2),
+  processed_at TIMESTAMPTZ NOT NULL,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(org_id, run_code)
+);
+
+-- Processing Run Source Batches (links processing run to source collection batches)
+CREATE TABLE IF NOT EXISTS processing_run_batches (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  processing_run_id UUID NOT NULL REFERENCES processing_runs(id) ON DELETE CASCADE,
+  collection_batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  weight_contribution_kg DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(processing_run_id, collection_batch_id)
+);
+
+-- Finished Goods (export-ready products with pedigree)
+CREATE TABLE IF NOT EXISTS finished_goods (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  pedigree_code TEXT NOT NULL,
+  product_name TEXT NOT NULL,
+  product_type TEXT NOT NULL,
+  processing_run_id UUID NOT NULL REFERENCES processing_runs(id) ON DELETE CASCADE,
+  weight_kg DECIMAL(12,2) NOT NULL,
+  batch_number TEXT,
+  lot_number TEXT,
+  production_date DATE NOT NULL,
+  expiry_date DATE,
+  destination_country TEXT DEFAULT 'EU',
+  buyer_name TEXT,
+  buyer_company TEXT,
+  dds_submitted BOOLEAN DEFAULT false,
+  dds_submitted_at TIMESTAMPTZ,
+  dds_reference TEXT,
+  qr_code_url TEXT,
+  certificate_url TEXT,
+  pedigree_verified BOOLEAN DEFAULT true,
+  verification_notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(org_id, pedigree_code)
+);
+
+-- Standard Recovery Rates by Product Type
+CREATE TABLE IF NOT EXISTS recovery_standards (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  commodity TEXT NOT NULL,
+  product_type TEXT NOT NULL,
+  standard_recovery_rate DECIMAL(5,2) NOT NULL,
+  tolerance_percent DECIMAL(5,2) DEFAULT 5.0,
+  unit TEXT DEFAULT 'kg',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(commodity, product_type)
+);
+
+-- Seed recovery standards for cocoa processing
+INSERT INTO recovery_standards (commodity, product_type, standard_recovery_rate, tolerance_percent, notes) VALUES
+  ('cocoa', 'cocoa_butter', 41.6, 5.0, 'Standard butter extraction from dried beans'),
+  ('cocoa', 'cocoa_powder', 22.0, 5.0, 'Standard powder yield after butter extraction'),
+  ('cocoa', 'cocoa_liquor', 82.0, 5.0, 'Liquor from roasted nibs'),
+  ('cocoa', 'cocoa_nibs', 87.0, 5.0, 'Nibs from shelled beans'),
+  ('cashew', 'cashew_kernel', 25.0, 5.0, 'Raw kernel extraction rate'),
+  ('cashew', 'cashew_butter', 20.0, 5.0, 'Butter from kernels'),
+  ('palm_kernel', 'palm_kernel_oil', 45.0, 5.0, 'Oil extraction from palm kernels'),
+  ('ginger', 'ginger_powder', 15.0, 5.0, 'Dried powder from fresh ginger'),
+  ('rubber', 'dry_rubber_content', 30.0, 5.0, 'DRC from latex')
+ON CONFLICT (commodity, product_type) DO NOTHING;
+
+-- Function to validate mass balance on processing run
+CREATE OR REPLACE FUNCTION validate_mass_balance()
+RETURNS TRIGGER AS $$
+DECLARE
+  std_rate DECIMAL;
+  tolerance DECIMAL;
+  actual_rate DECIMAL;
+  variance DECIMAL;
+BEGIN
+  -- Skip if no output weight yet
+  IF NEW.output_weight_kg IS NULL OR NEW.output_weight_kg = 0 THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Calculate actual recovery rate
+  actual_rate := (NEW.output_weight_kg / NULLIF(NEW.input_weight_kg, 0)) * 100;
+  NEW.recovery_rate := actual_rate;
+  
+  -- Get standard rate for this commodity (default to cocoa butter if not specified)
+  SELECT standard_recovery_rate, tolerance_percent INTO std_rate, tolerance
+  FROM recovery_standards 
+  WHERE commodity = LOWER(NEW.commodity)
+  LIMIT 1;
+  
+  -- Use defaults if no standard found
+  std_rate := COALESCE(std_rate, 41.6);
+  tolerance := COALESCE(tolerance, 5.0);
+  NEW.standard_recovery_rate := std_rate;
+  
+  -- Calculate variance from standard
+  variance := ABS(actual_rate - std_rate);
+  NEW.mass_balance_variance := variance;
+  
+  -- Flag if variance exceeds tolerance
+  NEW.mass_balance_valid := variance <= tolerance;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create mass balance validation trigger
+DROP TRIGGER IF EXISTS trigger_validate_mass_balance ON processing_runs;
+CREATE TRIGGER trigger_validate_mass_balance
+  BEFORE INSERT OR UPDATE OF output_weight_kg ON processing_runs
+  FOR EACH ROW EXECUTE FUNCTION validate_mass_balance();
+
+-- Enable RLS on pedigree tables
+ALTER TABLE processing_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE processing_run_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finished_goods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recovery_standards ENABLE ROW LEVEL SECURITY;
+
+-- Processing runs policies
+CREATE POLICY "Users can view processing runs in their org" ON processing_runs
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage processing runs" ON processing_runs
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all processing runs" ON processing_runs
+  FOR ALL USING (is_system_admin());
+
+-- Processing run batches policies
+CREATE POLICY "Users can view processing run batches in their org" ON processing_run_batches
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM processing_runs pr WHERE pr.id = processing_run_id AND pr.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Admins can manage processing run batches" ON processing_run_batches
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM processing_runs pr WHERE pr.id = processing_run_id AND pr.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+-- Finished goods policies
+CREATE POLICY "Users can view finished goods in their org" ON finished_goods
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage finished goods" ON finished_goods
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all finished goods" ON finished_goods
+  FOR ALL USING (is_system_admin());
+
+-- Recovery standards policies (read-only for all)
+CREATE POLICY "Anyone can view recovery standards" ON recovery_standards
+  FOR SELECT USING (true);
+
+-- Pedigree view for public verification (aggregates all data for a finished good)
+CREATE OR REPLACE VIEW pedigree_verification AS
+SELECT 
+  fg.id AS finished_good_id,
+  fg.pedigree_code,
+  fg.product_name,
+  fg.product_type,
+  fg.weight_kg AS finished_weight_kg,
+  fg.production_date,
+  fg.destination_country,
+  fg.buyer_name,
+  fg.buyer_company,
+  fg.dds_submitted,
+  fg.dds_submitted_at,
+  fg.dds_reference,
+  fg.pedigree_verified,
+  fg.verification_notes,
+  pr.run_code AS processing_run_code,
+  pr.facility_name,
+  pr.facility_location,
+  pr.input_weight_kg AS raw_input_kg,
+  pr.output_weight_kg AS processed_output_kg,
+  pr.recovery_rate,
+  pr.standard_recovery_rate,
+  pr.mass_balance_valid,
+  pr.mass_balance_variance,
+  pr.processed_at,
+  o.name AS organization_name,
+  o.logo_url AS organization_logo,
+  (
+    SELECT json_agg(json_build_object(
+      'batch_id', cb.id,
+      'collection_date', cb.created_at,
+      'farm_id', cb.farm_id,
+      'farmer_name', f.farmer_name,
+      'community', f.community,
+      'state', s.name,
+      'area_hectares', f.area_hectares,
+      'weight_kg', prb.weight_contribution_kg,
+      'compliance_status', f.compliance_status,
+      'boundary_geo', ST_AsGeoJSON(f.boundary_geo)::json
+    ))
+    FROM processing_run_batches prb
+    JOIN collection_batches cb ON cb.id = prb.collection_batch_id
+    JOIN farms f ON f.id = cb.farm_id
+    LEFT JOIN states s ON s.id = f.state_id
+    WHERE prb.processing_run_id = pr.id
+  ) AS source_farms,
+  (
+    SELECT COUNT(DISTINCT cb.farm_id)
+    FROM processing_run_batches prb
+    JOIN collection_batches cb ON cb.id = prb.collection_batch_id
+    WHERE prb.processing_run_id = pr.id
+  ) AS total_smallholders,
+  (
+    SELECT SUM(f.area_hectares)
+    FROM processing_run_batches prb
+    JOIN collection_batches cb ON cb.id = prb.collection_batch_id
+    JOIN farms f ON f.id = cb.farm_id
+    WHERE prb.processing_run_id = pr.id
+  ) AS total_farm_area_hectares
+FROM finished_goods fg
+JOIN processing_runs pr ON pr.id = fg.processing_run_id
+JOIN organizations o ON o.id = fg.org_id;
+
+
+-- System configuration table for tier templates and platform settings
+CREATE TABLE IF NOT EXISTS system_config (
+  key VARCHAR(100) PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_by UUID
+);
+
+ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "system_config_service_role_only" ON system_config
+  FOR ALL USING (auth.role() = 'service_role');

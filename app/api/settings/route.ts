@@ -1,0 +1,298 @@
+import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const IMPERSONATION_COOKIE = 'origintrace_impersonation';
+
+async function getImpersonatedOrgId(): Promise<number | null> {
+  try {
+    const cookieStore = await cookies();
+    const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
+    
+    if (impersonationCookie) {
+      const data = JSON.parse(impersonationCookie.value);
+      if (new Date(data.expires_at) > new Date()) {
+        return data.org_id;
+      }
+    }
+  } catch (error) {
+    console.error('Error reading impersonation cookie:', error);
+  }
+  return null;
+}
+
+async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('system_admins')
+    .select('id')
+    .eq('user_id', userId)
+    .single();
+  return !!data;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
+    
+    const isSuperAdmin = await isSystemAdmin(supabaseAdmin, user.id);
+    
+    if (!profile && !isSuperAdmin) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+    
+    let orgId = profile?.org_id;
+    let canEdit = profile?.role === 'admin';
+    
+    if (isSuperAdmin) {
+      const impersonatedOrgId = await getImpersonatedOrgId();
+      if (impersonatedOrgId) {
+        orgId = impersonatedOrgId;
+        canEdit = true;
+      }
+    }
+    
+    if (!orgId) {
+      return NextResponse.json({ error: 'No organization context' }, { status: 404 });
+    }
+    
+    const { data: organization, error } = await supabaseAdmin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .single();
+    
+    if (error || !organization) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    if (!organization.invite_code) {
+      let newCode = '';
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = String(Math.floor(100000 + Math.random() * 900000));
+        const { data: existing } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('invite_code', candidate)
+          .maybeSingle();
+        if (!existing) {
+          newCode = candidate;
+          break;
+        }
+      }
+      if (!newCode) newCode = String(Math.floor(100000 + Math.random() * 900000));
+      await supabaseAdmin
+        .from('organizations')
+        .update({ invite_code: newCode })
+        .eq('id', orgId);
+      organization.invite_code = newCode;
+    }
+    
+    return NextResponse.json({ 
+      organization,
+      canEdit,
+      isImpersonating: isSuperAdmin && orgId !== profile?.org_id
+    });
+    
+  } catch (error) {
+    console.error('Settings API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
+    
+    const isSuperAdmin = await isSystemAdmin(supabaseAdmin, user.id);
+
+    if (!profile && !isSuperAdmin) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+    
+    let orgId = profile?.org_id;
+
+    if (isSuperAdmin) {
+      const impersonatedOrgId = await getImpersonatedOrgId();
+      if (impersonatedOrgId) {
+        orgId = impersonatedOrgId;
+      }
+    }
+
+    if (!isSuperAdmin && profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Only admins can update organization settings' }, { status: 403 });
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ error: 'No organization context' }, { status: 404 });
+    }
+    
+    const body = await request.json();
+    const { name, logo_url, settings, active_lgas, commodity_types, commodities } = body;
+    
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    
+    if (name && typeof name === 'string' && name.trim().length >= 2) {
+      updates.name = name.trim();
+    }
+    
+    if (logo_url !== undefined) {
+      updates.logo_url = logo_url || null;
+    }
+    
+    if (settings && typeof settings === 'object') {
+      const { data: currentOrg } = await supabaseAdmin
+        .from('organizations')
+        .select('settings')
+        .eq('id', orgId)
+        .single();
+      
+      updates.settings = { ...(currentOrg?.settings || {}), ...settings };
+    }
+    
+    if (Array.isArray(active_lgas)) {
+      updates.active_lgas = active_lgas;
+    }
+    
+    if (Array.isArray(commodity_types)) {
+      updates.commodity_types = commodity_types;
+    }
+    
+    if (Array.isArray(commodities)) {
+      updates.commodities = commodities;
+    }
+    
+    const { data: organization, error } = await supabaseAdmin
+      .from('organizations')
+      .update(updates)
+      .eq('id', orgId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Settings update error:', error);
+      return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+    }
+    
+    return NextResponse.json({ organization });
+    
+  } catch (error) {
+    console.error('Settings API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
+    
+    const isSuperAdmin = await isSystemAdmin(supabaseAdmin, user.id);
+
+    if (!profile && !isSuperAdmin) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+    
+    let orgId = profile?.org_id;
+
+    if (isSuperAdmin) {
+      const impersonatedOrgId = await getImpersonatedOrgId();
+      if (impersonatedOrgId) {
+        orgId = impersonatedOrgId;
+      }
+    }
+
+    if (!isSuperAdmin && profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Only admins can regenerate invite code' }, { status: 403 });
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ error: 'No organization context' }, { status: 404 });
+    }
+    
+    const body = await request.json();
+    
+    if (body.action === 'regenerate_invite_code') {
+      let newCode = '';
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = String(Math.floor(100000 + Math.random() * 900000));
+        const { data: existing } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('invite_code', candidate)
+          .maybeSingle();
+        if (!existing) {
+          newCode = candidate;
+          break;
+        }
+      }
+      if (!newCode) newCode = String(Math.floor(100000 + Math.random() * 900000));
+      
+      const { data: organization, error } = await supabaseAdmin
+        .from('organizations')
+        .update({ invite_code: newCode, updated_at: new Date().toISOString() })
+        .eq('id', orgId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Invite code regeneration error:', error);
+        return NextResponse.json({ error: 'Failed to regenerate invite code' }, { status: 500 });
+      }
+      
+      return NextResponse.json({ organization, invite_code: newCode });
+    }
+    
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    
+  } catch (error) {
+    console.error('Settings API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

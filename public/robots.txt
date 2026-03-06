@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /solutions
+Allow: /pedigree
+Allow: /processors
+Allow: /demo
+
+Disallow: /app/
+Disallow: /superadmin/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /_next/
+
+Sitemap: https://origintrace.trade/sitemap.xml

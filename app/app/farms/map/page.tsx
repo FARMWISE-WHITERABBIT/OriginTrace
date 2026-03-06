@@ -1,0 +1,471 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useOrg } from '@/lib/contexts/org-context';
+import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useOnlineStatus } from '@/components/online-status';
+import { detectMockLocation } from '@/lib/validation/yield-validation';
+import {
+  Navigation,
+  MapPin,
+  Loader2,
+  CheckCircle,
+  Footprints,
+  Satellite,
+  Save,
+  AlertTriangle,
+  Plus,
+  RotateCcw,
+  X,
+  Search,
+  User,
+} from 'lucide-react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+interface Coordinates { lat: number; lng: number; }
+
+interface Farm {
+  id: string;
+  farmer_name: string;
+  community: string;
+  boundary?: any;
+  area_hectares?: number;
+}
+
+const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, loading: () => (
+  <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+)});
+
+export default function HybridFarmMappingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <HybridFarmMappingContent />
+    </Suspense>
+  );
+}
+
+function HybridFarmMappingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { organization, profile, isLoading: orgLoading } = useOrg();
+  const { toast } = useToast();
+  const supabase = createClient();
+  const isOnline = useOnlineStatus();
+
+  const [mode, setMode] = useState<'gps' | 'satellite'>('gps');
+  const [coordinates, setCoordinates] = useState<Coordinates[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isCheckingGPS, setIsCheckingGPS] = useState(false);
+  const [gpsSpoofWarning, setGpsSpoofWarning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [farmsLoading, setFarmsLoading] = useState(true);
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [farmSearch, setFarmSearch] = useState('');
+  const [showFarmPicker, setShowFarmPicker] = useState(false);
+
+  const farmIdParam = searchParams.get('farm_id');
+
+  useEffect(() => {
+    async function loadFarms() {
+      if (!organization || !supabase) { setFarmsLoading(false); return; }
+      try {
+        const { data } = await supabase
+          .from('farms')
+          .select('id, farmer_name, community, boundary, area_hectares')
+          .eq('org_id', organization.id)
+          .order('farmer_name');
+        setFarms(data || []);
+        if (farmIdParam && data) {
+          const found = data.find((f: any) => String(f.id) === farmIdParam);
+          if (found) setSelectedFarm(found);
+        }
+      } catch {} finally { setFarmsLoading(false); }
+    }
+    loadFarms();
+  }, [organization, supabase, farmIdParam]);
+
+  const filteredFarms = farmSearch.trim()
+    ? farms.filter(f =>
+        f.farmer_name.toLowerCase().includes(farmSearch.toLowerCase()) ||
+        f.community.toLowerCase().includes(farmSearch.toLowerCase())
+      ).slice(0, 15)
+    : farms.slice(0, 15);
+
+  const getCurrentLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Not Supported', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+      return;
+    }
+
+    setIsCheckingGPS(true);
+    try {
+      const spoofCheck = await detectMockLocation();
+      if (spoofCheck.isMocked) {
+        setGpsSpoofWarning(true);
+        toast({ title: 'GPS Spoof Detected', description: 'Please disable mock location apps.', variant: 'destructive' });
+        setIsCheckingGPS(false);
+        return;
+      }
+    } catch {}
+    setIsCheckingGPS(false);
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setIsLocating(false);
+        toast({ title: 'Location acquired', description: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` });
+      },
+      (err) => {
+        setIsLocating(false);
+        toast({ title: 'Location Error', description: err.message, variant: 'destructive' });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, [toast]);
+
+  const addBoundaryPoint = () => {
+    if (currentLocation) {
+      setCoordinates(prev => [...prev, currentLocation]);
+      toast({ title: 'Point Added', description: `Point ${coordinates.length + 1} added to boundary` });
+    }
+  };
+
+  const removePoint = (index: number) => {
+    setCoordinates(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearBoundary = () => {
+    setCoordinates([]);
+    setCurrentLocation(null);
+  };
+
+  const calculateArea = (coords: Coordinates[]): number => {
+    if (coords.length < 3) return 0;
+    let area = 0;
+    const n = coords.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += coords[i].lng * coords[j].lat;
+      area -= coords[j].lng * coords[i].lat;
+    }
+    area = Math.abs(area) / 2;
+    const hectares = area * 111.32 * 111.32 * 100;
+    return Math.round(hectares * 100) / 100;
+  };
+
+  const handleSatellitePoints = (points: Coordinates[]) => {
+    setCoordinates(points);
+  };
+
+  const areaHectares = calculateArea(coordinates);
+
+  const handleSave = async () => {
+    if (!selectedFarm || coordinates.length < 3) return;
+    setIsSaving(true);
+
+    const boundary = {
+      type: 'Polygon',
+      coordinates: [[...coordinates.map(c => [c.lng, c.lat]), [coordinates[0].lng, coordinates[0].lat]]]
+    };
+
+    try {
+      if (isOnline && supabase) {
+        const { error } = await supabase
+          .from('farms')
+          .update({
+            boundary,
+            area_hectares: areaHectares,
+          })
+          .eq('id', selectedFarm.id);
+
+        if (error) throw error;
+        toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
+      } else {
+        toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
+      }
+      setIsSuccess(true);
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({ title: 'Error', description: 'Failed to save boundary.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (orgLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-md mx-auto py-12 text-center space-y-6">
+        <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+        <h2 className="text-2xl font-bold">Boundary Saved</h2>
+        <p className="text-muted-foreground">
+          {selectedFarm?.farmer_name}'s farm has been mapped ({areaHectares} hectares).
+        </p>
+        <div className="space-y-3">
+          <Button onClick={() => { setIsSuccess(false); setCoordinates([]); setSelectedFarm(null); setCurrentLocation(null); }} className="w-full" data-testid="button-map-another">
+            Map Another Farm
+          </Button>
+          <Link href="/app" className="block">
+            <Button variant="ghost" className="w-full" data-testid="button-back-dashboard">Back to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div>
+        <h1 className="text-xl font-bold" data-testid="text-page-title">Map Farm Boundary</h1>
+        <p className="text-sm text-muted-foreground">Capture farm boundary using GPS Walk or Satellite Draw</p>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            Select Farmer
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {selectedFarm ? (
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="font-medium text-sm">{selectedFarm.farmer_name}</div>
+                <div className="text-xs text-muted-foreground">{selectedFarm.community}</div>
+                {selectedFarm.boundary && (
+                  <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); }} data-testid="button-change-farmer">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={farmSearch}
+                  onChange={(e) => { setFarmSearch(e.target.value); setShowFarmPicker(true); }}
+                  onFocus={() => setShowFarmPicker(true)}
+                  placeholder="Search farmer..."
+                  className="pl-9"
+                  data-testid="input-farm-search"
+                />
+              </div>
+              {showFarmPicker && (
+                <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
+                  {farmsLoading ? (
+                    <div className="p-3 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Loading...</span></div>
+                  ) : filteredFarms.length === 0 ? (
+                    <div className="p-3 text-sm text-muted-foreground text-center">No farms found</div>
+                  ) : (
+                    filteredFarms.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => { setSelectedFarm(f); setShowFarmPicker(false); setFarmSearch(''); }}
+                        className="w-full text-left p-3 flex items-center justify-between gap-2 hover-elevate"
+                        data-testid={`farm-pick-${f.id}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{f.farmer_name}</div>
+                          <div className="text-xs text-muted-foreground">{f.community}</div>
+                        </div>
+                        {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedFarm && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant={mode === 'gps' ? 'default' : 'outline'}
+              onClick={() => { setMode('gps'); setCoordinates([]); }}
+              className="h-14 flex-col gap-1"
+              data-testid="button-mode-gps"
+            >
+              <Footprints className="h-5 w-5" />
+              <span className="text-xs">GPS Walk</span>
+            </Button>
+            <Button
+              variant={mode === 'satellite' ? 'default' : 'outline'}
+              onClick={() => { setMode('satellite'); setCoordinates([]); }}
+              className="h-14 flex-col gap-1"
+              data-testid="button-mode-satellite"
+            >
+              <Satellite className="h-5 w-5" />
+              <span className="text-xs">Satellite Draw</span>
+            </Button>
+          </div>
+
+          {mode === 'gps' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Footprints className="h-4 w-4 text-primary" />
+                  GPS Walk Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Walk the farm boundary and tap to record each corner point. Minimum 3 points needed.
+                </p>
+
+                {gpsSpoofWarning && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    GPS spoofing detected. Please disable mock location.
+                  </div>
+                )}
+
+                {currentLocation && (
+                  <div className="p-3 bg-muted/50 rounded-lg flex items-center gap-2 text-sm">
+                    <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="font-mono text-xs">{currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={getCurrentLocation}
+                    disabled={isLocating || isCheckingGPS || gpsSpoofWarning}
+                    variant="outline"
+                    data-testid="button-get-location"
+                  >
+                    {isCheckingGPS ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                    ) : isLocating ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Getting...</>
+                    ) : (
+                      <><Navigation className="h-4 w-4 mr-2" />Get Location</>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={addBoundaryPoint}
+                    disabled={!currentLocation}
+                    data-testid="button-add-point"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Point
+                  </Button>
+                </div>
+
+                {coordinates.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>{coordinates.length} Points</Label>
+                      {coordinates.length >= 3 && (
+                        <Badge variant="outline" data-testid="text-area">{areaHectares} ha</Badge>
+                      )}
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {coordinates.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs font-mono">
+                          <span>#{i + 1}: {c.lat.toFixed(5)}, {c.lng.toFixed(5)}</span>
+                          <Button variant="ghost" size="icon" onClick={() => removePoint(i)}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="ghost" onClick={clearBoundary} className="w-full" data-testid="button-clear">
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Clear All Points
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {mode === 'satellite' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Satellite className="h-4 w-4 text-primary" />
+                  Satellite Draw Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Tap on the map to draw your farm boundary on satellite imagery.
+                </p>
+
+                <SatelliteMap
+                  coordinates={coordinates}
+                  onPointsChange={handleSatellitePoints}
+                  center={currentLocation || { lat: 7.4, lng: 3.9 }}
+                />
+
+                {coordinates.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{coordinates.length} points</span>
+                    {coordinates.length >= 3 && (
+                      <Badge variant="outline" data-testid="text-satellite-area">{areaHectares} ha</Badge>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={clearBoundary} data-testid="button-clear-satellite">
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {coordinates.length >= 3 && (
+            <div className="pb-4">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="w-full"
+                data-testid="button-save-boundary"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                Save Boundary ({areaHectares} ha)
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

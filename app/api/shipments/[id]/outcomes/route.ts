@@ -1,0 +1,245 @@
+'use server';
+
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+function createServiceClient() {
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+async function getAuthenticatedUser(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.split(' ')[1];
+  const supabase = createServiceClient();
+
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+
+  return user;
+}
+
+async function getUserFromCookies(request: NextRequest) {
+  const supabase = createServiceClient();
+  const cookieHeader = request.headers.get('cookie');
+
+  if (!cookieHeader) return null;
+
+  const cookies = Object.fromEntries(
+    cookieHeader.split(';').map(c => {
+      const [key, ...val] = c.trim().split('=');
+      return [key, val.join('=')];
+    })
+  );
+
+  const accessToken = cookies['sb-access-token'] ||
+    Object.entries(cookies).find(([k]) => k.includes('auth-token'))?.[1];
+
+  if (!accessToken) return null;
+
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('subscription_tier, feature_flags')
+    .eq('id', orgId)
+    .single();
+  if (!org) return false;
+  const tier = org.subscription_tier || 'starter';
+  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
+  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
+  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServiceClient();
+
+    let user = await getAuthenticatedUser(request);
+    if (!user) {
+      user = await getUserFromCookies(request);
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    const hasAccess = await checkTierAccess(supabase, profile.org_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Shipment Readiness requires Pro tier or above' }, { status: 403 });
+    }
+
+    const { data: shipment, error: shipmentError } = await supabase
+      .from('shipments')
+      .select('id')
+      .eq('id', params.id)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (shipmentError || !shipment) {
+      return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    }
+
+    const { data: outcomes, error } = await supabase
+      .from('shipment_outcomes')
+      .select('*')
+      .eq('shipment_id', params.id)
+      .eq('org_id', profile.org_id)
+      .order('outcome_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching shipment outcomes:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ outcomes: outcomes || [] });
+
+  } catch (error) {
+    console.error('Shipment outcomes API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServiceClient();
+
+    let user = await getAuthenticatedUser(request);
+    if (!user) {
+      user = await getUserFromCookies(request);
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    const hasAccess = await checkTierAccess(supabase, profile.org_id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Shipment Readiness requires Pro tier or above' }, { status: 403 });
+    }
+
+    const { data: shipment, error: shipmentError } = await supabase
+      .from('shipments')
+      .select('id')
+      .eq('id', params.id)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (shipmentError || !shipment) {
+      return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { outcome, outcome_date } = body;
+
+    if (!outcome) {
+      return NextResponse.json({ error: 'Outcome is required' }, { status: 400 });
+    }
+
+    const validOutcomes = ['approved', 'rejected', 'delayed', 'conditional_release'];
+    if (!validOutcomes.includes(outcome)) {
+      return NextResponse.json({ error: `Outcome must be one of: ${validOutcomes.join(', ')}` }, { status: 400 });
+    }
+
+    if (!outcome_date) {
+      return NextResponse.json({ error: 'Outcome date is required' }, { status: 400 });
+    }
+
+    const validRejectionCategories = ['documentation', 'contamination', 'traceability', 'regulatory', 'quality', 'other'];
+    if (body.rejection_category && !validRejectionCategories.includes(body.rejection_category)) {
+      return NextResponse.json({ error: `Rejection category must be one of: ${validRejectionCategories.join(', ')}` }, { status: 400 });
+    }
+
+    const insertData: Record<string, any> = {
+      shipment_id: params.id,
+      org_id: profile.org_id,
+      recorded_by: profile.id,
+      outcome,
+      outcome_date,
+    };
+
+    if (body.rejection_reason !== undefined) insertData.rejection_reason = body.rejection_reason;
+    if (body.rejection_category !== undefined) insertData.rejection_category = body.rejection_category;
+    if (body.port_of_entry !== undefined) insertData.port_of_entry = body.port_of_entry;
+    if (body.customs_reference !== undefined) insertData.customs_reference = body.customs_reference;
+    if (body.inspector_notes !== undefined) insertData.inspector_notes = body.inspector_notes;
+    if (body.financial_impact_usd !== undefined) insertData.financial_impact_usd = body.financial_impact_usd;
+
+    const { data: outcomeRecord, error: insertError } = await supabase
+      .from('shipment_outcomes')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error recording shipment outcome:', insertError);
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    if (outcome === 'approved') {
+      const { error: updateError } = await supabase
+        .from('shipments')
+        .update({ status: 'shipped' })
+        .eq('id', params.id)
+        .eq('org_id', profile.org_id);
+
+      if (updateError) {
+        console.error('Error updating shipment status:', updateError);
+      }
+    }
+
+    return NextResponse.json({ outcome: outcomeRecord, success: true });
+
+  } catch (error) {
+    console.error('Shipment outcomes API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
