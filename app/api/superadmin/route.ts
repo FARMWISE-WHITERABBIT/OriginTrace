@@ -158,39 +158,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ users: formattedUsers });
       }
       
-      case 'metrics': {
-        const { count: orgCount } = await supabase
-          .from('organizations')
-          .select('*', { count: 'exact', head: true });
-        
-        const { count: userCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-        
-        const { count: farmCount } = await supabase
-          .from('farms')
-          .select('*', { count: 'exact', head: true });
-        
-        const { count: bagCount } = await supabase
-          .from('bags')
-          .select('*', { count: 'exact', head: true });
-        
-        const { count: approvedFarmCount } = await supabase
-          .from('farms')
-          .select('*', { count: 'exact', head: true })
-          .eq('compliance_status', 'approved');
-        
-        return NextResponse.json({
-          metrics: {
-            organizations: orgCount || 0,
-            users: userCount || 0,
-            farms: farmCount || 0,
-            bags: bagCount || 0,
-            approved_farms: approvedFarmCount || 0
-          }
-        });
-      }
-      
       case 'enhanced_metrics': {
         const { count: orgCount } = await supabase
           .from('organizations')
@@ -297,7 +264,7 @@ export async function GET(request: NextRequest) {
         const { count: activeApiKeyCount } = await supabase
           .from('api_keys')
           .select('*', { count: 'exact', head: true })
-          .eq('is_active', true);
+          .eq('status', 'active');
 
         const { count: complianceProfileCount } = await supabase
           .from('compliance_profiles')
@@ -343,28 +310,52 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: buyerOrgsError.message }, { status: 500 });
         }
 
-        const enrichedBuyerOrgs = await Promise.all((buyerOrgs || []).map(async (org: any) => {
-          const { data: links } = await supabase
+        const buyerOrgIds = (buyerOrgs || []).map((o: any) => o.id);
+
+        if (buyerOrgIds.length === 0) {
+          return NextResponse.json({ buyer_organizations: [] });
+        }
+
+        const [linksResult, contractsResult] = await Promise.all([
+          supabase
             .from('supply_chain_links')
-            .select('id, exporter_org_id, status, invited_at, accepted_at')
-            .eq('buyer_org_id', org.id);
-
-          const { count: contractCount } = await supabase
+            .select('id, buyer_org_id, exporter_org_id, status, invited_at, accepted_at')
+            .in('buyer_org_id', buyerOrgIds),
+          supabase
             .from('contracts')
-            .select('*', { count: 'exact', head: true })
-            .eq('buyer_org_id', org.id);
+            .select('buyer_org_id')
+            .in('buyer_org_id', buyerOrgIds),
+        ]);
 
-          const exporterOrgIds = (links || []).map((l: any) => l.exporter_org_id).filter(Boolean);
-          let exporterMap = new Map();
-          if (exporterOrgIds.length > 0) {
-            const { data: exporters } = await supabase
-              .from('organizations')
-              .select('id, name, slug')
-              .in('id', exporterOrgIds);
-            exporterMap = new Map((exporters || []).map((e: any) => [e.id, e]));
-          }
+        const allLinks = linksResult.data || [];
+        const allContracts = contractsResult.data || [];
 
-          const linkedExporters = (links || []).map((link: any) => {
+        const linksByBuyerOrg = new Map<string, any[]>();
+        const allExporterOrgIds = new Set<string>();
+        for (const link of allLinks) {
+          const list = linksByBuyerOrg.get(link.buyer_org_id) || [];
+          list.push(link);
+          linksByBuyerOrg.set(link.buyer_org_id, list);
+          if (link.exporter_org_id) allExporterOrgIds.add(link.exporter_org_id);
+        }
+
+        const contractCountByBuyerOrg = new Map<string, number>();
+        for (const c of allContracts) {
+          contractCountByBuyerOrg.set(c.buyer_org_id, (contractCountByBuyerOrg.get(c.buyer_org_id) || 0) + 1);
+        }
+
+        let exporterMap = new Map<string, any>();
+        if (allExporterOrgIds.size > 0) {
+          const { data: exporters } = await supabase
+            .from('organizations')
+            .select('id, name, slug')
+            .in('id', Array.from(allExporterOrgIds));
+          exporterMap = new Map((exporters || []).map((e: any) => [e.id, e]));
+        }
+
+        const enrichedBuyerOrgs = (buyerOrgs || []).map((org: any) => {
+          const links = linksByBuyerOrg.get(org.id) || [];
+          const linkedExporters = links.map((link: any) => {
             const exporter = exporterMap.get(link.exporter_org_id);
             return {
               id: link.id,
@@ -378,11 +369,11 @@ export async function GET(request: NextRequest) {
 
           return {
             ...org,
-            supply_chain_link_count: (links || []).length,
-            contract_count: contractCount || 0,
+            supply_chain_link_count: links.length,
+            contract_count: contractCountByBuyerOrg.get(org.id) || 0,
             linked_exporters: linkedExporters,
           };
-        }));
+        });
 
         return NextResponse.json({ buyer_organizations: enrichedBuyerOrgs });
       }
@@ -439,73 +430,9 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { action, org_id, user_id, target_user_id } = body;
+    const { action, org_id, target_user_id } = body;
     
     switch (action) {
-      case 'impersonate': {
-        if (!target_user_id) {
-          return NextResponse.json({ error: 'Target user ID required' }, { status: 400 });
-        }
-        
-        const { data: targetUser, error: userError } = await supabase
-          .from('profiles')
-          .select('id, user_id, full_name, email, role, org_id')
-          .eq('user_id', target_user_id)
-          .single();
-        
-        // Fetch organization separately if needed
-        let organization = null;
-        if (targetUser?.org_id) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('id, name, slug')
-            .eq('id', targetUser.org_id)
-            .single();
-          organization = orgData;
-        }
-        
-        const targetProfile = targetUser ? { ...targetUser, organization } : null;
-        
-        if (userError || !targetProfile) {
-          return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
-        }
-        
-        return NextResponse.json({
-          impersonation: {
-            target_user_id,
-            target_profile: targetProfile,
-            original_admin_id: user.id,
-            expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          }
-        });
-      }
-      
-      case 'impersonate_org': {
-        if (!org_id) {
-          return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-        }
-        
-        const { data: targetOrg, error: orgError } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', org_id)
-          .single();
-        
-        if (orgError || !targetOrg) {
-          return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-        }
-        
-        return NextResponse.json({
-          impersonation: {
-            org_id,
-            organization: targetOrg,
-            original_admin_id: user.id,
-            expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          },
-          success: true
-        });
-      }
-      
       case 'update_org_status': {
         if (!org_id) {
           return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });

@@ -21,9 +21,9 @@ import {
   QrCode,
   Key,
   ClipboardCheck,
-  Link2
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 interface EnhancedMetrics {
@@ -56,6 +56,7 @@ interface EnhancedMetrics {
 export default function SuperadminDashboard() {
   const [metrics, setMetrics] = useState<EnhancedMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchMetrics() {
@@ -64,9 +65,12 @@ export default function SuperadminDashboard() {
         if (response.ok) {
           const data = await response.json();
           setMetrics(data.metrics);
+        } else {
+          toast({ title: 'Error', description: 'Failed to load dashboard metrics.', variant: 'destructive' });
         }
       } catch (error) {
         console.error('Failed to fetch metrics:', error);
+        toast({ title: 'Error', description: 'Unable to connect to the server.', variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
