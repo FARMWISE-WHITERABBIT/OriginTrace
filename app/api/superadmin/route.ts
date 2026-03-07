@@ -244,6 +244,65 @@ export async function GET(request: NextRequest) {
           ? Math.round((approvedFarmCount || 0) / farmCount * 100) 
           : 0;
         
+        const { count: buyerOrgCount } = await supabase
+          .from('buyer_organizations')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: supplyChainLinkCount } = await supabase
+          .from('supply_chain_links')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: contractCount } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: documentCount } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: expiredDocCount } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['expired', 'expiring_soon']);
+
+        const { data: paymentData } = await supabase
+          .from('payments')
+          .select('amount, currency');
+
+        const paymentCount = (paymentData || []).length;
+        const paymentByCurrency: Record<string, number> = {};
+        for (const p of paymentData || []) {
+          const cur = p.currency || 'NGN';
+          paymentByCurrency[cur] = (paymentByCurrency[cur] || 0) + (parseFloat(p.amount) || 0);
+        }
+
+        const { count: dppCount } = await supabase
+          .from('digital_product_passports')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: activeDppCount } = await supabase
+          .from('digital_product_passports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active');
+
+        const { count: revokedDppCount } = await supabase
+          .from('digital_product_passports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'revoked');
+
+        const { count: apiKeyCount } = await supabase
+          .from('api_keys')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: activeApiKeyCount } = await supabase
+          .from('api_keys')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true);
+
+        const { count: complianceProfileCount } = await supabase
+          .from('compliance_profiles')
+          .select('*', { count: 'exact', head: true });
+
         return NextResponse.json({
           metrics: {
             organizations: orgCount || 0,
@@ -256,11 +315,78 @@ export async function GET(request: NextRequest) {
             total_weight_kg: totalWeightKg,
             active_agents: agentCount || 0,
             online_agents: onlineAgentCount || 0,
-            compliance_rate: complianceRate
+            compliance_rate: complianceRate,
+            buyer_organizations: buyerOrgCount || 0,
+            supply_chain_links: supplyChainLinkCount || 0,
+            contracts: contractCount || 0,
+            documents: documentCount || 0,
+            expired_documents: expiredDocCount || 0,
+            payment_count: paymentCount,
+            payment_by_currency: paymentByCurrency,
+            dpp_total: dppCount || 0,
+            dpp_active: activeDppCount || 0,
+            dpp_revoked: revokedDppCount || 0,
+            api_keys_total: apiKeyCount || 0,
+            api_keys_active: activeApiKeyCount || 0,
+            compliance_profiles: complianceProfileCount || 0,
           }
         });
       }
       
+      case 'buyer_organizations': {
+        const { data: buyerOrgs, error: buyerOrgsError } = await supabase
+          .from('buyer_organizations')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (buyerOrgsError) {
+          return NextResponse.json({ error: buyerOrgsError.message }, { status: 500 });
+        }
+
+        const enrichedBuyerOrgs = await Promise.all((buyerOrgs || []).map(async (org: any) => {
+          const { data: links } = await supabase
+            .from('supply_chain_links')
+            .select('id, exporter_org_id, status, invited_at, accepted_at')
+            .eq('buyer_org_id', org.id);
+
+          const { count: contractCount } = await supabase
+            .from('contracts')
+            .select('*', { count: 'exact', head: true })
+            .eq('buyer_org_id', org.id);
+
+          const exporterOrgIds = (links || []).map((l: any) => l.exporter_org_id).filter(Boolean);
+          let exporterMap = new Map();
+          if (exporterOrgIds.length > 0) {
+            const { data: exporters } = await supabase
+              .from('organizations')
+              .select('id, name, slug')
+              .in('id', exporterOrgIds);
+            exporterMap = new Map((exporters || []).map((e: any) => [e.id, e]));
+          }
+
+          const linkedExporters = (links || []).map((link: any) => {
+            const exporter = exporterMap.get(link.exporter_org_id);
+            return {
+              id: link.id,
+              exporter_name: exporter?.name || 'Unknown',
+              exporter_slug: exporter?.slug || '-',
+              status: link.status || 'pending',
+              invited_at: link.invited_at,
+              accepted_at: link.accepted_at,
+            };
+          });
+
+          return {
+            ...org,
+            supply_chain_link_count: (links || []).length,
+            contract_count: contractCount || 0,
+            linked_exporters: linkedExporters,
+          };
+        }));
+
+        return NextResponse.json({ buyer_organizations: enrichedBuyerOrgs });
+      }
+
       case 'sync-status': {
         const { data: syncStatus, error } = await supabase
           .from('agent_sync_status')
@@ -410,7 +536,8 @@ export async function POST(request: NextRequest) {
         }
         
         const { role } = body;
-        if (!role || !['admin', 'aggregator', 'agent'].includes(role)) {
+        const validRoles = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer'];
+        if (!role || !validRoles.includes(role)) {
           return NextResponse.json({ error: 'Valid role required' }, { status: 400 });
         }
         

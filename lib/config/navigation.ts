@@ -73,6 +73,7 @@ const superadminNavigation: NavigationConfig = {
         { title: 'Organizations', url: '/superadmin/organizations', icon: Building2, allowedRoles: ['admin', 'aggregator', 'agent'] },
         { title: 'User Management', url: '/superadmin/users', icon: Users, allowedRoles: ['admin', 'aggregator', 'agent'] },
         { title: 'Tenant Health', url: '/superadmin/tenant-health', icon: Gauge, allowedRoles: ['admin', 'aggregator', 'agent'] },
+        { title: 'Buyer Organizations', url: '/superadmin/buyer-orgs', icon: Handshake, allowedRoles: ['admin', 'aggregator', 'agent'] },
       ],
     },
     {

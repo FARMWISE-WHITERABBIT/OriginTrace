@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import {
   TIER_TAGLINES, TIER_DESCRIPTIONS, FEATURE_LABELS as GATED_FEATURE_LABELS,
-  getTierNewFeatures, type TierFeature, type SubscriptionTier
+  getTierNewFeatures, getTierFeatures, type TierFeature, type SubscriptionTier
 } from '@/lib/config/tier-gating';
 
 interface FeatureFlags {
@@ -27,6 +27,8 @@ interface FeatureFlags {
   advanced_mapping: boolean;
   financing: boolean;
   api_access: boolean;
+  buyer_portal_access: boolean;
+  dpp_access: boolean;
 }
 
 interface TierTemplate {
@@ -50,14 +52,18 @@ const ADDON_LABELS: Record<keyof FeatureFlags, string> = {
   satellite_overlays: 'Satellite',
   advanced_mapping: 'Advanced Mapping',
   financing: 'Financing',
-  api_access: 'API Access'
+  api_access: 'API Access',
+  buyer_portal_access: 'Buyer Portal',
+  dpp_access: 'DPP Generation'
 };
 
 const ADDON_DESCRIPTIONS: Record<keyof FeatureFlags, string> = {
   satellite_overlays: 'Satellite imagery overlays for farm verification',
   advanced_mapping: 'Enhanced GPS mapping with polygon editing tools',
   financing: 'Farmer performance analytics for finance partners',
-  api_access: 'REST API access for third-party integrations (ERP, customs)'
+  api_access: 'REST API access for third-party integrations (ERP, customs)',
+  buyer_portal_access: 'Allow buyer portal access for this organization (independent of tier)',
+  dpp_access: 'Allow Digital Product Passport generation for this organization'
 };
 
 const TIER_ORDER = ['starter', 'basic', 'pro', 'enterprise'] as const;
@@ -75,7 +81,7 @@ const TIER_ICONS: Record<string, typeof Zap> = {
   enterprise: Crown,
 };
 
-const ADDON_KEYS: (keyof FeatureFlags)[] = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access'];
+const ADDON_KEYS: (keyof FeatureFlags)[] = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access', 'buyer_portal_access', 'dpp_access'];
 
 export default function FeatureTogglesPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -177,7 +183,7 @@ export default function FeatureTogglesPage() {
 
   const openOrgSettings = (org: Organization) => {
     setSelectedOrg(org);
-    setEditedFlags(org.feature_flags || { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false });
+    setEditedFlags(org.feature_flags || { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false });
     setEditedSeats(org.agent_seat_limit || 5);
     setEditedCollections(org.monthly_collection_limit || 1000);
     setEditedTier(org.subscription_tier || 'starter');
@@ -201,7 +207,7 @@ export default function FeatureTogglesPage() {
 
   const quickToggleOrgFeature = async (org: Organization, feature: keyof FeatureFlags) => {
     const newFlags = {
-      ...(org.feature_flags || { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false }),
+      ...(org.feature_flags || { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false }),
       [feature]: !(org.feature_flags?.[feature] ?? false)
     };
     try {
@@ -350,6 +356,8 @@ export default function FeatureTogglesPage() {
                       <TableHead className="text-center">Adv. Mapping</TableHead>
                       <TableHead className="text-center">Financing</TableHead>
                       <TableHead className="text-center">API Access</TableHead>
+                      <TableHead className="text-center">Buyer Portal</TableHead>
+                      <TableHead className="text-center">DPP</TableHead>
                       <TableHead className="text-right">Agent Seats</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -357,7 +365,7 @@ export default function FeatureTogglesPage() {
                   <TableBody>
                     {organizations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                           No organizations found
                         </TableCell>
                       </TableRow>
@@ -695,18 +703,7 @@ export default function FeatureTogglesPage() {
 }
 
 function getLockedFeatures(tier: SubscriptionTier): TierFeature[] {
-  const allFeatures: TierFeature[] = [
-    'smart_collect', 'farmer_registration', 'farm_mapping', 'sync_dashboard', 'traceability',
-    'farm_polygons', 'farmers_list', 'inventory', 'bags', 'yield_alerts', 'agents', 'scan_verify',
-    'dispatch', 'compliance_review', 'dds_export', 'processing', 'pedigree', 'boundary_conflicts',
-    'delegations', 'resolve', 'data_vault'
-  ];
-  const accessible = getTierNewFeatures('starter' as SubscriptionTier);
-  const hierarchy: SubscriptionTier[] = ['starter', 'basic', 'pro', 'enterprise'];
-  const tierIndex = hierarchy.indexOf(tier);
-  const accessibleSet = new Set<TierFeature>();
-  for (let i = 0; i <= tierIndex; i++) {
-    getTierNewFeatures(hierarchy[i]).forEach(f => accessibleSet.add(f));
-  }
+  const allFeatures = Object.keys(GATED_FEATURE_LABELS) as TierFeature[];
+  const accessibleSet = new Set<TierFeature>(getTierFeatures(tier));
   return allFeatures.filter(f => !accessibleSet.has(f));
 }

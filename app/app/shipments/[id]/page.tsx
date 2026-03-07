@@ -347,14 +347,21 @@ const LIFECYCLE_STAGES = [
   { key: 'cleared', label: 'Cleared', icon: CircleCheckBig },
 ] as const;
 
-function getStageIndex(status: string, outcomes: ShipmentOutcome[]): number {
+function getStageIndex(status: string, outcomes: ShipmentOutcome[], estimatedShipDate?: string | null): number {
   const hasApproval = outcomes.some(o => o.outcome === 'approved' || o.outcome === 'conditional_release');
   const hasAnyOutcome = outcomes.length > 0;
 
   if (status === 'cancelled') return -1;
   if (hasApproval) return 5;
   if (hasAnyOutcome) return 4;
-  if (status === 'shipped') return 3;
+  if (status === 'shipped') {
+    if (estimatedShipDate) {
+      const shipDate = new Date(estimatedShipDate);
+      const now = new Date();
+      if (now > shipDate) return 3;
+    }
+    return 2;
+  }
   if (status === 'ready') return 1;
   return 0;
 }
@@ -373,7 +380,7 @@ function getStageDates(shipment: ShipmentDetail, outcomes: ShipmentOutcome[]): R
 }
 
 function ShipmentTimeline({ shipment, outcomes }: { shipment: ShipmentDetail; outcomes: ShipmentOutcome[] }) {
-  const currentStageIndex = getStageIndex(shipment.status, outcomes);
+  const currentStageIndex = getStageIndex(shipment.status, outcomes, shipment.estimated_ship_date);
   const stageDates = getStageDates(shipment, outcomes);
   const isCancelled = shipment.status === 'cancelled';
 

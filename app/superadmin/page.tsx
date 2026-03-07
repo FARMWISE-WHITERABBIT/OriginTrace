@@ -14,7 +14,14 @@ import {
   Wifi,
   CheckCircle2,
   AlertTriangle,
-  ArrowUpRight
+  ArrowUpRight,
+  ShoppingCart,
+  FileText,
+  Banknote,
+  QrCode,
+  Key,
+  ClipboardCheck,
+  Link2
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
@@ -31,6 +38,19 @@ interface EnhancedMetrics {
   active_agents: number;
   online_agents: number;
   compliance_rate: number;
+  buyer_organizations: number;
+  supply_chain_links: number;
+  contracts: number;
+  documents: number;
+  expired_documents: number;
+  payment_count: number;
+  payment_by_currency: Record<string, number>;
+  dpp_total: number;
+  dpp_active: number;
+  dpp_revoked: number;
+  api_keys_total: number;
+  api_keys_active: number;
+  compliance_profiles: number;
 }
 
 export default function SuperadminDashboard() {
@@ -278,6 +298,131 @@ export default function SuperadminDashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-white" data-testid="text-expansion-title">Platform Expansion</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-buyer-ecosystem">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">Buyer Ecosystem</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <ShoppingCart className="h-5 w-5 text-blue-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Buyer Organizations</span>
+                <span className="text-sm font-medium text-white" data-testid="text-buyer-orgs">{metrics?.buyer_organizations || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Supply Chain Links</span>
+                <span className="text-sm font-medium text-white" data-testid="text-supply-chain-links">{metrics?.supply_chain_links || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Contracts</span>
+                <span className="text-sm font-medium text-white" data-testid="text-contracts">{metrics?.contracts || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-document-vault">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">Document Vault</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-indigo-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Total Documents</span>
+                <span className="text-sm font-medium text-white" data-testid="text-total-documents">{metrics?.documents || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Expired / Expiring</span>
+                <span className={`text-sm font-medium ${(metrics?.expired_documents || 0) > 0 ? 'text-orange-400' : 'text-white'}`} data-testid="text-expired-documents">{metrics?.expired_documents || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-payment-volume">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">Payment Volume</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Banknote className="h-5 w-5 text-emerald-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Transactions</span>
+                <span className="text-sm font-medium text-white" data-testid="text-payment-count">{metrics?.payment_count || 0}</span>
+              </div>
+              {metrics?.payment_by_currency && Object.entries(metrics.payment_by_currency).map(([currency, amount]) => (
+                <div key={currency} className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">{currency}</span>
+                  <span className="text-sm font-medium text-white" data-testid={`text-payment-${currency}`}>{Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-dpp-passports">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">DPP Passports</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <QrCode className="h-5 w-5 text-purple-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Total</span>
+                <span className="text-sm font-medium text-white" data-testid="text-dpp-total">{metrics?.dpp_total || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Active</span>
+                <span className="text-sm font-medium text-green-400" data-testid="text-dpp-active">{metrics?.dpp_active || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Revoked</span>
+                <span className={`text-sm font-medium ${(metrics?.dpp_revoked || 0) > 0 ? 'text-red-400' : 'text-white'}`} data-testid="text-dpp-revoked">{metrics?.dpp_revoked || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-api-usage">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">Enterprise API Usage</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                <Key className="h-5 w-5 text-teal-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Total API Keys</span>
+                <span className="text-sm font-medium text-white" data-testid="text-api-keys-total">{metrics?.api_keys_total || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Active Keys</span>
+                <span className="text-sm font-medium text-green-400" data-testid="text-api-keys-active">{metrics?.api_keys_active || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700" data-testid="card-compliance-profiles">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-slate-300">Compliance Profiles</CardTitle>
+              <div className="h-9 w-9 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                <ClipboardCheck className="h-5 w-5 text-rose-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Total Profiles</span>
+                <span className="text-sm font-medium text-white" data-testid="text-compliance-profiles">{metrics?.compliance_profiles || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

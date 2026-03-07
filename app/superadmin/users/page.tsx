@@ -15,6 +15,9 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Search, User, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ROLE_LABELS, ROLE_DESCRIPTIONS, type AppRole } from '@/lib/rbac';
+
+const ALL_ROLES: AppRole[] = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer'];
 
 interface UserProfile {
   id: number;
@@ -126,9 +129,15 @@ export default function UsersPage() {
     const variants: Record<string, 'default' | 'secondary' | 'outline'> = {
       admin: 'default',
       aggregator: 'secondary',
-      agent: 'outline'
+      agent: 'outline',
+      quality_manager: 'secondary',
+      logistics_coordinator: 'outline',
+      compliance_officer: 'secondary',
+      warehouse_supervisor: 'outline',
+      buyer: 'default'
     };
-    return <Badge variant={variants[role] || 'default'}>{role}</Badge>;
+    const label = ROLE_LABELS[role as AppRole] || role;
+    return <Badge variant={variants[role] || 'default'} data-testid={`badge-role-${role}`}>{label}</Badge>;
   };
 
   if (isLoading) {
@@ -205,13 +214,18 @@ export default function UsersPage() {
                           value={user.role}
                           onValueChange={(value: string) => updateUserRole(user.user_id, value)}
                         >
-                          <SelectTrigger className="w-[120px]" data-testid={`select-role-${user.id}`}>
+                          <SelectTrigger className="w-[180px]" data-testid={`select-role-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="aggregator">Aggregator</SelectItem>
-                            <SelectItem value="agent">Agent</SelectItem>
+                            {ALL_ROLES.map((role) => (
+                              <SelectItem key={role} value={role} data-testid={`option-role-${role}`}>
+                                <div className="flex flex-col">
+                                  <span>{ROLE_LABELS[role]}</span>
+                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">{ROLE_DESCRIPTIONS[role]}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <Button
