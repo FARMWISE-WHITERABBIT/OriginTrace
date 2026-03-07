@@ -192,7 +192,7 @@ export default function PedigreePage() {
   };
 
   return (
-    <TierGate feature="pedigree" requiredTier="enterprise" featureLabel="Pedigree">
+    <TierGate feature="pedigree" requiredTier="pro" featureLabel="Pedigree">
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>

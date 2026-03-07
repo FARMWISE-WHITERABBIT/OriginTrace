@@ -191,6 +191,7 @@ export async function POST(request: NextRequest) {
     if (body.destination_port !== undefined) insertData.destination_port = body.destination_port;
     if (body.notes !== undefined) insertData.notes = body.notes;
     if (body.estimated_ship_date !== undefined) insertData.estimated_ship_date = body.estimated_ship_date;
+    if (body.compliance_profile_id !== undefined) insertData.compliance_profile_id = body.compliance_profile_id;
 
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
@@ -201,6 +202,22 @@ export async function POST(request: NextRequest) {
     if (shipmentError) {
       console.error('Error creating shipment:', shipmentError);
       return NextResponse.json({ error: shipmentError.message }, { status: 500 });
+    }
+
+    if (body.contract_id && shipment) {
+      await supabase
+        .from('contract_shipments')
+        .insert({ contract_id: body.contract_id, shipment_id: shipment.id });
+    }
+
+    if (body.document_ids && Array.isArray(body.document_ids) && shipment) {
+      for (const docId of body.document_ids) {
+        await supabase
+          .from('documents')
+          .update({ linked_entity_type: 'shipment', linked_entity_id: shipment.id })
+          .eq('id', docId)
+          .eq('org_id', profile.org_id);
+      }
     }
 
     return NextResponse.json({ shipment, success: true });

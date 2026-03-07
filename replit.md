@@ -89,18 +89,18 @@ Supabase PostgreSQL with RLS for multi-tenant isolation. Schema includes:
 
 ## Recent Changes (Mar 2026 — Platform Expansion)
 
-### 10-Phase Expansion (Current Session)
+### 10-Phase Expansion
 - **Role Expansion**: Added 5 new roles (quality_manager, logistics_coordinator, compliance_officer, warehouse_supervisor, buyer) with RBAC and navigation support
-- **Tier Gating Update**: Added 11 new tier features across Basic/Pro/Enterprise tiers
-- **Analytics Dashboard**: API route `/api/analytics` with volume trends, agent performance, compliance metrics. Admin and aggregator dashboards enhanced with recharts visualization
-- **Role-Specific Dashboards**: Created tailored dashboards for all 8 roles
+- **Tier Gating Update**: Added 11 new tier features across Basic/Pro/Enterprise tiers; all page-level TierGate props synchronized with central config
+- **Analytics Dashboard**: API route `/api/analytics` with volume trends, agent performance, compliance metrics, role+tier access control. Admin and aggregator dashboards enhanced with recharts visualization
+- **Role-Specific Dashboards**: Created tailored dashboards for all 8 roles; sidebar properly detects all roles
 - **Document Vault**: Full CRUD API + UI with expiry tracking and entity linking
-- **Payment Tracking**: Multi-currency payment recording with ledger, summaries, CSV export
-- **Buyer Portal**: Buyer registration (`/auth/buyer-register`), supplier invitation flow, contract management, read-only shipment/traceability views
-- **Compliance Profiles**: EUDR/FSMA_204/UK_Environment_Act profiles with document requirements
+- **Payment Tracking**: Multi-currency payment recording with entity linking (batch/contract), ledger, summaries, CSV export
+- **Buyer Portal**: Buyer registration (`/auth/buyer-register`), supplier invitation flow, contract management, real shipment/traceability/document views (not placeholders)
+- **Compliance Profiles**: EUDR/FSMA_204/UK_Environment_Act profiles with document requirements; dynamically integrated with shipment scoring
 - **Digital Product Passport**: DPP generation from finished goods, JSON-LD output, public verification
-- **Enterprise API**: API key management, versioned endpoints (/api/v1/), rate limiting, API documentation page
-- **Shipment Planning**: Enhanced creation wizard with batch selection and compliance review
+- **Enterprise API**: API key management page (`/app/api-keys`), versioned endpoints (/api/v1/), rate limiting, API documentation page
+- **Shipment Planning**: 6-step creation wizard (contract → batches → compliance profile → review → documents → confirm), detail page with lifecycle timeline
 - **Marketing Repositioning**: From "agricultural traceability" to "trust infrastructure for origin-sensitive supply chains"
 
 ### Previous Cleanup (Early Mar 2026)

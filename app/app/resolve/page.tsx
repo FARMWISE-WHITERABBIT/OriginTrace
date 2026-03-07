@@ -50,7 +50,7 @@ interface Batch {
 
 export default function ResolveBatchPage() {
   return (
-    <TierGate feature="resolve" requiredTier="enterprise" featureLabel="Resolve">
+    <TierGate feature="resolve" requiredTier="pro" featureLabel="Resolve">
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

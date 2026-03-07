@@ -34,10 +34,17 @@ interface Payment {
   currency: string;
   payment_method: string;
   reference_number: string | null;
+  linked_entity_type: string | null;
+  linked_entity_id: string | null;
   payment_date: string;
   status: string;
   notes: string | null;
   created_at: string;
+}
+
+interface LinkedEntity {
+  id: string;
+  label: string;
 }
 
 interface PaymentSummary {
@@ -113,9 +120,13 @@ export default function PaymentsPage() {
     currency: 'NGN',
     payment_method: 'cash',
     reference_number: '',
+    linked_entity_type: '',
+    linked_entity_id: '',
     payment_date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+  const [linkedEntities, setLinkedEntities] = useState<LinkedEntity[]>([]);
+  const [isLoadingEntities, setIsLoadingEntities] = useState(false);
 
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
@@ -179,6 +190,50 @@ export default function PaymentsPage() {
     setPage(1);
   }, [payeeTypeFilter, methodFilter, dateFrom, dateTo, searchQuery]);
 
+  const fetchLinkedEntities = useCallback(async (entityType: string) => {
+    if (!entityType || !organization) {
+      setLinkedEntities([]);
+      return;
+    }
+    setIsLoadingEntities(true);
+    try {
+      if (entityType === 'collection_batch') {
+        const response = await fetch('/api/batches');
+        if (response.ok) {
+          const data = await response.json();
+          const batches = data.batches || data || [];
+          setLinkedEntities(
+            batches.map((b: { id: string; batch_code?: string; commodity?: string; total_weight?: number }) => ({
+              id: b.id,
+              label: `${b.batch_code || b.id.slice(0, 8)} — ${b.commodity || 'Unknown'} (${b.total_weight ?? 0} kg)`,
+            }))
+          );
+        }
+      } else if (entityType === 'contract') {
+        const response = await fetch('/api/contracts');
+        if (response.ok) {
+          const data = await response.json();
+          const contracts = data.contracts || data || [];
+          setLinkedEntities(
+            contracts.map((c: { id: string; contract_number?: string; buyer_name?: string; commodity?: string }) => ({
+              id: c.id,
+              label: `${c.contract_number || c.id.slice(0, 8)} — ${c.buyer_name || ''} ${c.commodity || ''}`.trim(),
+            }))
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch linked entities:', error);
+      setLinkedEntities([]);
+    } finally {
+      setIsLoadingEntities(false);
+    }
+  }, [organization]);
+
+  useEffect(() => {
+    fetchLinkedEntities(form.linked_entity_type);
+  }, [form.linked_entity_type, fetchLinkedEntities]);
+
   const handleCreate = async () => {
     if (!form.payee_name || !form.amount || !form.payment_method) {
       toast({ title: 'Missing fields', description: 'Payee name, amount, and payment method are required.', variant: 'destructive' });
@@ -202,6 +257,8 @@ export default function PaymentsPage() {
           currency: form.currency,
           payment_method: form.payment_method,
           reference_number: form.reference_number || undefined,
+          linked_entity_type: form.linked_entity_type || undefined,
+          linked_entity_id: form.linked_entity_id || undefined,
           payment_date: form.payment_date || undefined,
           notes: form.notes || undefined,
         }),
@@ -219,9 +276,12 @@ export default function PaymentsPage() {
         currency: 'NGN',
         payment_method: 'cash',
         reference_number: '',
+        linked_entity_type: '',
+        linked_entity_id: '',
         payment_date: new Date().toISOString().split('T')[0],
         notes: '',
       });
+      setLinkedEntities([]);
       fetchPayments();
       fetchSummary();
     } catch (error: unknown) {
@@ -233,7 +293,7 @@ export default function PaymentsPage() {
 
   const handleExportCSV = () => {
     if (payments.length === 0) return;
-    const headers = ['Date', 'Payee', 'Type', 'Amount', 'Currency', 'Method', 'Reference', 'Status'];
+    const headers = ['Date', 'Payee', 'Type', 'Amount', 'Currency', 'Method', 'Reference', 'Linked Entity Type', 'Linked Entity ID', 'Status'];
     const rows = payments.map(p => [
       p.payment_date,
       p.payee_name,
@@ -242,6 +302,8 @@ export default function PaymentsPage() {
       p.currency,
       METHOD_LABELS[p.payment_method] || p.payment_method,
       p.reference_number || '',
+      p.linked_entity_type || '',
+      p.linked_entity_id || '',
       p.status,
     ].map(escapeCSVField).join(','));
     const csv = [headers.map(escapeCSVField).join(','), ...rows].join('\n');
@@ -371,6 +433,46 @@ export default function PaymentsPage() {
                         onChange={e => setForm(f => ({ ...f, payment_date: e.target.value }))}
                         data-testid="input-payment-date"
                       />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="linked_entity_type">Link to Entity</Label>
+                      <Select
+                        value={form.linked_entity_type || 'none'}
+                        onValueChange={v => setForm(f => ({ ...f, linked_entity_type: v === 'none' ? '' : v, linked_entity_id: '' }))}
+                      >
+                        <SelectTrigger data-testid="select-linked-entity-type">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="collection_batch">Collection Batch</SelectItem>
+                          <SelectItem value="contract">Contract</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="linked_entity_id">
+                        {form.linked_entity_type === 'collection_batch' ? 'Select Batch' : form.linked_entity_type === 'contract' ? 'Select Contract' : 'Select Entity'}
+                      </Label>
+                      <Select
+                        value={form.linked_entity_id || 'none'}
+                        onValueChange={v => setForm(f => ({ ...f, linked_entity_id: v === 'none' ? '' : v }))}
+                        disabled={!form.linked_entity_type || isLoadingEntities}
+                      >
+                        <SelectTrigger data-testid="select-linked-entity-id">
+                          <SelectValue placeholder={isLoadingEntities ? 'Loading...' : !form.linked_entity_type ? 'Select type first' : 'Select entity'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {linkedEntities.map(entity => (
+                            <SelectItem key={entity.id} value={entity.id}>
+                              {entity.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -550,6 +652,7 @@ export default function PaymentsPage() {
                       <TableHead>Currency</TableHead>
                       <TableHead>Method</TableHead>
                       <TableHead>Reference</TableHead>
+                      <TableHead>Linked To</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -578,6 +681,13 @@ export default function PaymentsPage() {
                         </TableCell>
                         <TableCell className="font-mono text-sm" data-testid={`text-reference-${payment.id}`}>
                           {payment.reference_number || '-'}
+                        </TableCell>
+                        <TableCell data-testid={`text-linked-entity-${payment.id}`}>
+                          {payment.linked_entity_type ? (
+                            <Badge variant="outline">
+                              {payment.linked_entity_type === 'collection_batch' ? 'Batch' : 'Contract'}
+                            </Badge>
+                          ) : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={STATUS_VARIANTS[payment.status] || 'outline'} data-testid={`badge-status-${payment.id}`}>

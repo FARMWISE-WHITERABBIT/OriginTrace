@@ -106,7 +106,7 @@ export default function CompliancePage() {
   };
 
   return (
-    <TierGate feature="compliance_review" requiredTier="enterprise" featureLabel="Compliance Review">
+    <TierGate feature="compliance_review" requiredTier="pro" featureLabel="Compliance Review">
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Compliance Review</h1>
