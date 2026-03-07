@@ -10,18 +10,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
   { href: '/solutions', label: 'Solutions' },
+  { href: '/#use-cases', label: 'Use Cases' },
   { href: '/pedigree', label: 'Pedigree' },
-  { href: '/processors', label: 'For Processors' },
-  { href: '/#shipment-readiness', label: 'Shipment Readiness' },
+  { href: '/#shipment-readiness', label: 'Readiness Score' },
+  { href: '/api-docs', label: 'API' },
 ];
 
 export function MarketingNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-
-  // All marketing pages now use light backgrounds
-  const isDarkHero = false;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,7 +52,7 @@ export function MarketingNav() {
               alt="OriginTrace" 
               width={120} 
               height={32}
-              className={isDarkHero ? 'hidden' : 'block dark:hidden'}
+              className="block dark:hidden"
               style={{ width: 'auto', height: '28px' }}
               priority
             />
@@ -63,7 +61,7 @@ export function MarketingNav() {
               alt="OriginTrace" 
               width={120} 
               height={32}
-              className={isDarkHero ? 'block' : 'hidden dark:block'}
+              className="hidden dark:block"
               style={{ width: 'auto', height: '28px' }}
               priority
             />
@@ -74,14 +72,10 @@ export function MarketingNav() {
               <Link 
                 key={link.href}
                 href={link.href} 
-                className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                className={`px-3 py-2 text-sm rounded-md transition-colors ${
                   pathname === link.href
-                    ? isDarkHero
-                      ? 'text-white font-medium bg-white/10'
-                      : 'text-primary font-medium bg-primary/5'
-                    : isDarkHero
-                      ? 'text-slate-300 hover:text-white hover:bg-white/10'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/5'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 {link.label}
@@ -89,11 +83,18 @@ export function MarketingNav() {
             ))}
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-3">
+            <Link 
+              href="/auth/login" 
+              className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors px-3 py-2"
+              data-testid="nav-sign-in"
+            >
+              Sign In
+            </Link>
             <Link href="/demo">
               <Button 
                 size="sm" 
-                className={isDarkHero ? 'bg-emerald-500 hover:bg-emerald-400 text-white' : ''}
+                className="bg-emerald-600 text-white"
                 data-testid="nav-request-demo"
               >
                 Request Demo
@@ -102,9 +103,7 @@ export function MarketingNav() {
           </div>
 
           <button 
-            className={`md:hidden p-2 rounded-md transition-colors ${
-              isDarkHero ? 'hover:bg-white/10 text-white' : 'hover:bg-muted'
-            }`}
+            className="md:hidden p-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
             data-testid="button-mobile-menu"
@@ -130,16 +129,22 @@ export function MarketingNav() {
                   href={link.href} 
                   className={`block px-4 py-3 text-sm rounded-md transition-colors ${
                     pathname === link.href
-                      ? 'text-primary font-medium bg-primary/5'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      ? 'text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/5'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
+              <Link 
+                href="/auth/login" 
+                className="block px-4 py-3 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              >
+                Sign In
+              </Link>
               <div className="pt-2">
                 <Link href="/demo">
-                  <Button size="sm" className="w-full">
+                  <Button size="sm" className="w-full bg-emerald-600 text-white">
                     Request Demo
                   </Button>
                 </Link>
