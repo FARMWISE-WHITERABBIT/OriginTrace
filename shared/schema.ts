@@ -23,7 +23,7 @@ export const organizations = pgTable("organizations", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   commodities: jsonb("commodities").default([]),
   subscriptionTier: text("subscription_tier").default("starter"),
-  featureFlags: jsonb("feature_flags").default({ financing: false, api_access: false, advanced_mapping: false, satellite_overlays: false }),
+  featureFlags: jsonb("feature_flags").default({ financing: false, api_access: false, advanced_mapping: false, satellite_overlays: false, buyer_portal_access: false, dpp_access: false }),
   agentSeatLimit: integer("agent_seat_limit").default(5),
   monthlyCollectionLimit: integer("monthly_collection_limit").default(1000),
   dataRegion: text("data_region").default("default"),

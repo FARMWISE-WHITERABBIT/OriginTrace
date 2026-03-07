@@ -347,7 +347,7 @@ const LIFECYCLE_STAGES = [
   { key: 'cleared', label: 'Cleared', icon: CircleCheckBig },
 ] as const;
 
-function getStageIndex(status: string, outcomes: ShipmentOutcome[], estimatedShipDate?: string | null): number {
+function getStageIndex(status: string, outcomes: ShipmentOutcome[], estimatedShipDate?: string | null, createdAt?: string | null): number {
   const hasApproval = outcomes.some(o => o.outcome === 'approved' || o.outcome === 'conditional_release');
   const hasAnyOutcome = outcomes.length > 0;
 
@@ -355,11 +355,20 @@ function getStageIndex(status: string, outcomes: ShipmentOutcome[], estimatedShi
   if (hasApproval) return 5;
   if (hasAnyOutcome) return 4;
   if (status === 'shipped') {
+    const now = new Date();
+    const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
+    const referenceDate = createdAt ? new Date(createdAt) : now;
+    const timeSinceCreation = now.getTime() - referenceDate.getTime();
+
+    if (timeSinceCreation < GRACE_PERIOD_MS) {
+      return 2;
+    }
+
     if (estimatedShipDate) {
       const shipDate = new Date(estimatedShipDate);
-      const now = new Date();
       if (now > shipDate) return 3;
     }
+
     return 2;
   }
   if (status === 'ready') return 1;
@@ -371,7 +380,7 @@ function getStageDates(shipment: ShipmentDetail, outcomes: ShipmentOutcome[]): R
   dates.planning = shipment.created_at;
   dates.packed = shipment.status === 'ready' || shipment.status === 'shipped' ? shipment.estimated_ship_date || shipment.created_at : null;
   dates.dispatched = shipment.status === 'shipped' ? shipment.estimated_ship_date || shipment.created_at : null;
-  dates.in_transit = shipment.status === 'shipped' ? shipment.estimated_ship_date || null : null;
+  dates.in_transit = shipment.status === 'shipped' ? shipment.estimated_ship_date || shipment.created_at : null;
   const firstOutcome = outcomes.length > 0 ? outcomes[outcomes.length - 1] : null;
   dates.arrived = firstOutcome ? firstOutcome.outcome_date : null;
   const approval = outcomes.find(o => o.outcome === 'approved' || o.outcome === 'conditional_release');
@@ -380,7 +389,7 @@ function getStageDates(shipment: ShipmentDetail, outcomes: ShipmentOutcome[]): R
 }
 
 function ShipmentTimeline({ shipment, outcomes }: { shipment: ShipmentDetail; outcomes: ShipmentOutcome[] }) {
-  const currentStageIndex = getStageIndex(shipment.status, outcomes, shipment.estimated_ship_date);
+  const currentStageIndex = getStageIndex(shipment.status, outcomes, shipment.estimated_ship_date, shipment.created_at);
   const stageDates = getStageDates(shipment, outcomes);
   const isCancelled = shipment.status === 'cancelled';
 

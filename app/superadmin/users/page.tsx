@@ -175,6 +175,13 @@ export default function UsersPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <User className="h-12 w-12 mx-auto mb-3 opacity-40" />
+              <p className="text-lg font-medium">No users found</p>
+              <p className="text-sm">{searchQuery ? 'Try adjusting your search query.' : 'Users will appear here once they register.'}</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -244,6 +251,7 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

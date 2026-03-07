@@ -60,7 +60,7 @@ export default function SuperadminLoginPage() {
         return;
       }
 
-      const res = await fetch('/api/superadmin?resource=metrics');
+      const res = await fetch('/api/superadmin?resource=enhanced_metrics');
       if (!res.ok) {
         await supabase.auth.signOut();
         toast({
