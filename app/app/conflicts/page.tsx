@@ -290,7 +290,7 @@ export default function ConflictsPage() {
   );
 
   return (
-    <TierGate feature="boundary_conflicts" requiredTier="enterprise" featureLabel="Boundary Conflicts">
+    <TierGate feature="boundary_conflicts" requiredTier="pro" featureLabel="Boundary Conflicts">
     {isLoading ? (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

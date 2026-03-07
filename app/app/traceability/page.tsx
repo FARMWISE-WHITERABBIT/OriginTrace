@@ -118,7 +118,7 @@ export default function TraceabilityPage() {
   };
 
   return (
-    <TierGate feature="traceability" requiredTier="pro" featureLabel="Traceability">
+    <TierGate feature="traceability" requiredTier="starter" featureLabel="Traceability">
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Bag-to-Bush Traceability</h1>

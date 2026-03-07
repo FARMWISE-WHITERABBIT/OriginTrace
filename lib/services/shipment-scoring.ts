@@ -1,3 +1,15 @@
+export interface ComplianceProfile {
+  id: string;
+  name: string;
+  destination_market: string;
+  regulation_framework: string;
+  required_documents: string[];
+  required_certifications: string[];
+  geo_verification_level: string;
+  min_traceability_depth: number;
+  custom_rules?: Record<string, any>;
+}
+
 export interface ShipmentScoreInput {
   shipment: {
     id: string;
@@ -32,6 +44,7 @@ export interface ShipmentScoreInput {
   cold_chain_total_entries?: number;
   lot_count?: number;
   lots_with_valid_mass_balance?: number;
+  compliance_profile?: ComplianceProfile;
 }
 
 export interface ScoreDimension {
@@ -89,13 +102,35 @@ function scoreTraceabilityIntegrity(
   const traceabilityScore = traceabilityPct * 100;
   details.push(`${traceableCount}/${items.length} items have complete traceability (${Math.round(traceabilityPct * 100)}%)`);
 
+  const profile = input.compliance_profile;
+  const geoLevel = profile?.geo_verification_level || 'basic';
+
   const batches = items.filter((i) => i.item_type === 'batch' && i.batch_data);
   let gpsScore = 100;
   if (batches.length > 0) {
     const gpsCount = batches.filter((b) => b.batch_data!.has_gps).length;
     gpsScore = (gpsCount / batches.length) * 100;
     details.push(`${gpsCount}/${batches.length} batches have GPS-linked farms`);
-    if (gpsCount < batches.length) {
+
+    if (geoLevel === 'satellite' || geoLevel === 'polygon') {
+      if (gpsCount < batches.length) {
+        const isStrict = geoLevel === 'satellite';
+        remediation.push({
+          priority: isStrict ? 'urgent' : 'important',
+          title: `Complete GPS farm mapping (${geoLevel} level required)`,
+          description: `${batches.length - gpsCount} batch(es) are missing GPS coordinates. Compliance profile "${profile?.name || 'default'}" requires ${geoLevel}-level geo-verification.`,
+          dimension: 'Traceability Integrity',
+        });
+        if (isStrict) {
+          riskFlags.push({
+            severity: 'critical',
+            category: 'Geo-Verification',
+            message: `Satellite-level geo-verification required but ${batches.length - gpsCount} batch(es) lack GPS data`,
+            is_hard_fail: false,
+          });
+        }
+      }
+    } else if (gpsCount < batches.length) {
       remediation.push({
         priority: 'important',
         title: 'Complete GPS farm mapping',
@@ -232,7 +267,7 @@ function scoreDocumentationCompleteness(
   const riskFlags: RiskFlag[] = [];
   const remediation: RemediationItem[] = [];
 
-  const requiredDocs = [
+  const defaultRequiredDocs = [
     { key: 'certificate_of_origin', label: 'Certificate of Origin' },
     { key: 'phytosanitary_certificate', label: 'Phytosanitary Certificate' },
     { key: 'bill_of_lading', label: 'Bill of Lading' },
@@ -241,19 +276,38 @@ function scoreDocumentationCompleteness(
     { key: 'export_permit', label: 'Export Permit' },
   ];
 
+  const profile = input.compliance_profile;
+
+  const requiredDocs = (profile && profile.required_documents.length > 0)
+    ? profile.required_documents.map((doc) => ({
+        key: doc.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+        label: doc,
+      }))
+    : defaultRequiredDocs;
+
+  if (profile) {
+    details.push(`Using compliance profile: ${profile.name} (${profile.regulation_framework})`);
+  }
+
   const pointsPerDoc = 100 / requiredDocs.length;
   let score = 0;
   let presentCount = 0;
 
   for (const doc of requiredDocs) {
-    if (doc_status[doc.key] === true) {
+    const isPresent = doc_status[doc.key] === true ||
+      Object.keys(doc_status).some((k) => {
+        const normalizedKey = k.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        return normalizedKey === doc.key && doc_status[k] === true;
+      });
+
+    if (isPresent) {
       score += pointsPerDoc;
       presentCount++;
     } else {
       remediation.push({
         priority: 'important',
         title: `Obtain ${doc.label}`,
-        description: `${doc.label} is missing and required for export compliance.`,
+        description: `${doc.label} is missing and required for ${profile ? profile.regulation_framework : 'export'} compliance.`,
         dimension: 'Documentation Completeness',
       });
     }
@@ -371,7 +425,23 @@ function scoreRegulatoryAlignment(
   const riskFlags: RiskFlag[] = [];
   const remediation: RemediationItem[] = [];
 
-  if (target_regulations.length === 0) {
+  const profile = input.compliance_profile;
+
+  let effectiveRegulations = [...target_regulations];
+  if (profile && profile.regulation_framework) {
+    const frameworkMap: Record<string, string> = {
+      'EUDR': 'EUDR',
+      'FSMA_204': 'FSMA 204',
+      'UK_Environment_Act': 'UK Environment Act',
+    };
+    const mapped = frameworkMap[profile.regulation_framework] || profile.regulation_framework;
+    if (!effectiveRegulations.some((r) => r.toLowerCase().includes(mapped.toLowerCase()))) {
+      effectiveRegulations.push(mapped);
+    }
+    details.push(`Compliance profile "${profile.name}" adds ${profile.regulation_framework} framework`);
+  }
+
+  if (effectiveRegulations.length === 0) {
     details.push('No target regulations specified');
     return { score: 100, details, riskFlags, remediation };
   }
@@ -382,7 +452,7 @@ function scoreRegulatoryAlignment(
 
   const regulationScores: number[] = [];
 
-  for (const reg of target_regulations) {
+  for (const reg of effectiveRegulations) {
     const regLower = reg.toLowerCase();
     let met = 0;
     let total = 0;

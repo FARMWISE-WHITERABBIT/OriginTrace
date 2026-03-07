@@ -121,7 +121,7 @@ export default function DDSExportPage() {
   };
 
   return (
-    <TierGate feature="dds_export" requiredTier="enterprise" featureLabel="DDS Export">
+    <TierGate feature="dds_export" requiredTier="pro" featureLabel="DDS Export">
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">DDS Export</h1>

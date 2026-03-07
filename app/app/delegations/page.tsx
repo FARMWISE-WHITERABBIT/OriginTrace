@@ -166,7 +166,7 @@ export default function DelegationsPage() {
   };
 
   return (
-    <TierGate feature="delegations" requiredTier="enterprise" featureLabel="Delegations">
+    <TierGate feature="delegations" requiredTier="pro" featureLabel="Delegations">
     {isLoading ? (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

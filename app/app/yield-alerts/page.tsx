@@ -117,7 +117,7 @@ export default function YieldAlertsPage() {
   };
 
   return (
-    <TierGate feature="yield_alerts" requiredTier="pro" featureLabel="Yield Alerts">
+    <TierGate feature="yield_alerts" requiredTier="basic" featureLabel="Yield Alerts">
     {isLoading ? (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

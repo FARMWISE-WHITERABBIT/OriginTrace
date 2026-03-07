@@ -62,6 +62,7 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/analytics': ['admin', 'aggregator'],
   '/app/contracts': ['admin'],
   '/app/buyers': ['admin'],
+  '/app/api-keys': ['admin'],
   '/app/buyer': ['buyer'],
   '/app/buyer/contracts': ['buyer'],
   '/app/buyer/shipments': ['buyer'],

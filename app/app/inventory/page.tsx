@@ -170,7 +170,7 @@ export default function InventoryPage() {
   };
 
   return (
-    <TierGate feature="inventory" requiredTier="pro" featureLabel="Inventory">
+    <TierGate feature="inventory" requiredTier="basic" featureLabel="Inventory">
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

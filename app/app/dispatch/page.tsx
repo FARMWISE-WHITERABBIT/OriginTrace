@@ -54,7 +54,7 @@ interface ContributionItem {
 
 export default function DispatchPage() {
   return (
-    <TierGate feature="dispatch" requiredTier="pro" featureLabel="Dispatch">
+    <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -181,6 +181,7 @@ const ROUTE_TO_FEATURE: Record<string, TierFeature> = {
   '/app/dpp': 'digital_product_passport',
   '/app/contracts': 'contracts',
   '/app/buyers': 'buyer_portal',
+  '/app/api-keys': 'enterprise_api',
   '/app/buyer': 'buyer_portal',
 };
 

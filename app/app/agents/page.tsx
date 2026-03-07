@@ -182,7 +182,7 @@ export default function AgentManagementPage() {
   };
 
   return (
-    <TierGate feature="agents" requiredTier="pro" featureLabel="Field Agents">
+    <TierGate feature="agents" requiredTier="basic" featureLabel="Field Agents">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

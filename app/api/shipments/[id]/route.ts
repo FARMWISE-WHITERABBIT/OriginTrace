@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
-import type { ShipmentScoreInput } from '@/lib/services/shipment-scoring';
+import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -234,6 +234,18 @@ export async function GET(
       .eq('shipment_id', shipment.id)
       .eq('org_id', profile.org_id);
 
+    let complianceProfile: ComplianceProfile | undefined;
+    if (shipment.compliance_profile_id) {
+      const { data: cpData } = await supabase
+        .from('compliance_profiles')
+        .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
+        .eq('id', shipment.compliance_profile_id)
+        .single();
+      if (cpData) {
+        complianceProfile = cpData as ComplianceProfile;
+      }
+    }
+
     const scoreInput: ShipmentScoreInput = {
       shipment: {
         id: shipment.id,
@@ -249,6 +261,7 @@ export async function GET(
       cold_chain_total_entries: coldChainTotalEntries,
       lot_count: lots?.length || 0,
       lots_with_valid_mass_balance: lots?.filter((l: any) => l.mass_balance_valid).length || 0,
+      compliance_profile: complianceProfile,
     };
 
     const readiness = computeShipmentReadiness(scoreInput);
@@ -419,6 +432,18 @@ export async function PATCH(
       .select('*')
       .eq('shipment_id', params.id);
 
+    let patchComplianceProfile: ComplianceProfile | undefined;
+    if (updatedShipment.compliance_profile_id) {
+      const { data: cpData } = await supabase
+        .from('compliance_profiles')
+        .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
+        .eq('id', updatedShipment.compliance_profile_id)
+        .single();
+      if (cpData) {
+        patchComplianceProfile = cpData as ComplianceProfile;
+      }
+    }
+
     const scoreInput: ShipmentScoreInput = {
       shipment: {
         id: updatedShipment.id,
@@ -435,6 +460,7 @@ export async function PATCH(
         traceability_complete: item.traceability_complete || false,
         compliance_status: item.compliance_status || 'unknown',
       })),
+      compliance_profile: patchComplianceProfile,
     };
 
     const readinessResult = computeShipmentReadiness(scoreInput);

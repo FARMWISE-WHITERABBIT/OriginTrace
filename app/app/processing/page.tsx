@@ -287,7 +287,7 @@ export default function ProcessingPage() {
   const validRuns = processingRuns.filter(r => r.mass_balance_valid).length;
 
   return (
-    <TierGate feature="processing" requiredTier="enterprise" featureLabel="Processing Runs">
+    <TierGate feature="processing" requiredTier="pro" featureLabel="Processing Runs">
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>

@@ -118,13 +118,14 @@ export function AppSidebar() {
   };
 
   // Determine user role for navigation
+  const validAppRoles: UserRole[] = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer'];
   let userRole: UserRole = 'agent';
   if (isSystemAdmin && pathname.startsWith('/superadmin')) {
     userRole = 'superadmin';
-  } else if (isSystemAdmin || profile?.role === 'admin') {
-    userRole = 'admin';
-  } else if (profile?.role === 'aggregator') {
-    userRole = 'aggregator';
+  } else if (isSystemAdmin && !pathname.startsWith('/app')) {
+    userRole = 'superadmin';
+  } else if (profile?.role && validAppRoles.includes(profile.role as UserRole)) {
+    userRole = profile.role as UserRole;
   }
 
   const navConfig = getNavigationConfig(userRole);

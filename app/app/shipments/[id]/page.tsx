@@ -36,6 +36,11 @@ import {
   Plus,
   DollarSign,
   Calendar,
+  ClipboardList,
+  PackageCheck,
+  Truck,
+  MapPin,
+  CircleCheckBig,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -333,6 +338,128 @@ function LotDialog({ open, onOpenChange, onSubmit, isSubmitting, shipmentCode }:
   );
 }
 
+const LIFECYCLE_STAGES = [
+  { key: 'planning', label: 'Planning', icon: ClipboardList },
+  { key: 'packed', label: 'Packed', icon: PackageCheck },
+  { key: 'dispatched', label: 'Dispatched', icon: Truck },
+  { key: 'in_transit', label: 'In Transit', icon: Ship },
+  { key: 'arrived', label: 'Arrived', icon: MapPin },
+  { key: 'cleared', label: 'Cleared', icon: CircleCheckBig },
+] as const;
+
+function getStageIndex(status: string, outcomes: ShipmentOutcome[]): number {
+  const hasApproval = outcomes.some(o => o.outcome === 'approved' || o.outcome === 'conditional_release');
+  const hasAnyOutcome = outcomes.length > 0;
+
+  if (status === 'cancelled') return -1;
+  if (hasApproval) return 5;
+  if (hasAnyOutcome) return 4;
+  if (status === 'shipped') return 3;
+  if (status === 'ready') return 1;
+  return 0;
+}
+
+function getStageDates(shipment: ShipmentDetail, outcomes: ShipmentOutcome[]): Record<string, string | null> {
+  const dates: Record<string, string | null> = {};
+  dates.planning = shipment.created_at;
+  dates.packed = shipment.status === 'ready' || shipment.status === 'shipped' ? shipment.estimated_ship_date || shipment.created_at : null;
+  dates.dispatched = shipment.status === 'shipped' ? shipment.estimated_ship_date || shipment.created_at : null;
+  dates.in_transit = shipment.status === 'shipped' ? shipment.estimated_ship_date || null : null;
+  const firstOutcome = outcomes.length > 0 ? outcomes[outcomes.length - 1] : null;
+  dates.arrived = firstOutcome ? firstOutcome.outcome_date : null;
+  const approval = outcomes.find(o => o.outcome === 'approved' || o.outcome === 'conditional_release');
+  dates.cleared = approval ? approval.outcome_date : null;
+  return dates;
+}
+
+function ShipmentTimeline({ shipment, outcomes }: { shipment: ShipmentDetail; outcomes: ShipmentOutcome[] }) {
+  const currentStageIndex = getStageIndex(shipment.status, outcomes);
+  const stageDates = getStageDates(shipment, outcomes);
+  const isCancelled = shipment.status === 'cancelled';
+
+  return (
+    <Card data-testid="card-shipment-timeline">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Ship className="h-4 w-4" />
+          Shipment Lifecycle
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-start justify-between gap-1 relative">
+          <div className="absolute top-5 left-[calc(8.33%)] right-[calc(8.33%)] h-0.5 bg-muted" />
+          <div
+            className="absolute top-5 left-[calc(8.33%)] h-0.5 bg-primary transition-all duration-500"
+            style={{
+              width: isCancelled
+                ? '0%'
+                : `${Math.max(0, (currentStageIndex / (LIFECYCLE_STAGES.length - 1)) * 83.34)}%`,
+            }}
+          />
+
+          {LIFECYCLE_STAGES.map((stage, index) => {
+            const isCompleted = !isCancelled && index <= currentStageIndex;
+            const isCurrent = !isCancelled && index === currentStageIndex;
+            const StageIcon = stage.icon;
+            const dateStr = stageDates[stage.key];
+
+            return (
+              <div
+                key={stage.key}
+                className="flex flex-col items-center relative z-10"
+                style={{ width: `${100 / LIFECYCLE_STAGES.length}%` }}
+                data-testid={`timeline-stage-${stage.key}`}
+              >
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    isCancelled
+                      ? 'border-muted bg-muted'
+                      : isCurrent
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : isCompleted
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-muted bg-background text-muted-foreground'
+                  }`}
+                >
+                  {isCompleted && !isCurrent ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <StageIcon className="h-4 w-4" />
+                  )}
+                </div>
+                <p
+                  className={`text-xs font-medium mt-2 text-center ${
+                    isCancelled
+                      ? 'text-muted-foreground'
+                      : isCurrent
+                        ? 'text-foreground'
+                        : isCompleted
+                          ? 'text-foreground/80'
+                          : 'text-muted-foreground'
+                  }`}
+                >
+                  {stage.label}
+                </p>
+                {dateStr && isCompleted && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 text-center">
+                    {new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {isCancelled && (
+          <div className="flex items-center gap-2 mt-4 p-2 rounded-md bg-destructive/10">
+            <XCircle className="h-4 w-4 text-destructive shrink-0" />
+            <p className="text-sm text-destructive font-medium">Shipment Cancelled</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ShipmentDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -594,6 +721,8 @@ export default function ShipmentDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
 
       {readiness && readiness.risk_flags.length > 0 && (
         <Card>

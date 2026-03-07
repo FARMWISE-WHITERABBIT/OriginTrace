@@ -87,7 +87,7 @@ export default function FarmersPage() {
   const withConsent = farmers.filter(f => f.has_consent).length;
 
   return (
-    <TierGate feature="farmers_list" requiredTier="pro" featureLabel="Farmers">
+    <TierGate feature="farmers_list" requiredTier="starter" featureLabel="Farmers">
     {isLoading ? (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { payee_name, payee_type, amount, currency, payment_method, reference_number, payment_date, notes } = body;
+    const { payee_name, payee_type, amount, currency, payment_method, reference_number, linked_entity_type, linked_entity_id, payment_date, notes } = body;
 
     if (!payee_name || !payee_type || !amount || !payment_method) {
       return NextResponse.json(
@@ -144,6 +144,14 @@ export async function POST(request: NextRequest) {
     if (typeof amount !== 'number' || amount <= 0) {
       return NextResponse.json(
         { error: 'Amount must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    const validEntityTypes = ['collection_batch', 'contract'];
+    if (linked_entity_type && !validEntityTypes.includes(linked_entity_type)) {
+      return NextResponse.json(
+        { error: 'Invalid linked_entity_type. Must be collection_batch or contract' },
         { status: 400 }
       );
     }
@@ -195,6 +203,8 @@ export async function POST(request: NextRequest) {
         currency: currency || 'NGN',
         payment_method,
         reference_number: reference_number || null,
+        linked_entity_type: linked_entity_type || null,
+        linked_entity_id: linked_entity_id || null,
         payment_date: payment_date || new Date().toISOString().split('T')[0],
         notes: notes || null,
         status: 'completed',

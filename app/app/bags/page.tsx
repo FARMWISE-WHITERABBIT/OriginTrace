@@ -121,7 +121,7 @@ export default function BagsPage() {
   const isAdmin = profile?.role === 'admin' || isSystemAdmin;
 
   return (
-    <TierGate feature="bags" requiredTier="pro" featureLabel="Bags">
+    <TierGate feature="bags" requiredTier="basic" featureLabel="Bags">
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
