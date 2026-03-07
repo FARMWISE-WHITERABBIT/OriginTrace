@@ -24,8 +24,8 @@ export const TIER_TAGLINES: Record<SubscriptionTier, string> = {
 export const TIER_DESCRIPTIONS: Record<SubscriptionTier, string> = {
   starter: 'For pilots, NGOs, and early aggregators demonstrating traceability value.',
   basic: 'For active supply chains with real throughput — regional aggregators, domestic processors, co-ops.',
-  pro: 'For exporters and processors supplying EU/US markets. Full compliance and pedigree capabilities.',
-  enterprise: 'OriginTrace as critical trade infrastructure — multinationals, governments, commodity boards.',
+  pro: 'For exporters and processors supplying EU/US markets. Full compliance, buyer portal, and shipment planning.',
+  enterprise: 'OriginTrace as critical trade infrastructure — Digital Product Passports, enterprise API, multinationals.',
 };
 
 export type TierFeature =
@@ -50,7 +50,18 @@ export type TierFeature =
   | 'pedigree'
   | 'delegations'
   | 'resolve'
-  | 'shipment_readiness';
+  | 'shipment_readiness'
+  | 'analytics'
+  | 'documents'
+  | 'payments'
+  | 'supplier_scorecards'
+  | 'cost_analysis'
+  | 'compliance_profiles'
+  | 'shipment_planning'
+  | 'buyer_portal'
+  | 'contracts'
+  | 'digital_product_passport'
+  | 'enterprise_api';
 
 export const FEATURE_LABELS: Record<TierFeature, string> = {
   smart_collect: 'Smart Collection',
@@ -75,6 +86,17 @@ export const FEATURE_LABELS: Record<TierFeature, string> = {
   delegations: 'Super-Aggregator Delegation',
   resolve: 'Conflict Management',
   shipment_readiness: 'Shipment Readiness',
+  analytics: 'Analytics & Reporting',
+  documents: 'Document Vault',
+  payments: 'Payment Tracking',
+  supplier_scorecards: 'Supplier Scorecards',
+  cost_analysis: 'Cost & Revenue Analysis',
+  compliance_profiles: 'Compliance Profiles',
+  shipment_planning: 'Shipment Planning Workspace',
+  buyer_portal: 'Buyer Portal',
+  contracts: 'Contract Management',
+  digital_product_passport: 'Digital Product Passport',
+  enterprise_api: 'Enterprise API Access',
 };
 
 const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
@@ -92,6 +114,9 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   agents: 'basic',
   scan_verify: 'basic',
   dispatch: 'basic',
+  analytics: 'basic',
+  documents: 'basic',
+  payments: 'basic',
 
   compliance_review: 'pro',
   dds_export: 'pro',
@@ -101,8 +126,16 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   delegations: 'pro',
   resolve: 'pro',
   shipment_readiness: 'pro',
+  supplier_scorecards: 'pro',
+  cost_analysis: 'pro',
+  compliance_profiles: 'pro',
+  shipment_planning: 'pro',
+  buyer_portal: 'pro',
+  contracts: 'pro',
 
   data_vault: 'enterprise',
+  digital_product_passport: 'enterprise',
+  enterprise_api: 'enterprise',
 };
 
 export function getTierFeatures(tier: SubscriptionTier): TierFeature[] {
@@ -141,6 +174,14 @@ const ROUTE_TO_FEATURE: Record<string, TierFeature> = {
   '/app/delegations': 'delegations',
   '/app/resolve': 'resolve',
   '/app/shipments': 'shipment_readiness',
+  '/app/analytics': 'analytics',
+  '/app/documents': 'documents',
+  '/app/payments': 'payments',
+  '/app/compliance-profiles': 'compliance_profiles',
+  '/app/dpp': 'digital_product_passport',
+  '/app/contracts': 'contracts',
+  '/app/buyers': 'buyer_portal',
+  '/app/buyer': 'buyer_portal',
 };
 
 const API_ROUTE_TO_FEATURE: Record<string, TierFeature> = {
@@ -158,6 +199,16 @@ const API_ROUTE_TO_FEATURE: Record<string, TierFeature> = {
   '/api/finished-goods': 'processing',
   '/api/delegations': 'delegations',
   '/api/shipments': 'shipment_readiness',
+  '/api/analytics': 'analytics',
+  '/api/documents': 'documents',
+  '/api/payments': 'payments',
+  '/api/compliance-profiles': 'compliance_profiles',
+  '/api/dpp': 'digital_product_passport',
+  '/api/contracts': 'contracts',
+  '/api/buyers': 'buyer_portal',
+  '/api/supply-chain-links': 'buyer_portal',
+  '/api/keys': 'enterprise_api',
+  '/api/v1': 'enterprise_api',
 };
 
 export function hasTierAccess(orgTier: string | undefined, feature: TierFeature): boolean {

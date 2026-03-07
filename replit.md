@@ -1,7 +1,9 @@
 # OriginTrace
 
 ## Overview
-OriginTrace is an enterprise-grade traceability and compliance platform for agricultural organizations, digitalizing supply chains from farm to warehouse. It provides a role-based workflow for admins, aggregators, and field agents, featuring farm boundary mapping, hybrid bag-batch traceability, an offline-first Progressive Web Application (PWA), and a sync dashboard. The platform supports compliance review, generates due diligence statements for EU TRACES, and ensures multi-tenant isolation with Row Level Security. OriginTrace aims to enhance traceability, ensure compliance, improve efficiency, expand market access, and incorporate anti-fraud measures, spatial intelligence, farmer performance analytics, data sovereignty, feature gating, and a finished goods pedigree system.
+OriginTrace is Trust Infrastructure for Origin-Sensitive Supply Chains — an enterprise-grade, multi-tenant SaaS platform for mid-to-large exporters and global buyers. Core value proposition: prevent shipment rejection through dynamic pre-shipment compliance scoring across 5 dimensions. Agriculture is the primary vertical, with architecture supporting timber, minerals, seafood, and textiles.
+
+The platform provides role-based workflows for 8 organizational roles (admin, aggregator, agent, quality_manager, logistics_coordinator, compliance_officer, warehouse_supervisor, buyer), featuring farm boundary mapping, hybrid bag-batch traceability, offline-first PWA, sync dashboard, document vault, payment tracking, buyer portal (buyer-invites-exporter flow), compliance profiles, Digital Product Passport, and enterprise API.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,62 +11,117 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Route Architecture
-The application uses two main dashboard layouts: `/superadmin/*` for platform governance with a dark slate theme, and `/app/*` for all organizational users with dynamic role-based navigation. Centralized Role-Based Access Control (RBAC) and a single source of truth for navigation configuration are key.
+The application uses three main layouts:
+- `/superadmin/*` for platform governance with a dark slate theme
+- `/app/*` for all organizational users (exporter roles) with dynamic role-based navigation
+- `/app/buyer/*` for buyer portal users with separate navigation
+Centralized RBAC (`lib/rbac.ts`) and navigation config (`lib/config/navigation.ts`) are the single source of truth. Tier-based feature gating (`lib/config/tier-gating.ts`) controls feature access per subscription tier.
+
+### Roles
+- **admin**: Full organizational access — settings, team, compliance, exports, analytics, buyer management
+- **aggregator**: Procurement and field operations — batches, bags, agents, farmers, payments
+- **agent**: Field operations — collection, farm mapping, farmer registration, sync (offline-first optimized)
+- **quality_manager**: Quality control — compliance review, yield alerts, bags, traceability, verification
+- **logistics_coordinator**: Shipment planning — dispatch, cold chain, inventory, shipments, documents
+- **compliance_officer**: Regulatory compliance — DDS, pedigree, DPP, compliance profiles, farm polygons
+- **warehouse_supervisor**: Warehouse operations — inventory, bags, receiving, dispatch, verification
+- **buyer**: Supply chain visibility (separate portal) — contracts, shipments, traceability, shared documents
 
 ### Color System
-OriginTrace employs a light-first enterprise UI with a specific palette: Primary Brand (Origin Green #2E7D6B), Headers/Active States (Deep Forest #1F5F52), Secondary UI/Accents (Muted Sage #6FB8A8), Main Background (#F8FAF9), Card/Panel (#FFFFFF), Dividers (#E5E7EB), and a range of text and status colors.
+Light-first enterprise UI: Primary Brand (Origin Green #2E7D6B), Headers/Active States (Deep Forest #1F5F52), Secondary UI/Accents (Muted Sage #6FB8A8), Main Background (#F8FAF9), Card/Panel (#FFFFFF), Dividers (#E5E7EB).
 
 ### Frontend
-Built with Next.js 16 (App Router), `shadcn/ui` (Radix UI, Tailwind CSS) for components, and Geist Mono for specific typography. Features include GPS-based farm mapping, light/dark mode, interactive onboarding, and a public QR verify page. The PWA offers offline-first capabilities using IndexedDB for sync queuing, optimized for outdoor use with high contrast.
+Built with Next.js 16 (App Router), `shadcn/ui` (Radix UI, Tailwind CSS), Geist Mono typography, `recharts` for analytics visualization. Features include GPS-based farm mapping, light/dark mode, interactive onboarding, public QR verify page, and analytics dashboards with trend charts. PWA offers offline-first capabilities using IndexedDB.
 
 ### Backend
-Utilizes Next.js serverless functions (App Router API routes) with TypeScript. Authentication is handled by Supabase Auth. APIs are RESTful for CRUD and specialized functions like tenant health, feature toggles, and pedigree generation.
+Next.js serverless functions (App Router API routes) with TypeScript. Authentication: Supabase Auth. APIs are RESTful. Enterprise API layer (`/api/v1/`) uses API key authentication (`lib/api-auth.ts`) with scope enforcement and rate limiting.
 
 ### Data Storage
-Supabase PostgreSQL serves as the database, enforcing multi-tenant isolation via Row Level Security (RLS). The schema includes GeoJSON storage for farm boundaries and manages entities such as organizations, collection batches, agents, farms, bags, collections, and compliance files. Additional tables support `crop_standards`, `farmer_performance_ledger`, `processing_runs`, and `finished_goods`.
+Supabase PostgreSQL with RLS for multi-tenant isolation. Schema includes:
+- **Core**: organizations, profiles, farms, bags, collections, collection_batches, agent_sync_status, compliance_files, dds_exports
+- **Processing**: processing_runs, processing_run_batches, finished_goods, recovery_standards
+- **Document Vault**: documents (with expiry tracking), document_alerts
+- **Payments**: payments (multi-currency: NGN/USD/EUR/GBP/XOF)
+- **Buyer Portal**: buyer_organizations, buyer_profiles, supply_chain_links, contracts, contract_shipments
+- **Compliance**: compliance_profiles (EUDR/FSMA_204/UK_Environment_Act/custom), crop_standards, farm_conflicts
+- **DPP**: digital_product_passports (JSON-LD, chain of custody, sustainability claims)
+- **Enterprise**: api_keys (hashed, scoped, rate-limited)
+- **System**: system_admins, system_config, states, lgas, villages
+
+### Tier System
+- **Starter**: smart_collect, farmer_registration, farm_mapping, sync_dashboard, traceability, farm_polygons, farmers_list
+- **Basic**: + analytics, documents, payments, inventory, bags, yield_alerts, agents, scan_verify, dispatch
+- **Pro**: + compliance_review, dds_export, processing, pedigree, boundary_conflicts, delegations, resolve, shipment_readiness, supplier_scorecards, cost_analysis, compliance_profiles, shipment_planning, buyer_portal, contracts
+- **Enterprise**: + data_vault, digital_product_passport, enterprise_api
 
 ### Key Design Patterns
--   **Server-Side Registration**: Secure user and organization creation.
--   **RLS Policies**: Enforce multi-tenancy.
--   **Role-Based UI**: Dynamic dashboard views via RBAC.
--   **Offline-First PWA**: IndexedDB-based sync queue with optimistic UI.
--   **Hybrid Bag-Batch Model**: Links multiple bags to a collection session.
--   **Impersonation**: Superadmin capability with audit logging.
--   **Anti-Fraud Layer**: Yield-to-area validation, GPS spoof protection.
--   **Spatial Conflict Engine**: Detects and resolves overlapping farm boundaries.
--   **Finished Goods Pedigree**: QR-based verification and export compliance.
--   **Tier-Based Feature Gating**: Scalable tier model for features, with core traceability never gated.
--   **Shipment Readiness Intelligence**: Dynamic risk scoring for exports.
--   **Offline Reference Data Cache**: IndexedDB for locations, commodities, and farm data for offline form usage.
+- **Server-Side Registration**: Secure user and organization creation
+- **RLS Policies**: Enforce multi-tenancy
+- **Role-Based UI**: Dynamic dashboard views via RBAC (8 roles)
+- **Offline-First PWA**: IndexedDB-based sync queue with optimistic UI
+- **Hybrid Bag-Batch Model**: Links multiple bags to a collection session
+- **Impersonation**: Superadmin capability with audit logging
+- **Anti-Fraud Layer**: Yield-to-area validation, GPS spoof protection
+- **Spatial Conflict Engine**: Detects overlapping farm boundaries
+- **Finished Goods Pedigree**: QR-based verification and export compliance
+- **Tier-Based Feature Gating**: 4-tier model, core traceability never gated
+- **Shipment Readiness Intelligence**: Dynamic risk scoring for exports
+- **Buyer-Invites-Exporter Flow**: Buyers initiate supply chain connections
+- **Document Vault**: Expiry tracking with 7d/30d alerts
+- **API Key Auth**: SHA-256 hashed keys, scope-based access, rate limiting
+- **Digital Product Passport**: JSON-LD output, public verification endpoint
 
 ### Core Features
--   **Traceability**: Hybrid Bag-Batch, bag search, bag-to-bush timeline, finished goods pedigree.
--   **Compliance**: Farm review, DDS GeoJSON export for EU TRACES, automated yield validation, farmer performance ledger.
--   **Agent Tools**: GPS farm mapping, offline batch collection, sync dashboard, anti-fraud measures.
--   **Admin Tools**: Bag inventory, batch generation, org/user/team management, compliance rules, white-label branding, conflict resolution.
--   **Superadmin Command Tower**: KPI dashboard, tenant health, configurable tier management.
--   **Marketing Site**: Public-facing pages focused on "Export Risk & Trade Compliance Infrastructure" covering multiple regulations (EU, UK, US) and including a compliance calculator.
+- **Traceability**: Hybrid Bag-Batch, bag search, bag-to-bush timeline, finished goods pedigree
+- **Compliance**: Farm review, DDS GeoJSON export, yield validation, farmer performance ledger, compliance profiles (EUDR/FSMA/UK)
+- **Analytics**: Volume trends (recharts), agent performance, supplier scorecards, compliance metrics, period selectors
+- **Agent Tools**: GPS farm mapping, offline batch collection, sync dashboard, anti-fraud, AI OCR for ID scanning
+- **Admin Tools**: Bag inventory, batch generation, org/user/team management, compliance rules, white-label branding, analytics dashboard
+- **Document Vault**: Upload, expiry tracking, entity linking, type filtering, alert banners
+- **Payment Tracking**: Multi-currency (NGN/USD/EUR/GBP/XOF), 4 methods, ledger, CSV export, summaries
+- **Buyer Portal**: Buyer registration, supplier invitations, contract management, shipment visibility, traceability, shared documents
+- **Compliance Profiles**: Per-destination configuration, pre-built templates (EU/UK/US), document requirements, geo verification levels
+- **Digital Product Passport**: JSON-LD, public endpoint, sustainability claims, QR verification
+- **Enterprise API**: Versioned endpoints (/api/v1/), API key management, scope enforcement, rate limiting, API docs page
+- **Shipment Planning**: Creation wizard, batch selection, compliance scoring, document checklist
+- **Superadmin Command Tower**: KPI dashboard, tenant health, tier management, feature toggles
+- **Marketing Site**: Positioned as "Trust Infrastructure for Origin-Sensitive Supply Chains" covering EUDR, FSMA 204, UK Environment Act
 
-## Recent Changes (Mar 2026 Cleanup & OCR)
--   **AI-Powered OCR for Farmer ID Scanning**: Real document OCR via OpenAI vision model (Replit AI Integrations). API route at `/api/ocr` accepts base64 image, extracts farmer name + ID number from Nigerian identity documents (NIN, voter's card, driver's license). `OCRCapture` component (`components/ocr-capture.tsx`) integrated into farmer registration page (`app/app/farmers/new/page.tsx`) — agents can scan IDs to auto-fill name fields. Shows offline fallback message when no connection. Confidence score and document type displayed.
--   **SMS Service Removed**: Deleted `lib/services/sms-service.ts` and all SMS references from `app/api/batches/route.ts`. Platform no longer has SMS notification capability.
--   **Auto-Sync Activated**: `AutoSync` component (`components/auto-sync.tsx`) added to app layout (`app/app/layout.tsx`), calling `setupAutoSync()` globally. Pending batches now auto-sync every 30 seconds when online and immediately when device transitions from offline to online.
--   **Offline Fallback Page**: `public/offline.html` with OriginTrace branding serves when navigating to uncached pages while offline. Configured via `next-pwa` fallbacks in `next.config.mjs`.
--   **Unused Dependencies Cleaned**: Removed ~30 unused npm packages from Express/Wouter template artifacts (passport, express-session, recharts, react-icons, embla-carousel, react-resizable-panels, vaul, cmdk, input-otp, multiple unused Radix UI primitives, etc.).
--   **API Error Sanitization**: `app/api/locations/route.ts` and `app/api/sync/route.ts` no longer leak raw database error messages to clients. Generic error messages returned; real errors logged server-side.
--   **Dead `sync_queue` Removed**: Unused `sync_queue` IndexedDB object store removed from `lib/offline/sync-store.ts`. All sync flows use `pending_batches`. DB version bumped with migration to clean up existing users.
--   **Stale Config Fixed**: `components.json` CSS path updated from non-existent `client/src/index.css` to `app/globals.css`.
+## Recent Changes (Mar 2026 — Platform Expansion)
+
+### 10-Phase Expansion (Current Session)
+- **Role Expansion**: Added 5 new roles (quality_manager, logistics_coordinator, compliance_officer, warehouse_supervisor, buyer) with RBAC and navigation support
+- **Tier Gating Update**: Added 11 new tier features across Basic/Pro/Enterprise tiers
+- **Analytics Dashboard**: API route `/api/analytics` with volume trends, agent performance, compliance metrics. Admin and aggregator dashboards enhanced with recharts visualization
+- **Role-Specific Dashboards**: Created tailored dashboards for all 8 roles
+- **Document Vault**: Full CRUD API + UI with expiry tracking and entity linking
+- **Payment Tracking**: Multi-currency payment recording with ledger, summaries, CSV export
+- **Buyer Portal**: Buyer registration (`/auth/buyer-register`), supplier invitation flow, contract management, read-only shipment/traceability views
+- **Compliance Profiles**: EUDR/FSMA_204/UK_Environment_Act profiles with document requirements
+- **Digital Product Passport**: DPP generation from finished goods, JSON-LD output, public verification
+- **Enterprise API**: API key management, versioned endpoints (/api/v1/), rate limiting, API documentation page
+- **Shipment Planning**: Enhanced creation wizard with batch selection and compliance review
+- **Marketing Repositioning**: From "agricultural traceability" to "trust infrastructure for origin-sensitive supply chains"
+
+### Previous Cleanup (Early Mar 2026)
+- AI-Powered OCR for Farmer ID Scanning (OpenAI GPT-5.2)
+- SMS Service Removed
+- Auto-Sync Activated (30s interval + online event)
+- Offline Fallback Page
+- ~30 Unused Dependencies Cleaned
+- API Error Sanitization
+- Dead sync_queue Removed
 
 ## External Dependencies
-
--   **Supabase**: PostgreSQL database, authentication, RLS.
--   **Next.js**: Frontend and backend API routes.
--   **React**: Frontend library.
--   **Tailwind CSS**: Styling.
--   **shadcn/ui & Radix UI**: UI component libraries.
--   **IndexedDB (via `idb` library)**: Offline data storage and sync queuing.
--   **next-pwa**: PWA configuration.
--   **OpenAI (via Replit AI Integrations)**: Document OCR for farmer ID scanning.
--   **Driver.js**: Interactive guided tours.
--   **Signature Pad**: Signature capture.
--   **jsQR**: QR/barcode scanning.
+- **Supabase**: PostgreSQL database, authentication, RLS
+- **Next.js 16**: Frontend and backend API routes
+- **React**: Frontend library
+- **Tailwind CSS**: Styling
+- **shadcn/ui & Radix UI**: UI component libraries
+- **recharts**: Chart visualization for analytics dashboards
+- **IndexedDB (via `idb`)**: Offline data storage and sync queuing
+- **next-pwa**: PWA configuration
+- **OpenAI (via Replit AI Integrations)**: Document OCR for farmer ID scanning
+- **Driver.js**: Interactive guided tours
+- **Signature Pad**: Signature capture
+- **jsQR**: QR/barcode scanning

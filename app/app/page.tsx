@@ -4,6 +4,10 @@ import { useOrg } from '@/lib/contexts/org-context';
 import { AdminDashboard } from '@/components/dashboards/admin-dashboard';
 import { AgentDashboard } from '@/components/dashboards/agent-dashboard';
 import { AggregatorDashboard } from '@/components/dashboards/aggregator-dashboard';
+import { QualityManagerDashboard } from '@/components/dashboards/quality-manager-dashboard';
+import { LogisticsDashboard } from '@/components/dashboards/logistics-dashboard';
+import { ComplianceOfficerDashboard } from '@/components/dashboards/compliance-officer-dashboard';
+import { WarehouseDashboard } from '@/components/dashboards/warehouse-dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
@@ -46,6 +50,16 @@ export default function AppDashboardPage() {
 
   const role = profile.role;
 
+  const dashboardMap: Record<string, React.ReactNode> = {
+    admin: <AdminDashboard />,
+    aggregator: <AggregatorDashboard />,
+    agent: <AgentDashboard />,
+    quality_manager: <QualityManagerDashboard />,
+    logistics_coordinator: <LogisticsDashboard />,
+    compliance_officer: <ComplianceOfficerDashboard />,
+    warehouse_supervisor: <WarehouseDashboard />,
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -55,9 +69,7 @@ export default function AppDashboardPage() {
         </p>
       </div>
 
-      {role === 'admin' && <AdminDashboard />}
-      {role === 'aggregator' && <AggregatorDashboard />}
-      {role === 'agent' && <AgentDashboard />}
+      {dashboardMap[role] || <AdminDashboard />}
     </div>
   );
 }
