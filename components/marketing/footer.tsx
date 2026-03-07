@@ -24,7 +24,7 @@ export function MarketingFooter() {
               style={{ width: 'auto', height: '24px' }}
             />
             <p className="text-sm text-muted-foreground max-w-xs">
-              Export risk and compliance infrastructure for emerging market trade — helping exporters meet EU, UK, US, and buyer-driven regulatory requirements.
+              Trust infrastructure for origin-sensitive supply chains — helping exporters across agriculture, timber, minerals, and seafood meet EUDR, FSMA 204, UK Environment Act, and buyer-driven compliance requirements.
             </p>
           </div>
           
@@ -52,7 +52,7 @@ export function MarketingFooter() {
             &copy; 2026 OriginTrace. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
-            Trade Compliance Infrastructure
+            Trust Infrastructure for Origin-Sensitive Supply Chains
           </p>
         </div>
       </div>

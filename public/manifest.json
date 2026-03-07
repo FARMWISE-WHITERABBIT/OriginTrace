@@ -1,7 +1,7 @@
 {
-  "name": "OriginTrace - Agricultural Traceability",
+  "name": "OriginTrace - Trust Infrastructure for Supply Chains",
   "short_name": "OriginTrace",
-  "description": "Enterprise traceability and compliance platform for agricultural supply chains",
+  "description": "Trust infrastructure and compliance platform for origin-sensitive supply chains",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#F8FAF9",

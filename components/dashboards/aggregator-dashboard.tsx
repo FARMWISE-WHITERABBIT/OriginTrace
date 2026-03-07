@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -15,11 +15,19 @@ import {
   Truck,
   AlertTriangle,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Users,
-  Plus
+  Plus,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+
+type Period = '7d' | '30d' | '90d' | '1y';
 
 interface AggregatorStats {
   totalBatches: number;
@@ -33,6 +41,45 @@ interface AggregatorStats {
   activeAgents: number;
   complianceScore: number;
   flaggedBatches: number;
+}
+
+interface VolumeTrend {
+  date: string;
+  weight: number;
+  bags: number;
+  batches: number;
+}
+
+const PERIOD_OPTIONS: { value: Period; label: string }[] = [
+  { value: '7d', label: '7D' },
+  { value: '30d', label: '30D' },
+  { value: '90d', label: '90D' },
+  { value: '1y', label: '1Y' },
+];
+
+function TrendIndicator({ value }: { value: number }) {
+  if (value > 0) {
+    return (
+      <span className="flex items-center gap-0.5 text-xs text-green-600 dark:text-green-400" data-testid="trend-up">
+        <TrendingUp className="h-3 w-3" />
+        +{value}%
+      </span>
+    );
+  }
+  if (value < 0) {
+    return (
+      <span className="flex items-center gap-0.5 text-xs text-red-600 dark:text-red-400" data-testid="trend-down">
+        <TrendingDown className="h-3 w-3" />
+        {value}%
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-0.5 text-xs text-muted-foreground" data-testid="trend-flat">
+      <Minus className="h-3 w-3" />
+      0%
+    </span>
+  );
 }
 
 export function AggregatorDashboard() {
@@ -50,6 +97,10 @@ export function AggregatorDashboard() {
     flaggedBatches: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [volumeTrends, setVolumeTrends] = useState<VolumeTrend[]>([]);
+  const [trendPeriod, setTrendPeriod] = useState<Period>('30d');
+  const [weightTrend, setWeightTrend] = useState(0);
+  const [isTrendLoading, setIsTrendLoading] = useState(true);
   const { organization } = useOrg();
   const supabase = createClient();
 
@@ -117,7 +168,28 @@ export function AggregatorDashboard() {
     }
 
     fetchStats();
-  }, [organization, supabase]);
+  }, [organization]);
+
+  const fetchTrends = useCallback(async () => {
+    if (!organization) return;
+    setIsTrendLoading(true);
+    try {
+      const res = await fetch(`/api/analytics?period=${trendPeriod}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVolumeTrends(data.volumeTrends || []);
+        setWeightTrend(data.weightSummary?.trend || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch trends:', error);
+    } finally {
+      setIsTrendLoading(false);
+    }
+  }, [organization, trendPeriod]);
+
+  useEffect(() => {
+    fetchTrends();
+  }, [fetchTrends]);
 
   const statCards = [
     { title: 'Total Batches', value: stats.totalBatches, icon: Package, color: 'text-blue-600' },
@@ -151,7 +223,81 @@ export function AggregatorDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <Card data-testid="card-volume-trends" className="mt-4">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Volume Trends
+              </CardTitle>
+              <CardDescription>Collection weight over time</CardDescription>
+            </div>
+            <div className="flex items-center gap-1" data-testid="aggregator-period-selector">
+              {PERIOD_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.value}
+                  variant={trendPeriod === opt.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTrendPeriod(opt.value)}
+                  data-testid={`button-agg-period-${opt.value}`}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+              {weightTrend !== 0 && <TrendIndicator value={weightTrend} />}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isTrendLoading ? (
+            <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+              Loading chart...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={volumeTrends}>
+                <defs>
+                  <linearGradient id="aggWeightGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
+                  className="text-muted-foreground"
+                  tickFormatter={(val) => {
+                    if (trendPeriod === '1y') return val;
+                    const d = new Date(val);
+                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                  }}
+                />
+                <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  formatter={(value) => [`${Number(value || 0).toLocaleString()} kg`, 'Weight']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="weight"
+                  stroke="hsl(var(--primary))"
+                  fill="url(#aggWeightGradient)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -203,7 +349,7 @@ export function AggregatorDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 mt-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

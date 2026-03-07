@@ -27,11 +27,20 @@ import {
   PlusCircle,
   Shield,
   Ship,
+  FolderOpen,
+  DollarSign,
+  BarChart3,
+  ShieldCheck,
+  Handshake,
+  FileCheck,
+  CreditCard,
+  Fingerprint,
+  Key,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
 
-export type UserRole = 'superadmin' | 'admin' | 'aggregator' | 'agent';
+export type UserRole = 'superadmin' | AppRole;
 
 export interface MenuItem {
   title: string;
@@ -90,9 +99,9 @@ const appNavigation: NavigationConfig = {
   groups: [
     {
       label: 'OVERVIEW',
-      allowedRoles: ['admin', 'aggregator', 'agent'],
+      allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'],
       items: [
-        { title: 'Dashboard', url: '/app', icon: PieChart, tourId: 'nav-dashboard', allowedRoles: ['admin', 'aggregator', 'agent'] },
+        { title: 'Dashboard', url: '/app', icon: PieChart, tourId: 'nav-dashboard', allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'] },
       ],
     },
     {
@@ -107,53 +116,66 @@ const appNavigation: NavigationConfig = {
     },
     {
       label: 'PROCUREMENT',
-      allowedRoles: ['admin', 'aggregator'],
+      allowedRoles: ['admin', 'aggregator', 'quality_manager', 'logistics_coordinator', 'warehouse_supervisor'],
       items: [
-        { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'inventory' },
-        { title: 'Bags', url: '/app/bags', icon: Package, tourId: 'nav-bags', allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'bags' },
-        { title: 'Traceability', url: '/app/traceability', icon: Database, tourId: 'nav-traceability', allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'traceability' },
-        { title: 'Scan & Verify', url: '/app/verify', icon: QrCode, tourId: 'nav-verify', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'scan_verify' },
-        { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'yield_alerts' },
+        { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'inventory' },
+        { title: 'Bags', url: '/app/bags', icon: Package, tourId: 'nav-bags', allowedRoles: ['admin', 'aggregator', 'quality_manager', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'bags' },
+        { title: 'Traceability', url: '/app/traceability', icon: Database, tourId: 'nav-traceability', allowedRoles: ['admin', 'aggregator', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'traceability' },
+        { title: 'Scan & Verify', url: '/app/verify', icon: QrCode, tourId: 'nav-verify', allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'scan_verify' },
+        { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
+        { title: 'Payments', url: '/app/payments', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
       ],
     },
     {
       label: 'EXPORT READINESS',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'],
       items: [
-        { title: 'Shipment Readiness', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
-        { title: 'DDS Exports', url: '/app/dds', icon: FileText, tourId: 'nav-dds', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'dds_export' },
+        { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
+        { title: 'Dispatch', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
+        { title: 'DDS Exports', url: '/app/dds', icon: FileText, tourId: 'nav-dds', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'dds_export' },
+        { title: 'Compliance Profiles', url: '/app/compliance-profiles', icon: ShieldCheck, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
       ],
     },
     {
       label: 'COMPLIANCE',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'quality_manager', 'compliance_officer'],
       items: [
-        { title: 'Farm Polygons', url: '/app/farms', icon: Map, tourId: 'nav-farm-polygons', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'farm_polygons' },
-        { title: 'Boundary Conflicts', url: '/app/conflicts', icon: Layers, badge: 'alert', tourId: 'nav-conflicts', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'boundary_conflicts' },
-        { title: 'Compliance Review', url: '/app/compliance', icon: ClipboardCheck, tourId: 'nav-compliance', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'compliance_review' },
+        { title: 'Farm Polygons', url: '/app/farms', icon: Map, tourId: 'nav-farm-polygons', allowedRoles: ['admin', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'farm_polygons' },
+        { title: 'Boundary Conflicts', url: '/app/conflicts', icon: Layers, badge: 'alert', tourId: 'nav-conflicts', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'boundary_conflicts' },
+        { title: 'Compliance Review', url: '/app/compliance', icon: ClipboardCheck, tourId: 'nav-compliance', allowedRoles: ['admin', 'quality_manager', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'compliance_review' },
+        { title: 'Documents', url: '/app/documents', icon: FolderOpen, allowedRoles: ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'documents' },
       ],
     },
     {
       label: 'PROCESSING',
+      allowedRoles: ['admin', 'compliance_officer'],
+      items: [
+        { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'processing' },
+        { title: 'Pedigree', url: '/app/pedigree', icon: QrCode, tourId: 'nav-pedigree', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'pedigree' },
+        { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
+      ],
+    },
+    {
+      label: 'TRADE',
       allowedRoles: ['admin'],
       items: [
-        { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'processing' },
-        { title: 'Pedigree', url: '/app/pedigree', icon: QrCode, tourId: 'nav-pedigree', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'pedigree' },
+        { title: 'Buyers', url: '/app/buyers', icon: Handshake, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'buyer_portal' },
+        { title: 'Contracts', url: '/app/contracts', icon: FileCheck, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'contracts' },
       ],
     },
     {
       label: 'GOVERNANCE',
       allowedRoles: ['admin'],
       items: [
-        { title: 'Delegations', url: '/app/delegations', icon: Shield, tourId: 'nav-delegations', allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'delegations' },
+        { title: 'Delegations', url: '/app/delegations', icon: Shield, tourId: 'nav-delegations', allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'delegations' },
       ],
     },
     {
       label: 'NETWORK',
-      allowedRoles: ['admin', 'aggregator'],
+      allowedRoles: ['admin', 'aggregator', 'quality_manager'],
       items: [
-        { title: 'Farmers', url: '/app/farmers', icon: Users, allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'farmers_list' },
-        { title: 'Field Agents', url: '/app/agents', icon: Users, allowedRoles: ['admin', 'aggregator'], requiredTier: 'pro', tierFeature: 'agents' },
+        { title: 'Farmers', url: '/app/farmers', icon: Users, allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'starter', tierFeature: 'farmers_list' },
+        { title: 'Field Agents', url: '/app/agents', icon: Users, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'agents' },
         { title: 'Team', url: '/app/team', icon: Users2, allowedRoles: ['admin'] },
       ],
     },
@@ -163,6 +185,36 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Settings', url: '/app/settings', icon: Settings, allowedRoles: ['admin', 'aggregator'] },
         { title: 'Data Vault', url: '/app/data-vault', icon: Download, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'data_vault' },
+        { title: 'API Keys', url: '/app/api-keys', icon: Key, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'enterprise_api' },
+      ],
+    },
+  ],
+};
+
+const buyerNavigation: NavigationConfig = {
+  groups: [
+    {
+      label: 'OVERVIEW',
+      allowedRoles: ['buyer'],
+      items: [
+        { title: 'Dashboard', url: '/app/buyer', icon: PieChart, allowedRoles: ['buyer'] },
+      ],
+    },
+    {
+      label: 'SUPPLY CHAIN',
+      allowedRoles: ['buyer'],
+      items: [
+        { title: 'Suppliers', url: '/app/buyer/suppliers', icon: Handshake, allowedRoles: ['buyer'] },
+        { title: 'Contracts', url: '/app/buyer/contracts', icon: FileCheck, allowedRoles: ['buyer'] },
+        { title: 'Shipments', url: '/app/buyer/shipments', icon: Ship, allowedRoles: ['buyer'] },
+      ],
+    },
+    {
+      label: 'VERIFICATION',
+      allowedRoles: ['buyer'],
+      items: [
+        { title: 'Traceability', url: '/app/buyer/traceability', icon: Database, allowedRoles: ['buyer'] },
+        { title: 'Documents', url: '/app/buyer/documents', icon: FolderOpen, allowedRoles: ['buyer'] },
       ],
     },
   ],
@@ -171,6 +223,10 @@ const appNavigation: NavigationConfig = {
 export function getNavigationConfig(role: UserRole): NavigationConfig {
   if (role === 'superadmin') {
     return superadminNavigation;
+  }
+
+  if (role === 'buyer') {
+    return buyerNavigation;
   }
 
   return {

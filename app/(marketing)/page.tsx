@@ -46,11 +46,11 @@ const problemCards = [
 ];
 
 const solutionPoints = [
-  { icon: Sprout, text: 'Digitally capture first-mile traceability from farm to aggregation point' },
-  { icon: FlaskConical, text: 'Track pesticide application, processing inputs, and contamination test results' },
-  { icon: Package, text: 'Link every batch and lot to verified origin with GPS polygon evidence' },
-  { icon: Search, text: 'Identify compliance gaps and flag risk factors before shipment leaves port' },
-  { icon: FileText, text: 'Generate standardized export compliance dossiers for any destination market' },
+  { icon: Sprout, text: 'Capture first-mile traceability offline — from farms, forests, fisheries, or mines to aggregation point' },
+  { icon: FlaskConical, text: 'Track inputs, contamination tests, and chain-of-custody across any origin-sensitive commodity' },
+  { icon: Package, text: 'Link every batch and lot to verified origin with GPS polygon evidence and compliance scoring' },
+  { icon: Search, text: 'Pre-shipment compliance scoring flags risk factors before cargo reaches port — across EUDR, FSMA 204, and UK Environment Act' },
+  { icon: FileText, text: 'Generate audit-ready compliance dossiers and buyer portal access for any destination market' },
 ];
 
 const readinessCategories = [
@@ -118,13 +118,13 @@ export default function HomePage() {
               <FadeIn direction="right">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
                   <Shield className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs font-medium text-emerald-500">Export Risk & Trade Compliance</span>
+                  <span className="text-xs font-medium text-emerald-500">Trust Infrastructure for Supply Chains</span>
                 </div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight mt-6 mb-6 text-slate-900" data-testid="text-hero-headline">
-                  Export Without Rejection Risk
+                  Trust Infrastructure for Origin-Sensitive Supply Chains
                 </h1>
                 <p className="text-base md:text-lg text-slate-600 leading-relaxed mb-8">
-                  OriginTrace helps exporters and processors prove origin, manage compliance risk, and generate audit-ready documentation before shipments leave port.
+                  OriginTrace prevents shipment rejections through pre-shipment compliance scoring, offline-first field operations, and a buyer portal that proves origin across agriculture, timber, minerals, and seafood.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href="#eudr-assessment">
@@ -140,7 +140,7 @@ export default function HomePage() {
                   </Link>
                 </div>
                 <p className="text-sm text-slate-500 mt-6">
-                  Built for fragmented supply chains and real-world export operations.
+                  Built for origin-sensitive verticals: agriculture, timber, minerals, seafood, and textiles.
                 </p>
               </FadeIn>
             </div>
@@ -160,8 +160,8 @@ export default function HomePage() {
                 Why Shipments Get Rejected
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Export rejections cost African commodity exporters millions annually. 
-                The root causes are structural, not accidental.
+                Shipment rejections cost origin-sensitive supply chains millions annually. 
+                Whether in agriculture, timber, minerals, or seafood — the root causes are structural, not accidental.
               </p>
             </FadeIn>
 
@@ -183,7 +183,7 @@ export default function HomePage() {
 
             <FadeIn className="text-center mt-10">
               <p className="text-sm font-medium text-muted-foreground border-t border-slate-200 dark:border-slate-700 pt-8 max-w-xl mx-auto">
-                Rejections are not random — they are infrastructure failures.
+                Rejections are not random — they are trust infrastructure failures.
               </p>
             </FadeIn>
           </div>
@@ -196,11 +196,11 @@ export default function HomePage() {
                 Pre-Shipment Risk Control
               </p>
               <h2 className="text-2xl md:text-3xl font-semibold mb-4" data-testid="text-solution-headline">
-                From Reactive Compliance to Pre-Shipment Risk Control
+                From Reactive Compliance to Pre-Shipment Trust Verification
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 OriginTrace shifts compliance from a post-rejection scramble to a structured, pre-shipment 
-                verification process embedded in your export workflow.
+                verification process — with offline-first field capture, compliance scoring, and a buyer portal for real-time supply chain visibility.
               </p>
             </FadeIn>
 
@@ -348,7 +348,7 @@ export default function HomePage() {
                 Compliance Coverage Grid
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                One traceability infrastructure serving multiple regulatory frameworks and buyer requirements.
+                One trust infrastructure serving multiple regulatory frameworks, verticals, and buyer requirements — from agriculture and timber to minerals, seafood, and textiles.
               </p>
             </FadeIn>
 
@@ -379,7 +379,7 @@ export default function HomePage() {
 
             <FadeIn className="text-center mt-10">
               <p className="text-sm font-medium text-muted-foreground max-w-xl mx-auto">
-                One traceability foundation. Multiple regulatory pathways.
+                One trust infrastructure. Multiple verticals. Multiple regulatory pathways.
               </p>
             </FadeIn>
           </div>
@@ -392,10 +392,10 @@ export default function HomePage() {
                 End-to-End Visibility
               </p>
               <h2 className="text-2xl md:text-3xl font-semibold mb-4" data-testid="text-flow-headline">
-                Supply Chain Under Control
+                Origin-to-Destination Visibility
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                OriginTrace captures compliance data at every handoff point in the export chain.
+                OriginTrace captures compliance data at every handoff point — whether the origin is a farm, forest concession, artisanal mine, or fishing vessel.
               </p>
             </FadeIn>
 
@@ -550,10 +550,10 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto px-6 text-center">
             <FadeIn>
               <h2 className="text-2xl md:text-3xl font-semibold mb-4" data-testid="text-final-cta-headline">
-                Ready to protect your export revenue?
+                Ready to build trust into your supply chain?
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                Join exporters and processors who trust OriginTrace for trade compliance.
+                Join exporters and processors across agriculture, timber, minerals, and seafood who trust OriginTrace for supply chain compliance.
               </p>
               <Link href="/demo">
                 <Button size="lg" className="gap-2" data-testid="button-get-started">

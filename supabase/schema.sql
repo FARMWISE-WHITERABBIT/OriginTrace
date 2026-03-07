@@ -1,4 +1,4 @@
--- Farmwise Multi-Tenant Database Schema for Supabase
+-- OriginTrace Multi-Tenant Database Schema for Supabase
 -- Run this in Supabase SQL Editor to set up your database
 
 -- Enable UUID extension
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent')),
+  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer')),
   full_name TEXT NOT NULL,
   avatar_url TEXT,
   assigned_state TEXT,
@@ -905,3 +905,379 @@ ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "system_config_service_role_only" ON system_config
   FOR ALL USING (auth.role() = 'service_role');
+
+-- ============================================
+-- DOCUMENT VAULT (Phase 3)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  document_type TEXT NOT NULL CHECK (document_type IN (
+    'export_license', 'phytosanitary', 'fumigation', 'organic_cert', 'insurance',
+    'lab_result', 'customs_declaration', 'bill_of_lading', 'certificate_of_origin',
+    'quality_cert', 'other'
+  )),
+  file_url TEXT,
+  file_name TEXT,
+  file_size INTEGER,
+  issued_date DATE,
+  expiry_date DATE,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'expiring_soon', 'archived')),
+  linked_entity_type TEXT CHECK (linked_entity_type IN ('shipment', 'farm', 'farmer', 'organization', 'batch')),
+  linked_entity_id UUID,
+  notes TEXT,
+  uploaded_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS document_alerts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  alert_type TEXT NOT NULL CHECK (alert_type IN ('expiry_30d', 'expiry_7d', 'expired')),
+  triggered_at TIMESTAMPTZ DEFAULT NOW(),
+  acknowledged_by UUID REFERENCES auth.users(id),
+  acknowledged_at TIMESTAMPTZ
+);
+
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_alerts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view documents in their org" ON documents
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Users can create documents in their org" ON documents
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+CREATE POLICY "Users can update documents in their org" ON documents
+  FOR UPDATE USING (org_id = get_user_org_id());
+
+CREATE POLICY "Admins can delete documents in their org" ON documents
+  FOR DELETE USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all documents" ON documents
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Users can view document alerts in their org" ON document_alerts
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Users can manage document alerts in their org" ON document_alerts
+  FOR ALL USING (org_id = get_user_org_id());
+
+CREATE INDEX IF NOT EXISTS idx_documents_org_id ON documents(org_id);
+CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
+CREATE INDEX IF NOT EXISTS idx_document_alerts_org_id ON document_alerts(org_id);
+
+CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- PAYMENT TRACKING (Phase 4)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  payee_type TEXT NOT NULL CHECK (payee_type IN ('farmer', 'aggregator', 'supplier')),
+  payee_id UUID,
+  payee_name TEXT NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  currency TEXT DEFAULT 'NGN' CHECK (currency IN ('NGN', 'USD', 'EUR', 'GBP', 'XOF')),
+  payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'bank_transfer', 'mobile_money', 'cheque')),
+  reference_number TEXT,
+  linked_entity_type TEXT CHECK (linked_entity_type IN ('collection_batch', 'contract')),
+  linked_entity_id UUID,
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  status TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'reversed')),
+  notes TEXT,
+  recorded_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view payments in their org" ON payments
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Users can create payments in their org" ON payments
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+CREATE POLICY "Admins can manage payments in their org" ON payments
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all payments" ON payments
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_payments_org_id ON payments(org_id);
+CREATE INDEX IF NOT EXISTS idx_payments_payee ON payments(payee_id);
+CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+
+-- ============================================
+-- BUYER PORTAL (Phase 5)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS buyer_organizations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  country TEXT,
+  industry TEXT,
+  contact_email TEXT,
+  logo_url TEXT,
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS buyer_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  buyer_org_id UUID NOT NULL REFERENCES buyer_organizations(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  role TEXT DEFAULT 'buyer_admin' CHECK (role IN ('buyer_admin', 'buyer_viewer')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS supply_chain_links (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_org_id UUID NOT NULL REFERENCES buyer_organizations(id) ON DELETE CASCADE,
+  exporter_org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended', 'terminated')),
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ,
+  invited_by UUID REFERENCES auth.users(id),
+  UNIQUE(buyer_org_id, exporter_org_id)
+);
+
+CREATE TABLE IF NOT EXISTS contracts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_org_id UUID NOT NULL REFERENCES buyer_organizations(id) ON DELETE CASCADE,
+  exporter_org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  contract_reference TEXT NOT NULL,
+  commodity TEXT NOT NULL,
+  quantity_mt DECIMAL(12,2),
+  quality_requirements JSONB DEFAULT '{}',
+  required_certifications JSONB DEFAULT '[]',
+  delivery_deadline DATE,
+  destination_port TEXT,
+  compliance_profile_id UUID,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'fulfilled', 'cancelled')),
+  price_per_unit DECIMAL(12,2),
+  currency TEXT DEFAULT 'USD',
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contract_shipments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  shipment_id UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(contract_id, shipment_id)
+);
+
+ALTER TABLE buyer_organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE buyer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_chain_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contract_shipments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Buyer users can view their own org" ON buyer_organizations
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = buyer_organizations.id)
+    OR is_system_admin()
+  );
+
+CREATE POLICY "System admins can manage buyer orgs" ON buyer_organizations
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Buyer users can view their own profile" ON buyer_profiles
+  FOR SELECT USING (user_id = auth.uid() OR is_system_admin());
+
+CREATE POLICY "System admins can manage buyer profiles" ON buyer_profiles
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Linked parties can view supply chain links" ON supply_chain_links
+  FOR SELECT USING (
+    exporter_org_id = get_user_org_id()
+    OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = supply_chain_links.buyer_org_id)
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Buyer admins can create supply chain links" ON supply_chain_links
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = supply_chain_links.buyer_org_id AND role = 'buyer_admin')
+  );
+
+CREATE POLICY "Linked parties can view contracts" ON contracts
+  FOR SELECT USING (
+    exporter_org_id = get_user_org_id()
+    OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = contracts.buyer_org_id)
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Buyer admins can manage contracts" ON contracts
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = contracts.buyer_org_id AND role = 'buyer_admin')
+  );
+
+CREATE POLICY "System admins can manage all contracts" ON contracts
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Linked parties can view contract shipments" ON contract_shipments
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM contracts c WHERE c.id = contract_shipments.contract_id AND (
+      c.exporter_org_id = get_user_org_id()
+      OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = c.buyer_org_id)
+    ))
+    OR is_system_admin()
+  );
+
+CREATE INDEX IF NOT EXISTS idx_supply_chain_links_buyer ON supply_chain_links(buyer_org_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_links_exporter ON supply_chain_links(exporter_org_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_buyer ON contracts(buyer_org_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_exporter ON contracts(exporter_org_id);
+
+CREATE TRIGGER update_contracts_updated_at BEFORE UPDATE ON contracts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- COMPLIANCE PROFILES (Phase 6)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS compliance_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  destination_market TEXT NOT NULL,
+  regulation_framework TEXT NOT NULL CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'custom')),
+  required_documents JSONB DEFAULT '[]',
+  required_certifications JSONB DEFAULT '[]',
+  geo_verification_level TEXT DEFAULT 'polygon' CHECK (geo_verification_level IN ('basic', 'polygon', 'satellite')),
+  min_traceability_depth INTEGER DEFAULT 1,
+  custom_rules JSONB DEFAULT '{}',
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE compliance_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view compliance profiles in their org" ON compliance_profiles
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage compliance profiles" ON compliance_profiles
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all compliance profiles" ON compliance_profiles
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_compliance_profiles_org ON compliance_profiles(org_id);
+
+CREATE TRIGGER update_compliance_profiles_updated_at BEFORE UPDATE ON compliance_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- DIGITAL PRODUCT PASSPORT (Phase 8)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS digital_product_passports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  finished_good_id UUID NOT NULL REFERENCES finished_goods(id) ON DELETE CASCADE,
+  dpp_code TEXT NOT NULL UNIQUE,
+  product_category TEXT NOT NULL,
+  origin_country TEXT DEFAULT 'NG',
+  sustainability_claims JSONB DEFAULT '{}',
+  carbon_footprint_kg DECIMAL(10,2),
+  certifications JSONB DEFAULT '[]',
+  processing_history JSONB DEFAULT '[]',
+  chain_of_custody JSONB DEFAULT '[]',
+  regulatory_compliance JSONB DEFAULT '{}',
+  machine_readable_data JSONB DEFAULT '{}',
+  passport_version INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'revoked')),
+  issued_at TIMESTAMPTZ,
+  valid_until DATE,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE digital_product_passports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view DPPs in their org" ON digital_product_passports
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage DPPs" ON digital_product_passports
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all DPPs" ON digital_product_passports
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Public can view active DPPs" ON digital_product_passports
+  FOR SELECT USING (status = 'active');
+
+CREATE INDEX IF NOT EXISTS idx_dpp_org ON digital_product_passports(org_id);
+CREATE INDEX IF NOT EXISTS idx_dpp_code ON digital_product_passports(dpp_code);
+CREATE INDEX IF NOT EXISTS idx_dpp_finished_good ON digital_product_passports(finished_good_id);
+
+CREATE TRIGGER update_dpp_updated_at BEFORE UPDATE ON digital_product_passports
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- ENTERPRISE API KEYS (Phase 9)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  key_hash TEXT NOT NULL,
+  key_prefix TEXT NOT NULL,
+  name TEXT NOT NULL,
+  scopes JSONB DEFAULT '["read"]',
+  rate_limit_per_hour INTEGER DEFAULT 1000,
+  last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'revoked')),
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can view API keys in their org" ON api_keys
+  FOR SELECT USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can manage API keys" ON api_keys
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all API keys" ON api_keys
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
