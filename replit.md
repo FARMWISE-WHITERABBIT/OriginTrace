@@ -100,8 +100,9 @@ Supabase PostgreSQL with RLS for multi-tenant isolation. Schema includes:
 - **Compliance Profiles**: EUDR/FSMA_204/UK_Environment_Act profiles with document requirements; dynamically integrated with shipment scoring
 - **Digital Product Passport**: DPP generation from finished goods, JSON-LD output, public verification
 - **Enterprise API**: API key management page (`/app/api-keys`), versioned endpoints (/api/v1/), rate limiting, API documentation page
-- **Shipment Planning**: 6-step creation wizard (contract → batches → compliance profile → review → documents → confirm), detail page with lifecycle timeline
+- **Shipment Planning**: 6-step creation wizard (contract → batches → compliance profile → review → documents → confirm), detail page with lifecycle timeline (all 6 stages reachable: Planning → Packed → Dispatched → In Transit → Arrived → Cleared)
 - **Marketing Repositioning**: From "agricultural traceability" to "trust infrastructure for origin-sensitive supply chains"
+- **Superadmin Expansion**: Command Tower dashboard updated with Platform Expansion metrics (buyer ecosystem, document vault, payment volume, DPP passports, enterprise API usage, compliance profiles); user management supports all 8 roles; feature toggles show all 33 features with buyer_portal_access and dpp_access add-on flags; new Buyer Organizations management page (`/superadmin/buyer-orgs`) with detail dialog
 
 ### Previous Cleanup (Early Mar 2026)
 - AI-Powered OCR for Farmer ID Scanning (OpenAI GPT-5.2)

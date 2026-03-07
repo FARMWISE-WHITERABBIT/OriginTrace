@@ -17,7 +17,8 @@ import {
   Zap,
   Activity,
   AlertCircle,
-  Wheat
+  Wheat,
+  Handshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -105,6 +106,7 @@ export default function SuperadminLayout({
     { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
     { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
     { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
+    { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
     { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },
     { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
   ];
