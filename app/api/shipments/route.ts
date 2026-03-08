@@ -3,6 +3,21 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const shipmentCreateSchema = z.object({
+  destination_country: z.string().min(1, 'Destination country is required'),
+  commodity: z.string().min(1, 'Commodity is required'),
+  buyer_company: z.string().optional(),
+  buyer_contact: z.string().optional(),
+  target_regulations: z.array(z.string()).optional(),
+  destination_port: z.string().optional(),
+  notes: z.string().optional(),
+  estimated_ship_date: z.string().optional(),
+  compliance_profile_id: z.number().optional(),
+  contract_id: z.number().optional(),
+  document_ids: z.array(z.number()).optional(),
+});
 
 function createServiceClient() {
   return createAdminClient();
@@ -119,15 +134,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { destination_country, commodity } = body;
 
-    if (!destination_country) {
-      return NextResponse.json({ error: 'Destination country is required' }, { status: 400 });
+    const parsed = shipmentCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    if (!commodity) {
-      return NextResponse.json({ error: 'Commodity is required' }, { status: 400 });
-    }
+    const { destination_country, commodity, buyer_company, buyer_contact, target_regulations, destination_port, notes, estimated_ship_date, compliance_profile_id, contract_id, document_ids } = parsed.data;
 
     const shipmentCode = `SHP-${profile.org_id}-${Date.now().toString(36).toUpperCase()}`;
 
@@ -140,13 +156,13 @@ export async function POST(request: NextRequest) {
       commodity,
     };
 
-    if (body.buyer_company !== undefined) insertData.buyer_company = body.buyer_company;
-    if (body.buyer_contact !== undefined) insertData.buyer_contact = body.buyer_contact;
-    if (body.target_regulations !== undefined) insertData.target_regulations = body.target_regulations;
-    if (body.destination_port !== undefined) insertData.destination_port = body.destination_port;
-    if (body.notes !== undefined) insertData.notes = body.notes;
-    if (body.estimated_ship_date !== undefined) insertData.estimated_ship_date = body.estimated_ship_date;
-    if (body.compliance_profile_id !== undefined) insertData.compliance_profile_id = body.compliance_profile_id;
+    if (buyer_company !== undefined) insertData.buyer_company = buyer_company;
+    if (buyer_contact !== undefined) insertData.buyer_contact = buyer_contact;
+    if (target_regulations !== undefined) insertData.target_regulations = target_regulations;
+    if (destination_port !== undefined) insertData.destination_port = destination_port;
+    if (notes !== undefined) insertData.notes = notes;
+    if (estimated_ship_date !== undefined) insertData.estimated_ship_date = estimated_ship_date;
+    if (compliance_profile_id !== undefined) insertData.compliance_profile_id = compliance_profile_id;
 
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
@@ -159,14 +175,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: shipmentError.message }, { status: 500 });
     }
 
-    if (body.contract_id && shipment) {
+    if (contract_id && shipment) {
       await supabase
         .from('contract_shipments')
-        .insert({ contract_id: body.contract_id, shipment_id: shipment.id });
+        .insert({ contract_id, shipment_id: shipment.id });
     }
 
-    if (body.document_ids && Array.isArray(body.document_ids) && shipment) {
-      for (const docId of body.document_ids) {
+    if (document_ids && document_ids.length > 0 && shipment) {
+      for (const docId of document_ids) {
         await supabase
           .from('documents')
           .update({ linked_entity_type: 'shipment', linked_entity_id: shipment.id })

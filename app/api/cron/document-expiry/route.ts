@@ -2,8 +2,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDocumentExpiryEmail } from '@/lib/email/templates';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 1 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
     const cronSecret = process.env.CRON_SECRET;
     if (!cronSecret) {
@@ -112,7 +116,7 @@ export async function GET(request: NextRequest) {
     try {
       resendClient = await getResendClient();
     } catch (e) {
-      console.warn('Resend not configured, skipping emails:', e);
+      console.error('Resend not configured, skipping emails:', e);
     }
 
     for (const orgId of orgIds) {

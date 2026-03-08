@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import {
   Warehouse,
   Package,
@@ -41,34 +40,17 @@ export function WarehouseDashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase || !organization) return;
+      if (!organization) return;
 
       try {
-        const [
-          unusedRes,
-          collectedRes,
-          processedRes,
-          totalRes,
-          recentBatchesRes,
-        ] = await Promise.all([
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'unused'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'collected'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'processed'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('collection_batches').select('id, status, bag_count, total_weight, created_at').eq('org_id', organization.id).order('created_at', { ascending: false }).limit(5),
-        ]);
-
-        setStats({
-          unusedBags: unusedRes.count || 0,
-          collectedBags: collectedRes.count || 0,
-          processedBags: processedRes.count || 0,
-          totalBags: totalRes.count || 0,
-          recentBatches: (recentBatchesRes.data || []) as WarehouseStats['recentBatches'],
-        });
+        const res = await fetch('/api/dashboard?role=warehouse');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch warehouse stats:', error);
       } finally {

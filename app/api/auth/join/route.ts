@@ -1,32 +1,29 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const joinSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  inviteCode: z.string().regex(/^\d{6}$/, 'Invalid invite code format. Please enter a 6-digit code.'),
+  role: z.enum(['agent', 'aggregator']).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, fullName, inviteCode, role } = body;
 
-    if (!email || !password || !fullName || !inviteCode) {
+    const parsed = joinSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
-        { status: 400 }
-      );
-    }
-
-    const codeStr = String(inviteCode).trim();
-    if (!/^\d{6}$/.test(codeStr)) {
-      return NextResponse.json(
-        { error: 'Invalid invite code format. Please enter a 6-digit code.' },
-        { status: 400 }
-      );
-    }
+    const { email, password, fullName, inviteCode, role } = parsed.data;
+    const codeStr = inviteCode;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

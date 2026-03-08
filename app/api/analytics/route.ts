@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 
 function createServiceClient() {
@@ -94,6 +95,9 @@ function groupByInterval(
 }
 
 export async function GET(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 30 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
     const supabase = createServiceClient();
     const authClient = await createServerClient();
@@ -206,12 +210,14 @@ export async function GET(request: NextRequest) {
           agentMap.set(agentId, existing);
         }
 
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         const agentIds = Array.from(agentMap.keys()).filter(Boolean);
-        if (agentIds.length > 0) {
+        const validUuidAgentIds = agentIds.filter(id => uuidRegex.test(id));
+        if (validUuidAgentIds.length > 0) {
           const { data: agentProfiles } = await supabase
             .from('profiles')
             .select('user_id, full_name')
-            .in('user_id', agentIds);
+            .in('user_id', validUuidAgentIds);
           for (const ap of (agentProfiles || [])) {
             const agent = agentMap.get(ap.user_id);
             if (agent) agent.name = ap.full_name || agent.name;

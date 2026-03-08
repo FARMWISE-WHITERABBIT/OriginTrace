@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   logo_url TEXT,
   settings JSONB DEFAULT '{}',
   commodities TEXT[] DEFAULT ARRAY['cocoa'],
-  subscription_tier TEXT DEFAULT 'starter',
+  subscription_tier TEXT DEFAULT 'starter' CHECK (subscription_tier IN ('starter', 'basic', 'pro', 'enterprise')),
   feature_flags JSONB DEFAULT '{"financing": false, "api_access": false, "advanced_mapping": false, "satellite_overlays": false}',
   agent_seat_limit INTEGER DEFAULT 5,
   monthly_collection_limit INTEGER DEFAULT 1000,
@@ -437,8 +437,6 @@ ALTER TABLE bags
 -- ============================================
 
 -- Add SaaS columns to organizations
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter' 
-  CHECK (subscription_tier IN ('starter', 'basic', 'pro', 'enterprise'));
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS feature_flags JSONB DEFAULT '{
   "satellite_overlays": false,
   "advanced_mapping": false,

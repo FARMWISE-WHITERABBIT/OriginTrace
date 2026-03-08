@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import {
   ShieldCheck,
   FileText,
@@ -49,45 +48,17 @@ export function ComplianceOfficerDashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase || !organization) return;
+      if (!organization) return;
 
       try {
-        const [
-          totalFarmsRes,
-          approvedRes,
-          pendingRes,
-          rejectedRes,
-          ddsRes,
-          compFilesRes,
-          recentRes,
-        ] = await Promise.all([
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'approved'),
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'pending'),
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'rejected'),
-          supabase.from('dds_exports').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('compliance_files').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('farms').select('id, farmer_name, compliance_status, updated_at').eq('org_id', organization.id).order('updated_at', { ascending: false }).limit(5),
-        ]);
-
-        const total = totalFarmsRes.count || 0;
-        const approved = approvedRes.count || 0;
-        const complianceRate = total > 0 ? Math.round((approved / total) * 100) : 0;
-
-        setStats({
-          totalFarms: total,
-          approvedFarms: approved,
-          pendingFarms: pendingRes.count || 0,
-          rejectedFarms: rejectedRes.count || 0,
-          complianceRate,
-          ddsExportCount: ddsRes.count || 0,
-          complianceFilesCount: compFilesRes.count || 0,
-          recentActivity: (recentRes.data || []) as ComplianceStats['recentActivity'],
-        });
+        const res = await fetch('/api/dashboard?role=compliance_officer');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch compliance stats:', error);
       } finally {

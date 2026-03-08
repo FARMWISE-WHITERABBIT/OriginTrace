@@ -4,6 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildFarmConflictEmail } from '@/lib/email/templates';
+import { z } from 'zod';
+
+const conflictPatchSchema = z.object({
+  conflict_id: z.number({ required_error: 'Conflict ID is required' }),
+  action: z.enum(['keep_a', 'keep_b', 'merge', 'dismiss'], { required_error: 'Action is required' }),
+  notes: z.string().optional(),
+});
 
 
 export async function GET(request: NextRequest) {
@@ -281,16 +288,16 @@ export async function PATCH(request: NextRequest) {
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
-    const { conflict_id, action, notes } = body;
 
-    if (!conflict_id || !action) {
-      return NextResponse.json({ error: 'Conflict ID and action required' }, { status: 400 });
+    const parsed = conflictPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const validActions = ['keep_a', 'keep_b', 'merge', 'dismiss'];
-    if (!validActions.includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+    const { conflict_id, action, notes } = parsed.data;
 
     const { data: conflict, error: fetchError } = await supabaseAdmin
       .from('farm_conflicts')

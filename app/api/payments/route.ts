@@ -1,6 +1,20 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const paymentCreateSchema = z.object({
+  payee_name: z.string().min(1, 'Payee name is required'),
+  payee_type: z.enum(['farmer', 'aggregator', 'supplier'], { required_error: 'payee_type is required' }),
+  amount: z.number().positive('Amount must be a positive number'),
+  currency: z.enum(['NGN', 'USD', 'EUR', 'GBP', 'XOF']).optional(),
+  payment_method: z.enum(['cash', 'bank_transfer', 'mobile_money', 'cheque'], { required_error: 'payment_method is required' }),
+  reference_number: z.string().optional(),
+  linked_entity_type: z.enum(['collection_batch', 'contract']).optional(),
+  linked_entity_id: z.number().optional(),
+  payment_date: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -106,53 +120,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { payee_name, payee_type, amount, currency, payment_method, reference_number, linked_entity_type, linked_entity_id, payment_date, notes } = body;
 
-    if (!payee_name || !payee_type || !amount || !payment_method) {
+    const parsed = paymentCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'payee_name, payee_type, amount, and payment_method are required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const validPayeeTypes = ['farmer', 'aggregator', 'supplier'];
-    if (!validPayeeTypes.includes(payee_type)) {
-      return NextResponse.json(
-        { error: 'Invalid payee_type. Must be farmer, aggregator, or supplier' },
-        { status: 400 }
-      );
-    }
-
-    const validMethods = ['cash', 'bank_transfer', 'mobile_money', 'cheque'];
-    if (!validMethods.includes(payment_method)) {
-      return NextResponse.json(
-        { error: 'Invalid payment_method' },
-        { status: 400 }
-      );
-    }
-
-    const validCurrencies = ['NGN', 'USD', 'EUR', 'GBP', 'XOF'];
-    if (currency && !validCurrencies.includes(currency)) {
-      return NextResponse.json(
-        { error: 'Invalid currency' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    const validEntityTypes = ['collection_batch', 'contract'];
-    if (linked_entity_type && !validEntityTypes.includes(linked_entity_type)) {
-      return NextResponse.json(
-        { error: 'Invalid linked_entity_type. Must be collection_batch or contract' },
-        { status: 400 }
-      );
-    }
+    const { payee_name, payee_type, amount, currency, payment_method, reference_number, linked_entity_type, linked_entity_id, payment_date, notes } = parsed.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

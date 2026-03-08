@@ -3,6 +3,20 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const batchCreateSchema = z.object({
+  farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
+  bags: z.array(z.object({
+    serial: z.string().optional(),
+    weight: z.number().optional(),
+    grade: z.string().optional(),
+    is_compliant: z.boolean().optional(),
+  })).optional(),
+  notes: z.string().optional(),
+  local_id: z.string().optional(),
+  collected_at: z.string().optional(),
+});
 
 function createServiceClient() {
   return createAdminClient();
@@ -100,11 +114,16 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { farm_id, bags, notes, local_id, collected_at } = body;
-    
-    if (!farm_id) {
-      return NextResponse.json({ error: 'Farm ID is required' }, { status: 400 });
+
+    const parsed = batchCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { farm_id, bags, notes, local_id, collected_at } = parsed.data;
     
     const { data: farm, error: farmError } = await supabase
       .from('farms')

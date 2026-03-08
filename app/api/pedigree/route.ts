@@ -109,18 +109,18 @@ export async function GET(request: NextRequest) {
     const sourceFarms = (runBatches || []).map((rb: any) => {
       const batch = rb.collection_batches;
       const farm = batch?.farms;
+      const farmIdStr = farm?.id ? String(farm.id) : '';
       return {
         batchId: batch?.id,
         collectionDate: batch?.created_at,
         farmId: farm?.id,
-        farmerName: farm?.farmer_name,
+        farmerName: farmIdStr ? `Farmer ${farmIdStr.substring(0, 4).toUpperCase()}` : 'Unknown Farmer',
         community: farm?.community,
         state: farm?.states?.name,
         areaHectares: farm?.area_hectares,
         commodity: farm?.commodity,
         complianceStatus: farm?.compliance_status,
         weightContribution: rb.weight_contribution_kg,
-        boundaryGeo: farm?.boundary_geo
       };
     }).filter((f: any) => f.farmId);
 
@@ -162,12 +162,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const { buyer_name, buyer_company, organizations, ...sanitizedGood } = finishedGood as any;
+    const { mass_balance_variance, ...sanitizedRun } = processingRun as any;
+
     return NextResponse.json({
       finishedGood: {
-        ...finishedGood,
-        organization: finishedGood.organizations
+        ...sanitizedGood,
+        organization: organizations
       },
-      processingRun,
+      processingRun: sanitizedRun,
       sourceFarms,
       summary: {
         totalSmallholders: uniqueFarmers,
@@ -177,7 +180,6 @@ export async function GET(request: NextRequest) {
         processedOutputKg: processingRun.output_weight_kg,
         recoveryRate: processingRun.recovery_rate,
         massBalanceValid: processingRun.mass_balance_valid,
-        massBalanceVariance: processingRun.mass_balance_variance
       },
       timeline
     });

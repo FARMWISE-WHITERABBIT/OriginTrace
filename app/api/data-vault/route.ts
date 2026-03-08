@@ -2,12 +2,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
 
-
-interface ExportOptions {
-  format: 'csv' | 'geojson' | 'json';
-  tables: string[];
-}
+const dataVaultExportSchema = z.object({
+  format: z.enum(['csv', 'geojson', 'json'], { required_error: 'Invalid format' }),
+  tables: z.array(z.string()).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -118,12 +118,17 @@ export async function POST(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'data_vault');
     if (tierBlock) return tierBlock;
 
-    const body = await request.json() as ExportOptions;
-    const { format, tables } = body;
+    const body = await request.json();
 
-    if (!format || !['csv', 'geojson', 'json'].includes(format)) {
-      return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
+    const parsed = dataVaultExportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { format, tables } = parsed.data;
 
     const validTables = ['farms', 'collection_batches', 'bags', 'profiles'];
     const selectedTables = tables?.filter(t => validTables.includes(t)) || validTables;

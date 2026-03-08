@@ -1,6 +1,26 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const farmCreateSchema = z.object({
+  farmer_name: z.string().min(1, 'Farmer name is required'),
+  farmer_id: z.string().optional(),
+  phone: z.string().optional(),
+  community: z.string().min(1, 'Community is required'),
+  boundary: z.object({
+    type: z.string().optional(),
+    coordinates: z.array(z.any()).optional(),
+  }).nullable().optional(),
+  area_hectares: z.number().positive().nullable().optional(),
+  legality_doc_url: z.string().url().nullable().optional(),
+});
+
+const farmPatchSchema = z.object({
+  id: z.number({ required_error: 'Farm ID is required' }),
+  compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  compliance_notes: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -117,14 +137,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { farmer_name, farmer_id, phone, community, boundary, area_hectares, legality_doc_url } = body;
 
-    if (!farmer_name || !community) {
+    const parsed = farmCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Farmer name and community are required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { farmer_name, farmer_id, phone, community, boundary, area_hectares, legality_doc_url } = parsed.data;
 
     const { data: org } = await supabaseAdmin
       .from('organizations')
@@ -194,22 +216,16 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, compliance_status, compliance_notes } = body;
 
-    if (!id) {
+    const parsed = farmPatchSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Farm ID is required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const allowedStatuses = ['pending', 'approved', 'rejected'];
-    if (compliance_status && !allowedStatuses.includes(compliance_status)) {
-      return NextResponse.json(
-        { error: 'Invalid compliance status' },
-        { status: 400 }
-      );
-    }
+    const { id, compliance_status, compliance_notes } = parsed.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

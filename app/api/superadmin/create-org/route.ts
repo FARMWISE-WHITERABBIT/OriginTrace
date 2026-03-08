@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
           created_by: user.id,
         }
       });
-    } catch {
-      console.log('Audit log skipped');
+    } catch (auditErr) {
+      console.error('Audit log insert failed:', auditErr);
     }
 
     return NextResponse.json({

@@ -48,7 +48,7 @@ export default function ReportBuilderPage() {
     if (!organization || !selectedReport) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}&section=all`);
+      const res = await fetch(`/api/reports?type=${selectedReport}&period=${period}`);
       if (res.ok) {
         const result = await res.json();
         setData(result);

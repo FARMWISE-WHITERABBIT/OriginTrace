@@ -5,6 +5,26 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
+import { z } from 'zod';
+
+const shipmentPatchSchema = z.object({
+  status: z.string().optional(),
+  destination_country: z.string().optional(),
+  destination_port: z.string().optional(),
+  buyer_company: z.string().optional(),
+  buyer_contact: z.string().optional(),
+  target_regulations: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  estimated_ship_date: z.string().optional(),
+  doc_status: z.record(z.any()).optional(),
+  storage_controls: z.record(z.any()).optional(),
+  add_items: z.array(z.object({
+    item_type: z.enum(['batch', 'finished_good']),
+    batch_id: z.number().optional(),
+    finished_good_id: z.number().optional(),
+  })).optional(),
+  remove_items: z.array(z.number()).optional(),
+});
 
 
 function createServiceClient() {
@@ -92,30 +112,122 @@ export async function GET(
       return NextResponse.json({ error: itemsError.message }, { status: 500 });
     }
 
+    const itemsList = items || [];
+
+    const batchIds = itemsList
+      .filter((i: any) => i.item_type === 'batch' && i.batch_id)
+      .map((i: any) => i.batch_id);
+    const finishedGoodIds = itemsList
+      .filter((i: any) => i.item_type === 'finished_good' && i.finished_good_id)
+      .map((i: any) => i.finished_good_id);
+
+    const batchMap = new Map<string, any>();
+    const bagsByBatchId = new Map<string, any[]>();
+    const fgMap = new Map<string, any>();
+    const runMap = new Map<string, any>();
+
+    const bulkBatchPromise = batchIds.length > 0
+      ? supabase
+          .from('collection_batches')
+          .select('*, farm:farms(id, farmer_name, community, gps_latitude, gps_longitude)')
+          .in('id', batchIds)
+      : Promise.resolve({ data: [] });
+
+    const bulkBagsPromise = batchIds.length > 0
+      ? supabase
+          .from('bags')
+          .select('id, farm_id, collection_batch_id')
+          .in('collection_batch_id', batchIds)
+      : Promise.resolve({ data: [] });
+
+    const bulkFgPromise = finishedGoodIds.length > 0
+      ? supabase
+          .from('finished_goods')
+          .select('*')
+          .in('id', finishedGoodIds)
+      : Promise.resolve({ data: [] });
+
+    const complianceProfilePromise = shipment.compliance_profile_id
+      ? supabase
+          .from('compliance_profiles')
+          .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
+          .eq('id', shipment.compliance_profile_id)
+          .single()
+      : Promise.resolve({ data: null });
+
+    const [
+      { data: batchesData },
+      { data: bagsData },
+      { data: fgData },
+      { data: allOutcomes },
+      { data: coldChainData },
+      { data: lots },
+      { data: cpData },
+    ] = await Promise.all([
+      bulkBatchPromise,
+      bulkBagsPromise,
+      bulkFgPromise,
+      supabase
+        .from('shipment_outcomes')
+        .select('outcome')
+        .eq('org_id', profile.org_id),
+      supabase
+        .from('cold_chain_logs')
+        .select('is_alert')
+        .eq('shipment_id', shipment.id)
+        .eq('org_id', profile.org_id),
+      supabase
+        .from('shipment_lots')
+        .select('mass_balance_valid')
+        .eq('shipment_id', shipment.id)
+        .eq('org_id', profile.org_id),
+      complianceProfilePromise,
+    ]);
+
+    for (const b of (batchesData || [])) {
+      batchMap.set(String(b.id), b);
+    }
+    for (const bag of (bagsData || [])) {
+      const key = String(bag.collection_batch_id);
+      if (!bagsByBatchId.has(key)) bagsByBatchId.set(key, []);
+      bagsByBatchId.get(key)!.push(bag);
+    }
+    for (const fg of (fgData || [])) {
+      fgMap.set(String(fg.id), fg);
+    }
+
+    const processingRunIds = (fgData || [])
+      .filter((fg: any) => fg.processing_run_id)
+      .map((fg: any) => fg.processing_run_id);
+
+    if (processingRunIds.length > 0) {
+      const { data: runsData } = await supabase
+        .from('processing_runs')
+        .select('*')
+        .in('id', processingRunIds);
+      for (const run of (runsData || [])) {
+        runMap.set(String(run.id), run);
+      }
+    }
+
     const enrichedItems = [];
     const scoreItems: ShipmentScoreInput['items'] = [];
+    const farmIds: string[] = [];
 
-    for (const item of (items || [])) {
+    for (const item of itemsList) {
       let enrichedItem: any = { ...item };
 
       if (item.item_type === 'batch' && item.batch_id) {
-        const { data: batch } = await supabase
-          .from('collection_batches')
-          .select('*, farm:farms(id, farmer_name, community, gps_latitude, gps_longitude)')
-          .eq('id', item.batch_id)
-          .single();
+        const batch = batchMap.get(String(item.batch_id));
 
         if (batch) {
           enrichedItem.batch_data = batch;
-
-          const { data: bags } = await supabase
-            .from('bags')
-            .select('id, farm_id')
-            .eq('collection_batch_id', batch.id);
-
-          const bagCount = bags?.length || 0;
-          const bagsWithFarmLink = bags?.filter((b: any) => b.farm_id)?.length || 0;
+          const bags = bagsByBatchId.get(String(batch.id)) || [];
+          const bagCount = bags.length;
+          const bagsWithFarmLink = bags.filter((b: any) => b.farm_id).length;
           const hasGps = !!(batch.farm?.gps_latitude && batch.farm?.gps_longitude);
+
+          if (batch.farm_id) farmIds.push(String(batch.farm_id));
 
           scoreItems.push({
             item_type: 'batch',
@@ -131,26 +243,25 @@ export async function GET(
               yield_validated: !!batch.yield_validated,
             },
           });
+        } else {
+          scoreItems.push({
+            item_type: item.item_type,
+            weight_kg: item.weight_kg || 0,
+            farm_count: item.farm_count || 0,
+            traceability_complete: item.traceability_complete || false,
+            compliance_status: item.compliance_status || 'pending',
+          });
         }
       } else if (item.item_type === 'finished_good' && item.finished_good_id) {
-        const { data: finishedGood } = await supabase
-          .from('finished_goods')
-          .select('*')
-          .eq('id', item.finished_good_id)
-          .single();
+        const finishedGood = fgMap.get(String(item.finished_good_id));
 
         if (finishedGood) {
           enrichedItem.finished_good_data = finishedGood;
 
           let processingRun = null;
           if (finishedGood.processing_run_id) {
-            const { data: run } = await supabase
-              .from('processing_runs')
-              .select('*')
-              .eq('id', finishedGood.processing_run_id)
-              .single();
-            processingRun = run;
-            enrichedItem.processing_run_data = run;
+            processingRun = runMap.get(String(finishedGood.processing_run_id)) || null;
+            enrichedItem.processing_run_data = processingRun;
           }
 
           scoreItems.push({
@@ -164,6 +275,14 @@ export async function GET(
               pedigree_verified: !!finishedGood.pedigree_verified,
               processing_run_complete: processingRun?.status === 'completed',
             },
+          });
+        } else {
+          scoreItems.push({
+            item_type: item.item_type,
+            weight_kg: item.weight_kg || 0,
+            farm_count: item.farm_count || 0,
+            traceability_complete: item.traceability_complete || false,
+            compliance_status: item.compliance_status || 'pending',
           });
         }
       } else {
@@ -179,52 +298,18 @@ export async function GET(
       enrichedItems.push(enrichedItem);
     }
 
-    const { data: allOutcomes } = await supabase
-      .from('shipment_outcomes')
-      .select('outcome')
-      .eq('org_id', profile.org_id);
     let historicalRejectionRate: number | undefined;
     if (allOutcomes && allOutcomes.length > 0) {
       const rejectedCount = allOutcomes.filter((o: any) => o.outcome === 'rejected').length;
       historicalRejectionRate = rejectedCount / allOutcomes.length;
     }
 
-    const { data: coldChainData } = await supabase
-      .from('cold_chain_logs')
-      .select('is_alert')
-      .eq('shipment_id', shipment.id)
-      .eq('org_id', profile.org_id);
     const coldChainTotalEntries = coldChainData?.length || 0;
     const coldChainAlertCount = coldChainData?.filter((c: any) => c.is_alert).length || 0;
 
-    const { data: lots } = await supabase
-      .from('shipment_lots')
-      .select('mass_balance_valid')
-      .eq('shipment_id', shipment.id)
-      .eq('org_id', profile.org_id);
-
     let complianceProfile: ComplianceProfile | undefined;
-    if (shipment.compliance_profile_id) {
-      const { data: cpData } = await supabase
-        .from('compliance_profiles')
-        .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
-        .eq('id', shipment.compliance_profile_id)
-        .single();
-      if (cpData) {
-        complianceProfile = cpData as ComplianceProfile;
-      }
-    }
-
-    const farmIds: string[] = [];
-    for (const item of (items || [])) {
-      if (item.item_type === 'batch' && item.batch_id) {
-        const { data: batch } = await supabase
-          .from('collection_batches')
-          .select('farm_id')
-          .eq('id', item.batch_id)
-          .single();
-        if (batch?.farm_id) farmIds.push(String(batch.farm_id));
-      }
+    if (cpData) {
+      complianceProfile = cpData as ComplianceProfile;
     }
 
     const uniqueFarmIds = [...new Set(farmIds)];
@@ -245,10 +330,16 @@ export async function GET(
       }
     }
 
-    const scoreItemsWithFarmIds = scoreItems.map((si, idx) => ({
-      ...si,
-      farm_ids: farmIds[idx] ? [farmIds[idx]] : undefined,
-    }));
+    const scoreItemsWithFarmIds = scoreItems.map((si, idx) => {
+      const item = itemsList[idx];
+      if (item?.item_type === 'batch' && item?.batch_id) {
+        const batch = batchMap.get(String(item.batch_id));
+        if (batch?.farm_id) {
+          return { ...si, farm_ids: [String(batch.farm_id)] };
+        }
+      }
+      return si;
+    });
 
     const scoreInput: ShipmentScoreInput = {
       shipment: {
@@ -322,13 +413,22 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { add_items, remove_items, ...updateFields } = body;
+
+    const parsed = shipmentPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { add_items, remove_items, ...updateFields } = parsed.data;
 
     const allowedFields = [
       'status', 'destination_country', 'destination_port', 'buyer_company',
       'buyer_contact', 'target_regulations', 'notes', 'estimated_ship_date',
       'doc_status', 'storage_controls',
-    ];
+    ] as const;
 
     const updateData: Record<string, any> = {};
     for (const field of allowedFields) {
