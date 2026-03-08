@@ -1,8 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-async function getAuthAndProfile() {
+type AuthResult =
+  | { error: NextResponse }
+  | { user: { id: string }; profile: { org_id: string; role: string }; supabaseAdmin: SupabaseClient };
+
+async function getAuthAndProfile(): Promise<AuthResult> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -31,7 +35,7 @@ async function getAuthAndProfile() {
     return { error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
   }
 
-  return { user, profile, supabaseAdmin };
+  return { user, profile: profile as { org_id: string; role: string }, supabaseAdmin };
 }
 
 export async function GET(
@@ -41,8 +45,8 @@ export async function GET(
   try {
     const { id } = await params;
     const auth = await getAuthAndProfile();
-    if ('error' in auth && auth.error) return auth.error;
-    const { profile, supabaseAdmin } = auth as { profile: { org_id: string; role: string }; supabaseAdmin: ReturnType<typeof createClient>; user: { id: string } };
+    if ('error' in auth) return auth.error;
+    const { profile, supabaseAdmin } = auth;
 
     const { data: document, error } = await supabaseAdmin
       .from('documents')
@@ -71,8 +75,8 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const auth = await getAuthAndProfile();
-    if ('error' in auth && auth.error) return auth.error;
-    const { profile, supabaseAdmin } = auth as { profile: { org_id: string; role: string }; supabaseAdmin: ReturnType<typeof createClient>; user: { id: string } };
+    if ('error' in auth) return auth.error;
+    const { profile, supabaseAdmin } = auth;
 
     const { data: existing } = await supabaseAdmin
       .from('documents')
@@ -130,8 +134,8 @@ export async function DELETE(
   try {
     const { id } = await params;
     const auth = await getAuthAndProfile();
-    if ('error' in auth && auth.error) return auth.error;
-    const { profile, supabaseAdmin } = auth as { profile: { org_id: string; role: string }; supabaseAdmin: ReturnType<typeof createClient>; user: { id: string } };
+    if ('error' in auth) return auth.error;
+    const { profile, supabaseAdmin } = auth;
 
     const { data: existing } = await supabaseAdmin
       .from('documents')
