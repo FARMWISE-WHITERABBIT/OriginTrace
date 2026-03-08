@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import {
   Package,
   CheckCircle,
@@ -112,64 +110,27 @@ export function AggregatorDashboard() {
   const [gradeData, setGradeData] = useState<Array<{ grade: string; count: number }>>([]);
   const [agentData, setAgentData] = useState<Array<{ name: string; weight: number }>>([]);
   const [deforestationData, setDeforestationData] = useState<Array<{ name: string; value: number }>>([]);
-  const { organization } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase || !organization) return;
-
       try {
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-        const [
-          batchesRes,
-          collectingRes,
-          resolvedRes,
-          dispatchedRes,
-          flaggedRes,
-          todayWeightRes,
-          weekWeightRes,
-          monthWeightRes,
-          agentsRes,
-          allWeightRes
-        ] = await Promise.all([
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'collecting'),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'resolved'),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'dispatched'),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).not('yield_flag_reason', 'is', null),
-          supabase.from('collection_batches').select('total_weight').eq('org_id', organization.id).gte('created_at', todayStart),
-          supabase.from('collection_batches').select('total_weight').eq('org_id', organization.id).gte('created_at', weekStart),
-          supabase.from('collection_batches').select('total_weight').eq('org_id', organization.id).gte('created_at', monthStart),
-          supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('role', 'agent'),
-          supabase.from('collection_batches').select('total_weight').eq('org_id', organization.id).eq('status', 'dispatched'),
-        ]);
-
-        const todayWeight = todayWeightRes.data?.reduce((sum, b) => sum + Number(b.total_weight || 0), 0) || 0;
-        const weekWeight = weekWeightRes.data?.reduce((sum, b) => sum + Number(b.total_weight || 0), 0) || 0;
-        const monthWeight = monthWeightRes.data?.reduce((sum, b) => sum + Number(b.total_weight || 0), 0) || 0;
-        const totalWeight = allWeightRes.data?.reduce((sum, b) => sum + Number(b.total_weight || 0), 0) || 0;
-
-        const total = batchesRes.count || 0;
-        const flagged = flaggedRes.count || 0;
-        const complianceScore = total > 0 ? Math.round(((total - flagged) / total) * 100) : 100;
-
+        const res = await fetch('/api/dashboard?view=aggregator');
+        if (!res.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await res.json();
+        const total = data.totalBatches || 0;
+        const flagged = data.flaggedBatches || 0;
         setStats({
           totalBatches: total,
-          collectingBatches: collectingRes.count || 0,
-          resolvedBatches: resolvedRes.count || 0,
-          dispatchedBatches: dispatchedRes.count || 0,
-          totalWeight,
-          todayWeight,
-          weekWeight,
-          monthWeight,
-          activeAgents: agentsRes.count || 0,
-          complianceScore,
-          flaggedBatches: flagged
+          collectingBatches: data.collectingBatches || 0,
+          resolvedBatches: data.resolvedBatches || 0,
+          dispatchedBatches: data.dispatchedBatches || 0,
+          totalWeight: data.dispatchedWeight || 0,
+          todayWeight: data.todayWeight || 0,
+          weekWeight: data.weekWeight || 0,
+          monthWeight: data.monthWeight || 0,
+          activeAgents: data.agentCount || 0,
+          complianceScore: total > 0 ? Math.round(((total - flagged) / total) * 100) : 100,
+          flaggedBatches: flagged,
         });
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -177,12 +138,10 @@ export function AggregatorDashboard() {
         setIsLoading(false);
       }
     }
-
     fetchStats();
-  }, [organization]);
+  }, []);
 
   const fetchTrends = useCallback(async () => {
-    if (!organization) return;
     setIsTrendLoading(true);
     try {
       const res = await fetch(`/api/analytics?period=${trendPeriod}`);
@@ -221,7 +180,7 @@ export function AggregatorDashboard() {
     } finally {
       setIsTrendLoading(false);
     }
-  }, [organization, trendPeriod]);
+  }, [trendPeriod]);
 
   useEffect(() => {
     fetchTrends();

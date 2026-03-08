@@ -15,6 +15,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limiting — OCR calls OpenAI Vision API (paid)
+    const { checkRateLimit, RATE_LIMIT_PRESETS } = await import('@/lib/api/rate-limit');
+    const rateLimitResponse = checkRateLimit(request, user.id, RATE_LIMIT_PRESETS.ocr);
+    if (rateLimitResponse) return rateLimitResponse;
+
+    // Role guard — OCR is only needed during farmer registration (agent, admin, aggregator)
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const adminClient = createAdminClient();
+    const { data: profile } = await adminClient
+      .from('profiles').select('role, org_id').eq('user_id', user.id).single();
+    if (!profile?.org_id) {
+      return NextResponse.json({ error: 'No organisation associated with this account' }, { status: 403 });
+    }
+    const ocrAllowed = ['admin', 'aggregator', 'agent', 'quality_manager'];
+    if (!ocrAllowed.includes(profile.role)) {
+      return NextResponse.json({ error: 'OCR is not available for your role' }, { status: 403 });
+    }
+
     const { image } = await request.json();
     if (!image) {
       return NextResponse.json({ error: 'Image data is required' }, { status: 400 });
@@ -23,7 +41,7 @@ export async function POST(request: NextRequest) {
     const base64Data = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',

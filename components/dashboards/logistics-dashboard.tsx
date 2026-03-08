@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import {
   Truck,
   Package,
@@ -49,31 +47,15 @@ export function LogisticsDashboard() {
     recentDispatches: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { organization } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase || !organization) return;
-
       try {
-        const [
-          unusedBagsRes,
-          collectedBagsRes,
-          processedBagsRes,
-          totalBagsRes,
-          dispatchedBatchesRes,
-          recentDispatchesRes,
-        ] = await Promise.all([
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'unused'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'collected'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'processed'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'shipped'),
-          supabase.from('collection_batches').select('id, status, bag_count, total_weight, created_at').eq('org_id', organization.id).in('status', ['shipped', 'completed']).order('created_at', { ascending: false }).limit(5),
-        ]);
-
-        let shipmentStats = { total: 0, pending: 0, inTransit: 0, delivered: 0 };
+        const res = await fetch('/api/dashboard?view=logistics_coordinator');
+        if (!res.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await res.json();
+        // Merge shipment counts from API response
+        let shipmentStats = { total: 0, pending: data.pendingShipments || 0, inTransit: data.activeShipments || 0, delivered: 0 };
         try {
           const shipmentRes = await fetch('/api/shipments');
           if (shipmentRes.ok) {
@@ -84,20 +66,18 @@ export function LogisticsDashboard() {
             shipmentStats.inTransit = shipments.filter((s: any) => s.status === 'in_transit').length;
             shipmentStats.delivered = shipments.filter((s: any) => s.status === 'delivered').length;
           }
-        } catch {
-          shipmentStats = { total: dispatchedBatchesRes.count || 0, pending: 0, inTransit: 0, delivered: 0 };
-        }
+        } catch { /* use API defaults */ }
 
         setStats({
           totalShipments: shipmentStats.total,
           pendingShipments: shipmentStats.pending,
           inTransitShipments: shipmentStats.inTransit,
           deliveredShipments: shipmentStats.delivered,
-          unusedBags: unusedBagsRes.count || 0,
-          collectedBags: collectedBagsRes.count || 0,
-          processedBags: processedBagsRes.count || 0,
-          totalBags: totalBagsRes.count || 0,
-          recentDispatches: (recentDispatchesRes.data || []) as LogisticsStats['recentDispatches'],
+          unusedBags: data.unusedBags || 0,
+          collectedBags: data.collectedBags || 0,
+          processedBags: data.processedBags || 0,
+          totalBags: data.totalBags || 0,
+          recentDispatches: data.recentBatches || [],
         });
       } catch (error) {
         console.error('Failed to fetch logistics stats:', error);
@@ -105,9 +85,8 @@ export function LogisticsDashboard() {
         setIsLoading(false);
       }
     }
-
     fetchStats();
-  }, [organization]);
+  }, []);
 
   const pipelineCards = [
     { title: 'Total Shipments', value: stats.totalShipments, icon: Truck, color: 'text-blue-600' },

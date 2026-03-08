@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('org_id')
+      .select('org_id, role')
       .eq('user_id', user.id)
       .single();
 
@@ -144,6 +144,15 @@ export async function POST(request: NextRequest) {
         { error: 'Profile not found' },
         { status: 404 }
       );
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organisation associated with this account' }, { status: 403 });
+    }
+
+    const allowedDocRoles = ['admin', 'quality_manager', 'compliance_officer', 'logistics_coordinator'];
+    if (!allowedDocRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions to manage documents' }, { status: 403 });
     }
 
     if (!body.title || !body.document_type) {

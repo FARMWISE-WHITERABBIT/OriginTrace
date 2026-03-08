@@ -193,6 +193,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organisation associated with this account' }, { status: 403 });
+    }
+
+    if (!['admin', 'aggregator'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions to record payments' }, { status: 403 });
+    }
+
     const { data: payment, error: insertError } = await supabaseAdmin
       .from('payments')
       .insert({

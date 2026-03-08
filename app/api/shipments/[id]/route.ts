@@ -1,6 +1,5 @@
-'use server';
-
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
@@ -12,47 +11,6 @@ function createServiceClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.split(' ')[1];
-  const supabase = createServiceClient();
-
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-
-  return user;
-}
-
-async function getUserFromCookies(request: NextRequest) {
-  const supabase = createServiceClient();
-  const cookieHeader = request.headers.get('cookie');
-
-  if (!cookieHeader) return null;
-
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(c => {
-      const [key, ...val] = c.trim().split('=');
-      return [key, val.join('=')];
-    })
-  );
-
-  const accessToken = cookies['sb-access-token'] ||
-    Object.entries(cookies).find(([k]) => k.includes('auth-token'))?.[1];
-
-  if (!accessToken) return null;
-
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-    if (error || !user) return null;
-    return user;
-  } catch {
-    return null;
-  }
-}
 
 async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
   const { data: org } = await supabase
@@ -73,13 +31,9 @@ export async function GET(
 ) {
   try {
     const supabase = createServiceClient();
-
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-
-    if (!user) {
+    const authClient = await createServerClient();
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -126,26 +80,61 @@ export async function GET(
     const enrichedItems = [];
     const scoreItems: ShipmentScoreInput['items'] = [];
 
+    // ── Batch all sub-queries to eliminate N+1 ─────────────────────────────
+    const batchIds = (items || []).filter(i => i.item_type === 'batch' && i.batch_id).map(i => i.batch_id as string);
+    const fgIds = (items || []).filter(i => i.item_type === 'finished_good' && i.finished_good_id).map(i => i.finished_good_id as string);
+
+    // Fetch all batches + farms in one query
+    const [batchesRes, fgRes, bagsRes, allOutcomesRes, coldChainRes, lotsRes, cpRes] = await Promise.all([
+      batchIds.length > 0
+        ? supabase.from('collection_batches').select('*, farm:farms(id, farmer_name, community, gps_latitude, gps_longitude)').in('id', batchIds)
+        : Promise.resolve({ data: [] }),
+      fgIds.length > 0
+        ? supabase.from('finished_goods').select('*').in('id', fgIds)
+        : Promise.resolve({ data: [] }),
+      batchIds.length > 0
+        ? supabase.from('bags').select('id, farm_id, collection_batch_id').in('collection_batch_id', batchIds)
+        : Promise.resolve({ data: [] }),
+      supabase.from('shipment_outcomes').select('outcome').eq('org_id', profile.org_id),
+      supabase.from('cold_chain_logs').select('is_alert').eq('shipment_id', shipment.id).eq('org_id', profile.org_id),
+      supabase.from('shipment_lots').select('mass_balance_valid').eq('shipment_id', shipment.id).eq('org_id', profile.org_id),
+      shipment.compliance_profile_id
+        ? supabase.from('compliance_profiles').select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules').eq('id', shipment.compliance_profile_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    // Build lookup maps
+    const batchMap = new Map((batchesRes.data || []).map((b: any) => [b.id, b]));
+    const fgMap = new Map((fgRes.data || []).map((fg: any) => [fg.id, fg]));
+    const bagsByBatch = new Map<string, any[]>();
+    for (const bag of (bagsRes.data || [])) {
+      const arr = bagsByBatch.get(bag.collection_batch_id) || [];
+      arr.push(bag);
+      bagsByBatch.set(bag.collection_batch_id, arr);
+    }
+
+    // Fetch processing runs for finished goods in one query
+    const processingRunIds = (fgRes.data || []).map((fg: any) => fg.processing_run_id).filter(Boolean);
+    const processingRunMap = new Map<string, any>();
+    if (processingRunIds.length > 0) {
+      const { data: runs } = await supabase.from('processing_runs').select('*').in('id', processingRunIds);
+      for (const run of (runs || [])) processingRunMap.set(run.id, run);
+    }
+
+    const farmIds: string[] = [];
+
     for (const item of (items || [])) {
       let enrichedItem: any = { ...item };
 
       if (item.item_type === 'batch' && item.batch_id) {
-        const { data: batch } = await supabase
-          .from('collection_batches')
-          .select('*, farm:farms(id, farmer_name, community, gps_latitude, gps_longitude)')
-          .eq('id', item.batch_id)
-          .single();
-
+        const batch = batchMap.get(item.batch_id);
         if (batch) {
           enrichedItem.batch_data = batch;
+          if (batch.farm_id) farmIds.push(String(batch.farm_id));
 
-          const { data: bags } = await supabase
-            .from('bags')
-            .select('id, farm_id')
-            .eq('collection_batch_id', batch.id);
-
-          const bagCount = bags?.length || 0;
-          const bagsWithFarmLink = bags?.filter((b: any) => b.farm_id)?.length || 0;
+          const bags = bagsByBatch.get(batch.id) || [];
+          const bagCount = bags.length;
+          const bagsWithFarmLink = bags.filter((b: any) => b.farm_id).length;
           const hasGps = !!(batch.farm?.gps_latitude && batch.farm?.gps_longitude);
 
           scoreItems.push({
@@ -154,6 +143,7 @@ export async function GET(
             farm_count: item.farm_count || 0,
             traceability_complete: item.traceability_complete || false,
             compliance_status: item.compliance_status || 'pending',
+            farm_ids: batch.farm_id ? [String(batch.farm_id)] : undefined,
             batch_data: {
               has_gps: hasGps,
               bag_count: batch.bag_count || bagCount,
@@ -164,25 +154,11 @@ export async function GET(
           });
         }
       } else if (item.item_type === 'finished_good' && item.finished_good_id) {
-        const { data: finishedGood } = await supabase
-          .from('finished_goods')
-          .select('*')
-          .eq('id', item.finished_good_id)
-          .single();
-
+        const finishedGood = fgMap.get(item.finished_good_id);
         if (finishedGood) {
           enrichedItem.finished_good_data = finishedGood;
-
-          let processingRun = null;
-          if (finishedGood.processing_run_id) {
-            const { data: run } = await supabase
-              .from('processing_runs')
-              .select('*')
-              .eq('id', finishedGood.processing_run_id)
-              .single();
-            processingRun = run;
-            enrichedItem.processing_run_data = run;
-          }
+          const processingRun = finishedGood.processing_run_id ? processingRunMap.get(finishedGood.processing_run_id) : null;
+          if (processingRun) enrichedItem.processing_run_data = processingRun;
 
           scoreItems.push({
             item_type: 'finished_good',
@@ -210,54 +186,23 @@ export async function GET(
       enrichedItems.push(enrichedItem);
     }
 
-    const { data: allOutcomes } = await supabase
-      .from('shipment_outcomes')
-      .select('outcome')
-      .eq('org_id', profile.org_id);
+    // Historical rejection rate
+    const allOutcomes = allOutcomesRes.data || [];
     let historicalRejectionRate: number | undefined;
-    if (allOutcomes && allOutcomes.length > 0) {
-      const rejectedCount = allOutcomes.filter((o: any) => o.outcome === 'rejected').length;
-      historicalRejectionRate = rejectedCount / allOutcomes.length;
+    if (allOutcomes.length > 0) {
+      historicalRejectionRate = allOutcomes.filter((o: any) => o.outcome === 'rejected').length / allOutcomes.length;
     }
 
-    const { data: coldChainData } = await supabase
-      .from('cold_chain_logs')
-      .select('is_alert')
-      .eq('shipment_id', shipment.id)
-      .eq('org_id', profile.org_id);
-    const coldChainTotalEntries = coldChainData?.length || 0;
-    const coldChainAlertCount = coldChainData?.filter((c: any) => c.is_alert).length || 0;
+    const coldChainData = coldChainRes.data || [];
+    const coldChainTotalEntries = coldChainData.length;
+    const coldChainAlertCount = coldChainData.filter((c: any) => c.is_alert).length;
 
-    const { data: lots } = await supabase
-      .from('shipment_lots')
-      .select('mass_balance_valid')
-      .eq('shipment_id', shipment.id)
-      .eq('org_id', profile.org_id);
+    const lots = lotsRes.data || [];
 
     let complianceProfile: ComplianceProfile | undefined;
-    if (shipment.compliance_profile_id) {
-      const { data: cpData } = await supabase
-        .from('compliance_profiles')
-        .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
-        .eq('id', shipment.compliance_profile_id)
-        .single();
-      if (cpData) {
-        complianceProfile = cpData as ComplianceProfile;
-      }
-    }
+    if (cpRes.data) complianceProfile = cpRes.data as ComplianceProfile;
 
-    const farmIds: string[] = [];
-    for (const item of (items || [])) {
-      if (item.item_type === 'batch' && item.batch_id) {
-        const { data: batch } = await supabase
-          .from('collection_batches')
-          .select('farm_id')
-          .eq('id', item.batch_id)
-          .single();
-        if (batch?.farm_id) farmIds.push(String(batch.farm_id));
-      }
-    }
-
+    // Deforestation checks — batch fetch all unique farm IDs
     const uniqueFarmIds = [...new Set(farmIds)];
     let farmDeforestationChecks: Array<{ farm_id: string; deforestation_free: boolean; forest_loss_hectares: number; forest_loss_percentage: number; analysis_date: string; data_source: string; risk_level: 'low' | 'medium' | 'high' }> = [];
 
@@ -276,10 +221,7 @@ export async function GET(
       }
     }
 
-    const scoreItemsWithFarmIds = scoreItems.map((si, idx) => ({
-      ...si,
-      farm_ids: farmIds[idx] ? [farmIds[idx]] : undefined,
-    }));
+    const scoreItemsWithFarmIds = scoreItems;
 
     const scoreInput: ShipmentScoreInput = {
       shipment: {
@@ -316,13 +258,9 @@ export async function PATCH(
 ) {
   try {
     const supabase = createServiceClient();
-
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-
-    if (!user) {
+    const authClient = await createServerClient();
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Pedigree code or ID required' }, { status: 400 });
     }
 
+    // Public endpoint — strip all commercially sensitive fields.
+    // buyer_name, buyer_company, dds_reference, dds_submitted_at, destination_country
+    // are confidential trade details and must never be returned to unauthenticated callers.
     let query = supabaseAdmin
       .from('finished_goods')
       .select(`
@@ -31,12 +34,6 @@ export async function GET(request: NextRequest) {
         lot_number,
         production_date,
         expiry_date,
-        destination_country,
-        buyer_name,
-        buyer_company,
-        dds_submitted,
-        dds_submitted_at,
-        dds_reference,
         pedigree_verified,
         verification_notes,
         created_at,
@@ -52,8 +49,7 @@ export async function GET(request: NextRequest) {
           standard_recovery_rate,
           mass_balance_valid,
           mass_balance_variance,
-          processed_at,
-          org_id
+          processed_at
         ),
         organizations (
           id,

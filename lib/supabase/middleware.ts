@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { hasAccess, type AppRole } from '@/lib/rbac';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -99,6 +100,19 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
     }
+
+    // ── RBAC enforcement for /app/* routes ──────────────────────────────────
+    // Skip /app itself (root dashboard) and /app/buyer (handled by its own role check)
+    if (pathname.startsWith('/app/') && !isSuperadmin) {
+      const role = await getUserRole(supabase, user.id);
+      if (role && !hasAccess(role, pathname)) {
+        // Redirect to the dashboard root — user is authenticated but not authorised
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'buyer' ? '/app/buyer' : '/app';
+        url.searchParams.set('unauthorised', '1');
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return supabaseResponse;
@@ -111,4 +125,13 @@ async function checkIsSuperadmin(supabase: any, userId: string): Promise<boolean
     .eq('user_id', userId)
     .single();
   return !!data;
+}
+
+async function getUserRole(supabase: any, userId: string): Promise<AppRole | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('user_id', userId)
+    .single();
+  return (data?.role as AppRole) || null;
 }
