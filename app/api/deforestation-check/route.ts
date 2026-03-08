@@ -4,6 +4,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+const coordinatePairSchema = z.tuple([
+  z.number().min(-180).max(180),
+  z.number().min(-90).max(90),
+]);
+
+const polygonSchema = z.object({
+  type: z.literal('Polygon'),
+  coordinates: z
+    .array(
+      z.array(coordinatePairSchema).min(4)
+    )
+    .min(1),
+}).refine(
+  (val) => {
+    const ring = val.coordinates[0];
+    if (!ring || ring.length < 4) return false;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    return first[0] === last[0] && first[1] === last[1];
+  },
+  { message: 'Polygon outer ring must be closed (first and last coordinates must match)' }
+);
+
+const deforestationCheckBodySchema = z.object({
+  farm_id: z.union([z.string(), z.number()]).optional(),
+  polygon: polygonSchema.optional(),
+  country_code: z.string().length(2).optional(),
+}).refine(
+  (val) => val.farm_id !== undefined || val.polygon !== undefined,
+  { message: 'Either farm_id or polygon is required' }
+);
 
 const COUNTRY_RISK_MAP: Record<string, { risk_level: 'low' | 'medium' | 'high'; forest_loss_percentage: number }> = {
   'NG': { risk_level: 'high', forest_loss_percentage: 5.2 },
@@ -151,15 +184,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { farm_id, polygon, country_code } = body;
-
-    if (!farm_id && !polygon) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: 'Either farm_id or polygon is required' },
+        { error: 'Invalid JSON body' },
         { status: 400 }
       );
     }
+
+    const parsed = deforestationCheckBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { farm_id, polygon, country_code } = parsed.data;
 
     let farmPolygon = polygon;
     let farmAreaHectares = 0;

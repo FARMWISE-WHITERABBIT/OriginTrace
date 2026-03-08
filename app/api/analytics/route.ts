@@ -1,14 +1,10 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
-
-
-function createServiceClient() {
-  return createAdminClient();
-}
+import { enforceTier } from '@/lib/api/tier-guard';
+import { createServiceClient } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 function getPeriodStart(period: string): string {
   const now = new Date();
@@ -122,17 +118,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('subscription_tier')
-      .eq('id', profile.org_id)
-      .single();
-
-    const tier = org?.subscription_tier || 'starter';
-    const tierLevel: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-    if ((tierLevel[tier] ?? 0) < 1) {
-      return NextResponse.json({ error: 'Analytics requires Basic tier or higher' }, { status: 403 });
-    }
+    const tierBlock = await enforceTier(profile.org_id, 'analytics');
+    if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';

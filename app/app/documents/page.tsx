@@ -22,6 +22,7 @@ import {
   Link as LinkIcon,
   Trash2,
 } from 'lucide-react';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface Document {
   id: string;
@@ -64,25 +65,6 @@ const TYPE_LABELS: Record<string, string> = Object.fromEntries(
   DOCUMENT_TYPES.map(t => [t.value, t.label])
 );
 
-function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'active': return 'default';
-    case 'expiring_soon': return 'secondary';
-    case 'expired': return 'destructive';
-    case 'archived': return 'outline';
-    default: return 'outline';
-  }
-}
-
-function getStatusLabel(status: string): string {
-  switch (status) {
-    case 'active': return 'Active';
-    case 'expiring_soon': return 'Expiring Soon';
-    case 'expired': return 'Expired';
-    case 'archived': return 'Archived';
-    default: return status;
-  }
-}
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -411,9 +393,7 @@ export default function DocumentsPage() {
                     <Badge variant="outline" data-testid={`badge-type-${doc.id}`}>
                       {TYPE_LABELS[doc.document_type] || doc.document_type}
                     </Badge>
-                    <Badge variant={getStatusBadgeVariant(doc.status)} data-testid={`badge-status-${doc.id}`}>
-                      {getStatusLabel(doc.status)}
-                    </Badge>
+                    <StatusBadge domain="document" status={doc.status} data-testid={`badge-status-${doc.id}`} />
                   </div>
                   {doc.expiry_date && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

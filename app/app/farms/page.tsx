@@ -14,7 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Loader2, Search, MapPin, Check, X, Clock, User, Phone, Calendar, Ruler, FileCheck, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, MapPin, User, Phone, Calendar, Ruler, FileCheck, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface Farm {
   id: string;
@@ -75,16 +76,6 @@ export default function FarmsPage() {
     (farm.farmer_id && farm.farmer_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-600"><Check className="h-3 w-3 mr-1" /> Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><X className="h-3 w-3 mr-1" /> Rejected</Badge>;
-      default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
-    }
-  };
 
   const handleRowClick = (farm: Farm) => {
     setSelectedFarm(farm);
@@ -156,7 +147,7 @@ export default function FarmsPage() {
                       <TableCell>{farm.community}</TableCell>
                       <TableCell>{farm.farmer_id || '-'}</TableCell>
                       <TableCell>{farm.area_hectares?.toFixed(2) || '-'}</TableCell>
-                      <TableCell>{getStatusBadge(farm.compliance_status)}</TableCell>
+                      <TableCell><StatusBadge domain="farm" status={farm.compliance_status} /></TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(farm.created_at).toLocaleDateString()}
                       </TableCell>
@@ -185,7 +176,7 @@ export default function FarmsPage() {
               
               <div className="mt-6 space-y-6">
                 <div className="flex justify-center">
-                  {getStatusBadge(selectedFarm.compliance_status)}
+                  <StatusBadge domain="farm" status={selectedFarm.compliance_status} />
                 </div>
 
                 <div className="space-y-4">

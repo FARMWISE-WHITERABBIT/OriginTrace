@@ -1,10 +1,5 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-
-
-function createServiceClient() {
-  return createAdminClient();
-}
+import { createServiceClient } from '@/lib/api-auth';
 
     const supabase = createServiceClient();
 

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Search, Building2, Users, Eye, ExternalLink, Weight, CheckCircle2, LogIn, Plus, Mail, Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrg } from '@/lib/contexts/org-context';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface Organization {
   id: number;
@@ -206,15 +207,6 @@ export default function OrganizationsPage() {
     (org.slug && org.slug.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      active: 'default',
-      trial: 'secondary',
-      suspended: 'destructive',
-      cancelled: 'outline'
-    };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
-  };
 
   if (isLoading) {
     return (
@@ -288,7 +280,7 @@ export default function OrganizationsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(org.subscription_status || 'trial')}</TableCell>
+                    <TableCell><StatusBadge domain="subscription" status={org.subscription_status || 'trial'} /></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -380,7 +372,7 @@ export default function OrganizationsPage() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Status</div>
-                  <div>{getStatusBadge(selectedOrg.subscription_status || 'trial')}</div>
+                  <div><StatusBadge domain="subscription" status={selectedOrg.subscription_status || 'trial'} /></div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Commodities</div>

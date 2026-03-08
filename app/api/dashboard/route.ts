@@ -1,12 +1,8 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-function createServiceClient() {
-  return createAdminClient();
-}
+import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 async function getAggregatorData(supabase: any, orgId: string) {
   const now = new Date();

@@ -6,12 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Package, Plus, Search } from 'lucide-react';
 import { TierGate } from '@/components/tier-gate';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface Bag {
   id: string;
@@ -100,16 +100,6 @@ export default function BagsPage() {
     (bag.batch_id && bag.batch_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'collected':
-        return <Badge className="bg-blue-600">Collected</Badge>;
-      case 'processed':
-        return <Badge className="bg-green-600">Processed</Badge>;
-      default:
-        return <Badge variant="secondary">Unused</Badge>;
-    }
-  };
 
   const stats = {
     total: bags.length,
@@ -252,7 +242,7 @@ export default function BagsPage() {
                     <TableRow key={bag.id} data-testid={`bag-row-${bag.id}`}>
                       <TableCell className="font-mono">{bag.serial}</TableCell>
                       <TableCell>{bag.batch_id || '-'}</TableCell>
-                      <TableCell>{getStatusBadge(bag.status)}</TableCell>
+                      <TableCell><StatusBadge domain="bag" status={bag.status} /></TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(bag.created_at).toLocaleDateString()}
                       </TableCell>

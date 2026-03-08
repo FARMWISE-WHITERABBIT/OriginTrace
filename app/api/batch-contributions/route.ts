@@ -1,7 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
+const ALLOWED_READ_ROLES = ['admin', 'aggregator', 'agent'];
+
+const batchContributionSchema = z.object({
+  batch_id: z.number({ required_error: 'batch_id is required' }).int().positive(),
+  farm_id: z.number({ required_error: 'farm_id is required' }).int().positive(),
+  farmer_name: z.string().nullable().optional(),
+  weight_kg: z.number().min(0).default(0),
+  bag_count: z.number().int().min(0).default(0),
+  notes: z.string().nullable().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +32,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!ALLOWED_READ_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const batchId = request.nextUrl.searchParams.get('batch_id');
@@ -80,11 +95,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes } = body;
+    const parsed = batchContributionSchema.safeParse(body);
 
-    if (!batch_id || !farm_id) {
-      return NextResponse.json({ error: 'batch_id and farm_id required' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes } = parsed.data;
 
     const { data: batch } = await supabaseAdmin
       .from('collection_batches')
@@ -119,11 +139,11 @@ export async function POST(request: NextRequest) {
       .insert({
         batch_id,
         farm_id,
-        farmer_name: farmer_name || null,
-        weight_kg: weight_kg || 0,
-        bag_count: bag_count || 0,
+        farmer_name: farmer_name ?? null,
+        weight_kg,
+        bag_count,
         compliance_status: complianceStatus,
-        notes: notes || null
+        notes: notes ?? null
       })
       .select()
       .single();

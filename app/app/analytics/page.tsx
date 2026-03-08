@@ -17,10 +17,19 @@ import {
   RadarSpiderChart,
   TrendLineChart,
 } from '@/components/charts';
+import { TierGate } from '@/components/tier-gate';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
 export default function AnalyticsPage() {
+  return (
+    <TierGate feature="analytics" requiredTier="basic" featureLabel="Analytics & Reporting">
+      <AnalyticsContent />
+    </TierGate>
+  );
+}
+
+function AnalyticsContent() {
   const { organization, profile } = useOrg();
   const [period, setPeriod] = useState<Period>('30d');
   const [data, setData] = useState<any>(null);

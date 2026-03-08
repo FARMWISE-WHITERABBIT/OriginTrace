@@ -1,11 +1,11 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
 
 const batchCreateSchema = z.object({
   farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
@@ -19,17 +19,6 @@ const batchCreateSchema = z.object({
   local_id: z.string().optional(),
   collected_at: z.string().optional(),
 });
-
-function createServiceClient() {
-  return createAdminClient();
-}
-
-async function getAuthenticatedUser() {
-  const supabase = await createServerClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +38,9 @@ export async function GET(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -114,6 +106,9 @@ export async function POST(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const body = await request.json();
 
@@ -221,6 +216,9 @@ export async function PATCH(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const body = await request.json();
     const { id, status, notes, total_weight, bag_count } = body;

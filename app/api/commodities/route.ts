@@ -1,11 +1,6 @@
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-
-function createServiceClient() {
-  return createAdminClient();
-}
+import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {

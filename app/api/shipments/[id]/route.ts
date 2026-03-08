@@ -1,12 +1,11 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
+import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
 
 const shipmentPatchSchema = z.object({
   status: z.string().optional(),
@@ -26,40 +25,6 @@ const shipmentPatchSchema = z.object({
   })).optional(),
   remove_items: z.array(z.number()).optional(),
 });
-
-
-function createServiceClient() {
-  return createAdminClient();
-}
-
-async function getAuthenticatedUser(request?: NextRequest) {
-  if (request) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      const supabase = createServiceClient();
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) return user;
-    }
-  }
-  const supabase = await createServerClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
-}
-
-async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('subscription_tier, feature_flags')
-    .eq('id', orgId)
-    .single();
-  if (!org) return false;
-  const tier = org.subscription_tier || 'starter';
-  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
-  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
-}
 
 export async function GET(
   request: NextRequest,
@@ -83,8 +48,9 @@ export async function GET(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
@@ -405,8 +371,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);

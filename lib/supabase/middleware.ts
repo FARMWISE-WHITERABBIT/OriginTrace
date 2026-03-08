@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { hasAccess, type AppRole } from '@/lib/rbac';
+import { checkRouteAccess } from '@/lib/config/tier-gating';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -113,6 +114,15 @@ export async function updateSession(request: NextRequest) {
         url.pathname = role === 'buyer' ? '/app/buyer' : role === 'farmer' ? '/app/farmer' : '/app';
         return NextResponse.redirect(url);
       }
+
+      const orgTier = await getOrgTier(supabase, user.id);
+      const tierAccess = checkRouteAccess(orgTier, pathname);
+      if (!tierAccess.allowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/app';
+        url.searchParams.set('tier_required', tierAccess.requiredTier || '');
+        return NextResponse.redirect(url);
+      }
     }
   }
 
@@ -138,5 +148,24 @@ async function getUserRole(supabase: any, userId: string): Promise<AppRole | nul
     return (data?.role as AppRole) || null;
   } catch {
     return null;
+  }
+}
+
+async function getOrgTier(supabase: any, userId: string): Promise<string | undefined> {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('user_id', userId)
+      .single();
+    if (!profile?.org_id) return undefined;
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('subscription_tier')
+      .eq('id', profile.org_id)
+      .single();
+    return org?.subscription_tier || undefined;
+  } catch {
+    return undefined;
   }
 }
