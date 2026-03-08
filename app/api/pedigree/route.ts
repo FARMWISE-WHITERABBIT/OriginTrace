@@ -153,14 +153,6 @@ export async function GET(request: NextRequest) {
       }
     ];
 
-    if (finishedGood.dds_submitted) {
-      timeline.push({
-        event: 'DDS Submitted',
-        date: finishedGood.dds_submitted_at,
-        details: `EU TRACES Portal - Ref: ${finishedGood.dds_reference || 'Pending'}`,
-        icon: 'certificate'
-      });
-    }
 
     return NextResponse.json({
       finishedGood: {
