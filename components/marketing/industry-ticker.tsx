@@ -24,8 +24,8 @@ export function IndustryTicker() {
   }, []);
 
   return (
-    <span className="relative inline-block align-bottom overflow-hidden" style={{ height: '1.15em' }}>
-      <span className="invisible whitespace-nowrap" aria-hidden="true" style={{ fontWeight: 'inherit' }}>
+    <span className="relative inline-block align-bottom overflow-hidden" style={{ lineHeight: 'inherit' }}>
+      <span className="invisible whitespace-nowrap block" aria-hidden="true" style={{ fontWeight: 'inherit', lineHeight: 'inherit' }}>
         {longestWord}
       </span>
       <AnimatePresence mode="wait">
@@ -35,7 +35,7 @@ export function IndustryTicker() {
           animate={{ y: '0%', opacity: 1 }}
           exit={{ y: '-110%', opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-          className="absolute bottom-0 left-0 text-emerald-500 whitespace-nowrap"
+          className="absolute inset-0 text-emerald-500 whitespace-nowrap"
           style={{ lineHeight: 'inherit', fontWeight: 'inherit' }}
         >
           {industries[index]}
