@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
+import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import {
   MapPin,
@@ -165,314 +166,378 @@ function FAQItem({ question, answer, index }: { question: string; answer: string
 export default function EUDRCompliancePage() {
   return (
     <>
-<div className="min-h-screen bg-background overflow-x-hidden">
-        <MarketingNav />
+      <MarketingNav />
 
-        <main>
-          <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden bg-slate-50 dark:bg-slate-900/20">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <FadeIn>
-                <div className="max-w-3xl">
-                  <p className="text-sm font-medium text-primary mb-4 tracking-wide uppercase">
-                    [ EUDR Compliance ]
-                  </p>
-                  <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50" data-testid="heading-eudr-title">
-                    EU Deforestation Regulation — Full Compliance Infrastructure
-                  </h1>
-                  <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mb-4" data-testid="text-eudr-subtitle">
-                    The EUDR (Regulation 2023/1115) requires operators to prove that commodities entering the EU market are deforestation-free, legally produced, and backed by a due diligence statement. Full enforcement begins December 30, 2026.
-                  </p>
-                  <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl mb-8">
-                    OriginTrace provides the end-to-end platform to meet every EUDR requirement — from GPS polygon farm mapping to automated DDS generation and real-time compliance scoring.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Link href="/demo">
-                      <Button size="lg" className="gap-2" data-testid="button-eudr-demo">
-                        Request Demo
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Link href="#how-origintrace-helps">
-                      <Button size="lg" variant="outline" className="gap-2" data-testid="button-eudr-learn-more">
-                        See How It Works
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </FadeIn>
-            </div>
-          </section>
-
-          <section className="py-16 md:py-20 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ Who It Affects ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-3" data-testid="heading-who-affected">
-                  Who Must Comply with the EUDR?
-                </h2>
-                <p className="text-muted-foreground mb-8 max-w-2xl leading-relaxed">
-                  The regulation applies to any operator or trader placing covered commodities on the EU market — or exporting them from the EU. This includes importers, manufacturers, retailers, and non-EU exporters.
-                </p>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-3 gap-6">
-                <StaggerItem>
-                  <Card className="h-full">
-                    <CardContent className="p-6">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                        <Globe className="h-5 w-5 text-primary" />
-                      </div>
-                      <h3 className="font-medium mb-2">EU Importers & Distributors</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Any company placing covered products on the EU market must verify deforestation-free status and submit a due diligence statement.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-                <StaggerItem>
-                  <Card className="h-full">
-                    <CardContent className="p-6">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                        <Target className="h-5 w-5 text-primary" />
-                      </div>
-                      <h3 className="font-medium mb-2">Non-EU Exporters</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Exporters in producing countries must provide the geolocation, traceability, and compliance data that EU operators require for their due diligence.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-                <StaggerItem>
-                  <Card className="h-full">
-                    <CardContent className="p-6">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <h3 className="font-medium mb-2">SME Traders</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Small and micro enterprises have a later deadline (June 2026) and simplified requirements — but must still demonstrate due diligence.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-16 md:py-20 bg-muted/30 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn className="text-center mb-12">
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ Covered Commodities ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-4" data-testid="heading-commodities">
-                  7 Commodity Groups Under the EUDR
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  The regulation covers these commodities and their derived products — from raw materials to processed goods like chocolate, furniture, and tires.
-                </p>
-              </FadeIn>
-
-              <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-                {commodities.map((commodity, i) => (
-                  <StaggerItem key={i}>
-                    <Card className="text-center">
-                      <CardContent className="p-5">
-                        <div className="h-10 w-10 mx-auto mb-3 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <commodity.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="text-sm font-medium" data-testid={`text-commodity-${i}`}>{commodity.name}</p>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-16 md:py-20 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn className="text-center mb-12">
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ Core Requirements ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-4" data-testid="heading-requirements">
-                  3 Pillars of EUDR Compliance
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  Every covered product must satisfy all three requirements before entering the EU market.
-                </p>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-3 gap-8">
-                {coreRequirements.map((req, i) => (
-                  <StaggerItem key={i}>
-                    <Card className="h-full">
-                      <CardContent className="p-6 text-center">
-                        <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <req.icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-3" data-testid={`text-requirement-title-${i}`}>{req.title}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{req.description}</p>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section id="how-origintrace-helps" className="py-16 md:py-20 bg-muted/30 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ How OriginTrace Helps ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-3" data-testid="heading-how-helps">
-                  Purpose-Built for EUDR Compliance
-                </h2>
-                <p className="text-muted-foreground mb-8 max-w-2xl leading-relaxed">
-                  OriginTrace provides the complete infrastructure to satisfy every EUDR requirement — from farm-level geolocation capture to export-ready due diligence documentation.
-                </p>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-2 gap-6">
-                {howOriginTraceHelps.map((feature, i) => (
-                  <StaggerItem key={i}>
-                    <Card className="h-full">
-                      <CardContent className="p-6">
-                        <div className="flex gap-4">
-                          <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <feature.icon className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium mb-1" data-testid={`text-feature-title-${i}`}>{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-
-              <FadeIn className="mt-10 text-center">
-                <Link href="/demo">
-                  <Button size="lg" className="gap-2" data-testid="button-eudr-demo-mid">
-                    See OriginTrace in Action
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </FadeIn>
-            </div>
-          </section>
-
-          <section className="py-16 md:py-20 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn className="mb-12">
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ Timeline & Milestones ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-4" data-testid="heading-timeline">
-                  EUDR Implementation Timeline
-                </h2>
-                <p className="text-muted-foreground max-w-2xl leading-relaxed">
-                  Key dates for operators and traders to prepare for compliance.
-                </p>
-              </FadeIn>
-
-              <div className="max-w-2xl">
-                {timeline.map((item, i) => (
-                  <FadeIn key={i} delay={i * 0.1}>
-                    <div className="flex gap-4 mb-6 last:mb-0" data-testid={`timeline-item-${i}`}>
-                      <div className="flex flex-col items-center">
-                        <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${
-                          item.status === 'complete' 
-                            ? 'bg-primary/10' 
-                            : 'bg-amber-500/10'
-                        }`}>
-                          {item.status === 'complete' ? (
-                            <CheckCircle className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                          )}
-                        </div>
-                        {i < timeline.length - 1 && (
-                          <div className="w-px flex-1 bg-border mt-2" />
-                        )}
-                      </div>
-                      <div className="pb-6">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{item.date}</p>
-                        <p className="text-sm font-medium">{item.event}</p>
-                      </div>
-                    </div>
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="py-16 md:py-20 bg-muted/30 border-t">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn className="mb-8">
-                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                  [ Frequently Asked Questions ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-4" data-testid="heading-faq">
-                  EUDR Compliance FAQ
-                </h2>
-                <p className="text-muted-foreground max-w-2xl leading-relaxed">
-                  Common questions about the EU Deforestation Regulation and how to prepare.
-                </p>
-              </FadeIn>
-
+      <main className="min-h-screen">
+        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
+          <HeroBackground />
+          <div className="max-w-6xl mx-auto px-6 relative z-10">
+            <FadeIn>
               <div className="max-w-3xl">
-                <Card>
-                  <CardContent className="p-4 md:p-6">
-                    {faqs.map((faq, i) => (
-                      <FAQItem key={i} question={faq.question} answer={faq.answer} index={i} />
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </section>
-
-          <section className="py-20 border-t">
-            <div className="max-w-6xl mx-auto px-6 text-center">
-              <FadeIn>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-4" data-testid="heading-cta">
-                  Start Your EUDR Compliance Journey
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                  Schedule a consultation to see how OriginTrace can help you meet every EUDR requirement — before enforcement begins.
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4 tracking-wide uppercase">
+                  [ EUDR Compliance ]
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-white" data-testid="heading-eudr-title">
+                  EU Deforestation Regulation — Full Compliance Infrastructure
+                </h1>
+                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mb-4" data-testid="text-eudr-subtitle">
+                  The EUDR (Regulation 2023/1115) requires operators to prove that commodities entering the EU market are deforestation-free, legally produced, and backed by a due diligence statement. Full enforcement begins December 30, 2026.
+                </p>
+                <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl mb-8">
+                  OriginTrace provides the end-to-end platform to meet every EUDR requirement — from GPS polygon farm mapping to automated DDS generation and real-time compliance scoring.
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
                   <Link href="/demo">
-                    <Button size="lg" className="gap-2" data-testid="button-eudr-demo-bottom">
+                    <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-eudr-demo">
                       Request Demo
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/compliance">
-                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-all-regulations">
-                      View All Regulations
-                      <ChevronRight className="h-4 w-4" />
+                  <Link href="#how-origintrace-helps">
+                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-eudr-learn-more">
+                      See How It Works
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid lg:grid-cols-2 gap-12 items-start">
+              <FadeIn direction="left">
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                  [ Who It Affects ]
+                </p>
+                <h2 className="text-2xl md:text-3xl font-extrabold mb-3 text-slate-900 dark:text-white" data-testid="heading-who-affected">
+                  Who Must Comply with the EUDR?
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+                  The regulation applies to any operator or trader placing covered commodities on the EU market — or exporting them from the EU. This includes importers, manufacturers, retailers, and non-EU exporters.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 p-4 rounded-md bg-slate-50 dark:bg-slate-900/30">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                      <Globe className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900 dark:text-white mb-1">EU Importers & Distributors</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Any company placing covered products on the EU market must verify deforestation-free status and submit a due diligence statement.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 p-4 rounded-md bg-slate-50 dark:bg-slate-900/30">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                      <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900 dark:text-white mb-1">Non-EU Exporters</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Exporters in producing countries must provide the geolocation, traceability, and compliance data that EU operators require for their due diligence.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4 p-4 rounded-md bg-slate-50 dark:bg-slate-900/30">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900 dark:text-white mb-1">SME Traders</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Small and micro enterprises have a later deadline (June 2026) and simplified requirements — but must still demonstrate due diligence.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+
+              <FadeIn direction="right">
+                <div className="relative p-8 rounded-md bg-slate-900 dark:bg-slate-800 text-white">
+                  <div className="absolute top-4 right-4">
+                    <Globe className="h-24 w-24 text-emerald-500/10" />
+                  </div>
+                  <p className="text-xs font-semibold tracking-widest uppercase text-emerald-400 mb-6">
+                    Global Reach
+                  </p>
+                  <div className="space-y-6 relative z-10">
+                    <div>
+                      <p className="text-4xl font-extrabold text-emerald-400">27</p>
+                      <p className="text-sm text-slate-300 mt-1">EU member states enforcing the regulation</p>
+                    </div>
+                    <div className="border-t border-slate-700 pt-6">
+                      <p className="text-4xl font-extrabold text-emerald-400">7</p>
+                      <p className="text-sm text-slate-300 mt-1">Commodity groups covered by the EUDR</p>
+                    </div>
+                    <div className="border-t border-slate-700 pt-6">
+                      <p className="text-4xl font-extrabold text-amber-400">4%</p>
+                      <p className="text-sm text-slate-300 mt-1">Maximum fine as percentage of annual EU turnover</p>
+                    </div>
+                    <div className="border-t border-slate-700 pt-6">
+                      <p className="text-4xl font-extrabold text-emerald-400">Dec 2020</p>
+                      <p className="text-sm text-slate-300 mt-1">Deforestation cut-off date for compliance</p>
+                    </div>
+                  </div>
+                </div>
               </FadeIn>
             </div>
-          </section>
-        </main>
+          </div>
+        </section>
 
-        <MarketingFooter />
-      </div>
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="text-center mb-10">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                [ Covered Commodities ]
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-commodities">
+                7 Commodity Groups Under the EUDR
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
+                The regulation covers these commodities and their derived products — from raw materials to processed goods like chocolate, furniture, and tires.
+              </p>
+            </FadeIn>
+
+            <FadeIn delay={0.2}>
+              <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+                {commodities.map((commodity, i) => (
+                  <div
+                    key={i}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50"
+                    data-testid={`text-commodity-${i}`}
+                  >
+                    <commodity.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">{commodity.name}</span>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="mb-12">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                [ Core Requirements ]
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-requirements">
+                3 Pillars of EUDR Compliance
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 max-w-xl">
+                Every covered product must satisfy all three requirements before entering the EU market.
+              </p>
+            </FadeIn>
+
+            <div className="grid lg:grid-cols-2 gap-10 items-start">
+              <StaggerContainer className="space-y-6">
+                {coreRequirements.map((req, i) => (
+                  <StaggerItem key={i}>
+                    <div className="flex gap-5" data-testid={`text-requirement-title-${i}`}>
+                      <div className="flex flex-col items-center">
+                        <div className="h-12 w-12 shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                          <req.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        {i < coreRequirements.length - 1 && (
+                          <div className="w-px flex-1 bg-emerald-200 dark:bg-emerald-800 mt-3" />
+                        )}
+                      </div>
+                      <div className="pb-6">
+                        <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-white">{req.title}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
+                      </div>
+                    </div>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+
+              <FadeIn direction="right">
+                <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Shield className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <h4 className="font-semibold text-slate-900 dark:text-white">Compliance Flow</h4>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                      <span className="text-slate-700 dark:text-slate-300">Map farm GPS polygons and verify land-use history</span>
+                    </div>
+                    <div className="w-px h-4 bg-emerald-300 dark:bg-emerald-700 ml-3" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                      <span className="text-slate-700 dark:text-slate-300">Confirm legal compliance with country-of-origin laws</span>
+                    </div>
+                    <div className="w-px h-4 bg-emerald-300 dark:bg-emerald-700 ml-3" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                      <span className="text-slate-700 dark:text-slate-300">Trace commodities through entire supply chain</span>
+                    </div>
+                    <div className="w-px h-4 bg-emerald-300 dark:bg-emerald-700 ml-3" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">4</div>
+                      <span className="text-slate-700 dark:text-slate-300">Generate and submit Due Diligence Statement</span>
+                    </div>
+                    <div className="w-px h-4 bg-emerald-300 dark:bg-emerald-700 ml-3" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">5</div>
+                      <span className="text-slate-700 dark:text-slate-300">Place product on the EU market with full audit trail</span>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </div>
+        </section>
+
+        <section id="how-origintrace-helps" className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                [ How OriginTrace Helps ]
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-3 text-slate-900 dark:text-white" data-testid="heading-how-helps">
+                Purpose-Built for EUDR Compliance
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-2xl leading-relaxed">
+                OriginTrace provides the complete infrastructure to satisfy every EUDR requirement — from farm-level geolocation capture to export-ready due diligence documentation.
+              </p>
+            </FadeIn>
+
+            <StaggerContainer className="grid md:grid-cols-2 gap-6">
+              {howOriginTraceHelps.map((feature, i) => (
+                <StaggerItem key={i}>
+                  <Card className="h-full">
+                    <CardContent className="p-6">
+                      <div className="flex gap-4">
+                        <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                          <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium mb-1 text-slate-900 dark:text-white" data-testid={`text-feature-title-${i}`}>{feature.title}</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+
+            <FadeIn className="mt-10 text-center">
+              <Link href="/demo">
+                <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-eudr-demo-mid">
+                  See OriginTrace in Action
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="mb-12">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                [ Timeline & Milestones ]
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-timeline">
+                EUDR Implementation Timeline
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+                Key dates for operators and traders to prepare for compliance.
+              </p>
+            </FadeIn>
+
+            <div className="max-w-2xl">
+              {timeline.map((item, i) => (
+                <FadeIn key={i} delay={i * 0.1}>
+                  <div className="flex gap-4 mb-6 last:mb-0" data-testid={`timeline-item-${i}`}>
+                    <div className="flex flex-col items-center">
+                      <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${
+                        item.status === 'complete' 
+                          ? 'bg-emerald-100 dark:bg-emerald-900/40' 
+                          : 'bg-amber-500/10'
+                      }`}>
+                        {item.status === 'complete' ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        )}
+                      </div>
+                      {i < timeline.length - 1 && (
+                        <div className="w-px flex-1 bg-border mt-2" />
+                      )}
+                    </div>
+                    <div className="pb-6">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.date}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{item.event}</p>
+                    </div>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="mb-8">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
+                [ Frequently Asked Questions ]
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-faq">
+                EUDR Compliance FAQ
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+                Common questions about the EU Deforestation Regulation and how to prepare.
+              </p>
+            </FadeIn>
+
+            <div className="max-w-3xl">
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  {faqs.map((faq, i) => (
+                    <FAQItem key={i} question={faq.question} answer={faq.answer} index={i} />
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <FadeIn>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-cta">
+                Start Your EUDR Compliance Journey
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto mb-8">
+                Schedule a consultation to see how OriginTrace can help you meet every EUDR requirement — before enforcement begins.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link href="/demo">
+                  <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-eudr-demo-bottom">
+                    Request Demo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/compliance">
+                  <Button size="lg" variant="outline" className="gap-2" data-testid="button-all-regulations">
+                    View All Regulations
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+      </main>
+
+      <MarketingFooter />
     </>
   );
 }

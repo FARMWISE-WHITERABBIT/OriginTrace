@@ -7,7 +7,7 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   ShieldCheck,
   Database,
@@ -25,22 +25,10 @@ import {
 } from 'lucide-react';
 
 const foodTraceabilityList = [
-  'Finfish (fresh/frozen)',
-  'Smoked finfish',
-  'Crustaceans (fresh/frozen)',
-  'Shell eggs',
-  'Nut butters',
-  'Cucumbers (fresh)',
-  'Herbs (fresh)',
-  'Leafy greens (fresh/fresh-cut)',
-  'Peppers (fresh)',
-  'Sprouts (fresh)',
-  'Tomatoes (fresh)',
-  'Tropical tree fruits (fresh)',
-  'Fruits (fresh-cut)',
-  'Vegetables (fresh-cut)',
-  'Ready-to-eat deli salads',
-  'Soft cheeses (certain)',
+  { category: 'Seafood', items: ['Finfish (fresh/frozen)', 'Smoked finfish', 'Crustaceans (fresh/frozen)'] },
+  { category: 'Produce', items: ['Cucumbers (fresh)', 'Herbs (fresh)', 'Leafy greens (fresh/fresh-cut)', 'Peppers (fresh)', 'Sprouts (fresh)', 'Tomatoes (fresh)'] },
+  { category: 'Fruits', items: ['Tropical tree fruits (fresh)', 'Fruits (fresh-cut)'] },
+  { category: 'Other', items: ['Shell eggs', 'Nut butters', 'Vegetables (fresh-cut)', 'Ready-to-eat deli salads', 'Soft cheeses (certain)'] },
 ];
 
 const kdeCategories = [
@@ -164,7 +152,7 @@ export default function USACompliancePage() {
 
   return (
     <>
-<MarketingNav />
+      <MarketingNav />
 
       <main className="min-h-screen">
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
@@ -202,7 +190,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800" data-testid="section-who-must-comply">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-who-must-comply">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <span className="inline-block text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-4">
@@ -234,10 +222,12 @@ export default function USACompliancePage() {
                 },
               ].map((item) => (
                 <StaggerItem key={item.title}>
-                  <Card className="p-6 h-full" data-testid={`card-who-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <item.icon className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mb-4" />
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
+                  <Card className="h-full" data-testid={`card-who-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardContent className="p-6">
+                      <item.icon className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mb-4" />
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
+                    </CardContent>
                   </Card>
                 </StaggerItem>
               ))}
@@ -245,7 +235,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800" data-testid="section-ftl">
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-ftl">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <span className="inline-block text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-4">
@@ -258,12 +248,19 @@ export default function USACompliancePage() {
                 The FDA identified these food categories through a risk-ranking model based on foodborne illness outbreak data. If you handle any of these foods, enhanced traceability records are required.
               </p>
             </FadeIn>
-            <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {foodTraceabilityList.map((food) => (
-                <StaggerItem key={food}>
-                  <div className="flex items-start gap-3 p-4 rounded-md bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700" data-testid={`text-ftl-${food.toLowerCase().replace(/[\s()\/]+/g, '-')}`}>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{food}</span>
+            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {foodTraceabilityList.map((group) => (
+                <StaggerItem key={group.category}>
+                  <div className="h-full" data-testid={`card-ftl-${group.category.toLowerCase()}`}>
+                    <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-3">{group.category}</h3>
+                    <ul className="space-y-2">
+                      {group.items.map((item) => (
+                        <li key={item} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </StaggerItem>
               ))}
@@ -271,7 +268,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800" data-testid="section-kdes-ctes">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-kdes-ctes">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <span className="inline-block text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-4">
@@ -285,70 +282,110 @@ export default function USACompliancePage() {
               </p>
             </FadeIn>
 
-            <div className="grid lg:grid-cols-2 gap-12 mb-16">
+            <FadeIn delay={0.1}>
+              <div className="mb-12">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Critical Tracking Event Flow</h3>
+                <div className="flex flex-col md:flex-row items-stretch gap-0">
+                  {criticalTrackingEvents.map((cte, i) => (
+                    <div key={cte.event} className="flex-1 flex items-stretch" data-testid={`text-cte-${cte.event.toLowerCase()}`}>
+                      <div className="flex-1 p-5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 relative">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-sm mb-3">
+                          {i + 1}
+                        </div>
+                        <h4 className="font-bold text-slate-900 dark:text-white mb-1">{cte.event}</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{cte.description}</p>
+                      </div>
+                      {i < criticalTrackingEvents.length - 1 && (
+                        <div className="flex items-center px-2 text-emerald-400">
+                          <ArrowRight className="h-5 w-5 hidden md:block" />
+                          <ChevronDown className="h-5 w-5 md:hidden" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </FadeIn>
+
+            <div className="grid lg:grid-cols-2 gap-12">
               <FadeIn direction="left">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Key Data Elements by Stage</h3>
                 <div className="space-y-6">
                   {kdeCategories.map((cat) => (
-                    <Card className="p-5" key={cat.title} data-testid={`card-kde-${cat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <cat.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        <h4 className="font-bold text-slate-900 dark:text-white">{cat.title}</h4>
-                      </div>
-                      <ul className="space-y-2">
-                        {cat.items.map((item) => (
-                          <li key={item} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                    <Card className="h-full" key={cat.title} data-testid={`card-kde-${cat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <cat.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          <h4 className="font-bold text-slate-900 dark:text-white">{cat.title}</h4>
+                        </div>
+                        <ul className="space-y-2">
+                          {cat.items.map((item) => (
+                            <li key={item} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
               </FadeIn>
 
               <FadeIn direction="right">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Critical Tracking Events</h3>
-                <div className="space-y-4">
-                  {criticalTrackingEvents.map((cte, i) => (
-                    <div key={cte.event} className="flex items-start gap-4" data-testid={`text-cte-${cte.event.toLowerCase()}`}>
-                      <div className="flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                          {i + 1}
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Record-Keeping Requirements</h3>
+                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" data-testid="card-record-keeping">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <h4 className="font-bold text-slate-900 dark:text-white">FDA Compliance Essentials</h4>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 rounded-md bg-white/60 dark:bg-slate-900/30">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-amber-700 dark:text-amber-300">24h</span>
                         </div>
-                        {i < criticalTrackingEvents.length - 1 && (
-                          <div className="w-px h-8 bg-emerald-200 dark:bg-emerald-800 mt-2" />
-                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Response Window</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">Records must be provided within 24 hours of FDA request</p>
+                        </div>
                       </div>
-                      <div className="pt-1.5">
-                        <h4 className="font-bold text-slate-900 dark:text-white">{cte.event}</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">{cte.description}</p>
+                      <div className="flex items-start gap-3 p-3 rounded-md bg-white/60 dark:bg-slate-900/30">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-amber-700 dark:text-amber-300">2yr</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Retention Period</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">Minimum 2-year retention period required</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-md bg-white/60 dark:bg-slate-900/30">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                          <Database className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Electronic Format</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">Electronic records must be sortable and searchable</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-md bg-white/60 dark:bg-slate-900/30">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                          <FileCheck className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Traceability Plan</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">Must include a traceability plan describing your procedures</p>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                <Card className="p-5 mt-8 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" data-testid="card-record-keeping">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white mb-1">Record-Keeping Requirements</h4>
-                      <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                        <li>Records must be provided within <strong>24 hours</strong> of FDA request</li>
-                        <li>Electronic records must be <strong>sortable and searchable</strong></li>
-                        <li>Minimum <strong>2-year retention</strong> period required</li>
-                        <li>Must include a <strong>traceability plan</strong> describing your procedures</li>
-                      </ul>
-                    </div>
-                  </div>
+                  </CardContent>
                 </Card>
               </FadeIn>
             </div>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -366,10 +403,12 @@ export default function USACompliancePage() {
             <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {howOriginTraceHelps.map((item) => (
                 <StaggerItem key={item.title}>
-                  <Card className="p-6 h-full" data-testid={`card-feature-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <item.icon className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mb-4" />
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
+                  <Card className="h-full" data-testid={`card-feature-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardContent className="p-6">
+                      <item.icon className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mb-4" />
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
+                    </CardContent>
                   </Card>
                 </StaggerItem>
               ))}
@@ -387,7 +426,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800" data-testid="section-timeline">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-timeline">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <span className="inline-block text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-4">
@@ -436,7 +475,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
           <div className="max-w-4xl mx-auto px-6">
             <FadeIn>
               <span className="inline-block text-xs font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-4">
@@ -473,7 +512,7 @@ export default function USACompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-emerald-600 dark:bg-emerald-900 border-t" data-testid="section-cta">
+        <section className="py-16 md:py-20 bg-emerald-600 dark:bg-emerald-900 border-t" data-testid="section-cta">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <FadeIn>
               <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6">

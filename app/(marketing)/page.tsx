@@ -197,7 +197,7 @@ export default function HomePage() {
               </FadeIn>
 
               <FadeIn delay={0.1}>
-                <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight leading-[1.1] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
+                <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight leading-[1.2] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
                   Compliance Infrastructure
                   <br />
                   for <IndustryTicker />
