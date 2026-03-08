@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 const paymentCreateSchema = z.object({
   payee_name: z.string().min(1, 'Payee name is required'),
@@ -193,6 +195,20 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'payment.recorded',
+      resourceType: 'payment',
+      resourceId: payment.id?.toString(),
+      metadata: { payee_name, amount, currency: currency || 'NGN', payment_method },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'payment.recorded', {
+      payment_id: payment.id, payee_name, amount, currency: currency || 'NGN', payment_method,
+    });
 
     return NextResponse.json({ payment });
 

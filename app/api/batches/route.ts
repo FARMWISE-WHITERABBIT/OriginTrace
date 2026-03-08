@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 const batchCreateSchema = z.object({
   farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
@@ -178,6 +180,20 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'batch.created',
+      resourceType: 'collection_batch',
+      resourceId: batch.id?.toString(),
+      metadata: { farm_id, bag_count: bagCount, total_weight: totalWeight },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'batch.created', {
+      batch_id: batch.id, farm_id, bag_count: bagCount, total_weight: totalWeight,
+    });
     
     return NextResponse.json({ batch, success: true });
     

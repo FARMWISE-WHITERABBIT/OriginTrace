@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(request: NextRequest) {
   try {
@@ -203,6 +205,20 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'document.uploaded',
+      resourceType: 'document',
+      resourceId: document.id?.toString(),
+      metadata: { title: body.title, document_type: body.document_type },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'document.uploaded', {
+      document_id: document.id, title: body.title, document_type: body.document_type,
+    });
 
     return NextResponse.json({ document });
 

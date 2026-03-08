@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 const shipmentCreateSchema = z.object({
   destination_country: z.string().min(1, 'Destination country is required'),
@@ -190,6 +192,20 @@ export async function POST(request: NextRequest) {
           .eq('org_id', profile.org_id);
       }
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'shipment.created',
+      resourceType: 'shipment',
+      resourceId: shipment.id?.toString(),
+      metadata: { shipment_code: shipmentCode, destination_country, commodity },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'shipment.created', {
+      shipment_id: shipment.id, shipment_code: shipmentCode, destination_country, commodity,
+    });
 
     return NextResponse.json({ shipment, success: true });
 

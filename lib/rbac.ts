@@ -1,4 +1,4 @@
-export type AppRole = 'admin' | 'aggregator' | 'agent' | 'quality_manager' | 'logistics_coordinator' | 'compliance_officer' | 'warehouse_supervisor' | 'buyer';
+export type AppRole = 'admin' | 'aggregator' | 'agent' | 'quality_manager' | 'logistics_coordinator' | 'compliance_officer' | 'warehouse_supervisor' | 'buyer' | 'farmer';
 export type SystemRole = 'superadmin';
 export type UserRole = AppRole | SystemRole;
 
@@ -15,6 +15,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   compliance_officer: 'Compliance Officer',
   warehouse_supervisor: 'Warehouse Supervisor',
   buyer: 'Buyer',
+  farmer: 'Farmer',
 };
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
@@ -26,6 +27,7 @@ export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   compliance_officer: 'Regulatory compliance — DDS, pedigree, DPP, compliance profiles, farm polygons.',
   warehouse_supervisor: 'Warehouse operations — inventory, bags, receiving, dispatch.',
   buyer: 'Supply chain visibility — contracts, shipments, traceability, shared documents.',
+  farmer: 'Farmer portal — own farm data, deliveries, payments, training, inputs.',
 };
 
 const routePermissions: Record<string, AppRole[]> = {
@@ -70,6 +72,13 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/buyer/traceability': ['buyer'],
   '/app/buyer/documents': ['buyer'],
   '/app/buyer/suppliers': ['buyer'],
+  '/app/audit': ['admin', 'compliance_officer'],
+  '/app/farmer': ['farmer'],
+  '/app/farmer/deliveries': ['farmer'],
+  '/app/farmer/payments': ['farmer'],
+  '/app/farmer/training': ['farmer'],
+  '/app/farmer/inputs': ['farmer'],
+  '/app/farmer/profile': ['farmer'],
 };
 
 export function hasAccess(role: AppRole, pathname: string): boolean {
@@ -90,7 +99,11 @@ export function getAllowedRoles(pathname: string): AppRole[] {
 }
 
 export function isExporterRole(role: AppRole): boolean {
-  return role !== 'buyer';
+  return role !== 'buyer' && role !== 'farmer';
+}
+
+export function isFarmerRole(role: AppRole): boolean {
+  return role === 'farmer';
 }
 
 export function isBuyerRole(role: AppRole): boolean {

@@ -74,6 +74,38 @@ const TEMPLATES: Record<string, {
     geo_verification_level: 'polygon',
     min_traceability_depth: 3,
   },
+  CHINA: {
+    name: 'China Green Trade Compliance',
+    destination_market: 'China',
+    regulation_framework: 'China_Green_Trade',
+    required_documents: [
+      'GACC registration certificate',
+      'Phytosanitary certificate',
+      'Fumigation certificate',
+      'Certificate of origin',
+      'GB standards compliance report',
+      'Inspection report',
+    ],
+    required_certifications: ['GACC Registration', 'GB Standards'],
+    geo_verification_level: 'polygon',
+    min_traceability_depth: 2,
+  },
+  UAE: {
+    name: 'UAE / Halal Compliance',
+    destination_market: 'UAE / Middle East',
+    regulation_framework: 'UAE_Halal',
+    required_documents: [
+      'Halal certificate (accredited body)',
+      'ESMA compliance certificate',
+      'MOCCAE import permit',
+      'Certificate of origin',
+      'Health certificate',
+      'Arabic labeling compliance',
+    ],
+    required_certifications: ['Halal Certification', 'ESMA Compliance'],
+    geo_verification_level: 'basic',
+    min_traceability_depth: 1,
+  },
 };
 
 export async function GET() {

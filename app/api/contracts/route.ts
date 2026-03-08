@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent } from '@/lib/audit';
 import { z } from 'zod';
 
 const contractCreateSchema = z.object({
@@ -141,6 +142,16 @@ export async function POST(request: NextRequest) {
       console.error('Contract insert error:', insertError);
       return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 });
     }
+
+    await logAuditEvent({
+      orgId: buyerProfile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'contract.created',
+      resourceType: 'contract',
+      resourceId: contract.id?.toString(),
+      metadata: { commodity, supplier_org_id: supplier_org_id },
+    });
 
     return NextResponse.json({ contract });
   } catch (error) {

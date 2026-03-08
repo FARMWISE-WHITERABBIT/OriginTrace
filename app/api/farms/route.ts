@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
@@ -200,6 +201,30 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create farm', details: insertError.message },
         { status: 500 }
       );
+    }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: profile.user_id,
+      actorEmail: user.email,
+      action: 'farm.created',
+      resourceType: 'farm',
+      resourceId: farm.id?.toString(),
+      metadata: { farmer_name, community, commodity: parsed.data.commodity },
+      ipAddress: getClientIp(request),
+    });
+
+    if (phone) {
+      const inviteToken = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+      await supabaseAdmin.from('farmer_accounts').insert({
+        farm_id: farm.id,
+        org_id: profile.org_id,
+        phone,
+        farmer_code: farmer_id || null,
+        status: 'invited',
+        invite_token: inviteToken,
+        created_by: profile.user_id,
+      });
     }
 
     return NextResponse.json({ farm, success: true });
