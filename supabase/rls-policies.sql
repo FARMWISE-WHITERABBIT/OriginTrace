@@ -215,6 +215,44 @@ CREATE POLICY "Agents can update own sync status"
   USING (org_id = public.get_user_org_id());
 
 -- =============================================
+-- COMMODITY MASTER (Defence-in-Depth)
+-- =============================================
+
+ALTER TABLE commodity_master ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read commodity_master"
+  ON commodity_master FOR SELECT
+  TO authenticated
+  USING (
+    is_global = true
+    OR created_by_org_id = public.get_user_org_id()
+  );
+
+CREATE POLICY "Orgs can insert own commodities"
+  ON commodity_master FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    is_global = false
+    AND created_by_org_id = public.get_user_org_id()
+  );
+
+CREATE POLICY "Orgs can update own commodities"
+  ON commodity_master FOR UPDATE
+  TO authenticated
+  USING (
+    is_global = false
+    AND created_by_org_id = public.get_user_org_id()
+  );
+
+CREATE POLICY "Orgs can delete own commodities"
+  ON commodity_master FOR DELETE
+  TO authenticated
+  USING (
+    is_global = false
+    AND created_by_org_id = public.get_user_org_id()
+  );
+
+-- =============================================
 -- NOTE: Service role key (used by API routes) bypasses ALL RLS.
 -- These policies only apply to client-side Supabase access
 -- using the anon key or user JWT tokens.

@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS bags (
   serial TEXT NOT NULL,
   status TEXT DEFAULT 'unused' CHECK (status IN ('unused', 'collected', 'processed')),
   collection_batch_id UUID, -- FK added after collection_batches table exists
-  weight DECIMAL(10,2),
+  weight_kg NUMERIC(12,2) DEFAULT 0,
   grade TEXT CHECK (grade IN ('A', 'B', 'C')),
   is_compliant BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1085,6 +1085,30 @@ CREATE TABLE IF NOT EXISTS contracts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================
+-- SHIPMENTS (Export Readiness)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  compliance_profile_id UUID,
+  destination_country TEXT,
+  total_weight_kg DECIMAL(12,2),
+  readiness_score DECIMAL(5,2),
+  readiness_decision TEXT CHECK (readiness_decision IN
+    ('go', 'conditional_go', 'no_go', 'pending')),
+  status TEXT DEFAULT 'draft' CHECK (status IN
+    ('draft', 'ready', 'shipped', 'cancelled')),
+  risk_flags JSONB DEFAULT '[]',
+  score_breakdown JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipments_org ON shipments(org_id);
+CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
+
 CREATE TABLE IF NOT EXISTS contract_shipments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
@@ -1093,11 +1117,25 @@ CREATE TABLE IF NOT EXISTS contract_shipments (
   UNIQUE(contract_id, shipment_id)
 );
 
+ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buyer_organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buyer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_chain_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_shipments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view shipments in their org"
+  ON shipments FOR SELECT
+  USING (org_id = public.get_user_org_id());
+
+CREATE POLICY "Admins can manage shipments"
+  ON shipments FOR ALL
+  USING (
+    org_id = public.get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles
+      WHERE user_id = auth.uid()
+      AND role IN ('admin', 'compliance_officer'))
+  );
 
 CREATE POLICY "Buyer users can view their own org" ON buyer_organizations
   FOR SELECT USING (
@@ -1306,3 +1344,17 @@ CREATE INDEX IF NOT EXISTS idx_api_rate_limits_window ON api_rate_limits(window_
 -- ============================================
 
 ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;
+
+-- ============================================
+-- IDEMPOTENT COLUMN RENAMES (Schema Drift Fix)
+-- ============================================
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight'
+  ) THEN
+    ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
+  END IF;
+END $$;
