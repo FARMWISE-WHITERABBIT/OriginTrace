@@ -143,7 +143,6 @@ function renderDpp(dpp: any, format: string | null) {
           <div class="field-value">${fg.weight_kg ? fg.weight_kg + ' kg' : 'N/A'}</div>
         </div>
         ${fg.production_date ? `<div class="field"><div class="field-label">Production Date</div><div class="field-value">${fg.production_date}</div></div>` : ''}
-        ${fg.destination_country ? `<div class="field"><div class="field-label">Destination</div><div class="field-value">${fg.destination_country}</div></div>` : ''}
       </div>
     </div>
 
@@ -190,7 +189,7 @@ function renderDpp(dpp: any, format: string | null) {
         </div>
         <div class="field">
           <div class="field-label">DDS Submitted</div>
-          <div class="field-value">${compliance.dds_submitted ? 'Yes' : 'No'}</div>
+          <div class="field-value">See exporter's compliance dashboard</div>
         </div>
         <div class="field">
           <div class="field-label">Total Smallholders</div>
