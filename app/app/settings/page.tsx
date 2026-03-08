@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1586,10 +1587,10 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <Button asChild data-testid="button-manage-team">
-                  <a href="/app/team">
+                  <Link href="/app/team">
                     <Users className="h-4 w-4 mr-2" />
                     Go to Team Management
-                  </a>
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

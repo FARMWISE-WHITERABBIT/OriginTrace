@@ -165,6 +165,14 @@ const appNavigation: NavigationConfig = {
       ],
     },
     {
+      label: 'ANALYTICS & REPORTS',
+      allowedRoles: ['admin', 'aggregator', 'quality_manager', 'compliance_officer'],
+      items: [
+        { title: 'Analytics', url: '/app/analytics', icon: BarChart3, tourId: 'nav-analytics', allowedRoles: ['admin', 'aggregator', 'quality_manager', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'analytics' },
+        { title: 'Report Builder', url: '/app/analytics/reports', icon: FileText, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'analytics' },
+      ],
+    },
+    {
       label: 'GOVERNANCE',
       allowedRoles: ['admin'],
       items: [

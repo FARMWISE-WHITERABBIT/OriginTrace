@@ -19,6 +19,11 @@ import {
   FileText,
   MapPin,
   Globe,
+  TreePine,
+  Utensils,
+  Landmark,
+  Scale,
+  Users,
 } from 'lucide-react';
 
 interface ComplianceProfile {
@@ -38,13 +43,31 @@ const FRAMEWORK_LABELS: Record<string, string> = {
   EUDR: 'EU Deforestation Regulation',
   FSMA_204: 'FSMA Rule 204',
   UK_Environment_Act: 'UK Environment Act',
-  custom: 'Custom',
+  Lacey_Act_UFLPA: 'Lacey Act / UFLPA',
+  custom: 'Buyer Standards',
+};
+
+const FRAMEWORK_DESCRIPTIONS: Record<string, string> = {
+  EUDR: 'GPS polygon verification, deforestation-free compliance, DDS submission, satellite cross-check',
+  FSMA_204: 'KDE completeness, CTE verification, lot-level traceability, supplier KYC, food safety certifications',
+  UK_Environment_Act: 'Due diligence assessment, risk scoring, polygon geo-verification, legality verification, country risk',
+  Lacey_Act_UFLPA: 'Supply chain transparency, country-of-origin docs, forced labor risk, species ID, import declarations',
+  custom: 'Profile-driven rules — required docs, custom geo level, traceability depth, buyer certifications, ESG metrics',
+};
+
+const FRAMEWORK_ICONS: Record<string, typeof TreePine> = {
+  EUDR: TreePine,
+  FSMA_204: Utensils,
+  UK_Environment_Act: Landmark,
+  Lacey_Act_UFLPA: Scale,
+  custom: Users,
 };
 
 const FRAMEWORK_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   EUDR: 'default',
   FSMA_204: 'secondary',
   UK_Environment_Act: 'outline',
+  Lacey_Act_UFLPA: 'default',
   custom: 'outline',
 };
 
@@ -67,6 +90,11 @@ const DEFAULT_DOCUMENTS = [
   'Critical Tracking Events (CTE) log',
   'Lot traceability records',
   'Food safety plan',
+  'Certificate of Origin',
+  'Species / product identification',
+  'Import declaration',
+  'Forced labor declaration',
+  'Country-of-origin documentation',
 ];
 
 const TEMPLATES: Record<string, {
@@ -118,6 +146,21 @@ const TEMPLATES: Record<string, {
     ],
     geo_verification_level: 'basic',
     min_traceability_depth: 1,
+  },
+  LACEY_UFLPA: {
+    name: 'US Lacey Act / UFLPA Compliance',
+    destination_market: 'United States',
+    regulation_framework: 'Lacey_Act_UFLPA',
+    required_documents: [
+      'Certificate of Origin',
+      'Species / product identification',
+      'Import declaration',
+      'Forced labor declaration',
+      'Supply chain mapping',
+      'Country-of-origin documentation',
+    ],
+    geo_verification_level: 'polygon',
+    min_traceability_depth: 3,
   },
 };
 
@@ -252,8 +295,8 @@ export default function ComplianceProfilesPage() {
                   onClick={() => applyTemplate('EU')}
                   data-testid="button-template-eu"
                 >
-                  <Globe className="h-3 w-3 mr-1" />
-                  EU Template
+                  <TreePine className="h-3 w-3 mr-1" />
+                  EU EUDR Template
                 </Button>
                 <Button
                   variant="outline"
@@ -261,7 +304,7 @@ export default function ComplianceProfilesPage() {
                   onClick={() => applyTemplate('UK')}
                   data-testid="button-template-uk"
                 >
-                  <Globe className="h-3 w-3 mr-1" />
+                  <Landmark className="h-3 w-3 mr-1" />
                   UK Template
                 </Button>
                 <Button
@@ -270,8 +313,17 @@ export default function ComplianceProfilesPage() {
                   onClick={() => applyTemplate('US')}
                   data-testid="button-template-us"
                 >
-                  <Globe className="h-3 w-3 mr-1" />
-                  US Template
+                  <Utensils className="h-3 w-3 mr-1" />
+                  US FSMA Template
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyTemplate('LACEY_UFLPA')}
+                  data-testid="button-template-lacey"
+                >
+                  <Scale className="h-3 w-3 mr-1" />
+                  Lacey / UFLPA Template
                 </Button>
               </div>
               <div className="space-y-4 py-2">
@@ -308,7 +360,8 @@ export default function ComplianceProfilesPage() {
                       <SelectItem value="EUDR">EUDR</SelectItem>
                       <SelectItem value="FSMA_204">FSMA 204</SelectItem>
                       <SelectItem value="UK_Environment_Act">UK Environment Act</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="Lacey_Act_UFLPA">Lacey Act / UFLPA</SelectItem>
+                      <SelectItem value="custom">Buyer Standards (Custom)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -413,13 +466,24 @@ export default function ComplianceProfilesPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge
-                      variant={FRAMEWORK_VARIANTS[profile.regulation_framework] || 'outline'}
-                      data-testid={`badge-framework-${profile.id}`}
-                    >
-                      {FRAMEWORK_LABELS[profile.regulation_framework] || profile.regulation_framework}
-                    </Badge>
+                    {(() => {
+                      const FrameworkIcon = FRAMEWORK_ICONS[profile.regulation_framework] || Shield;
+                      return (
+                        <Badge
+                          variant={FRAMEWORK_VARIANTS[profile.regulation_framework] || 'outline'}
+                          data-testid={`badge-framework-${profile.id}`}
+                        >
+                          <FrameworkIcon className="h-3 w-3 mr-1" />
+                          {FRAMEWORK_LABELS[profile.regulation_framework] || profile.regulation_framework}
+                        </Badge>
+                      );
+                    })()}
                   </div>
+                  {FRAMEWORK_DESCRIPTIONS[profile.regulation_framework] && (
+                    <p className="text-xs text-muted-foreground" data-testid={`text-framework-desc-${profile.id}`}>
+                      {FRAMEWORK_DESCRIPTIONS[profile.regulation_framework]}
+                    </p>
+                  )}
                   <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                     <div className="flex items-center gap-1">
                       <FileText className="h-3 w-3" />
