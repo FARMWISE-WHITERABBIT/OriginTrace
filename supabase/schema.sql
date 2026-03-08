@@ -1,5 +1,9 @@
--- OriginTrace Multi-Tenant Database Schema for Supabase
+-- OriginTrace Multi-Tenant Database Schema
 -- Run this in Supabase SQL Editor to set up your database
+-- NOTE: In the actual database, organizations.id is INTEGER (serial),
+-- profiles.user_id is TEXT, and farms.id is INTEGER.
+-- The UUID references to organizations(id) and auth.users(id) in this file
+-- represent the ideal Supabase schema. The live database uses adapted types.
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
