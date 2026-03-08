@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle2, Shield, Leaf } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 
 export default function FarmerActivatePage() {
   const searchParams = useSearchParams();
