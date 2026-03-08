@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       action: 'contract.created',
       resourceType: 'contract',
       resourceId: contract.id?.toString(),
-      metadata: { commodity, supplier_org_id: supplier_org_id },
+      metadata: { commodity, exporter_org_id },
     });
 
     return NextResponse.json({ contract });
