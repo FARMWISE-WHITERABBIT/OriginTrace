@@ -112,6 +112,8 @@ Supabase PostgreSQL with RLS for multi-tenant isolation. Schema includes:
 - **5 Compliance Landing Pages**: EUDR (`/compliance/eudr`), USA/FSMA 204 (`/compliance/usa`), UK Environment Act (`/compliance/uk`), China GACC (`/compliance/china`), UAE ESMA (`/compliance/uae`) — each with regulatory overview, FAQ section (8 questions), and SEO metadata
 - **Compliance Hub**: Index page at `/compliance` linking to all 5 regulation pages with status badges and commodity tags
 - **SEO**: Per-page metadata via layout.tsx exports (title template `%s | OriginTrace`), Open Graph tags, keywords for compliance pages. next/head removed in favor of App Router metadata API
+- **Middleware Fix**: Added `/compliance/*` and `/api-docs` to public pages list in Supabase middleware — previously these marketing pages required login
+- **Root Layout Brand Update**: Title updated from "Agricultural Traceability & Compliance Platform" to "Trust Infrastructure for Origin-Sensitive Supply Chains"
 
 ### Previous Cleanup (Early Mar 2026)
 - AI-Powered OCR for Farmer ID Scanning (OpenAI GPT-5.2)

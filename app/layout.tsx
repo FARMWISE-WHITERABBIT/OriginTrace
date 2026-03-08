@@ -13,8 +13,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'OriginTrace - Agricultural Traceability & Compliance Platform',
-  description: 'Enterprise traceability and compliance platform for agricultural supply chains. Track produce from farm to warehouse with full EUDR compliance.',
+  title: 'OriginTrace — Trust Infrastructure for Origin-Sensitive Supply Chains',
+  description: 'OriginTrace is the all-in-one platform for supply chain traceability, compliance verification, and export readiness. Prevent shipment rejections with pre-shipment compliance scoring.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.png',
@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: 'OriginTrace - Agricultural Traceability & Compliance',
-    description: 'Enterprise traceability and compliance platform for agricultural supply chains.',
+    title: 'OriginTrace — Trust Infrastructure for Origin-Sensitive Supply Chains',
+    description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
     siteName: 'OriginTrace',
     type: 'website',
   },

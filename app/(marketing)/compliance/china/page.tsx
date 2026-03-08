@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
+import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import { useState } from 'react';
 import {
@@ -221,347 +222,363 @@ const faqItems = [
 
 export default function ChinaCompliancePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   return (
     <>
-<div className="min-h-screen bg-background overflow-x-hidden">
-        <MarketingNav />
+      <MarketingNav />
 
-        <main>
-          <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden bg-slate-50 dark:bg-slate-900/20">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <FadeIn>
-                <div className="text-center max-w-4xl mx-auto">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-6" data-testid="text-section-label-hero">
-                    [ China Import Compliance ]
-                  </span>
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6" data-testid="text-hero-heading">
-                    China Food Safety Import Requirements
-                  </h1>
-                  <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto mb-8" data-testid="text-hero-description">
-                    China maintains one of the world&apos;s most rigorous food import regulatory frameworks. GACC, SAMR, and NHC collectively enforce facility registration, labeling standards, and inspection protocols that every exporter must navigate.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Link href="/demo">
-                      <Button className="bg-emerald-600 text-white" data-testid="button-hero-demo">
-                        Get Compliance Support
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Link href="/solutions">
-                      <Button variant="outline" data-testid="button-hero-solutions">
-                        Explore Platform
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </FadeIn>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-background" data-testid="section-regulatory-bodies">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ Regulatory Bodies ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Three Agencies Governing Food Imports
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    China&apos;s food import regime is overseen by GACC, SAMR, and NHC — each responsible for different aspects of food safety and market access.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-3 gap-6">
-                {regulatoryBodies.map((body) => (
-                  <StaggerItem key={body.name}>
-                    <Card className="h-full" data-testid={`card-regulatory-${body.name.toLowerCase()}`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                            <body.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{body.name}</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{body.fullName}</p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                          {body.description}
-                        </p>
-                        <ul className="space-y-2">
-                          {body.responsibilities.map((resp, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                              <span>{resp}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-registration">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ Registration Requirements ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Facility & Exporter Registration with GACC
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    GACC Decree 248 requires all overseas food facilities to register before exporting to China — covering all 18 food product categories.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-3 gap-6">
-                {registrationRequirements.map((req) => (
-                  <StaggerItem key={req.title}>
-                    <Card className="h-full" data-testid={`card-registration-${req.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <CardContent className="p-6">
-                        <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                          <req.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                          {req.description}
-                        </p>
-                        <ul className="space-y-2">
-                          {req.details.map((detail, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                              <span>{detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-background border-t border-slate-200 dark:border-slate-800" data-testid="section-labeling">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ Labeling & Packaging ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Labeling and Packaging Standards
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    China enforces strict Chinese-language labeling requirements under GB 7718 and GB 28050 — non-compliant labels are the leading cause of import rejections.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-2 gap-6">
-                {labelingStandards.map((standard) => (
-                  <StaggerItem key={standard.title}>
-                    <Card className="h-full" data-testid={`card-labeling-${standard.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <CardContent className="p-6 flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                          <standard.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{standard.title}</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                            {standard.description}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-inspection">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ Inspection & Quarantine ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Port Inspection and Quarantine Protocols
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    Every food shipment entering China undergoes GACC inspection. Understanding the process helps you prepare documentation and reduce clearance delays.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {inspectionProtocols.map((protocol, index) => (
-                  <StaggerItem key={protocol.title}>
-                    <Card className="h-full" data-testid={`card-inspection-${index}`}>
-                      <CardContent className="p-6 text-center">
-                        <div className="w-12 h-12 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
-                          <protocol.icon className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
-                          Step {index + 1}
-                        </div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{protocol.title}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                          {protocol.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-background border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ How OriginTrace Helps ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Streamline China Import Compliance
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    OriginTrace provides the documentation, traceability, and origin verification infrastructure you need to meet GACC requirements and clear Chinese port inspections.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {howOriginTraceHelps.map((item) => (
-                  <StaggerItem key={item.title}>
-                    <Card className="h-full" data-testid={`card-help-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <CardContent className="p-6">
-                        <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                          <item.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                          {item.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-
-              <FadeIn delay={0.3}>
-                <div className="text-center mt-12">
-                  <Link href="/demo">
-                    <Button className="bg-emerald-600 text-white" data-testid="button-help-demo">
-                      See How It Works
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </FadeIn>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
-            <div className="max-w-4xl mx-auto px-6">
-              <FadeIn>
-                <div className="text-center mb-16">
-                  <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                    [ FAQ ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Frequently Asked Questions
-                  </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    Common questions about exporting food products to China and navigating GACC, SAMR, and NHC requirements.
-                  </p>
-                </div>
-              </FadeIn>
-
-              <div className="space-y-3">
-                {faqItems.map((item, index) => (
-                  <FadeIn key={index} delay={index * 0.05}>
-                    <Card data-testid={`faq-item-${index}`}>
-                      <CardContent className="p-0">
-                        <button
-                          onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                          className="w-full flex items-center justify-between gap-4 p-5 text-left"
-                          data-testid={`button-faq-toggle-${index}`}
-                        >
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {item.question}
-                          </span>
-                          <ChevronDown
-                            className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
-                              openFaq === index ? 'rotate-180' : ''
-                            }`}
-                          />
-                        </button>
-                        {openFaq === index && (
-                          <div className="px-5 pb-5">
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                              {item.answer}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="py-20 md:py-28 bg-slate-900 dark:bg-slate-950 border-t border-slate-800" data-testid="section-cta">
-            <div className="max-w-4xl mx-auto px-6 text-center">
-              <FadeIn>
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-400 mb-6">
-                  [ Get Started ]
+      <main className="min-h-screen">
+        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
+          <HeroBackground />
+          <div className="max-w-6xl mx-auto px-6 relative z-10">
+            <FadeIn>
+              <div className="text-center max-w-4xl mx-auto">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-6" data-testid="text-section-label-hero">
+                  [ China Import Compliance ]
                 </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-6">
-                  Ready to Export to China with Confidence?
-                </h2>
-                <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-                  OriginTrace helps exporters navigate China&apos;s complex food import regulations with automated documentation, traceability infrastructure, and pre-shipment compliance scoring.
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6" data-testid="text-hero-heading">
+                  China Food Safety Import Requirements
+                </h1>
+                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto mb-8" data-testid="text-hero-description">
+                  China maintains one of the world&apos;s most rigorous food import regulatory frameworks. GACC, SAMR, and NHC collectively enforce facility registration, labeling standards, and inspection protocols that every exporter must navigate.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Link href="/demo">
-                    <Button className="bg-emerald-600 text-white" data-testid="button-cta-demo">
-                      Request a Demo
+                    <Button className="bg-emerald-600 text-white" data-testid="button-hero-demo">
+                      Get Compliance Support
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/compliance">
-                    <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-cta-compliance">
-                      View All Regulations
+                  <Link href="/solutions">
+                    <Button variant="outline" data-testid="button-hero-solutions">
+                      Explore Platform
                       <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
-              </FadeIn>
-            </div>
-          </section>
-        </main>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
 
-        <MarketingFooter />
-      </div>
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-regulatory-bodies">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-10">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ Regulatory Bodies ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Three Agencies Governing Food Imports
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  China&apos;s food import regime is overseen by GACC, SAMR, and NHC — each responsible for different aspects of food safety and market access.
+                </p>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={0.1}>
+              <div className="max-w-4xl mx-auto">
+                <div className="flex border-b border-slate-200 dark:border-slate-700 mb-0">
+                  {regulatoryBodies.map((body, index) => (
+                    <button
+                      key={body.name}
+                      onClick={() => setActiveTab(index)}
+                      className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+                        activeTab === index
+                          ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400'
+                          : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                      data-testid={`button-tab-${body.name.toLowerCase()}`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <body.icon className="w-4 h-4" />
+                        <span>{body.name}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <Card className="rounded-t-none border-t-0">
+                  <CardContent className="p-6 md:p-8" data-testid={`card-regulatory-${regulatoryBodies[activeTab].name.toLowerCase()}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">{regulatoryBodies[activeTab].name}</h3>
+                    </div>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-4">{regulatoryBodies[activeTab].fullName}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+                      {regulatoryBodies[activeTab].description}
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {regulatoryBodies[activeTab].responsibilities.map((resp, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                          <span>{resp}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-registration">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-16">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ Registration Requirements ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Facility & Exporter Registration with GACC
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  GACC Decree 248 requires all overseas food facilities to register before exporting to China — covering all 18 food product categories.
+                </p>
+              </div>
+            </FadeIn>
+
+            <StaggerContainer className="grid md:grid-cols-3 gap-6">
+              {registrationRequirements.map((req) => (
+                <StaggerItem key={req.title}>
+                  <Card className="h-full" data-testid={`card-registration-${req.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardContent className="p-6">
+                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
+                        <req.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+                        {req.description}
+                      </p>
+                      <ul className="space-y-2">
+                        {req.details.map((detail, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                            <span>{detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-labeling">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-16">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ Labeling & Packaging ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Labeling and Packaging Standards
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  China enforces strict Chinese-language labeling requirements under GB 7718 and GB 28050 — non-compliant labels are the leading cause of import rejections.
+                </p>
+              </div>
+            </FadeIn>
+
+            <StaggerContainer className="grid md:grid-cols-2 gap-6">
+              {labelingStandards.map((standard) => (
+                <StaggerItem key={standard.title}>
+                  <Card className="h-full" data-testid={`card-labeling-${standard.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardContent className="p-6 flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                        <standard.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{standard.title}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {standard.description}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-inspection">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="mb-12">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ Inspection & Quarantine ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Port Inspection and Quarantine Protocols
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
+                  Every food shipment entering China undergoes GACC inspection. Understanding the process helps you prepare documentation and reduce clearance delays.
+                </p>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={0.1}>
+              <div className="max-w-3xl">
+                {inspectionProtocols.map((protocol, index) => (
+                  <div key={protocol.title} className="flex gap-5 pb-8 last:pb-0" data-testid={`card-inspection-${index}`}>
+                    <div className="flex flex-col items-center">
+                      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        {index + 1}
+                      </div>
+                      {index < inspectionProtocols.length - 1 && (
+                        <div className="w-px flex-1 bg-emerald-200 dark:bg-emerald-800 mt-3" />
+                      )}
+                    </div>
+                    <div className="pt-1 pb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <protocol.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">{protocol.title}</h3>
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {protocol.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-16">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ How OriginTrace Helps ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Streamline China Import Compliance
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  OriginTrace provides the documentation, traceability, and origin verification infrastructure you need to meet GACC requirements and clear Chinese port inspections.
+                </p>
+              </div>
+            </FadeIn>
+
+            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {howOriginTraceHelps.map((item) => (
+                <StaggerItem key={item.title}>
+                  <Card className="h-full" data-testid={`card-help-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardContent className="p-6">
+                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
+                        <item.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+
+            <FadeIn delay={0.3}>
+              <div className="text-center mt-12">
+                <Link href="/demo">
+                  <Button className="bg-emerald-600 text-white" data-testid="button-help-demo">
+                    See How It Works
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
+          <div className="max-w-4xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-16">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
+                  [ FAQ ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
+                  Frequently Asked Questions
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  Common questions about exporting food products to China and navigating GACC, SAMR, and NHC requirements.
+                </p>
+              </div>
+            </FadeIn>
+
+            <div className="space-y-3">
+              {faqItems.map((item, index) => (
+                <FadeIn key={index} delay={index * 0.05}>
+                  <Card data-testid={`faq-item-${index}`}>
+                    <CardContent className="p-0">
+                      <button
+                        onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                        className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                        data-testid={`button-faq-toggle-${index}`}
+                      >
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {item.question}
+                        </span>
+                        <ChevronDown
+                          className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
+                            openFaq === index ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                      {openFaq === index && (
+                        <div className="px-5 pb-5">
+                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                            {item.answer}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-900 dark:bg-slate-950 border-t border-slate-800" data-testid="section-cta">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <FadeIn>
+              <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-400 mb-6">
+                [ Get Started ]
+              </span>
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-6">
+                Ready to Export to China with Confidence?
+              </h2>
+              <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+                OriginTrace helps exporters navigate China&apos;s complex food import regulations with automated documentation, traceability infrastructure, and pre-shipment compliance scoring.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link href="/demo">
+                  <Button className="bg-emerald-600 text-white" data-testid="button-cta-demo">
+                    Request a Demo
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/compliance">
+                  <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-cta-compliance">
+                    View All Regulations
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+      </main>
+
+      <MarketingFooter />
     </>
   );
 }

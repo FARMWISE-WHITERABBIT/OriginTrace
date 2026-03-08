@@ -7,6 +7,7 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Shield,
   FileCheck,
@@ -176,10 +177,10 @@ export default function UAECompliancePage() {
 
   return (
     <>
-<MarketingNav />
+      <MarketingNav />
 
       <main className="min-h-screen">
-        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
+        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
           <HeroBackground />
           <div className="max-w-6xl mx-auto px-6 relative z-10">
             <FadeIn>
@@ -214,7 +215,79 @@ export default function UAECompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn>
+              <div className="mb-12">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4" data-testid="text-section-label-halal">
+                  [ Halal Certification ]
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4" data-testid="text-halal-title">
+                  Halal Certification Requirements
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+                  Halal compliance is a cornerstone of UAE food import regulations. Understanding and meeting these requirements is critical for market access.
+                </p>
+              </div>
+            </FadeIn>
+
+            <div className="grid lg:grid-cols-2 gap-8 items-start">
+              <FadeIn direction="left">
+                <div className="rounded-md bg-emerald-900 dark:bg-emerald-950 p-8 text-white relative overflow-visible" data-testid="card-halal-visual">
+                  <div className="absolute top-4 right-4">
+                    <Award className="h-20 w-20 text-emerald-500/15" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-6">
+                      <Award className="h-3.5 w-3.5" />
+                      Halal Certified
+                    </div>
+                    <h3 className="text-2xl font-extrabold mb-4">Halal Compliance is Mandatory</h3>
+                    <p className="text-emerald-200 text-sm leading-relaxed mb-6">
+                      All meat, poultry, and related products entering the UAE must carry halal certification from a recognized accreditation body. This is non-negotiable for market access.
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-100">UAE embassy authentication required</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-100">EIAC-accredited certification bodies</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-100">Full supply chain segregation</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-100">UAE.S GSO 993 slaughter compliance</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+
+              <StaggerContainer className="space-y-4">
+                {halalRequirements.map((req, index) => (
+                  <StaggerItem key={req.title}>
+                    <div className="flex gap-4 p-5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950" data-testid={`card-halal-${index}`}>
+                      <div className="shrink-0">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
+                      </div>
+                    </div>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -232,53 +305,95 @@ export default function UAECompliancePage() {
             <StaggerContainer className="grid md:grid-cols-3 gap-8">
               {esmaStandards.map((item) => (
                 <StaggerItem key={item.title}>
-                  <div className="p-8 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 h-full" data-testid={`card-regulatory-${item.title.toLowerCase().replace(/\s+/g, '-').slice(0, 20)}`}>
-                    <div className="w-12 h-12 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-5">
-                      <item.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
-                  </div>
+                  <Card className="h-full" data-testid={`card-regulatory-${item.title.toLowerCase().replace(/\s+/g, '-').slice(0, 20)}`}>
+                    <CardContent className="p-8">
+                      <div className="w-12 h-12 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-5">
+                        <item.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
+                    </CardContent>
+                  </Card>
                 </StaggerItem>
               ))}
             </StaggerContainer>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4" data-testid="text-section-label-halal">
-                  [ Halal Certification ]
+              <div className="mb-12">
+                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4" data-testid="text-section-label-labeling">
+                  [ Labeling Standards ]
                 </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4" data-testid="text-halal-title">
-                  Halal Certification Requirements
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4" data-testid="text-labeling-title">
+                  Labeling Requirements (Arabic)
                 </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  Halal compliance is a cornerstone of UAE food import regulations. Understanding and meeting these requirements is critical for market access.
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+                  UAE labeling standards, aligned with GSO requirements, mandate Arabic-language labels with comprehensive product information.
                 </p>
               </div>
             </FadeIn>
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
-              {halalRequirements.map((req, index) => (
-                <StaggerItem key={req.title}>
-                  <div className="flex gap-4 p-6 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 h-full" data-testid={`card-halal-${index}`}>
-                    <div className="shrink-0">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+
+            <div className="grid lg:grid-cols-2 gap-8 items-start">
+              <StaggerContainer className="space-y-4">
+                {labelingRequirements.map((req, index) => (
+                  <StaggerItem key={req.title}>
+                    <div className="flex gap-4 p-5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950" data-testid={`card-labeling-${index}`}>
+                      <div className="shrink-0">
+                        <Languages className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+
+              <FadeIn direction="right">
+                <Card className="border-2 border-dashed border-slate-300 dark:border-slate-600" data-testid="card-label-example">
+                  <CardContent className="p-6">
+                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-4">Label Example — Bilingual Format</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">English</p>
+                        <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                          <p><span className="font-semibold">Product:</span> Roasted Coffee</p>
+                          <p><span className="font-semibold">Origin:</span> Ethiopia</p>
+                          <p><span className="font-semibold">Net Wt:</span> 250g</p>
+                          <p><span className="font-semibold">Exp:</span> 15/03/2026</p>
+                          <p><span className="font-semibold">Lot:</span> OT-2025-0847</p>
+                          <p><span className="font-semibold">Importer:</span> UAE Foods LLC</p>
+                        </div>
+                      </div>
+                      <div className="text-right" dir="rtl">
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-2" dir="ltr">Arabic</p>
+                        <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                          <p>&#1602;&#1607;&#1608;&#1577; &#1605;&#1581;&#1605;&#1589;&#1577;</p>
+                          <p>&#1573;&#1579;&#1610;&#1608;&#1576;&#1610;&#1575;</p>
+                          <p>&#1634;&#1637;&#1632; &#1580;&#1585;&#1575;&#1605;</p>
+                          <p>&#1633;&#1637;/&#1632;&#1635;/&#1634;&#1632;&#1634;&#1638;</p>
+                          <p>OT-2025-0847</p>
+                          <p>&#1588;&#1585;&#1603;&#1577; &#1575;&#1604;&#1571;&#1594;&#1584;&#1610;&#1577; &#1575;&#1604;&#1573;&#1605;&#1575;&#1585;&#1575;&#1578;&#1610;&#1577;</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        DD/MM/YYYY date format required. All mandatory fields must appear in both Arabic and English.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            </div>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -296,53 +411,22 @@ export default function UAECompliancePage() {
             <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {municipalityPermits.map((permit) => (
                 <StaggerItem key={permit.step}>
-                  <div className="p-6 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 h-full" data-testid={`card-permit-step-${permit.step}`}>
-                    <span className="text-3xl font-extrabold text-emerald-600/20 dark:text-emerald-400/20 block mb-3">
-                      {permit.step}
-                    </span>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{permit.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{permit.description}</p>
-                  </div>
+                  <Card className="h-full" data-testid={`card-permit-step-${permit.step}`}>
+                    <CardContent className="p-6">
+                      <span className="text-3xl font-extrabold text-emerald-600/20 dark:text-emerald-400/20 block mb-3">
+                        {permit.step}
+                      </span>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{permit.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{permit.description}</p>
+                    </CardContent>
+                  </Card>
                 </StaggerItem>
               ))}
             </StaggerContainer>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4" data-testid="text-section-label-labeling">
-                  [ Labeling Standards ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4" data-testid="text-labeling-title">
-                  Labeling Requirements (Arabic)
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  UAE labeling standards, aligned with GSO requirements, mandate Arabic-language labels with comprehensive product information.
-                </p>
-              </div>
-            </FadeIn>
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
-              {labelingRequirements.map((req, index) => (
-                <StaggerItem key={req.title}>
-                  <div className="flex gap-4 p-6 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 h-full" data-testid={`card-labeling-${index}`}>
-                    <div className="shrink-0">
-                      <Languages className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -360,23 +444,25 @@ export default function UAECompliancePage() {
             <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {howOriginTraceHelps.map((feature) => (
                 <StaggerItem key={feature.title}>
-                  <div className="p-8 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 h-full" data-testid={`card-feature-${feature.title.toLowerCase().replace(/\s+/g, '-').slice(0, 20)}`}>
-                    <div className="w-12 h-12 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-5">
-                      <feature.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
-                  </div>
+                  <Card className="h-full" data-testid={`card-feature-${feature.title.toLowerCase().replace(/\s+/g, '-').slice(0, 20)}`}>
+                    <CardContent className="p-8">
+                      <div className="w-12 h-12 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-5">
+                        <feature.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
+                    </CardContent>
+                  </Card>
                 </StaggerItem>
               ))}
             </StaggerContainer>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-10 md:py-12 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
-              <div className="text-center mb-4">
+              <div className="text-center">
                 <Link href="/demo">
                   <Button className="bg-emerald-600 text-white" data-testid="button-mid-cta-demo">
                     See How OriginTrace Works
@@ -388,7 +474,7 @@ export default function UAECompliancePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center mb-16">
@@ -406,35 +492,34 @@ export default function UAECompliancePage() {
             <div className="max-w-3xl mx-auto space-y-3">
               {faqs.map((faq, index) => (
                 <FadeIn key={index} delay={index * 0.05}>
-                  <div
-                    className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden"
-                    data-testid={`faq-item-${index}`}
-                  >
-                    <button
-                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                      className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
-                      data-testid={`button-faq-${index}`}
-                    >
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{faq.question}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${
-                          openFaq === index ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-                    {openFaq === index && (
-                      <div className="px-5 pb-5">
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
+                  <Card data-testid={`faq-item-${index}`}>
+                    <CardContent className="p-0">
+                      <button
+                        onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                        className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                        data-testid={`button-faq-${index}`}
+                      >
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{faq.question}</span>
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${
+                            openFaq === index ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                      {openFaq === index && (
+                        <div className="px-5 pb-5">
+                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.answer}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </FadeIn>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
+        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="text-center max-w-2xl mx-auto">
