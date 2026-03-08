@@ -11,6 +11,7 @@ import {
   ZoomOut,
   Move,
   Crosshair,
+  Layers,
 } from 'lucide-react';
 
 interface Coordinates {
@@ -18,10 +19,18 @@ interface Coordinates {
   lng: number;
 }
 
+type TileLayer = 'satellite' | 'street';
+
+const TILE_URLS: Record<TileLayer, string> = {
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  street: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+};
+
 interface SatelliteMapProps {
   coordinates: Coordinates[];
   onPointsChange: (points: Coordinates[]) => void;
   center: Coordinates;
+  satelliteEnabled?: boolean;
 }
 
 const TILE_SIZE = 256;
@@ -47,7 +56,7 @@ function tileYToLat(y: number, zoom: number) {
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
 }
 
-export default function SatelliteMap({ coordinates, onPointsChange, center }: SatelliteMapProps) {
+export default function SatelliteMap({ coordinates, onPointsChange, center, satelliteEnabled = true }: SatelliteMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(16);
@@ -56,6 +65,7 @@ export default function SatelliteMap({ coordinates, onPointsChange, center }: Sa
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [drawMode, setDrawMode] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
+  const [tileLayer, setTileLayer] = useState<TileLayer>(satelliteEnabled ? 'satellite' : 'street');
   const tileCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const drawMapRef = useRef<() => void>(() => {});
 
@@ -67,19 +77,22 @@ export default function SatelliteMap({ coordinates, onPointsChange, center }: Sa
   }, []);
 
   const loadTile = useCallback((tileX: number, tileY: number, z: number): HTMLImageElement | null => {
-    const key = `${z}/${tileX}/${tileY}`;
+    const key = `${tileLayer}/${z}/${tileX}/${tileY}`;
     if (tileCache.current.has(key)) {
       return tileCache.current.get(key) || null;
     }
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = `https://tile.openstreetmap.org/${z}/${tileX}/${tileY}.png`;
+    img.src = TILE_URLS[tileLayer]
+      .replace('{z}', String(z))
+      .replace('{x}', String(tileX))
+      .replace('{y}', String(tileY));
     img.onload = () => {
       tileCache.current.set(key, img);
       drawMapRef.current();
     };
     return null;
-  }, []);
+  }, [tileLayer]);
 
   const lngLatToPixel = useCallback((lng: number, lat: number) => {
     const centerTileX = lngToTileX(mapCenter.lng, zoom);
@@ -170,7 +183,7 @@ export default function SatelliteMap({ coordinates, onPointsChange, center }: Sa
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = tileLayer === 'satellite' ? '#ffffff' : '#1a1a1a';
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(`${i + 1}`, pt.x, pt.y - 10);
@@ -309,6 +322,16 @@ export default function SatelliteMap({ coordinates, onPointsChange, center }: Sa
           </Button>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTileLayer(tileLayer === 'satellite' ? 'street' : 'satellite')}
+            disabled={!satelliteEnabled && tileLayer === 'street'}
+            data-testid="button-toggle-tile-layer"
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            {tileLayer === 'satellite' ? 'Street' : 'Satellite'}
+          </Button>
           <Button variant="outline" size="icon" onClick={zoomOut} data-testid="button-zoom-out">
             <ZoomOut className="h-4 w-4" />
           </Button>

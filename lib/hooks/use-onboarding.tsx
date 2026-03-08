@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { driver, DriveStep, Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { useOrg } from '@/lib/contexts/org-context';
 
 interface OnboardingContextType {
   hasSeenAgentTour: boolean;
@@ -172,6 +173,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [hasSeenAggregatorTour, setHasSeenAggregatorTour] = useState(true);
   const [hasSeenAdminTour, setHasSeenAdminTour] = useState(true);
   const [driverInstance, setDriverInstance] = useState<Driver | null>(null);
+  const autoStartTriggered = useRef(false);
+  const { profile, isLoading: isOrgLoading } = useOrg();
 
   useEffect(() => {
     const agentSeen = localStorage.getItem(AGENT_TOUR_KEY) === 'true';
@@ -245,6 +248,32 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setHasSeenAggregatorTour(false);
     setHasSeenAdminTour(false);
   }, []);
+
+  useEffect(() => {
+    if (isOrgLoading || !profile || autoStartTriggered.current) return;
+
+    const role = profile.role;
+    const tourMap: Record<string, { seen: boolean; start: () => void }> = {
+      agent: { seen: localStorage.getItem(AGENT_TOUR_KEY) === 'true', start: startAgentTour },
+      aggregator: { seen: localStorage.getItem(AGGREGATOR_TOUR_KEY) === 'true', start: startAggregatorTour },
+      admin: { seen: localStorage.getItem(ADMIN_TOUR_KEY) === 'true', start: startAdminTour },
+      quality_manager: { seen: localStorage.getItem(ADMIN_TOUR_KEY) === 'true', start: startAdminTour },
+      compliance_officer: { seen: localStorage.getItem(ADMIN_TOUR_KEY) === 'true', start: startAdminTour },
+      logistics_coordinator: { seen: localStorage.getItem(AGGREGATOR_TOUR_KEY) === 'true', start: startAggregatorTour },
+      warehouse_supervisor: { seen: localStorage.getItem(AGGREGATOR_TOUR_KEY) === 'true', start: startAggregatorTour },
+    };
+
+    const tourConfig = tourMap[role];
+    if (!tourConfig || tourConfig.seen) return;
+
+    autoStartTriggered.current = true;
+
+    const timer = setTimeout(() => {
+      tourConfig.start();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [isOrgLoading, profile, startAgentTour, startAggregatorTour, startAdminTour]);
 
   return (
     <OnboardingContext.Provider value={{

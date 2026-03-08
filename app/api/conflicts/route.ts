@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { getResendClient } from '@/lib/email/resend-client';
+import { buildFarmConflictEmail } from '@/lib/email/templates';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -124,6 +126,138 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Conflicts API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('org_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { farm_a_id, farm_b_id, overlap_ratio } = body;
+
+    if (!farm_a_id || !farm_b_id) {
+      return NextResponse.json({ error: 'farm_a_id and farm_b_id required' }, { status: 400 });
+    }
+
+    const { data: farmA } = await supabaseAdmin
+      .from('farms')
+      .select('id, farmer_name, community')
+      .eq('id', farm_a_id)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    const { data: farmB } = await supabaseAdmin
+      .from('farms')
+      .select('id, farmer_name, community')
+      .eq('id', farm_b_id)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (!farmA || !farmB) {
+      return NextResponse.json({ error: 'One or both farms not found' }, { status: 404 });
+    }
+
+    const { data: conflict, error: insertError } = await supabaseAdmin
+      .from('farm_conflicts')
+      .insert({
+        farm_a_id,
+        farm_b_id,
+        overlap_ratio: overlap_ratio || 0,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Failed to create conflict:', insertError);
+      return NextResponse.json({ error: 'Failed to create conflict' }, { status: 500 });
+    }
+
+    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_a_id);
+    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_b_id);
+
+    try {
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('id', profile.org_id)
+        .single();
+
+      const { data: admins } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name, user_id')
+        .eq('org_id', profile.org_id)
+        .eq('role', 'admin');
+
+      if (admins && admins.length > 0) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
+
+        for (const admin of admins) {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(admin.user_id);
+          const adminEmail = authUser?.user?.email;
+          if (!adminEmail) continue;
+
+          const emailContent = buildFarmConflictEmail({
+            recipientName: admin.full_name || 'Admin',
+            orgName: org?.name || 'Your Organization',
+            farmAName: farmA.farmer_name || `Farm ${farm_a_id}`,
+            farmBName: farmB.farmer_name || `Farm ${farm_b_id}`,
+            overlapRatio: overlap_ratio || 0,
+            dashboardUrl: `${baseUrl}/app/conflicts`,
+          });
+
+          try {
+            const { client, fromEmail } = await getResendClient();
+            await client.emails.send({
+              from: fromEmail,
+              to: adminEmail,
+              subject: `Farm Boundary Conflict: ${farmA.farmer_name || 'Farm A'} vs ${farmB.farmer_name || 'Farm B'} - ${org?.name || 'OriginTrace'}`,
+              html: emailContent.html,
+              text: emailContent.text,
+            });
+          } catch (emailErr) {
+            console.error('Failed to send conflict email:', emailErr);
+          }
+
+          await supabaseAdmin.from('notifications').insert({
+            org_id: profile.org_id,
+            user_id: admin.user_id,
+            type: 'farm_conflict',
+            title: 'Farm Boundary Conflict Detected',
+            message: `Boundary overlap detected between ${farmA.farmer_name || 'Farm A'} and ${farmB.farmer_name || 'Farm B'} (${Math.round((overlap_ratio || 0) * 100)}% overlap)`,
+            read: false,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error('Failed to send conflict notifications:', notifErr);
+    }
+
+    return NextResponse.json({ conflict });
+    
+  } catch (error) {
+    console.error('Conflicts POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

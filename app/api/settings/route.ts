@@ -160,7 +160,7 @@ export async function PATCH(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { name, logo_url, settings, active_lgas, commodity_types, commodities } = body;
+    const { name, logo_url, settings, active_lgas, commodity_types, commodities, brand_colors } = body;
     
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     
@@ -192,6 +192,21 @@ export async function PATCH(request: NextRequest) {
     
     if (Array.isArray(commodities)) {
       updates.commodities = commodities;
+    }
+    
+    if (brand_colors !== undefined) {
+      if (brand_colors && typeof brand_colors === 'object') {
+        const validColors: Record<string, string> = {};
+        const hexRegex = /^#[0-9a-fA-F]{6}$/;
+        for (const key of ['primary', 'secondary', 'accent']) {
+          if (brand_colors[key] && hexRegex.test(brand_colors[key])) {
+            validColors[key] = brand_colors[key];
+          }
+        }
+        updates.brand_colors = Object.keys(validColors).length > 0 ? validColors : null;
+      } else {
+        updates.brand_colors = null;
+      }
     }
     
     const { data: organization, error } = await supabaseAdmin

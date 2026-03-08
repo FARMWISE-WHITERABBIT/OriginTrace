@@ -27,6 +27,7 @@ export const organizations = pgTable("organizations", {
   agentSeatLimit: integer("agent_seat_limit").default(5),
   monthlyCollectionLimit: integer("monthly_collection_limit").default(1000),
   dataRegion: text("data_region").default("default"),
+  brandColors: jsonb("brand_colors"),
 });
 
 // Users (Profiles)
@@ -105,6 +106,7 @@ export const farms = pgTable("farms", {
   consentPhotoUrl: text("consent_photo_url"),
   consentSignature: text("consent_signature"),
   conflictStatus: varchar("conflict_status").default("clear"),
+  deforestationCheck: jsonb("deforestation_check"),
 });
 
 // Bags

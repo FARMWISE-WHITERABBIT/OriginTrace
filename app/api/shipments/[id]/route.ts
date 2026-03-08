@@ -246,6 +246,41 @@ export async function GET(
       }
     }
 
+    const farmIds: string[] = [];
+    for (const item of (items || [])) {
+      if (item.item_type === 'batch' && item.batch_id) {
+        const { data: batch } = await supabase
+          .from('collection_batches')
+          .select('farm_id')
+          .eq('id', item.batch_id)
+          .single();
+        if (batch?.farm_id) farmIds.push(String(batch.farm_id));
+      }
+    }
+
+    const uniqueFarmIds = [...new Set(farmIds)];
+    let farmDeforestationChecks: Array<{ farm_id: string; deforestation_free: boolean; forest_loss_hectares: number; forest_loss_percentage: number; analysis_date: string; data_source: string; risk_level: string }> = [];
+
+    if (uniqueFarmIds.length > 0) {
+      const { data: farmsWithChecks } = await supabase
+        .from('farms')
+        .select('id, deforestation_check')
+        .in('id', uniqueFarmIds)
+        .not('deforestation_check', 'is', null);
+
+      if (farmsWithChecks) {
+        farmDeforestationChecks = farmsWithChecks.map((f: any) => ({
+          farm_id: String(f.id),
+          ...f.deforestation_check,
+        }));
+      }
+    }
+
+    const scoreItemsWithFarmIds = scoreItems.map((si, idx) => ({
+      ...si,
+      farm_ids: farmIds[idx] ? [farmIds[idx]] : undefined,
+    }));
+
     const scoreInput: ShipmentScoreInput = {
       shipment: {
         id: shipment.id,
@@ -255,13 +290,14 @@ export async function GET(
         storage_controls: shipment.storage_controls || {},
         estimated_ship_date: shipment.estimated_ship_date || null,
       },
-      items: scoreItems,
+      items: scoreItemsWithFarmIds,
       historical_rejection_rate: historicalRejectionRate,
       cold_chain_alert_count: coldChainAlertCount,
       cold_chain_total_entries: coldChainTotalEntries,
       lot_count: lots?.length || 0,
       lots_with_valid_mass_balance: lots?.filter((l: any) => l.mass_balance_valid).length || 0,
       compliance_profile: complianceProfile,
+      farm_deforestation_checks: farmDeforestationChecks,
     };
 
     const readiness = computeShipmentReadiness(scoreInput);

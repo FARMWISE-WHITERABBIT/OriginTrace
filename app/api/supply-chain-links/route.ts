@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getResendClient } from '@/lib/email/resend-client';
+import { buildBuyerInvitationEmail } from '@/lib/email/templates';
 
 async function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -124,6 +126,53 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Link insert error:', insertError);
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
+    }
+
+    const { data: buyerOrg } = await supabaseAdmin
+      .from('buyer_organizations')
+      .select('name')
+      .eq('id', buyerProfile.buyer_org_id)
+      .single();
+
+    const buyerCompanyName = buyerOrg?.name || 'A buyer';
+
+    try {
+      const { data: exporterAdmins } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('org_id', exporterOrg.id)
+        .eq('role', 'admin');
+
+      if (exporterAdmins && exporterAdmins.length > 0) {
+        const adminUserIds = exporterAdmins.map((a: { user_id: string }) => a.user_id);
+        const { data: { users: adminUsers } } = await supabaseAdmin.auth.admin.listUsers();
+        const adminEmails = adminUsers
+          ?.filter((u: { id: string }) => adminUserIds.includes(u.id))
+          .map((u: { email?: string }) => u.email)
+          .filter(Boolean) as string[];
+
+        if (adminEmails && adminEmails.length > 0) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
+          const acceptUrl = `${baseUrl}/app/traceability`;
+
+          const { html, text } = buildBuyerInvitationEmail({
+            buyerCompanyName,
+            exporterOrgName: exporterOrg.name,
+            acceptUrl,
+          });
+
+          const { client: resend, fromEmail } = await getResendClient();
+          await resend.emails.send({
+            from: fromEmail,
+            to: adminEmails,
+            subject: `Supply Chain Invitation from ${buyerCompanyName} - OriginTrace`,
+            html,
+            text,
+          });
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send buyer invitation email:', emailError);
     }
 
     return NextResponse.json({ link });

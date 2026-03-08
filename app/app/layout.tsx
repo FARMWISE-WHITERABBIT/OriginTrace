@@ -12,6 +12,7 @@ import { MobileNav, AgentBottomNav } from '@/components/mobile-nav';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CacheWarmer } from '@/components/cache-warmer';
 import { AutoSync } from '@/components/auto-sync';
+import { TenantThemeProvider } from '@/components/tenant-theme-provider';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -52,14 +53,16 @@ export default function AppLayout({
   return (
     <OnboardingProvider>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <AppContent>{children}</AppContent>
-            <CacheWarmer />
-            <AutoSync />
-          </div>
-        </SidebarProvider>
+        <TenantThemeProvider>
+          <SidebarProvider style={style as React.CSSProperties}>
+            <div className="flex h-screen w-full">
+              <AppSidebar />
+              <AppContent>{children}</AppContent>
+              <CacheWarmer />
+              <AutoSync />
+            </div>
+          </SidebarProvider>
+        </TenantThemeProvider>
       </TooltipProvider>
     </OnboardingProvider>
   );
