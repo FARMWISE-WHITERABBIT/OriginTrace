@@ -3,6 +3,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const COUNTRY_RISK_MAP: Record<string, { risk_level: 'low' | 'medium' | 'high'; forest_loss_percentage: number }> = {
   'NG': { risk_level: 'high', forest_loss_percentage: 5.2 },
@@ -121,17 +122,10 @@ function getFallbackResult(areaHectares: number, countryCode: string = 'NG'): De
 }
 
 export async function POST(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 10 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: 'Supabase is not properly configured' },
-        { status: 500 }
-      );
-    }
-
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -275,7 +269,7 @@ export async function POST(request: NextRequest) {
             });
           }
         } catch (emailErr) {
-          console.warn('Failed to send deforestation risk email:', emailErr);
+          console.error('Failed to send deforestation risk email:', emailErr);
         }
       }
     }

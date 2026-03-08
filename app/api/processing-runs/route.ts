@@ -3,6 +3,20 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
+
+const processingRunCreateSchema = z.object({
+  facility_name: z.string().min(1, 'Facility name is required'),
+  facility_location: z.string().optional(),
+  commodity: z.string().min(1, 'Commodity is required'),
+  input_weight_kg: z.number().positive('Input weight must be positive'),
+  output_weight_kg: z.number().positive().optional(),
+  processed_at: z.string().optional(),
+  notes: z.string().optional(),
+  source_batch_ids: z.array(z.number()).optional(),
+  batch_ids: z.array(z.number()).optional(),
+  compliance_attestations: z.record(z.boolean()).optional(),
+});
 
 
 export async function GET(request: NextRequest) {
@@ -80,6 +94,15 @@ export async function POST(request: NextRequest) {
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
+
+    const parsed = processingRunCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const {
       facility_name,
       facility_location,
@@ -91,14 +114,8 @@ export async function POST(request: NextRequest) {
       source_batch_ids,
       batch_ids,
       compliance_attestations
-    } = body;
+    } = parsed.data;
     const resolvedBatchIds = source_batch_ids || batch_ids;
-
-    if (!facility_name || !commodity || !input_weight_kg) {
-      return NextResponse.json({ 
-        error: 'facility_name, commodity, and input_weight_kg are required' 
-      }, { status: 400 });
-    }
 
     const runCode = `PR-${new Date().getFullYear()}-${nanoid(6).toUpperCase()}`;
 

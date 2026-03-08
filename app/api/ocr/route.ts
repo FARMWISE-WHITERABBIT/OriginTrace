@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+const ocrSchema = z.object({
+  image: z.string().min(1, 'Image data is required'),
+});
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -8,6 +14,9 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 20 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -15,10 +24,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { image } = await request.json();
-    if (!image) {
-      return NextResponse.json({ error: 'Image data is required' }, { status: 400 });
+    const body = await request.json();
+
+    const parsed = ocrSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { image } = parsed.data;
 
     const base64Data = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 

@@ -292,9 +292,42 @@ export function DDSExportModal({ trigger }: DDSExportModalProps) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                setIsExporting(true);
+                const params = new URLSearchParams({ format: 'json' });
+                if (commodity !== 'all') params.set('commodity', commodity);
+                const res = await fetch(`/api/dds?${params}`);
+                if (!res.ok) throw new Error('Failed to generate DDS');
+                const data = await res.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `DDS-${data.reference_number || 'export'}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                toast({ title: 'DDS Exported', description: 'EUDR Due Diligence Statement exported as structured JSON.' });
+                setOpen(false);
+              } catch (err) {
+                toast({ title: 'Export Failed', description: err instanceof Error ? err.message : 'Export error', variant: 'destructive' });
+              } finally {
+                setIsExporting(false);
+              }
+            }}
+            disabled={isExporting}
+            data-testid="button-export-dds-json"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            DDS JSON
           </Button>
           <Button 
             onClick={handleExport} 

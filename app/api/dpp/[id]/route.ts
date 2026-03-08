@@ -62,7 +62,30 @@ export async function GET(
   }
 }
 
-function renderDpp(dpp: any, format: string | null) {
+function anonymizeChainOfCustody(chain: any[]): any[] {
+  if (!Array.isArray(chain)) return chain;
+  return chain.map((item: any) => {
+    if (item.stage && item.stage.toLowerCase() === 'collection') {
+      return { ...item, actor: 'Smallholder Farmer' };
+    }
+    return item;
+  });
+}
+
+function sanitizeDpp(dpp: any): any {
+  const sanitized = { ...dpp };
+  if (sanitized.chain_of_custody) {
+    sanitized.chain_of_custody = anonymizeChainOfCustody(sanitized.chain_of_custody);
+  }
+  if (sanitized.finished_goods) {
+    const { buyer_company, ...fg } = sanitized.finished_goods;
+    sanitized.finished_goods = fg;
+  }
+  return sanitized;
+}
+
+function renderDpp(rawDpp: any, format: string | null) {
+  const dpp = sanitizeDpp(rawDpp);
   if (format === 'jsonld') {
     return NextResponse.json(
       dpp.machine_readable_data || {},

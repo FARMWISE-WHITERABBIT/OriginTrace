@@ -3,6 +3,36 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const syncBatchSchema = z.object({
+  local_id: z.string().min(1, 'local_id is required'),
+  batch_id: z.string().optional(),
+  farm_id: z.union([z.string(), z.number()]).optional(),
+  commodity: z.string().optional(),
+  state: z.string().optional(),
+  lga: z.string().optional(),
+  community: z.string().optional(),
+  gps_lat: z.number().optional(),
+  gps_lng: z.number().optional(),
+  contributors: z.array(z.object({
+    farm_id: z.union([z.string(), z.number()]).optional(),
+    farmer_name: z.string().optional(),
+    weight_kg: z.number().optional(),
+    bag_count: z.number().optional(),
+  })).optional(),
+  bags: z.array(z.object({
+    serial: z.string().optional(),
+    weight: z.number().optional(),
+    grade: z.string().optional(),
+  })).optional(),
+  notes: z.string().optional(),
+  collected_at: z.string().optional(),
+});
+
+const syncPutSchema = z.object({
+  batches: z.array(syncBatchSchema).min(1, 'At least one batch is required'),
+});
 
 
 function createServiceClient() {
@@ -153,11 +183,16 @@ export async function PUT(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { batches } = body;
-    
-    if (!batches || !Array.isArray(batches)) {
-      return NextResponse.json({ error: 'Batches array required' }, { status: 400 });
+
+    const parsed = syncPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { batches } = parsed.data;
     
     const results = [];
     
@@ -181,7 +216,7 @@ export async function PUT(request: NextRequest) {
       const bagCount = contributors?.reduce((sum: number, c: any) => sum + (c.bag_count || 0), 0) 
         || bags?.length || 0;
       
-      const parsedFarmId = farm_id && farm_id !== 'unknown' ? (parseInt(farm_id) || null) : null;
+      const parsedFarmId = farm_id && String(farm_id) !== 'unknown' ? (parseInt(String(farm_id)) || null) : null;
       
       const { data: newBatch, error: batchError } = await serviceClient
         .from('collection_batches')
@@ -213,13 +248,13 @@ export async function PUT(request: NextRequest) {
       
       if (contributors && contributors.length > 0) {
         for (const contrib of contributors) {
-          if (contrib.bag_count > 0) {
+          if ((contrib.bag_count || 0) > 0) {
             try {
               await serviceClient
                 .from('batch_contributions')
                 .insert({
                   batch_id: newBatch.id,
-                  farm_id: parseInt(contrib.farm_id) || null,
+                  farm_id: contrib.farm_id ? parseInt(String(contrib.farm_id)) || null : null,
                   farmer_name: contrib.farmer_name,
                   weight_kg: contrib.weight_kg,
                   bag_count: contrib.bag_count,
@@ -250,6 +285,43 @@ export async function PUT(request: NextRequest) {
       results.push({ local_id, status: 'synced', id: newBatch.id });
     }
     
+    const warnings: Array<{ type: string; message: string; details?: any }> = [];
+    
+    const syncedFarmIds = batches
+      .map((b: any) => parseInt(b.farm_id))
+      .filter((id: number) => !isNaN(id) && id > 0);
+    
+    if (syncedFarmIds.length > 0) {
+      const uniqueFarmIds = [...new Set(syncedFarmIds)] as number[];
+      const { data: farms } = await serviceClient
+        .from('farms')
+        .select('id, farmer_name, compliance_status, updated_at')
+        .in('id', uniqueFarmIds)
+        .eq('org_id', profile.org_id);
+      
+      if (farms) {
+        const changedFarms = farms.filter(f => {
+          if (f.compliance_status === 'rejected' || f.compliance_status === 'suspended') {
+            return true;
+          }
+          return false;
+        });
+        
+        if (changedFarms.length > 0) {
+          warnings.push({
+            type: 'farm_compliance_changed',
+            message: `${changedFarms.length} farm(s) referenced in synced batches have compliance issues`,
+            details: changedFarms.map(f => ({
+              farm_id: f.id,
+              farmer_name: f.farmer_name,
+              compliance_status: f.compliance_status,
+              updated_at: f.updated_at,
+            })),
+          });
+        }
+      }
+    }
+    
     await serviceClient
       .from('agent_sync_status')
       .update({ 
@@ -259,7 +331,7 @@ export async function PUT(request: NextRequest) {
       })
       .eq('agent_id', profile.id);
     
-    return NextResponse.json({ results, success: true });
+    return NextResponse.json({ results, warnings, success: true });
     
   } catch (error) {
     console.error('Sync API error:', error);
