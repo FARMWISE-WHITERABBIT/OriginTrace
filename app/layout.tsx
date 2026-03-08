@@ -13,6 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://origintrace.trade'),
   title: 'OriginTrace — Trust Infrastructure for Origin-Sensitive Supply Chains',
   description: 'OriginTrace is the all-in-one platform for supply chain traceability, compliance verification, and export readiness. Prevent shipment rejections with pre-shipment compliance scoring.',
   manifest: '/manifest.json',
@@ -33,6 +34,11 @@ export const metadata: Metadata = {
     description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
     siteName: 'OriginTrace',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'OriginTrace — Trust Infrastructure for Origin-Sensitive Supply Chains',
+    description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
   },
 };
 

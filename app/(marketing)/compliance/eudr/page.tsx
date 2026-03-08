@@ -7,6 +7,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import {
   MapPin,
   FileText,
@@ -144,6 +145,7 @@ function FAQItem({ question, answer, index }: { question: string; answer: string
       <button
         className="w-full flex items-center justify-between gap-4 py-5 text-left hover-elevate rounded-md px-2"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         data-testid={`button-faq-toggle-${index}`}
       >
         <span className="font-medium text-sm md:text-base">{question}</span>
@@ -173,6 +175,7 @@ export default function EUDRCompliancePage() {
     <>
       <MarketingNav />
 
+      <FAQSchema faqs={faqs} />
       <main className="min-h-screen">
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
           <HeroBackground />

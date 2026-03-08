@@ -7,6 +7,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import {
   Shield,
   FileText,
@@ -160,6 +161,7 @@ export default function UKCompliancePage() {
     <>
       <MarketingNav />
 
+      <FAQSchema faqs={faqItems} />
       <main className="min-h-screen">
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
           <HeroBackground />
@@ -498,6 +500,7 @@ export default function UKCompliancePage() {
                       <button
                         onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
                         className="w-full flex items-start justify-between gap-4 p-5 text-left"
+                        aria-expanded={openFaqIndex === index}
                         data-testid={`button-faq-${index}`}
                       >
                         <span className="text-sm font-medium text-slate-900 dark:text-white leading-relaxed">

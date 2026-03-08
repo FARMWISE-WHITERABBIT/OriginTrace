@@ -7,6 +7,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import { useState } from 'react';
 import {
   Shield,
@@ -228,6 +229,7 @@ export default function ChinaCompliancePage() {
     <>
       <MarketingNav />
 
+      <FAQSchema faqs={faqItems} />
       <main className="min-h-screen">
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
           <HeroBackground />
@@ -521,6 +523,7 @@ export default function ChinaCompliancePage() {
                       <button
                         onClick={() => setOpenFaq(openFaq === index ? null : index)}
                         className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                        aria-expanded={openFaq === index}
                         data-testid={`button-faq-toggle-${index}`}
                       >
                         <span className="text-sm font-semibold text-slate-900 dark:text-white">
