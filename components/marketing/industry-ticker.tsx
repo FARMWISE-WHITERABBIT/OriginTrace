@@ -24,19 +24,19 @@ export function IndustryTicker() {
   }, []);
 
   return (
-    <span className="relative inline-block align-bottom overflow-hidden" style={{ lineHeight: 'inherit' }}>
-      <span className="invisible whitespace-nowrap block" aria-hidden="true" style={{ fontWeight: 'inherit', lineHeight: 'inherit' }}>
+    <span className="relative inline-block align-bottom" style={{ lineHeight: 1.3, clipPath: 'inset(-5% -5% -10% -5%)' }}>
+      <span className="invisible whitespace-nowrap block" aria-hidden="true" style={{ fontWeight: 'inherit', lineHeight: 1.3 }}>
         {longestWord}
       </span>
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
-          initial={{ y: '110%', opacity: 0 }}
+          initial={{ y: '120%', opacity: 0 }}
           animate={{ y: '0%', opacity: 1 }}
-          exit={{ y: '-110%', opacity: 0 }}
+          exit={{ y: '-120%', opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-          className="absolute inset-0 text-emerald-500 whitespace-nowrap"
-          style={{ lineHeight: 'inherit', fontWeight: 'inherit' }}
+          className="absolute top-0 left-0 text-emerald-500 whitespace-nowrap"
+          style={{ fontWeight: 'inherit', lineHeight: 1.3 }}
         >
           {industries[index]}
         </motion.span>
