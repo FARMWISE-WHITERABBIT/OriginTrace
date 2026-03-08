@@ -15,8 +15,61 @@ import {
   ChevronRight,
   Check,
   ClipboardCheck,
-  Package
+  Package,
+  Layers,
+  BarChart3,
+  ArrowRight
 } from 'lucide-react';
+
+const processingControls = [
+  {
+    icon: Scale,
+    title: 'Mass Balance Enforcement',
+    description: 'Input-output reconciliation with commodity-specific recovery rates. Automatic validation flags discrepancies before they become compliance issues.',
+  },
+  {
+    icon: Factory,
+    title: 'Transformation Audit Trail',
+    description: 'Complete processing run records with timestamped logs. Link input batches to output products with verifiable transformation records.',
+  },
+  {
+    icon: Shield,
+    title: 'Identity Preservation',
+    description: 'Maintain source segregation through the entire processing chain. Track which farms contributed to each finished good for full traceability.',
+  },
+  {
+    icon: AlertTriangle,
+    title: 'Contamination Prevention',
+    description: 'Instant alerts when non-compliant or flagged batches are about to enter the production line. Prevent contamination before it reaches finished goods.',
+  },
+];
+
+const commodityRecovery = [
+  {
+    name: 'Cocoa',
+    rates: [
+      { product: 'Butter', range: '38-45%' },
+      { product: 'Powder', range: '20-25%' },
+      { product: 'Liquor', range: '80-85%' },
+    ],
+  },
+  {
+    name: 'Cashew',
+    rates: [
+      { product: 'Kernels', range: '22-28%' },
+      { product: 'CNSL', range: '18-22%' },
+      { product: 'Shell', range: '65-70%' },
+    ],
+  },
+  {
+    name: 'Palm Kernel',
+    rates: [
+      { product: 'Oil', range: '45-52%' },
+      { product: 'Cake', range: '40-48%' },
+      { product: 'Losses', range: '5-10%' },
+    ],
+  },
+];
 
 export default function ProcessorsPage() {
   return (
@@ -31,95 +84,71 @@ export default function ProcessorsPage() {
             <FadeIn>
               <div className="max-w-3xl">
                 <p className="text-sm font-medium text-primary mb-4 tracking-wide uppercase">
-                  For Processors
+                  [ For Processors ]
                 </p>
-                <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50">
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50">
                   Maintain Chain-of-Custody Through Every Transformation
                 </h1>
                 <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8 max-w-2xl">
                   Processing is where traceability breaks. OriginTrace maintains audit-ready chain-of-custody through crushing, fermentation, and transformation — so every finished good can be traced to its source farms.
                 </p>
-                <Link href="/demo">
-                  <Button size="lg" className="gap-2" data-testid="button-request-demo">
-                    Request Demo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                  <Link href="/demo">
+                    <Button size="lg" className="gap-2" data-testid="button-request-demo">
+                      Request Demo
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/solutions#processors">
+                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-view-solutions">
+                      View All Solutions
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </FadeIn>
           </div>
         </section>
 
-        <section className="py-16 border-t">
+        <section className="py-20 md:py-28 border-t">
           <div className="max-w-6xl mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-16">
               <FadeIn direction="right">
-                <h2 className="text-2xl font-semibold mb-3">
-                  Processing Controls
+                <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
+                  [ Processing Controls ]
+                </p>
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
+                  End-to-End Processing Visibility
                 </h2>
-                <p className="text-muted-foreground mb-8">
+                <p className="text-muted-foreground mb-8 leading-relaxed">
                   Every transformation step is documented, validated, and audit-ready.
                 </p>
                 
                 <div className="space-y-8">
-                  <div className="flex gap-4">
-                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Scale className="h-5 w-5 text-primary" />
+                  {processingControls.map((control) => (
+                    <div key={control.title} className="flex gap-4">
+                      <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <control.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-2">{control.title}</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {control.description}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Mass Balance Enforcement</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Input-output reconciliation with commodity-specific recovery rates. 
-                        Automatic validation flags discrepancies before they become compliance issues.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Factory className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Transformation Audit Trail</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Complete processing run records with timestamped logs. Link input batches to 
-                        output products with verifiable transformation records.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Shield className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Identity Preservation</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Maintain source segregation through the entire processing chain. 
-                        Track which farms contributed to each finished good for full traceability.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <AlertTriangle className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Contamination Prevention</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Instant alerts when non-compliant or flagged batches are about to enter 
-                        the production line. Prevent contamination before it reaches finished goods.
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </FadeIn>
               
               <FadeIn direction="left" delay={0.2}>
                 <Card className="shadow-lg">
                   <CardContent className="p-8">
-                    <h3 className="font-medium mb-6">Processing Run Summary</h3>
+                    <p className="text-xs font-medium text-primary mb-4 tracking-wide uppercase">
+                      [ Live Dashboard Preview ]
+                    </p>
+                    <h3 className="font-semibold mb-6">Processing Run Summary</h3>
                     
                     <div className="space-y-4">
                       <div className="p-4 bg-muted/50 rounded-lg">
@@ -179,10 +208,13 @@ export default function ProcessorsPage() {
           </div>
         </section>
 
-        <section className="py-16 bg-muted/30">
+        <section className="py-20 md:py-28 bg-muted/30 border-t">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn className="text-center mb-12">
-              <h2 className="text-2xl font-semibold mb-4">
+              <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
+                [ Recovery Standards ]
+              </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
                 Commodity-Specific Recovery Standards
               </h2>
               <p className="text-muted-foreground max-w-xl mx-auto">
@@ -191,50 +223,60 @@ export default function ProcessorsPage() {
             </FadeIn>
             
             <StaggerContainer className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <StaggerItem>
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <h3 className="font-medium mb-2">Cocoa</h3>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>Butter: 38-45%</p>
-                      <p>Powder: 20-25%</p>
-                      <p>Liquor: 80-85%</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-              
-              <StaggerItem>
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <h3 className="font-medium mb-2">Cashew</h3>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>Kernels: 22-28%</p>
-                      <p>CNSL: 18-22%</p>
-                      <p>Shell: 65-70%</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-              
-              <StaggerItem>
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <h3 className="font-medium mb-2">Palm Kernel</h3>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>Oil: 45-52%</p>
-                      <p>Cake: 40-48%</p>
-                      <p>Losses: 5-10%</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
+              {commodityRecovery.map((commodity) => (
+                <StaggerItem key={commodity.name}>
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <h3 className="font-semibold mb-3 text-lg">{commodity.name}</h3>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        {commodity.rates.map((rate) => (
+                          <p key={rate.product}>{rate.product}: {rate.range}</p>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
             </StaggerContainer>
           </div>
         </section>
 
-        <section className="py-16">
+        <section className="py-20 md:py-28 border-t">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <FadeIn className="mb-12">
+              <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
+                [ Get Started ]
+              </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                See How It Works for Your Commodity
+              </h2>
+              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
+                Schedule a demo to see OriginTrace processing controls configured for your specific commodity and transformation workflows.
+              </p>
+              <Link href="/demo">
+                <Button size="lg" className="gap-2" data-testid="button-request-demo-mid">
+                  Request Demo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-20 md:py-28 border-t">
           <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="mb-12">
+              <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
+                [ Output & Compliance ]
+              </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                From Processing Floor to Export Documentation
+              </h2>
+              <p className="text-muted-foreground max-w-2xl leading-relaxed">
+                Every finished good carries its full traceability story — from source farms through every transformation step to final export dossier.
+              </p>
+            </FadeIn>
+
             <StaggerContainer className="grid md:grid-cols-2 gap-8">
               <StaggerItem>
                 <ScaleIn>
@@ -249,7 +291,7 @@ export default function ProcessorsPage() {
                         every source farm GPS coordinate. Auditors verify in seconds.
                       </p>
                       <Link href="/pedigree">
-                        <Button variant="secondary" size="sm" className="gap-2">
+                        <Button variant="secondary" size="sm" className="gap-2" data-testid="link-pedigree">
                           Learn More
                           <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -272,7 +314,7 @@ export default function ProcessorsPage() {
                         traceability data for EU, UK, US, and buyer-driven regulatory submissions.
                       </p>
                       <Link href="/demo">
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2" data-testid="link-demo-compliance">
                           Request Demo
                           <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -285,14 +327,17 @@ export default function ProcessorsPage() {
           </div>
         </section>
 
-        <section className="py-20 bg-muted/30">
+        <section className="py-20 md:py-28 bg-muted/30 border-t">
           <div className="max-w-6xl mx-auto px-6 text-center">
             <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-semibold mb-4">
-                Ready to make your processing audit-ready?
+              <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
+                [ Take the Next Step ]
+              </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                Ready to Make Your Processing Audit-Ready?
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                See how OriginTrace maintains traceability through every transformation step.
+                See how OriginTrace maintains traceability through every transformation step — from raw material intake to finished good export.
               </p>
               <Link href="/demo">
                 <Button size="lg" className="gap-2" data-testid="button-request-demo-bottom">

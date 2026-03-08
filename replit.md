@@ -105,6 +105,14 @@ Supabase PostgreSQL with RLS for multi-tenant isolation. Schema includes:
 - **Marketing Website Redesign (Mar 2026)**: Complete homepage redesign inspired by Tello Framer website. New components: `IndustryTicker` (animated vertical text cycling), `LogoMarquee` (auto-scrolling compliance standard badges), `TestimonialCarousel` (6 testimonials with auto-advance and manual nav), `StatCounter` (animated count-up on scroll). Homepage sections in order: Hero (centered, bold headline with industry ticker + dual CTAs), Logo Marquee, About OriginTrace (side-by-side + stats), Problem Discovery, Platform Capabilities (numbered accordion 01-06), Shipment Readiness Score mockup, Use Cases grid (6 verticals), Compliance Coverage Grid, Supply Chain Flow, Testimonials, Regulatory Readiness Assessment (calculator), Pedigree CTA banner, Blog/Insights teasers, Final CTA. All sections use bracketed labels `[ Section Name ]`. Updated nav (Solutions, Use Cases, Pedigree, Readiness Score, API, Sign In). Updated footer (4 columns with social icons, contact info, legal links).
 - **Superadmin Expansion**: Command Tower dashboard updated with Platform Expansion metrics (buyer ecosystem, document vault, payment volume, DPP passports, enterprise API usage, compliance profiles); user management supports all 8 roles; feature toggles show all 33 features with buyer_portal_access and dpp_access add-on flags; new Buyer Organizations management page (`/superadmin/buyer-orgs`) with detail dialog
 
+### Marketing Website Redesign — Phase 2 (Mar 2026)
+- **Homepage polish**: All headings upgraded to `font-extrabold`, `text-3xl md:text-4xl` section sizing, updated subtitle, fixed IndustryTicker alignment
+- **Navigation update**: 4 nav links (Solutions, Compliance, Use Cases, Pedigree) + Sign In + Request Demo button; footer has 5 columns (Brand, Platform, Compliance, Company, Contact)
+- **Subpage redesigns**: Solutions, Pedigree, Processors, Demo, API Docs — all redesigned with bracketed section labels, enterprise typography, consistent spacing, demo CTAs
+- **5 Compliance Landing Pages**: EUDR (`/compliance/eudr`), USA/FSMA 204 (`/compliance/usa`), UK Environment Act (`/compliance/uk`), China GACC (`/compliance/china`), UAE ESMA (`/compliance/uae`) — each with regulatory overview, FAQ section (8 questions), and SEO metadata
+- **Compliance Hub**: Index page at `/compliance` linking to all 5 regulation pages with status badges and commodity tags
+- **SEO**: Per-page metadata via layout.tsx exports (title template `%s | OriginTrace`), Open Graph tags, keywords for compliance pages. next/head removed in favor of App Router metadata API
+
 ### Previous Cleanup (Early Mar 2026)
 - AI-Powered OCR for Farmer ID Scanning (OpenAI GPT-5.2)
 - SMS Service Removed

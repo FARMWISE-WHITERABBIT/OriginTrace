@@ -10,10 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
   { href: '/solutions', label: 'Solutions' },
+  { href: '/compliance', label: 'Compliance' },
   { href: '/#use-cases', label: 'Use Cases' },
   { href: '/pedigree', label: 'Pedigree' },
-  { href: '/#shipment-readiness', label: 'Readiness Score' },
-  { href: '/api-docs', label: 'API' },
 ];
 
 export function MarketingNav() {
@@ -73,10 +72,11 @@ export function MarketingNav() {
                 key={link.href}
                 href={link.href} 
                 className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                  pathname === link.href
+                  pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href.split('#')[0]))
                     ? 'text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/5'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
+                data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {link.label}
               </Link>

@@ -22,7 +22,10 @@ import {
   FileText,
   ArrowRight,
   Calendar,
-  Users
+  Users,
+  Phone,
+  Rocket,
+  Headphones
 } from 'lucide-react';
 
 export default function DemoPage() {
@@ -74,70 +77,104 @@ export default function DemoPage() {
     setSubmitting(false);
   }
 
+  const timelineSteps = [
+    {
+      icon: Phone,
+      title: 'Discovery Call',
+      duration: '30 min',
+      description: 'We review your operation, supply chain complexity, and compliance requirements across target markets.',
+    },
+    {
+      icon: MapPin,
+      title: 'Platform Demo',
+      duration: '45 min',
+      description: 'See polygon mapping, bag-level traceability, DDS export, and compliance scoring in a live environment.',
+    },
+    {
+      icon: Rocket,
+      title: '30-Day Pilot Setup',
+      duration: 'Week 1',
+      description: 'We onboard your organization, configure commodities and regions, and begin farmer enrollment.',
+    },
+    {
+      icon: Headphones,
+      title: 'Dedicated Support',
+      duration: 'Ongoing',
+      description: 'Your compliance success manager ensures smooth adoption with training and optimization.',
+    },
+  ];
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-background overflow-x-hidden">
         <MarketingNav />
         
-        <main className="pt-24 pb-20">
-          <div className="max-w-lg mx-auto px-6 text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-              className="mx-auto mb-6 h-20 w-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center"
-            >
-              <Check className="h-10 w-10 text-emerald-500" />
-            </motion.div>
-            
+        <main className="pt-28 pb-20 md:pb-28">
+          <div className="max-w-2xl mx-auto px-6">
+            <FadeIn>
+              <div className="text-center mb-12">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                  className="mx-auto mb-6 h-20 w-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center"
+                >
+                  <Check className="h-10 w-10 text-emerald-500" />
+                </motion.div>
+
+                <p className="text-sm font-medium text-primary mb-3 tracking-wide uppercase" data-testid="text-success-label">
+                  [ Request Received ]
+                </p>
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" data-testid="text-success-heading">
+                  Your Pilot Slot is Secured
+                </h1>
+                <p className="text-muted-foreground leading-relaxed max-w-lg mx-auto" data-testid="text-success-description">
+                  Our compliance team will contact you within 24 hours to schedule 
+                  your personalized demonstration and discuss your pilot setup.
+                </p>
+              </div>
+            </FadeIn>
+
+            <div className="relative mb-12">
+              <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
+
+              <div className="space-y-0">
+                {timelineSteps.map((item, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + index * 0.15, duration: 0.4 }}
+                    className="relative flex gap-5 py-5"
+                    data-testid={`timeline-step-${index}`}
+                  >
+                    <div className="relative z-10 h-12 w-12 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <item.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <h3 className="font-semibold">{item.title}</h3>
+                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                          {item.duration}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 1.2 }}
+              className="text-center"
             >
-              <h1 className="text-2xl font-semibold mb-4">
-                Your Pilot Slot is Secured
-              </h1>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                Our compliance team will contact you within 24 hours to schedule 
-                your personalized demonstration and discuss your pilot setup.
-              </p>
-              
-              <div className="bg-muted/50 rounded-lg p-6 mb-8 text-left">
-                <h3 className="font-medium mb-4">What happens next:</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-xs font-medium text-primary">1</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Discovery Call (30 min)</p>
-                      <p className="text-xs text-muted-foreground">We'll review your operation and compliance needs</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-xs font-medium text-primary">2</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Platform Demo</p>
-                      <p className="text-xs text-muted-foreground">See polygon mapping, traceability, and DDS export in action</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-xs font-medium text-primary">3</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">30-Day Pilot Setup</p>
-                      <p className="text-xs text-muted-foreground">Onboard your organization with dedicated support</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
               <Link href="/">
-                <Button variant="outline">Return to Homepage</Button>
+                <Button variant="outline" data-testid="button-return-home">Return to Homepage</Button>
               </Link>
             </motion.div>
           </div>
@@ -152,30 +189,30 @@ export default function DemoPage() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <MarketingNav />
 
-      <main className="pt-24 pb-16 md:pb-24">
+      <main className="pt-28 pb-20 md:pb-28">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
             <FadeIn direction="right">
-              <p className="text-sm font-medium text-primary mb-4 tracking-wide uppercase">
-                Compliance Consultation
+              <p className="text-sm font-medium text-primary mb-4 tracking-wide uppercase" data-testid="text-section-label">
+                [ Request a Demo ]
               </p>
-              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6" data-testid="text-demo-heading">
                 Get Your Verified Pedigree Pilot
               </h1>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-lg" data-testid="text-demo-description">
                 We'll review your operation and show you exactly how OriginTrace 
                 can strengthen your export compliance and reduce shipment rejection risk.
               </p>
               
-              <div className="space-y-6 mb-8">
+              <div className="space-y-6 mb-10">
                 <div className="flex gap-4">
                   <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Shield className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1">Compliance Assessment</h3>
+                    <h3 className="font-semibold mb-1" data-testid="text-feature-compliance">Compliance Assessment</h3>
                     <p className="text-sm text-muted-foreground">
-                      Identify gaps in your current traceability and documentation
+                      Identify gaps in your current traceability and documentation across EUDR, FSMA 204, UK, and more.
                     </p>
                   </div>
                 </div>
@@ -185,9 +222,9 @@ export default function DemoPage() {
                     <MapPin className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1">Platform Demo</h3>
+                    <h3 className="font-semibold mb-1" data-testid="text-feature-demo">Live Platform Demo</h3>
                     <p className="text-sm text-muted-foreground">
-                      See polygon mapping, bag traceability, and DDS export
+                      See polygon mapping, bag traceability, and DDS export in a live environment tailored to your commodity.
                     </p>
                   </div>
                 </div>
@@ -197,9 +234,9 @@ export default function DemoPage() {
                     <FileText className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-medium mb-1">Pilot Onboarding</h3>
+                    <h3 className="font-semibold mb-1" data-testid="text-feature-pilot">Pilot Onboarding</h3>
                     <p className="text-sm text-muted-foreground">
-                      30-day pilot with dedicated support team
+                      30-day pilot with a dedicated compliance success manager and full platform access.
                     </p>
                   </div>
                 </div>
@@ -215,23 +252,23 @@ export default function DemoPage() {
             </FadeIn>
             
             <FadeIn direction="left" delay={0.2}>
-              <Card className="shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+              <Card className="shadow-lg border">
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-colors ${
                       step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    }`}>
+                    }`} data-testid="indicator-step-1">
                       {step > 1 ? <Check className="h-4 w-4" /> : '1'}
                     </div>
-                    <div className="flex-1 h-1 bg-muted rounded">
+                    <div className="flex-1 h-1 bg-muted rounded-full">
                       <div 
-                        className="h-full bg-primary rounded transition-all duration-300"
+                        className="h-full bg-primary rounded-full transition-all duration-500"
                         style={{ width: step > 1 ? '100%' : '0%' }}
                       />
                     </div>
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                    <div className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-colors ${
                       step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    }`}>
+                    }`} data-testid="indicator-step-2">
                       2
                     </div>
                   </div>
@@ -245,7 +282,8 @@ export default function DemoPage() {
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <h3 className="font-medium mb-4">Contact Information</h3>
+                        <h3 className="text-lg font-semibold mb-1" data-testid="text-step-title">Contact Information</h3>
+                        <p className="text-sm text-muted-foreground mb-6">Tell us who you are so we can tailor your demo.</p>
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="full_name">Full Name *</Label>
@@ -321,16 +359,18 @@ export default function DemoPage() {
                         transition={{ duration: 0.2 }}
                         onSubmit={handleSubmit}
                       >
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-medium">Operation Details</h3>
+                        <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                          <h3 className="text-lg font-semibold" data-testid="text-step2-title">Operation Details</h3>
                           <button 
                             type="button"
                             onClick={() => setStep(1)}
                             className="text-sm text-primary hover:underline"
+                            data-testid="button-back"
                           >
                             Back
                           </button>
                         </div>
+                        <p className="text-sm text-muted-foreground mb-6">Help us understand your supply chain.</p>
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="organization_type">Organization Type *</Label>
