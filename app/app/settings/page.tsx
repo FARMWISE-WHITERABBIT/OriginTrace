@@ -25,6 +25,8 @@ import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useLocale } from '@/lib/i18n/locale-provider';
+import { locales, localeNames, type Locale } from '@/i18n';
 
 interface OrgSettings {
   require_polygon?: boolean;
@@ -221,6 +223,76 @@ function ComplianceFrameworkSection({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function LanguagePreferenceSection() {
+  const { locale, setLocale } = useLocale();
+  const { toast } = useToast();
+  const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSelectedLocale(locale);
+  }, [locale]);
+
+  const handleSaveLanguage = async () => {
+    setSaving(true);
+    try {
+      setLocale(selectedLocale);
+      try {
+        await fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preferred_locale: selectedLocale }),
+        });
+      } catch {}
+      toast({
+        title: selectedLocale === 'fr' ? 'Langue mise à jour' : selectedLocale === 'ar' ? 'تم تحديث اللغة' : 'Language Updated',
+        description: selectedLocale === 'fr' ? 'Votre préférence linguistique a été enregistrée.' : selectedLocale === 'ar' ? 'تم حفظ تفضيل اللغة الخاص بك.' : 'Your language preference has been saved.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Could not update language preference.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Interface Language</Label>
+        <Select value={selectedLocale} onValueChange={(v) => setSelectedLocale(v as Locale)}>
+          <SelectTrigger className="w-full" data-testid="select-language">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {locales.map((loc) => (
+              <SelectItem key={loc} value={loc} data-testid={`language-option-${loc}`}>
+                {localeNames[loc]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {selectedLocale === 'ar' && 'Arabic enables right-to-left (RTL) layout'}
+          {selectedLocale === 'fr' && 'Le français sera appliqué à toute l\'interface'}
+          {selectedLocale === 'en' && 'English is the default interface language'}
+        </p>
+      </div>
+      <Button
+        onClick={handleSaveLanguage}
+        disabled={saving || selectedLocale === locale}
+        data-testid="button-save-language"
+      >
+        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {selectedLocale === 'fr' ? 'Enregistrer la langue' : selectedLocale === 'ar' ? 'حفظ اللغة' : 'Save Language'}
+      </Button>
     </div>
   );
 }
@@ -761,6 +833,19 @@ export default function SettingsPage() {
                     Save Changes
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Language Preference
+                </CardTitle>
+                <CardDescription>Choose your preferred language for the interface</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <LanguagePreferenceSection />
               </CardContent>
             </Card>
 

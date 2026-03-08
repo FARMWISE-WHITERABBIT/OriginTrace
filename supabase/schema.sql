@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer')),
+  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer', 'farmer')),
   full_name TEXT NOT NULL,
   avatar_url TEXT,
   assigned_state TEXT,
@@ -1342,6 +1342,250 @@ CREATE INDEX IF NOT EXISTS idx_api_rate_limits_window ON api_rate_limits(window_
 -- ============================================
 
 ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;
+
+-- ============================================
+-- AUDIT EVENTS (Phase 11 — Immutable Append-Only Log)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+  actor_id UUID,
+  actor_email TEXT,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  metadata JSONB DEFAULT '{}',
+  ip_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can view audit events" ON audit_events
+  FOR SELECT USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_org ON audit_events(org_id);
+CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action);
+CREATE INDEX IF NOT EXISTS idx_audit_events_created ON audit_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_events_resource ON audit_events(resource_type, resource_id);
+
+-- ============================================
+-- WEBHOOK ENDPOINTS & DELIVERIES (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  secret TEXT NOT NULL,
+  events TEXT[] NOT NULL DEFAULT '{}',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'disabled')),
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org admins can manage webhooks" ON webhook_endpoints
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  webhook_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  response_status INTEGER,
+  response_body TEXT,
+  attempts INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'delivered', 'failed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at DESC);
+
+-- ============================================
+-- FARMER DIGITAL IDENTITY (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_accounts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  farmer_code TEXT,
+  status TEXT DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'suspended')),
+  pin_hash TEXT,
+  invite_token TEXT UNIQUE,
+  preferred_locale TEXT DEFAULT 'en',
+  verified_at TIMESTAMPTZ,
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_accounts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Farmers can view own account" ON farmer_accounts
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Org members can view farmer accounts" ON farmer_accounts
+  FOR SELECT USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_phone ON farmer_accounts(phone);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_farm ON farmer_accounts(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_org ON farmer_accounts(org_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_token ON farmer_accounts(invite_token);
+
+-- ============================================
+-- FARMER TRAINING MODULES (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_training (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farmer_account_id UUID REFERENCES farmer_accounts(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  module_name TEXT NOT NULL,
+  module_type TEXT NOT NULL CHECK (module_type IN ('gap', 'safety', 'sustainability', 'organic', 'child_labor', 'eudr_awareness')),
+  status TEXT DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed')),
+  completed_at TIMESTAMPTZ,
+  score DECIMAL,
+  certificate_url TEXT,
+  assigned_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_training ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage training" ON farmer_training
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_training_farmer ON farmer_training(farmer_account_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_training_org ON farmer_training(org_id);
+
+-- ============================================
+-- FARMER AGRICULTURAL INPUTS (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_inputs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  input_type TEXT NOT NULL CHECK (input_type IN ('fertilizer', 'pesticide', 'herbicide', 'seed', 'organic_amendment')),
+  product_name TEXT,
+  quantity DECIMAL,
+  unit TEXT CHECK (unit IN ('kg', 'liters', 'bags', 'units')),
+  application_date DATE,
+  area_applied_hectares DECIMAL,
+  notes TEXT,
+  recorded_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_inputs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage inputs" ON farmer_inputs
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_inputs_farm ON farmer_inputs(farm_id);
+
+-- ============================================
+-- YIELD BENCHMARKS (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS yield_benchmarks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  commodity TEXT NOT NULL,
+  country TEXT,
+  region TEXT,
+  season TEXT,
+  avg_yield_per_hectare DECIMAL,
+  min_yield DECIMAL,
+  max_yield DECIMAL,
+  source TEXT,
+  year INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed benchmark data for key commodities
+INSERT INTO yield_benchmarks (commodity, country, region, avg_yield_per_hectare, min_yield, max_yield, source, year) VALUES
+  ('Cocoa', 'Nigeria', 'South West', 0.35, 0.15, 0.60, 'ICCO/FAO', 2024),
+  ('Cocoa', 'Ghana', 'Western Region', 0.45, 0.20, 0.80, 'COCOBOD', 2024),
+  ('Cocoa', 'Côte d''Ivoire', 'Sud-Comoé', 0.55, 0.25, 0.90, 'CCC', 2024),
+  ('Coffee', 'Nigeria', 'Plateau', 0.60, 0.30, 1.00, 'FAO', 2024),
+  ('Coffee', 'Côte d''Ivoire', 'Man', 0.50, 0.25, 0.85, 'FAO', 2024),
+  ('Cashew', 'Nigeria', 'Kogi', 0.80, 0.40, 1.50, 'ACA', 2024),
+  ('Cashew', 'Ghana', 'Bono', 0.70, 0.35, 1.20, 'FAO', 2024),
+  ('Sesame', 'Nigeria', 'Nassarawa', 0.45, 0.20, 0.80, 'FAO', 2024),
+  ('Shea', 'Nigeria', 'Niger', 0.25, 0.10, 0.50, 'Global Shea Alliance', 2024),
+  ('Shea', 'Ghana', 'Northern', 0.30, 0.12, 0.55, 'Global Shea Alliance', 2024)
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- FARM CERTIFICATIONS REGISTRY (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farm_certifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  certification_body TEXT NOT NULL CHECK (certification_body IN ('rainforest_alliance', 'utz', 'fairtrade', 'organic', 'globalgap', 'fsc', 'pefc', 'other')),
+  certificate_number TEXT,
+  issued_date DATE,
+  expiry_date DATE,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'revoked', 'pending')),
+  verification_url TEXT,
+  verified_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farm_certifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage certifications" ON farm_certifications
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farm_certifications_farm ON farm_certifications(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_certifications_expiry ON farm_certifications(expiry_date);
+
+-- ============================================
+-- SCHEMA FIXES — Compliance Gaps (Phase 11)
+-- ============================================
+
+-- Fix regulation_framework CHECK to include all 7 frameworks
+ALTER TABLE compliance_profiles DROP CONSTRAINT IF EXISTS compliance_profiles_regulation_framework_check;
+ALTER TABLE compliance_profiles ADD CONSTRAINT compliance_profiles_regulation_framework_check
+  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'));
+
+-- Fix compliance_files file_type CHECK to support all regulatory document types
+ALTER TABLE compliance_files DROP CONSTRAINT IF EXISTS compliance_files_file_type_check;
+ALTER TABLE compliance_files ADD CONSTRAINT compliance_files_file_type_check
+  CHECK (file_type IN (
+    'land_title', 'id_card', 'photo', 'other',
+    'phytosanitary_certificate', 'fumigation_certificate', 'certificate_of_origin',
+    'halal_certificate', 'gacc_certificate', 'food_safety_plan', 'haccp_certificate',
+    'health_certificate', 'inspection_report', 'esma_certificate', 'moccae_permit',
+    'import_permit', 'labeling_compliance', 'training_certificate', 'input_record',
+    'deforestation_declaration', 'due_diligence_statement', 'risk_assessment',
+    'supply_chain_map', 'forced_labor_declaration', 'species_identification'
+  ));
+
+-- Add preferred_locale to profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'en';
 
 -- ============================================
 -- IDEMPOTENT COLUMN RENAMES (Schema Drift Fix)

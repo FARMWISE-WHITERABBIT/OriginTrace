@@ -24,6 +24,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Smartphone,
 } from 'lucide-react';
 
 interface Payment {
@@ -103,7 +104,12 @@ export default function PaymentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [disburseOpen, setDisburseOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isDisbursing, setIsDisbursing] = useState(false);
+  const [disburseForm, setDisburseForm] = useState({
+    phone: '', amount: '', currency: 'NGN', provider: 'mtn_momo', payee_name: '', notes: '',
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [payeeTypeFilter, setPayeeTypeFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
@@ -291,6 +297,41 @@ export default function PaymentsPage() {
     }
   };
 
+  const handleDisburse = async () => {
+    setIsDisbursing(true);
+    try {
+      const response = await fetch('/api/payments/disburse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: disburseForm.phone,
+          amount: parseFloat(disburseForm.amount),
+          currency: disburseForm.currency,
+          provider: disburseForm.provider,
+          payee_name: disburseForm.payee_name,
+          notes: disburseForm.notes || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Disbursement failed');
+      }
+      const data = await response.json();
+      toast({
+        title: 'Disbursement Initiated',
+        description: `${data.disbursement.status === 'completed' ? 'Completed' : 'Pending'} — ${data.disbursement.provider} TxID: ${data.disbursement.transactionId}`,
+      });
+      setDisburseOpen(false);
+      setDisburseForm({ phone: '', amount: '', currency: 'NGN', provider: 'mtn_momo', payee_name: '', notes: '' });
+      fetchPayments();
+      fetchSummary();
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Disbursement failed', variant: 'destructive' });
+    } finally {
+      setIsDisbursing(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (payments.length === 0) return;
     const headers = ['Date', 'Payee', 'Type', 'Amount', 'Currency', 'Method', 'Reference', 'Linked Entity Type', 'Linked Entity ID', 'Status'];
@@ -329,6 +370,69 @@ export default function PaymentsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
+            <Dialog open={disburseOpen} onOpenChange={setDisburseOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-disburse">
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Disburse
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Mobile Money Disbursement</DialogTitle>
+                  <DialogDescription>Send payment directly to a farmer's mobile money wallet.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Payee Name</Label>
+                    <Input placeholder="Farmer name" value={disburseForm.payee_name} onChange={e => setDisburseForm(f => ({ ...f, payee_name: e.target.value }))} data-testid="input-disburse-name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone Number</Label>
+                    <Input placeholder="+2348012345678" value={disburseForm.phone} onChange={e => setDisburseForm(f => ({ ...f, phone: e.target.value }))} data-testid="input-disburse-phone" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Amount</Label>
+                      <Input type="number" placeholder="0" value={disburseForm.amount} onChange={e => setDisburseForm(f => ({ ...f, amount: e.target.value }))} data-testid="input-disburse-amount" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select value={disburseForm.currency} onValueChange={v => setDisburseForm(f => ({ ...f, currency: v }))}>
+                        <SelectTrigger data-testid="select-disburse-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NGN">NGN</SelectItem>
+                          <SelectItem value="GHS">GHS</SelectItem>
+                          <SelectItem value="XOF">XOF</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Provider</Label>
+                    <Select value={disburseForm.provider} onValueChange={v => setDisburseForm(f => ({ ...f, provider: v }))}>
+                      <SelectTrigger data-testid="select-disburse-provider"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
+                        <SelectItem value="opay">OPay</SelectItem>
+                        <SelectItem value="palmpay">PalmPay</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes (optional)</Label>
+                    <Input placeholder="Payment for cocoa delivery" value={disburseForm.notes} onChange={e => setDisburseForm(f => ({ ...f, notes: e.target.value }))} data-testid="input-disburse-notes" />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDisburseOpen(false)}>Cancel</Button>
+                  <Button onClick={handleDisburse} disabled={isDisbursing || !disburseForm.phone || !disburseForm.amount || !disburseForm.payee_name} data-testid="button-send-disbursement">
+                    {isDisbursing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</> : 'Send Payment'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button data-testid="button-record-payment">

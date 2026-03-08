@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logAuditEvent, getClientIp } from '@/lib/audit';
 
 const teamCreateSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -147,6 +148,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
     }
     
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'team.user_invited',
+      resourceType: 'user',
+      resourceId: authData.user.id,
+      metadata: { invited_email: email, role, full_name: fullName },
+      ipAddress: getClientIp(request),
+    });
+
     return NextResponse.json({
       success: true,
       message: `${role} account created for ${email}`
