@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const industries = [
-  { name: 'Agriculture', color: 'text-emerald-500' },
-  { name: 'Timber', color: 'text-amber-600 dark:text-amber-400' },
-  { name: 'Minerals', color: 'text-blue-500' },
-  { name: 'Seafood', color: 'text-cyan-500' },
-  { name: 'Textiles', color: 'text-violet-500' },
+  'Agriculture',
+  'Timber',
+  'Minerals',
+  'Seafood',
+  'Textiles',
 ];
 
 export function IndustryTicker() {
@@ -22,7 +22,7 @@ export function IndustryTicker() {
   }, []);
 
   return (
-    <span className="relative inline-block overflow-hidden align-bottom" style={{ height: '1.15em', width: '5.5em' }}>
+    <span className="relative inline-block overflow-hidden align-bottom" style={{ height: '1.15em', width: '6.2em' }}>
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
@@ -30,10 +30,10 @@ export function IndustryTicker() {
           animate={{ y: '0%', opacity: 1 }}
           exit={{ y: '-110%', opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-          className={`absolute bottom-0 left-0 ${industries[index].color}`}
+          className="absolute bottom-0 left-0 text-emerald-500"
           style={{ lineHeight: 'inherit', fontWeight: 'inherit' }}
         >
-          {industries[index].name}
+          {industries[index]}
         </motion.span>
       </AnimatePresence>
     </span>
