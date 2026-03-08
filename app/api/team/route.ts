@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const { email, password, fullName, role, assigned_state, assigned_lga } = parsed.data;
     
     const validRoles = profile.role === 'admin' 
-      ? ['admin', 'aggregator', 'agent']
+      ? ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor']
       : ['agent'];
     
     if (!validRoles.includes(role)) {

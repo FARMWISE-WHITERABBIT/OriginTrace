@@ -36,7 +36,6 @@ import {
   CreditCard,
   Fingerprint,
   Key,
-  ScrollText,
   Store,
   Gavel,
 } from 'lucide-react';
@@ -180,7 +179,6 @@ const appNavigation: NavigationConfig = {
       label: 'GOVERNANCE',
       allowedRoles: ['admin', 'compliance_officer'],
       items: [
-        { title: 'Audit Log', url: '/app/audit', icon: ScrollText, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'delegations' },
         { title: 'Delegations', url: '/app/delegations', icon: Shield, tourId: 'nav-delegations', allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'delegations' },
       ],
     },

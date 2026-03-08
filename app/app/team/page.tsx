@@ -25,12 +25,30 @@ const roleIcons: Record<string, React.ReactNode> = {
   admin: <Shield className="h-4 w-4" />,
   aggregator: <UserCheck className="h-4 w-4" />,
   agent: <User className="h-4 w-4" />,
+  quality_manager: <UserCheck className="h-4 w-4" />,
+  logistics_coordinator: <UserCheck className="h-4 w-4" />,
+  compliance_officer: <Shield className="h-4 w-4" />,
+  warehouse_supervisor: <UserCheck className="h-4 w-4" />,
 };
 
 const roleColors: Record<string, string> = {
   admin: 'bg-primary text-primary-foreground',
   aggregator: 'bg-blue-500 text-white',
   agent: 'bg-green-600 text-white',
+  quality_manager: 'bg-purple-600 text-white',
+  logistics_coordinator: 'bg-amber-600 text-white',
+  compliance_officer: 'bg-teal-600 text-white',
+  warehouse_supervisor: 'bg-indigo-600 text-white',
+};
+
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  aggregator: 'Aggregator',
+  agent: 'Agent',
+  quality_manager: 'Quality Manager',
+  logistics_coordinator: 'Logistics Coordinator',
+  compliance_officer: 'Compliance Officer',
+  warehouse_supervisor: 'Warehouse Supervisor',
 };
 
 export default function TeamPage() {
@@ -226,6 +244,14 @@ export default function TeamPage() {
                         </>
                       )}
                       <SelectItem value="agent">Agent - Field data collection</SelectItem>
+                      {isAdmin && (
+                        <>
+                          <SelectItem value="quality_manager">Quality Manager - Quality control & grading</SelectItem>
+                          <SelectItem value="logistics_coordinator">Logistics Coordinator - Shipment & transport management</SelectItem>
+                          <SelectItem value="compliance_officer">Compliance Officer - Regulatory compliance & audit</SelectItem>
+                          <SelectItem value="warehouse_supervisor">Warehouse Supervisor - Warehouse & inventory management</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -287,8 +313,8 @@ export default function TeamPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className={roleColors[member.role]} data-testid={`badge-role-${member.id}`}>
-                    {member.role}
+                  <Badge className={roleColors[member.role] || 'bg-gray-500 text-white'} data-testid={`badge-role-${member.id}`}>
+                    {roleLabels[member.role] || member.role}
                   </Badge>
                   {isAdmin && member.user_id !== profile?.user_id && (
                     <Button
@@ -324,6 +350,22 @@ export default function TeamPage() {
             <div className="flex items-start gap-3">
               <Badge className={roleColors.agent}>Agent</Badge>
               <span>Map farms, collect produce (offline-capable), scan IDs</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge className={roleColors.quality_manager}>Quality Manager</Badge>
+              <span>Quality control, grading standards, yield validation, and batch review</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge className={roleColors.logistics_coordinator}>Logistics Coordinator</Badge>
+              <span>Shipment planning, transport management, and delivery tracking</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge className={roleColors.compliance_officer}>Compliance Officer</Badge>
+              <span>Regulatory compliance, audit log access, farm reviews, and certifications</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <Badge className={roleColors.warehouse_supervisor}>Warehouse Supervisor</Badge>
+              <span>Warehouse operations, inventory management, and stock tracking</span>
             </div>
           </div>
         </CardContent>

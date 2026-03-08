@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette } from 'lucide-react';
+import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { locales, localeNames, type Locale } from '@/i18n';
+import { AuditLogContent } from '@/app/app/audit/audit-content';
+import { WebhooksContent } from '@/components/settings/webhooks-content';
+import { ApiKeysContent } from '@/components/settings/api-keys-content';
 
 interface OrgSettings {
   require_polygon?: boolean;
@@ -788,7 +791,21 @@ export default function SettingsPage() {
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Data Import
               </TabsTrigger>
+              <TabsTrigger value="webhooks" data-testid="tab-webhooks">
+                <Webhook className="h-4 w-4 mr-2" />
+                Webhooks
+              </TabsTrigger>
+              <TabsTrigger value="api-keys" data-testid="tab-api-keys">
+                <Key className="h-4 w-4 mr-2" />
+                API Keys
+              </TabsTrigger>
             </>
+          )}
+          {(isAdmin || profile.role === 'compliance_officer') && (
+            <TabsTrigger value="audit" data-testid="tab-audit">
+              <ScrollText className="h-4 w-4 mr-2" />
+              Audit Log
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -1071,27 +1088,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Webhooks
-                </CardTitle>
-                <CardDescription>Configure webhook endpoints to receive real-time event notifications</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Set up webhook endpoints to receive automated notifications when events occur in your organization, such as shipment updates, document expiry, farm approvals, and more.
-                </p>
-                <Link href="/app/settings/webhooks">
-                  <Button variant="outline" data-testid="button-manage-webhooks">
-                    Manage Webhooks
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* COMPLIANCE TAB */}
@@ -1780,6 +1776,24 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {(isAdmin || profile.role === 'compliance_officer') && (
+          <TabsContent value="audit" className="space-y-6">
+            <AuditLogContent />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="webhooks" className="space-y-6">
+            <WebhooksContent />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="api-keys" className="space-y-6">
+            <ApiKeysContent />
           </TabsContent>
         )}
       </Tabs>
