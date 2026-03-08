@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent } from '@/lib/audit';
+import { enforceTier } from '@/lib/api/tier-guard';
 import { z } from 'zod';
 
 const contractCreateSchema = z.object({
@@ -50,6 +51,11 @@ export async function GET(request: NextRequest) {
       .select('org_id, role')
       .eq('user_id', user.id)
       .single();
+
+    if (exporterProfile) {
+      const tierBlock = await enforceTier(exporterProfile.org_id, 'contracts');
+      if (tierBlock) return tierBlock;
+    }
 
     let contracts = [];
 

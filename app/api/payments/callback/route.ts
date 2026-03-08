@@ -18,10 +18,10 @@ function verifyProviderSignature(rawBody: string, signature: string, provider: s
   if (!secretKey) return true;
 
   const expectedSig = crypto.createHmac('sha256', secretKey).update(rawBody).digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSig)
-  );
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSig);
+  if (sigBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
 }
 
 export async function POST(request: NextRequest) {
@@ -34,6 +34,13 @@ export async function POST(request: NextRequest) {
       body = JSON.parse(rawBody);
     } catch {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
+    const provider = body.referenceId ? 'mtn_momo' : body.orderNo ? 'opay' : 'palmpay';
+
+    if (!verifyProviderSignature(rawBody, signature, provider)) {
+      console.error('Payment callback: invalid signature for provider', provider);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     const transactionId = body.referenceId || body.reference || body.orderNo || body.transactionId;

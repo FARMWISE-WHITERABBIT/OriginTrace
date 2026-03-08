@@ -1,8 +1,14 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+
+const FARMER_LOGIN_RATE_LIMIT = {
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+};
 
 function hashPin(pin: string, salt: string): string {
   return crypto.createHash('sha256').update(`${salt}:${pin}`).digest('hex');
@@ -15,6 +21,12 @@ export async function POST(request: NextRequest) {
 
     if (!phone || !pin || pin.length !== 4) {
       return NextResponse.json({ error: 'Phone and 4-digit PIN required' }, { status: 400 });
+    }
+
+    const rateLimitKey = `farmer-login:${phone}`;
+    const { limited, response } = checkRateLimit(request, FARMER_LOGIN_RATE_LIMIT, rateLimitKey);
+    if (limited) {
+      return response!;
     }
 
     const supabase = createAdminClient();

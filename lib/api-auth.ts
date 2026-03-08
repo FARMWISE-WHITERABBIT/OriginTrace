@@ -1,6 +1,56 @@
 import crypto from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+
+export function createServiceClient() {
+  return createAdminClient();
+}
+
+export async function getAuthenticatedUser(request?: NextRequest) {
+  if (request) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const supabase = createServiceClient();
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (!error && user) return user;
+    }
+  }
+  const supabase = await createServerClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
+  return user;
+}
+
+export async function getAuthenticatedProfile(request?: NextRequest) {
+  const user = await getAuthenticatedUser(request);
+  if (!user) return { user: null, profile: null };
+
+  const supabase = createServiceClient();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('id, org_id, role, user_id, full_name')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error || !profile) return { user, profile: null };
+  return { user, profile };
+}
+
+export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('subscription_tier, feature_flags')
+    .eq('id', orgId)
+    .single();
+  if (!org) return false;
+  const tier = org.subscription_tier || 'starter';
+  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
+  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
+  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
+}
 
 interface ApiKeyValidation {
   valid: boolean;

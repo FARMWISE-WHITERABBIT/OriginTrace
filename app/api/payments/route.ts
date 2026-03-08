@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
 
 const paymentCreateSchema = z.object({
   payee_name: z.string().min(1, 'Payee name is required'),
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'payments');
+    if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
     const payeeType = searchParams.get('payee_type');
@@ -167,6 +171,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'payments');
+    if (tierBlock) return tierBlock;
 
     const { data: payment, error: insertError } = await supabaseAdmin
       .from('payments')

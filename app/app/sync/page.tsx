@@ -25,6 +25,7 @@ import {
   Wheat,
   Scale,
 } from 'lucide-react';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface LocalBatch {
   id: string;
@@ -172,15 +173,6 @@ export default function SyncDashboardPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending': return <Badge variant="outline" className="text-amber-600 border-amber-300">Pending</Badge>;
-      case 'syncing': return <Badge variant="outline" className="text-blue-600 border-blue-300">Syncing</Badge>;
-      case 'synced': return <Badge variant="outline" className="text-green-600 border-green-300">Synced</Badge>;
-      case 'error': return <Badge variant="outline" className="text-red-600 border-red-300">Failed</Badge>;
-      default: return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -399,7 +391,7 @@ export default function SyncDashboardPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {getStatusBadge(batch.status)}
+                      <StatusBadge domain="sync" status={batch.status} />
                       {batch.status === 'error' && (
                         <Button
                           variant="ghost"

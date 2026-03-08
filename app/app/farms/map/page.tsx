@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { TierGate } from '@/components/tier-gate';
 
 interface Coordinates { lat: number; lng: number; }
 
@@ -77,13 +78,15 @@ const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, load
 
 export default function HybridFarmMappingPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
-      <HybridFarmMappingContent />
-    </Suspense>
+    <TierGate feature="farm_mapping" requiredTier="starter" featureLabel="Farm Mapping">
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        <HybridFarmMappingContent />
+      </Suspense>
+    </TierGate>
   );
 }
 

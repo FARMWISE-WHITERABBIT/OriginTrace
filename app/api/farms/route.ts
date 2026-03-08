@@ -3,6 +3,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
@@ -61,6 +62,9 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -137,6 +141,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
 
     const body = await request.json();
 
@@ -288,6 +295,9 @@ export async function PATCH(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
 
     // Verify farm belongs to user's org
     const { data: farm } = await supabaseAdmin

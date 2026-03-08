@@ -1,9 +1,9 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { createServiceClient } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 const syncBatchSchema = z.object({
   local_id: z.string().min(1, 'local_id is required'),
@@ -33,11 +33,6 @@ const syncBatchSchema = z.object({
 const syncPutSchema = z.object({
   batches: z.array(syncBatchSchema).min(1, 'At least one batch is required'),
 });
-
-
-function createServiceClient() {
-  return createAdminClient();
-}
 
 export async function GET(request: NextRequest) {
   try {

@@ -19,9 +19,7 @@ import {
   Package, 
   Search, 
   Filter,
-  CheckCircle,
   Clock,
-  XCircle,
   Loader2,
   User,
   MapPin,
@@ -37,6 +35,7 @@ import {
 import Link from 'next/link';
 import { generateBatchManifestCSV, downloadCSV } from '@/lib/export/csv-export';
 import { TierGate } from '@/components/tier-gate';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface Batch {
   id: string;
@@ -144,18 +143,6 @@ export default function InventoryPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'dispatched':
-        return <Badge className="bg-green-600"><Truck className="h-3 w-3 mr-1" /> Dispatched</Badge>;
-      case 'resolved':
-        return <Badge><Lock className="h-3 w-3 mr-1" /> Resolved</Badge>;
-      case 'collecting':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Collecting</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const handleRowClick = (batch: Batch) => {
     setSelectedBatch(batch);
@@ -281,7 +268,7 @@ export default function InventoryPage() {
                       <TableCell>{batch.farm?.farmer_name}</TableCell>
                       <TableCell>{batch.bag_count}</TableCell>
                       <TableCell>{batch.total_weight} kg</TableCell>
-                      <TableCell>{getStatusBadge(batch.status)}</TableCell>
+                      <TableCell><StatusBadge domain="batch" status={batch.status} /></TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(batch.created_at).toLocaleDateString()}
                       </TableCell>
@@ -310,7 +297,7 @@ export default function InventoryPage() {
               
               <div className="mt-6 space-y-6">
                 <div className="flex justify-center">
-                  {getStatusBadge(selectedBatch.status)}
+                  <StatusBadge domain="batch" status={selectedBatch.status} />
                 </div>
 
                 <div className="space-y-4">
