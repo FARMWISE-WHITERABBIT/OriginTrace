@@ -23,6 +23,10 @@ export async function GET(request: NextRequest) {
     const includeInactive = searchParams.get('include_inactive') === 'true';
 
     const userOrgId = profile?.org_id;
+
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
     
     let query = supabase
       .from('commodity_master')
@@ -35,10 +39,9 @@ export async function GET(request: NextRequest) {
     
     if (globalOnly) {
       query = query.eq('is_global', true);
-    } else if (userOrgId) {
-      query = query.or(`is_global.eq.true,created_by_org_id.eq.${userOrgId}`);
     } else {
-      query = query.eq('is_global', true);
+      const orgIdFilter = 'is_global.eq.true,created_by_org_id.eq.' + String(userOrgId);
+      query = query.or(orgIdFilter);
     }
     
     const { data: commodities, error } = await query;
@@ -86,6 +89,10 @@ export async function POST(request: NextRequest) {
       .single();
     if (!profile || !['admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
     
     const body = await request.json();

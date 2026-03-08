@@ -184,6 +184,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const deforestAllowedRoles = ['admin', 'aggregator', 'quality_manager'];
+    if (!deforestAllowedRoles.includes(profile.role as string)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
     let body: unknown;
     try {
       body = await request.json();

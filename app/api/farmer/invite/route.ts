@@ -1,5 +1,3 @@
-'use server';
-
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,6 +19,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile || !['admin', 'aggregator', 'agent'].includes(profile.role)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const farmId = request.nextUrl.searchParams.get('farm_id');
@@ -71,6 +73,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile || !['admin', 'aggregator', 'agent'].includes(profile.role)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();

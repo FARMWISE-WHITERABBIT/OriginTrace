@@ -13,20 +13,7 @@ async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
       .select('id')
       .eq('user_id', userId)
       .single();
-    
-    if (data) return true;
-    
-    // Auto-bootstrap first user as system admin
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-    
-    if (count === 0) {
-      await supabase.from('system_admins').insert({ user_id: userId });
-      return true;
-    }
-    
-    return false;
+    return !!data;
   } catch (err) {
     console.error('System admin check error:', err);
     return false;

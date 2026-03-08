@@ -22,8 +22,6 @@ export async function GET(
           product_type,
           pedigree_code,
           weight_kg,
-          destination_country,
-          buyer_company,
           production_date
         )
       `)
@@ -40,8 +38,6 @@ export async function GET(
             product_type,
             pedigree_code,
             weight_kg,
-            destination_country,
-            buyer_company,
             production_date
           )
         `)
@@ -78,7 +74,7 @@ function sanitizeDpp(dpp: any): any {
     sanitized.chain_of_custody = anonymizeChainOfCustody(sanitized.chain_of_custody);
   }
   if (sanitized.finished_goods) {
-    const { buyer_company, ...fg } = sanitized.finished_goods;
+    const { buyer_company, destination_country, ...fg } = sanitized.finished_goods;
     sanitized.finished_goods = fg;
   }
   return sanitized;
@@ -165,7 +161,6 @@ function renderDpp(rawDpp: any, format: string | null) {
           <div class="field-value">${fg.weight_kg ? fg.weight_kg + ' kg' : 'N/A'}</div>
         </div>
         ${fg.production_date ? `<div class="field"><div class="field-label">Production Date</div><div class="field-value">${fg.production_date}</div></div>` : ''}
-        ${fg.destination_country ? `<div class="field"><div class="field-label">Destination</div><div class="field-value">${fg.destination_country}</div></div>` : ''}
       </div>
     </div>
 

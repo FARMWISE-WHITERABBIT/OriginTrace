@@ -24,6 +24,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     if (!['admin', 'aggregator'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin or aggregator access required' }, { status: 403 });
     }

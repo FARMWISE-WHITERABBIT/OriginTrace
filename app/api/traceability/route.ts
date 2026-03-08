@@ -50,6 +50,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
     const tierBlock = await enforceTier(profile.org_id, 'traceability');
     if (tierBlock) return tierBlock;
 

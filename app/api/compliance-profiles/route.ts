@@ -129,6 +129,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const { data: profiles, error } = await supabaseAdmin
       .from('compliance_profiles')
       .select('*')
@@ -166,6 +170,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile || !['admin', 'compliance_officer'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin or compliance officer access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();

@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
 
@@ -23,6 +21,10 @@ export async function GET(
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
@@ -86,6 +88,10 @@ export async function POST(
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];

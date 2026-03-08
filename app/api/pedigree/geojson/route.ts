@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
     
     const { searchParams } = new URL(request.url);
     const finishedGoodId = searchParams.get('id');
@@ -144,8 +148,6 @@ export async function GET(request: NextRequest) {
         production_date: finishedGood.production_date,
         batch_number: finishedGood.batch_number,
         lot_number: finishedGood.lot_number,
-        destination_country: finishedGood.destination_country,
-        buyer_company: finishedGood.buyer_company,
         processing_run: {
           code: processingRun.run_code,
           facility: processingRun.facility_name,

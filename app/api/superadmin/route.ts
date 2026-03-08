@@ -4,27 +4,12 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 
 async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
   try {
-    // Check if user is in system_admins table
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('system_admins')
       .select('id')
       .eq('user_id', userId)
       .single();
-    
-    if (data) return true;
-    
-    // If no system admins exist, auto-bootstrap the first user
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-    
-    if (count === 0) {
-      // Auto-add first authenticated user as system admin
-      await supabase.from('system_admins').insert({ user_id: userId });
-      return true;
-    }
-    
-    return false;
+    return !!data;
   } catch (err) {
     console.error('System admin check error:', err);
     return false;
