@@ -113,6 +113,8 @@ export const WEBHOOK_EVENTS = [
   'farm.approved',
   'farm.rejected',
   'certification.expiring',
+  'tender.created',
+  'tender.awarded',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];

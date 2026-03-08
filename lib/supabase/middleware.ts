@@ -103,9 +103,14 @@ export async function updateSession(request: NextRequest) {
 
     if (pathname.startsWith('/app') && !isSuperadmin) {
       const role = await getUserRole(supabase, user.id);
+      if (role === 'farmer' && !pathname.startsWith('/app/farmer')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/app/farmer';
+        return NextResponse.redirect(url);
+      }
       if (role && !hasAccess(role, pathname)) {
         const url = request.nextUrl.clone();
-        url.pathname = role === 'buyer' ? '/app/buyer' : '/app';
+        url.pathname = role === 'buyer' ? '/app/buyer' : role === 'farmer' ? '/app/farmer' : '/app';
         return NextResponse.redirect(url);
       }
     }

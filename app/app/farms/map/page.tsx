@@ -37,6 +37,19 @@ import dynamic from 'next/dynamic';
 
 interface Coordinates { lat: number; lng: number; }
 
+interface BoundaryAnalysisResult {
+  confidence_score: number;
+  confidence_level: 'high' | 'medium' | 'low';
+  flags: {
+    shape_regularity: { score: number; detail: string };
+    vertex_spacing: { score: number; detail: string };
+    area_plausibility: { score: number; detail: string };
+    location_plausibility: { score: number; detail: string };
+    edge_straightness: { score: number; detail: string };
+  };
+  analyzed_at: string;
+}
+
 interface Farm {
   id: string;
   farmer_name: string;
@@ -44,6 +57,7 @@ interface Farm {
   boundary?: any;
   area_hectares?: number;
   deforestation_check?: DeforestationResult | null;
+  boundary_analysis?: BoundaryAnalysisResult | null;
 }
 
 interface DeforestationResult {
@@ -98,6 +112,9 @@ function HybridFarmMappingContent() {
 
   const [deforestationResult, setDeforestationResult] = useState<DeforestationResult | null>(null);
   const [isCheckingDeforestation, setIsCheckingDeforestation] = useState(false);
+  const [boundaryAnalysis, setBoundaryAnalysis] = useState<BoundaryAnalysisResult | null>(null);
+  const [isAnalyzingBoundary, setIsAnalyzingBoundary] = useState(false);
+  const [showBoundaryDetails, setShowBoundaryDetails] = useState(false);
 
   const farmIdParam = searchParams.get('farm_id');
 
@@ -107,7 +124,7 @@ function HybridFarmMappingContent() {
       try {
         const { data } = await supabase
           .from('farms')
-          .select('id, farmer_name, community, boundary, area_hectares, deforestation_check')
+          .select('id, farmer_name, community, boundary, area_hectares, deforestation_check, boundary_analysis')
           .eq('org_id', organization.id)
           .order('farmer_name');
         setFarms(data || []);
@@ -125,6 +142,11 @@ function HybridFarmMappingContent() {
       setDeforestationResult(selectedFarm.deforestation_check);
     } else {
       setDeforestationResult(null);
+    }
+    if (selectedFarm?.boundary_analysis) {
+      setBoundaryAnalysis(selectedFarm.boundary_analysis);
+    } else {
+      setBoundaryAnalysis(null);
     }
   }, [selectedFarm]);
 
@@ -151,6 +173,32 @@ function HybridFarmMappingContent() {
       setIsCheckingDeforestation(false);
     }
   }, [selectedFarm, toast]);
+
+  const runBoundaryAnalysis = useCallback(async (farmId: string, boundary?: any) => {
+    setIsAnalyzingBoundary(true);
+    try {
+      const payload: any = { farm_id: farmId };
+      if (boundary) payload.boundary = boundary;
+      const res = await fetch('/api/farms/boundary-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setBoundaryAnalysis(data.result);
+        toast({ title: 'Boundary Analysis Complete', description: `Confidence: ${data.result.confidence_score}/100 (${data.result.confidence_level})` });
+        return data.result;
+      } else {
+        toast({ title: 'Analysis Failed', description: data.error || 'Could not analyze boundary.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to run boundary analysis.', variant: 'destructive' });
+    } finally {
+      setIsAnalyzingBoundary(false);
+    }
+    return null;
+  }, [toast]);
 
   const filteredFarms = farmSearch.trim()
     ? farms.filter(f =>
@@ -249,6 +297,7 @@ function HybridFarmMappingContent() {
 
         if (error) throw error;
         toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
+        await runBoundaryAnalysis(selectedFarm.id, boundary);
       } else {
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
       }
@@ -313,7 +362,7 @@ function HybridFarmMappingContent() {
                   <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); }} data-testid="button-change-farmer">
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); setBoundaryAnalysis(null); setShowBoundaryDetails(false); }} data-testid="button-change-farmer">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -514,6 +563,115 @@ function HybridFarmMappingContent() {
                 Save Boundary ({areaHectares} ha)
               </Button>
             </div>
+          )}
+
+          {(boundaryAnalysis || isAnalyzingBoundary) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Boundary Confidence
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isAnalyzingBoundary ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing boundary authenticity...
+                  </div>
+                ) : boundaryAnalysis ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            boundaryAnalysis.confidence_level === 'high'
+                              ? 'bg-green-600 text-white'
+                              : boundaryAnalysis.confidence_level === 'medium'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-red-600 text-white'
+                          }
+                          data-testid="badge-boundary-confidence"
+                        >
+                          {boundaryAnalysis.confidence_level === 'high' ? (
+                            <ShieldCheck className="h-3 w-3 mr-1" />
+                          ) : boundaryAnalysis.confidence_level === 'medium' ? (
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                          ) : (
+                            <ShieldAlert className="h-3 w-3 mr-1" />
+                          )}
+                          {boundaryAnalysis.confidence_level.charAt(0).toUpperCase() + boundaryAnalysis.confidence_level.slice(1)} Confidence
+                        </Badge>
+                        <span className="text-sm font-medium" data-testid="text-boundary-score">
+                          {boundaryAnalysis.confidence_score}/100
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBoundaryDetails(!showBoundaryDetails)}
+                        data-testid="button-toggle-boundary-details"
+                      >
+                        {showBoundaryDetails ? 'Hide Details' : 'Show Details'}
+                      </Button>
+                    </div>
+
+                    {showBoundaryDetails && (
+                      <div className="space-y-2">
+                        {Object.entries(boundaryAnalysis.flags).map(([key, flag]) => (
+                          <div key={key} className="p-2 bg-muted/50 rounded-md">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-xs font-medium capitalize">
+                                {key.replace(/_/g, ' ')}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  flag.score >= 70
+                                    ? 'text-green-600'
+                                    : flag.score >= 40
+                                    ? 'text-amber-600'
+                                    : 'text-red-600'
+                                }
+                                data-testid={`badge-flag-${key}`}
+                              >
+                                {flag.score}/100
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1" data-testid={`text-flag-detail-${key}`}>
+                              {flag.detail}
+                            </p>
+                          </div>
+                        ))}
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Analyzed {new Date(boundaryAnalysis.analyzed_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFarm && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => runBoundaryAnalysis(selectedFarm.id)}
+                        disabled={isAnalyzingBoundary}
+                        className="w-full"
+                        data-testid="button-reanalyze-boundary"
+                      >
+                        {isAnalyzingBoundary ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyzing...</>
+                        ) : (
+                          <><RotateCcw className="h-4 w-4 mr-2" />Re-analyze Boundary</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
           )}
 
           {(selectedFarm.boundary || isSuccess) && (

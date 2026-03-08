@@ -6,7 +6,42 @@ export function scoreEUDR(ctx: FrameworkScorerContext): FrameworkScorerResult {
   const riskFlags: FrameworkScorerResult['riskFlags'] = [];
   const remediation: FrameworkScorerResult['remediation'] = [];
   let met = 0;
-  const total = 3;
+  const total = 4;
+
+  const boundaryAnalyses = input.farm_boundary_analyses || [];
+  if (boundaryAnalyses.length > 0) {
+    const avgConfidence = boundaryAnalyses.reduce((s, b) => s + b.confidence_score, 0) / boundaryAnalyses.length;
+    const lowConfidenceFarms = boundaryAnalyses.filter(b => b.confidence_level === 'low');
+
+    if (avgConfidence >= 60 && lowConfidenceFarms.length === 0) {
+      met++;
+      details.push(`Boundary verification: ${boundaryAnalyses.length} farm(s) analyzed, avg confidence ${Math.round(avgConfidence)}/100`);
+    } else {
+      if (lowConfidenceFarms.length > 0) {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'Boundary Verification',
+          message: `${lowConfidenceFarms.length} farm(s) have low boundary confidence — polygons may be fabricated`,
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'EUDR: Low boundary confidence detected',
+          description: `${lowConfidenceFarms.length} farm(s) have low confidence boundary polygons (avg ${Math.round(avgConfidence)}/100). Re-map with GPS walking for authentic boundaries.`,
+          dimension: 'Regulatory Alignment',
+        });
+      }
+      details.push(`Boundary verification: avg confidence ${Math.round(avgConfidence)}/100 (${lowConfidenceFarms.length} low-confidence)`);
+    }
+  } else {
+    details.push('Boundary verification: No boundary analyses available');
+    remediation.push({
+      priority: 'recommended',
+      title: 'EUDR: Run boundary authenticity analysis',
+      description: 'Analyze farm boundary polygons to verify they represent authentic GPS-walked boundaries rather than drawn shapes.',
+      dimension: 'Regulatory Alignment',
+    });
+  }
 
   if (allHaveGps) met++;
   else {

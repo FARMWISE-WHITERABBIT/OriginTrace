@@ -14,7 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Loader2, Search, MapPin, Check, X, Clock, User, Phone, Calendar, Ruler, FileCheck } from 'lucide-react';
+import { Loader2, Search, MapPin, Check, X, Clock, User, Phone, Calendar, Ruler, FileCheck, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 interface Farm {
   id: string;
@@ -26,6 +26,11 @@ interface Farm {
   compliance_status: string;
   area_hectares: number | null;
   boundary: any;
+  boundary_analysis?: {
+    confidence_score: number;
+    confidence_level: 'high' | 'medium' | 'low';
+    analyzed_at: string;
+  } | null;
   created_at: string;
   mapped_by: string | null;
 }
@@ -244,6 +249,38 @@ export default function FarmsPage() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {selectedFarm.boundary.coordinates?.[0]?.length || 0} boundary points recorded
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedFarm.boundary_analysis && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                        <div className="flex items-center gap-2">
+                          {selectedFarm.boundary_analysis.confidence_level === 'high' ? (
+                            <ShieldCheck className="h-5 w-5 text-green-600" />
+                          ) : selectedFarm.boundary_analysis.confidence_level === 'medium' ? (
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                          ) : (
+                            <ShieldAlert className="h-5 w-5 text-red-600" />
+                          )}
+                          <p className="text-sm font-medium">Boundary Confidence</p>
+                        </div>
+                        <Badge
+                          className={
+                            selectedFarm.boundary_analysis.confidence_level === 'high'
+                              ? 'bg-green-600 text-white'
+                              : selectedFarm.boundary_analysis.confidence_level === 'medium'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-red-600 text-white'
+                          }
+                          data-testid="badge-farm-boundary-confidence"
+                        >
+                          {selectedFarm.boundary_analysis.confidence_score}/100
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedFarm.boundary_analysis.confidence_level.charAt(0).toUpperCase() + selectedFarm.boundary_analysis.confidence_level.slice(1)} confidence — analyzed {new Date(selectedFarm.boundary_analysis.analyzed_at).toLocaleDateString()}
                       </p>
                     </div>
                   )}

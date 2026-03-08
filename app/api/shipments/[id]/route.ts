@@ -5,6 +5,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
 
 const shipmentPatchSchema = z.object({
@@ -314,19 +315,30 @@ export async function GET(
 
     const uniqueFarmIds = [...new Set(farmIds)];
     let farmDeforestationChecks: Array<{ farm_id: string; deforestation_free: boolean; forest_loss_hectares: number; forest_loss_percentage: number; analysis_date: string; data_source: string; risk_level: 'low' | 'medium' | 'high' }> = [];
+    let farmBoundaryAnalyses: Array<{ farm_id: string; confidence_score: number; confidence_level: string; flags: Record<string, any> }> = [];
 
     if (uniqueFarmIds.length > 0) {
       const { data: farmsWithChecks } = await supabase
         .from('farms')
-        .select('id, deforestation_check')
-        .in('id', uniqueFarmIds)
-        .not('deforestation_check', 'is', null);
+        .select('id, deforestation_check, boundary_analysis')
+        .in('id', uniqueFarmIds);
 
       if (farmsWithChecks) {
-        farmDeforestationChecks = farmsWithChecks.map((f: any) => ({
-          farm_id: String(f.id),
-          ...f.deforestation_check,
-        }));
+        farmDeforestationChecks = farmsWithChecks
+          .filter((f: any) => f.deforestation_check)
+          .map((f: any) => ({
+            farm_id: String(f.id),
+            ...f.deforestation_check,
+          }));
+
+        farmBoundaryAnalyses = farmsWithChecks
+          .filter((f: any) => f.boundary_analysis)
+          .map((f: any) => ({
+            farm_id: String(f.id),
+            confidence_score: f.boundary_analysis.confidence_score,
+            confidence_level: f.boundary_analysis.confidence_level,
+            flags: f.boundary_analysis.flags || {},
+          }));
       }
     }
 
@@ -358,6 +370,7 @@ export async function GET(
       lots_with_valid_mass_balance: lots?.filter((l: any) => l.mass_balance_valid).length || 0,
       compliance_profile: complianceProfile,
       farm_deforestation_checks: farmDeforestationChecks,
+      farm_boundary_analyses: farmBoundaryAnalyses,
     };
 
     const readiness = computeShipmentReadiness(scoreInput);
@@ -577,6 +590,19 @@ export async function PATCH(
       })
       .eq('id', params.id)
       .eq('org_id', profile.org_id);
+
+    dispatchWebhookEvent(String(profile.org_id), 'shipment.updated', {
+      shipment_id: params.id,
+      updated_fields: Object.keys(updateData),
+      status: updatedShipment.status,
+    });
+
+    dispatchWebhookEvent(String(profile.org_id), 'shipment.scored', {
+      shipment_id: params.id,
+      readiness_score: Math.round(readinessResult.overall_score),
+      decision: readinessResult.decision,
+      risk_flags: readinessResult.risk_flags,
+    });
 
     return NextResponse.json({ shipment: { ...updatedShipment, readiness_score: Math.round(readinessResult.overall_score), readiness_decision: readinessResult.decision }, success: true });
 

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildYieldFlagEmail } from '@/lib/email/templates';
+import { predictYield, checkPredictionExceedance } from '@/lib/services/yield-prediction';
 
 
 interface YieldValidationResult {
@@ -69,18 +70,34 @@ export async function POST(request: NextRequest) {
     const isFlagged = batch_weight > expectedMax;
     const percentageOver = isFlagged ? ((batch_weight - expectedMax) / expectedMax) * 100 : 0;
 
+    let predictionFlag = false;
+    let predictionExceedance = 0;
+    try {
+      const prediction = await predictYield(farm_id, farmCommodity, profile.org_id);
+      if (prediction.predictedYieldKg > 0) {
+        const check = checkPredictionExceedance(batch_weight, prediction.predictedYieldKg);
+        predictionFlag = check.exceeded;
+        predictionExceedance = check.percentageOver;
+      }
+    } catch {
+    }
+
+    const finalFlagged = isFlagged || predictionFlag;
+
     const result: YieldValidationResult = {
-      isValid: !isFlagged,
-      isFlagged,
+      isValid: !finalFlagged,
+      isFlagged: finalFlagged,
       expectedMax: Math.round(expectedMax * 100) / 100,
       actualWeight: batch_weight,
       percentageOver: Math.round(percentageOver * 100) / 100,
-      reason: isFlagged 
-        ? `Batch weight ${batch_weight}kg exceeds expected maximum ${Math.round(expectedMax)}kg (${Math.round(percentageOver)}% over threshold)`
+      reason: finalFlagged
+        ? isFlagged
+          ? `Batch weight ${batch_weight}kg exceeds expected maximum ${Math.round(expectedMax)}kg (${Math.round(percentageOver)}% over threshold)`
+          : `Batch weight ${batch_weight}kg exceeds predicted yield by ${predictionExceedance}% (>200% threshold)`
         : undefined
     };
 
-    if (isFlagged) {
+    if (finalFlagged) {
       try {
         const { data: org } = await supabaseAdmin
           .from('organizations')

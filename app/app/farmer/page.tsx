@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Scale, Leaf, Globe, Award, TrendingUp, Package } from 'lucide-react';
+import { MapPin, Scale, Leaf, Globe, Award, TrendingUp, TrendingDown, Minus, Package, Lightbulb, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface FarmerData {
@@ -19,14 +19,17 @@ export default function FarmerHomePage() {
   const [data, setData] = useState<FarmerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [yieldData, setYieldData] = useState<any>(null);
+  const [predictionData, setPredictionData] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/farmer').then(r => r.json()),
       fetch('/api/farmer/yield').then(r => r.json()),
-    ]).then(([farmer, y]) => {
+      fetch('/api/farmer/predictions').then(r => r.ok ? r.json() : null),
+    ]).then(([farmer, y, pred]) => {
       setData(farmer);
       setYieldData(y);
+      setPredictionData(pred);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -117,6 +120,64 @@ export default function FarmerHomePage() {
             {yieldData.benchmarks?.length > 0 && (
               <div className="mt-3 text-xs text-muted-foreground">
                 Regional average: {yieldData.benchmarks[0].avg_yield_per_hectare} kg/ha ({yieldData.benchmarks[0].commodity})
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {predictionData && predictionData.predictedYieldKg > 0 && (
+        <Card className="border-[#2E7D6B]/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-[#2E7D6B]" />
+              Yield Forecast
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-muted-foreground">Predicted Yield</div>
+                <div className="font-bold text-lg text-[#2E7D6B]" data-testid="text-predicted-yield">
+                  {(predictionData.predictedYieldKg / 1000).toFixed(1)} t
+                </div>
+                <div className="text-xs text-muted-foreground" data-testid="text-confidence-range">
+                  {(predictionData.confidenceRange.low / 1000).toFixed(1)} – {(predictionData.confidenceRange.high / 1000).toFixed(1)} t range
+                </div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-muted-foreground">Trend</div>
+                <div className="font-bold text-lg flex items-center gap-1" data-testid="text-yield-trend">
+                  {predictionData.trend === 'improving' && (
+                    <>
+                      <ArrowUpRight className="h-4 w-4 text-green-600" />
+                      <span className="text-green-600">Improving</span>
+                    </>
+                  )}
+                  {predictionData.trend === 'declining' && (
+                    <>
+                      <ArrowDownRight className="h-4 w-4 text-red-600" />
+                      <span className="text-red-600">Declining</span>
+                    </>
+                  )}
+                  {predictionData.trend === 'stable' && (
+                    <>
+                      <Minus className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Stable</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            {predictionData.recommendations && predictionData.recommendations.length > 0 && (
+              <div className="bg-[#2E7D6B]/5 rounded-lg p-3 space-y-1">
+                <div className="text-xs font-medium text-[#1F5F52] mb-1">Recommendations</div>
+                {predictionData.recommendations.slice(0, 3).map((rec: string, i: number) => (
+                  <div key={i} className="text-xs text-muted-foreground flex items-start gap-1" data-testid={`text-recommendation-${i}`}>
+                    <span className="text-[#2E7D6B] mt-0.5">•</span>
+                    {rec}
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

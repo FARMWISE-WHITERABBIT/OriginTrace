@@ -57,6 +57,13 @@ export interface ShipmentScoreInput {
   lots_with_valid_mass_balance?: number;
   compliance_profile?: ComplianceProfile;
   farm_deforestation_checks?: FarmDeforestationCheck[];
+  farm_boundary_analyses?: FarmBoundaryAnalysis[];
+}
+
+export interface FarmBoundaryAnalysis {
+  farm_id: string;
+  confidence_score: number;
+  confidence_level: 'high' | 'medium' | 'low';
 }
 
 export interface ScoreDimension {
