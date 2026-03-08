@@ -200,7 +200,7 @@ export function BuyerESGDashboard() {
           <CardContent data-testid="chart-compliance-trend">
             {data.complianceTrend.some(t => t.count > 0) ? (
               <TrendLineChart
-                data={data.complianceTrend as Array<Record<string, string | number>>}
+                data={data.complianceTrend as unknown as Array<Record<string, string | number>>}
                 xKey="month"
                 series={[{ dataKey: 'score', label: 'Avg Score', color: '#2E7D6B' }]}
                 height={250}

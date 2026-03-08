@@ -247,7 +247,8 @@ function PeriodPerformanceReport({ data, period }: { data: any; period: string }
         <CardContent className="pt-4">
           <TrendLineChart
             data={(data.volumeTrends || []).map((v: any) => ({ date: v.date, value: v.weight }))}
-            series={[{ key: 'value', name: 'Weight (kg)', color: '#2E7D6B' }]}
+            xKey="date"
+            series={[{ dataKey: 'value', label: 'Weight (kg)', color: '#2E7D6B' }]}
             height={250}
           />
         </CardContent>
@@ -269,6 +270,8 @@ function PeriodPerformanceReport({ data, period }: { data: any; period: string }
           <CardContent>
             <VerticalBarChart
               data={(data.commodityBreakdown || []).filter((c: any) => c.totalFarms > 0).map((c: any) => ({ name: c.name, value: c.complianceRate }))}
+              dataKey="value"
+              categoryKey="name"
               height={240} valueFormatter={(v) => `${v}%`}
             />
           </CardContent>
@@ -309,6 +312,8 @@ function PeriodPerformanceReport({ data, period }: { data: any; period: string }
           <CardContent>
             <VerticalBarChart
               data={(data.paymentsByStatus || []).map((p: any) => ({ name: p.status, value: p.amount }))}
+              dataKey="value"
+              categoryKey="name"
               height={200} valueFormatter={(v) => `$${v.toLocaleString()}`}
             />
           </CardContent>
@@ -341,6 +346,8 @@ function ShipmentDDSReport({ data }: { data: any }) {
             <CardContent>
               <HorizontalBarChart
                 data={shipments.slice(0, 10).map((s: any) => ({ name: s.name, value: s.overall }))}
+                dataKey="value"
+                categoryKey="name"
                 height={Math.max(200, shipments.slice(0, 10).length * 40)}
                 valueFormatter={(v) => `${v}/100`}
               />
@@ -357,7 +364,8 @@ function ShipmentDDSReport({ data }: { data: any }) {
                   { dimension: 'Regulatory', ...Object.fromEntries(shipments.slice(0, 3).map((s: any, i: number) => [`s${i}`, s.regulatory])) },
                   { dimension: 'Storage', ...Object.fromEntries(shipments.slice(0, 3).map((s: any, i: number) => [`s${i}`, s.storage])) },
                 ]}
-                series={shipments.slice(0, 3).map((s: any, i: number) => ({ key: `s${i}`, name: s.name }))}
+                angleKey="dimension"
+                series={shipments.slice(0, 3).map((s: any, i: number) => ({ dataKey: `s${i}`, label: s.name }))}
                 height={300}
               />
             </CardContent>
@@ -424,6 +432,8 @@ function SupplierAuditReport({ data }: { data: any }) {
         <CardContent className="pt-4">
           <HorizontalBarChart
             data={(data.agentPerformance || []).slice(0, 10).map((a: any) => ({ name: a.name, value: a.weight }))}
+            dataKey="value"
+            categoryKey="name"
             height={Math.max(200, (data.agentPerformance || []).slice(0, 10).length * 40)}
             valueFormatter={(v) => `${v.toLocaleString()} kg`}
           />
@@ -465,6 +475,8 @@ function RegulatoryReadinessReport({ data }: { data: any }) {
         <CardContent className="pt-4">
           <VerticalBarChart
             data={frameworkScores.map(f => ({ name: f.name, value: f.score }))}
+            dataKey="value"
+            categoryKey="name"
             height={280}
             valueFormatter={(v) => `${v}%`}
             colors={frameworkScores.map(f => f.score >= 75 ? '#2E7D6B' : f.score >= 50 ? '#F59E0B' : '#EF4444')}
@@ -558,6 +570,8 @@ function BuyerIntelligenceReport({ data }: { data: any }) {
             {(data.shipmentRiskFlags || []).length > 0 ? (
               <HorizontalBarChart
                 data={(data.shipmentRiskFlags || []).map((r: any) => ({ name: r.category, value: r.count }))}
+                dataKey="value"
+                categoryKey="name"
                 height={200}
                 colors={['#EF4444', '#F59E0B', '#F97316', '#DC2626']}
               />
