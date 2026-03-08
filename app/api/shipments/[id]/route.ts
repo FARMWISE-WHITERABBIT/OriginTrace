@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
+import type { FarmBoundaryAnalysis } from '@/lib/services/scoring/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
 import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
@@ -283,7 +284,7 @@ export async function GET(
 
     const uniqueFarmIds = [...new Set(farmIds)];
     let farmDeforestationChecks: Array<{ farm_id: string; deforestation_free: boolean; forest_loss_hectares: number; forest_loss_percentage: number; analysis_date: string; data_source: string; risk_level: 'low' | 'medium' | 'high' }> = [];
-    let farmBoundaryAnalyses: Array<{ farm_id: string; confidence_score: number; confidence_level: string; flags: Record<string, any> }> = [];
+    let farmBoundaryAnalyses: FarmBoundaryAnalysis[] = [];
 
     if (uniqueFarmIds.length > 0) {
       const { data: farmsWithChecks } = await supabase
@@ -303,9 +304,8 @@ export async function GET(
           .filter((f: any) => f.boundary_analysis)
           .map((f: any) => ({
             farm_id: String(f.id),
-            confidence_score: f.boundary_analysis.confidence_score,
-            confidence_level: f.boundary_analysis.confidence_level,
-            flags: f.boundary_analysis.flags || {},
+            confidence_score: f.boundary_analysis.confidence_score || 0,
+            confidence_level: (f.boundary_analysis.confidence_level || 'low') as 'high' | 'medium' | 'low',
           }));
       }
     }

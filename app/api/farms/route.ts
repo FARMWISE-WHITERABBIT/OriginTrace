@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
       action: 'farm.created',
       resourceType: 'farm',
       resourceId: farm.id?.toString(),
-      metadata: { farmer_name, community, commodity: parsed.data.commodity },
+      metadata: { farmer_name, community },
       ipAddress: getClientIp(request),
     });
 
