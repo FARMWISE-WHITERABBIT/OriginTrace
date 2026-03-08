@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     await logAuditEvent({
-      orgId: buyerProfile.org_id,
+      orgId: buyerProfile.buyer_org_id,
       actorId: user.id,
       actorEmail: user.email,
       action: 'contract.created',
