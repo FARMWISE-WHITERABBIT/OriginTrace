@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/api-auth';
 
-    const supabase = createServiceClient();
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code') || '';
 
-    if (code.length < 3 || code.length > 128) {
+    if (!code || code.length < 3 || code.length > 128) {
       return NextResponse.json({ error: 'Invalid verification code format' }, { status: 400 });
     }
+
+    const supabase = createServiceClient();
 
     let result: any = null;
 
