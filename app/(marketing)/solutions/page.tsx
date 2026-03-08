@@ -307,25 +307,24 @@ export default function SolutionsPage() {
                 </p>
               </FadeIn>
 
-              <StaggerContainer className="space-y-6 md:space-y-0 mb-14">
+              <StaggerContainer className="grid sm:grid-cols-2 gap-6 mb-14">
                 {complianceFeatures.map((feature, i) => (
                   <StaggerItem key={i}>
-                    <div 
-                      className={`flex flex-col md:flex-row gap-6 md:gap-10 items-start py-8 ${i > 0 ? 'border-t border-slate-200 dark:border-slate-700' : ''} ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}
-                      data-testid={`card-feature-compliance-${i}`}
-                    >
-                      <div className="shrink-0">
-                        <div className="h-16 w-16 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                          <feature.icon className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                    <Card className="h-full hover-elevate" data-testid={`card-feature-compliance-${i}`}>
+                      <CardContent className="p-6">
+                        <div className="flex gap-4">
+                          <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                            <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-1 text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-compliance-${i}`}>{feature.title}</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {feature.desc}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className={`flex-1 ${i % 2 === 1 ? 'md:text-right' : ''}`}>
-                        <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-compliance-${i}`}>{feature.title}</h3>
-                        <p className="text-muted-foreground leading-relaxed text-base max-w-lg">
-                          {feature.desc}
-                        </p>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   </StaggerItem>
                 ))}
               </StaggerContainer>
