@@ -438,7 +438,7 @@ ALTER TABLE bags
 
 -- Add SaaS columns to organizations
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter' 
-  CHECK (subscription_tier IN ('starter', 'professional', 'enterprise'));
+  CHECK (subscription_tier IN ('starter', 'basic', 'pro', 'enterprise'));
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS feature_flags JSONB DEFAULT '{
   "satellite_overlays": false,
   "advanced_mapping": false,

@@ -1,24 +1,18 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { hasTierAccess, getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function enforceTier(orgId: number | string, feature: TierFeature): Promise<NextResponse | null> {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabase = createAdminClient();
 
     const { data: org } = await supabase
       .from('organizations')
-      .select('settings')
+      .select('subscription_tier')
       .eq('id', orgId)
       .single();
 
-    const settings = org?.settings as Record<string, unknown> | null;
-    const tier = (settings?.subscription_tier as string) || 'starter';
+    const tier = (org?.subscription_tier as string) || 'starter';
 
     if (!hasTierAccess(tier, feature)) {
       const requiredTier = getRequiredTier(feature);

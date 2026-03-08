@@ -1,10 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
 
@@ -68,9 +66,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -125,8 +121,8 @@ export async function POST(request: NextRequest) {
             started_at: new Date().toISOString()
           }
         });
-      } catch {
-        console.log('Audit log skipped (table may not exist)');
+      } catch (auditErr) {
+        console.error('[impersonate] Failed to write audit log for impersonation_start:', auditErr);
       }
       
       const response = NextResponse.json({
@@ -165,8 +161,8 @@ export async function POST(request: NextRequest) {
                 ended_at: new Date().toISOString()
               }
             });
-          } catch {
-            console.log('Audit log skipped (table may not exist)');
+          } catch (auditErr) {
+            console.error('[impersonate] Failed to write audit log for impersonation_end:', auditErr);
           }
         } catch (e) {}
       }

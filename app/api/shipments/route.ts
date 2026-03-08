@@ -1,55 +1,18 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
 function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
+  return createAdminClient();
 }
 
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.split(' ')[1];
-  const supabase = createServiceClient();
-
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+async function getAuthenticatedUser() {
+  const supabase = await createServerClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
-
   return user;
-}
-
-async function getUserFromCookies(request: NextRequest) {
-  const supabase = createServiceClient();
-  const cookieHeader = request.headers.get('cookie');
-
-  if (!cookieHeader) return null;
-
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(c => {
-      const [key, ...val] = c.trim().split('=');
-      return [key, val.join('=')];
-    })
-  );
-
-  const accessToken = cookies['sb-access-token'] ||
-    Object.entries(cookies).find(([k]) => k.includes('auth-token'))?.[1];
-
-  if (!accessToken) return null;
-
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-    if (error || !user) return null;
-    return user;
-  } catch {
-    return null;
-  }
 }
 
 async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
@@ -69,11 +32,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-
+    const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -135,11 +94,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-
+    const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
