@@ -22,7 +22,7 @@ export function IndustryTicker() {
   }, []);
 
   return (
-    <span className="relative inline-flex overflow-hidden align-baseline" style={{ height: '1.2em', width: '5.8em' }}>
+    <span className="relative inline-block overflow-hidden align-bottom" style={{ height: '1.15em', width: '5.5em' }}>
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
@@ -30,7 +30,7 @@ export function IndustryTicker() {
           animate={{ y: '0%', opacity: 1 }}
           exit={{ y: '-110%', opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
-          className={`absolute inset-0 flex items-baseline justify-start ${industries[index].color}`}
+          className={`absolute bottom-0 left-0 ${industries[index].color}`}
           style={{ lineHeight: 'inherit', fontWeight: 'inherit' }}
         >
           {industries[index].name}

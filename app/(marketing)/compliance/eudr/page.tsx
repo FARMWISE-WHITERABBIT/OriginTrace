@@ -20,21 +20,26 @@ import {
   Download,
   CheckCircle,
   ChevronDown,
-  Leaf,
   Target,
   Clock,
   Users,
+  Coffee,
+  Bean,
+  TreePalm,
+  Wheat,
+  Droplets,
+  Beef,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const commodities = [
-  { name: 'Cocoa', icon: Leaf },
-  { name: 'Coffee', icon: Leaf },
-  { name: 'Soy', icon: Leaf },
-  { name: 'Palm Oil', icon: Leaf },
-  { name: 'Rubber', icon: Leaf },
-  { name: 'Cattle / Leather', icon: Leaf },
+  { name: 'Cocoa', icon: Bean },
+  { name: 'Coffee', icon: Coffee },
+  { name: 'Soy', icon: Wheat },
+  { name: 'Palm Oil', icon: TreePalm },
+  { name: 'Rubber', icon: Droplets },
+  { name: 'Cattle / Leather', icon: Beef },
   { name: 'Wood / Timber', icon: TreePine },
 ];
 
@@ -173,20 +178,20 @@ export default function EUDRCompliancePage() {
           <HeroBackground />
           <div className="max-w-6xl mx-auto px-6 relative z-10">
             <FadeIn>
-              <div className="max-w-3xl">
+              <div className="max-w-3xl mx-auto text-center">
                 <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4 tracking-wide uppercase">
                   [ EUDR Compliance ]
                 </p>
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-white" data-testid="heading-eudr-title">
                   EU Deforestation Regulation — Full Compliance Infrastructure
                 </h1>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mb-4" data-testid="text-eudr-subtitle">
+                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto mb-4" data-testid="text-eudr-subtitle">
                   The EUDR (Regulation 2023/1115) requires operators to prove that commodities entering the EU market are deforestation-free, legally produced, and backed by a due diligence statement. Full enforcement begins December 30, 2026.
                 </p>
-                <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl mb-8">
+                <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto mb-8">
                   OriginTrace provides the end-to-end platform to meet every EUDR requirement — from GPS polygon farm mapping to automated DDS generation and real-time compliance scoring.
                 </p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                   <Link href="/demo">
                     <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-eudr-demo">
                       Request Demo
@@ -407,25 +412,27 @@ export default function EUDRCompliancePage() {
               </p>
             </FadeIn>
 
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-8">
               {howOriginTraceHelps.map((feature, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full">
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                          <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium mb-1 text-slate-900 dark:text-white" data-testid={`text-feature-title-${i}`}>{feature.title}</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
-                        </div>
+                <FadeIn key={i} direction={i % 2 === 0 ? 'left' : 'right'} delay={i * 0.1}>
+                  <div className={`flex flex-col md:flex-row gap-6 items-center ${i % 2 !== 0 ? 'md:flex-row-reverse' : ''}`} data-testid={`text-feature-title-${i}`}>
+                    <div className="flex-shrink-0 h-20 w-20 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <feature.icon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className={`flex-1 ${i % 2 !== 0 ? 'md:text-right' : ''}`}>
+                      <div className={`flex items-center gap-2 mb-2 flex-wrap ${i % 2 !== 0 ? 'md:justify-end' : ''}`}>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">0{i + 1}</span>
+                        <h3 className="font-semibold text-lg text-slate-900 dark:text-white">{feature.title}</h3>
                       </div>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
+                      <p className={`text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-lg ${i % 2 !== 0 ? 'md:ml-auto' : ''}`}>{feature.description}</p>
+                    </div>
+                  </div>
+                  {i < howOriginTraceHelps.length - 1 && (
+                    <div className="border-b border-slate-200 dark:border-slate-700 mt-8" />
+                  )}
+                </FadeIn>
               ))}
-            </StaggerContainer>
+            </div>
 
             <FadeIn className="mt-10 text-center">
               <Link href="/demo">
@@ -440,19 +447,19 @@ export default function EUDRCompliancePage() {
 
         <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="mb-12">
+            <FadeIn className="mb-12 text-center">
               <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
                 [ Timeline & Milestones ]
               </p>
               <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-timeline">
                 EUDR Implementation Timeline
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
                 Key dates for operators and traders to prepare for compliance.
               </p>
             </FadeIn>
 
-            <div className="max-w-2xl">
+            <div className="max-w-2xl mx-auto">
               {timeline.map((item, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="flex gap-4 mb-6 last:mb-0" data-testid={`timeline-item-${i}`}>
@@ -485,19 +492,19 @@ export default function EUDRCompliancePage() {
 
         <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="mb-8">
+            <FadeIn className="mb-8 text-center">
               <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
                 [ Frequently Asked Questions ]
               </p>
               <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-faq">
                 EUDR Compliance FAQ
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
                 Common questions about the EU Deforestation Regulation and how to prepare.
               </p>
             </FadeIn>
 
-            <div className="max-w-3xl">
+            <div className="max-w-3xl mx-auto">
               <Card>
                 <CardContent className="p-4 md:p-6">
                   {faqs.map((faq, i) => (

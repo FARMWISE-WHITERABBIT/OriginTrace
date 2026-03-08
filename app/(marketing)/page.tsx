@@ -128,21 +128,31 @@ const regulatoryData = [
     region: 'European Union',
     icon: Globe,
     regulations: ['EUDR (Deforestation Regulation)', 'General Food Law (EC 178/2002)', 'Organic Regulation (EU 2018/848)', 'CS3D (Corporate Sustainability Due Diligence)'],
-  },
-  {
-    region: 'United Kingdom',
-    icon: Scale,
-    regulations: ['Environment Act (Forest Risk Commodities)', 'UK Food Safety Regulations'],
+    link: '/compliance/eudr',
   },
   {
     region: 'United States',
     icon: ClipboardCheck,
-    regulations: ['FSMA 204 (Food Traceability Rule)', 'Lacey Act (Timber & Plant Products)'],
+    regulations: ['FSMA 204 (Food Traceability Rule)', 'Lacey Act (Timber & Plant Products)', 'COOL (Country of Origin Labeling)'],
+    link: '/compliance/usa',
   },
   {
-    region: 'Buyer & Voluntary Standards',
-    icon: Leaf,
-    regulations: ['Rainforest Alliance', 'Fairtrade International', 'Private sourcing policies & retailer codes'],
+    region: 'United Kingdom',
+    icon: Scale,
+    regulations: ['Environment Act (Forest Risk Commodities)', 'UK Timber Regulation', 'UK Food Safety Regulations'],
+    link: '/compliance/uk',
+  },
+  {
+    region: 'China',
+    icon: Package,
+    regulations: ['GACC (General Administration of Customs)', 'Import Food Safety Standards', 'Registration of Overseas Producers'],
+    link: '/compliance/china',
+  },
+  {
+    region: 'United Arab Emirates',
+    icon: Shield,
+    regulations: ['ESMA (Emirates Authority for Standardization)', 'Halal Certification Requirements', 'Food Import Re-export Controls'],
+    link: '/compliance/uae',
   },
 ];
 
@@ -189,15 +199,8 @@ export default function HomePage() {
           
           <div className="max-w-6xl mx-auto px-6 relative z-10 w-full">
             <div className="max-w-3xl mx-auto text-center">
-              <FadeIn>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8">
-                  <Shield className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Trust Infrastructure for Supply Chains</span>
-                </div>
-              </FadeIn>
-
               <FadeIn delay={0.1}>
-                <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight leading-[1.2] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
                   Compliance Infrastructure
                   <br />
                   for <IndustryTicker />
@@ -599,27 +602,29 @@ export default function HomePage() {
               </p>
             </FadeIn>
 
-            <StaggerContainer className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {regulatoryData.map((group, i) => (
                 <StaggerItem key={i}>
-                  <Card className="h-full border-slate-200 dark:border-slate-700">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="h-9 w-9 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
-                          <group.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <Link href={group.link}>
+                    <Card className="h-full border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors" data-testid={`card-regulation-${i}`}>
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="h-9 w-9 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                            <group.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <h3 className="font-semibold text-sm text-slate-900 dark:text-white">{group.region}</h3>
                         </div>
-                        <h3 className="font-semibold text-sm text-slate-900 dark:text-white">{group.region}</h3>
-                      </div>
-                      <ul className="space-y-2">
-                        {group.regulations.map((reg, j) => (
-                          <li key={j} className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                            <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                            {reg}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
+                        <ul className="space-y-2">
+                          {group.regulations.map((reg, j) => (
+                            <li key={j} className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                              <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              {reg}
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </StaggerItem>
               ))}
             </StaggerContainer>
