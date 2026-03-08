@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'custom'];
+    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'];
     if (!validFrameworks.includes(regulation_framework)) {
       return NextResponse.json({ error: 'Invalid regulation_framework' }, { status: 400 });
     }

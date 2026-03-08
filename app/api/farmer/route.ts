@@ -34,13 +34,37 @@ export async function GET() {
         .eq('org_id', orgId)
         .order('collection_date', { ascending: false })
         .limit(20),
-      supabase
-        .from('payments')
-        .select('id, payee_name, amount, currency, payment_method, status, payment_date, reference_number, notes')
-        .eq('org_id', orgId)
-        .ilike('payee_name', `%${farmerAccount.farms?.farmer_name || ''}%`)
-        .order('payment_date', { ascending: false })
-        .limit(20),
+      (async () => {
+        const farmerName = farmerAccount.farms?.farmer_name || '';
+        const { data: byName } = await supabase
+          .from('payments')
+          .select('id, payee_name, amount, currency, payment_method, status, payment_date, reference_number, notes')
+          .eq('org_id', orgId)
+          .ilike('payee_name', `%${farmerName}%`)
+          .order('payment_date', { ascending: false })
+          .limit(20);
+
+        const { data: byFarm } = await supabase
+          .from('payments')
+          .select('id, payee_name, amount, currency, payment_method, status, payment_date, reference_number, notes')
+          .eq('org_id', orgId)
+          .eq('farm_id', farmId)
+          .order('payment_date', { ascending: false })
+          .limit(20);
+
+        const { data: byAccount } = await supabase
+          .from('payments')
+          .select('id, payee_name, amount, currency, payment_method, status, payment_date, reference_number, notes')
+          .eq('org_id', orgId)
+          .eq('farmer_account_id', farmerAccount.id)
+          .order('payment_date', { ascending: false })
+          .limit(20);
+
+        const all = [...(byName || []), ...(byFarm || []), ...(byAccount || [])];
+        const unique = Array.from(new Map(all.map(p => [p.id, p])).values());
+        unique.sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime());
+        return { data: unique.slice(0, 20) };
+      })(),
       supabase
         .from('farmer_training')
         .select('*')

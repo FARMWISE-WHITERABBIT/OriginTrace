@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
@@ -319,6 +320,38 @@ export async function PATCH(request: NextRequest) {
         { error: 'Failed to update farm', details: updateError.message },
         { status: 500 }
       );
+    }
+
+    if (compliance_status === 'approved' || compliance_status === 'rejected') {
+      const action = compliance_status === 'approved' ? 'farm.approved' : 'farm.rejected';
+      await logAuditEvent({
+        orgId: String(profile.org_id),
+        actorId: user.id,
+        actorEmail: user.email,
+        action,
+        resourceType: 'farm',
+        resourceId: String(id),
+        metadata: { compliance_status, compliance_notes },
+        ipAddress: getClientIp(request),
+      });
+
+      const webhookEvent = compliance_status === 'approved' ? 'farm.approved' : 'farm.rejected';
+      dispatchWebhookEvent(String(profile.org_id), webhookEvent, {
+        farm_id: id,
+        compliance_status,
+        compliance_notes,
+        farmer_name: updatedFarm.farmer_name,
+        community: updatedFarm.community,
+      });
+    }
+
+    if (compliance_status && compliance_status !== 'pending') {
+      dispatchWebhookEvent(String(profile.org_id), 'compliance.changed', {
+        resource_type: 'farm',
+        farm_id: id,
+        new_status: compliance_status,
+        compliance_notes,
+      });
     }
 
     return NextResponse.json({ farm: updatedFarm });

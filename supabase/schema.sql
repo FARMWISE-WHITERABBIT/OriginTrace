@@ -1600,3 +1600,82 @@ BEGIN
     ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
   END IF;
 END $$;
+
+-- ============================================
+-- BOUNDARY ANALYSIS (Phase 12)
+-- ============================================
+
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS boundary_analysis JSONB;
+
+-- ============================================
+-- SPOT MARKET / TENDER SYSTEM (Phase 12)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tenders (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_org_id UUID NOT NULL REFERENCES buyer_organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  commodity TEXT NOT NULL,
+  quantity_mt DECIMAL(12,2) NOT NULL,
+  target_price_per_mt DECIMAL(12,2),
+  currency TEXT DEFAULT 'USD',
+  delivery_deadline DATE,
+  destination_country TEXT,
+  destination_port TEXT,
+  quality_requirements JSONB DEFAULT '{}',
+  certifications_required TEXT[] DEFAULT '{}',
+  regulation_framework TEXT,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'awarded', 'cancelled')),
+  visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'invited')),
+  invited_orgs UUID[] DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  closes_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS tender_bids (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tender_id UUID NOT NULL REFERENCES tenders(id) ON DELETE CASCADE,
+  exporter_org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  price_per_mt DECIMAL(12,2) NOT NULL,
+  quantity_available_mt DECIMAL(12,2) NOT NULL,
+  delivery_date DATE,
+  notes TEXT,
+  compliance_score DECIMAL(5,2),
+  certifications TEXT[] DEFAULT '{}',
+  status TEXT DEFAULT 'submitted' CHECK (status IN ('submitted', 'shortlisted', 'awarded', 'rejected', 'withdrawn')),
+  submitted_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE tenders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tender_bids ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Buyer orgs can manage their tenders" ON tenders
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id AND role = 'buyer_admin')
+  );
+
+CREATE POLICY "Exporters can view public or invited tenders" ON tenders
+  FOR SELECT USING (
+    (visibility = 'public' AND status = 'open')
+    OR (visibility = 'invited' AND get_user_org_id() = ANY(invited_orgs))
+    OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id)
+    OR is_system_admin()
+  );
+
+CREATE POLICY "System admins can manage all tenders" ON tenders
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Exporters can manage their own bids" ON tender_bids
+  FOR ALL USING (
+    exporter_org_id = get_user_org_id()
+    OR EXISTS (SELECT 1 FROM tenders t WHERE t.id = tender_bids.tender_id AND EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = t.buyer_org_id))
+    OR is_system_admin()
+  );
+
+CREATE INDEX IF NOT EXISTS idx_tenders_buyer_org ON tenders(buyer_org_id);
+CREATE INDEX IF NOT EXISTS idx_tenders_status ON tenders(status);
+CREATE INDEX IF NOT EXISTS idx_tenders_commodity ON tenders(commodity);
+CREATE INDEX IF NOT EXISTS idx_tender_bids_tender ON tender_bids(tender_id);
+CREATE INDEX IF NOT EXISTS idx_tender_bids_exporter ON tender_bids(exporter_org_id);

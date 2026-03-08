@@ -33,7 +33,7 @@ Email notifications use Resend integration for various triggers, including docum
 An immutable, append-only audit log (`audit_events` table) records all mutations, accessible via a searchable viewer and API.
 
 ### Webhook Event Streaming
-A system dispatches signed webhook POSTs for 12 event types, supporting HMAC-SHA256 signatures, an admin UI, and retries.
+A system dispatches signed webhook POSTs for 14 event types (including `tender.created` and `tender.awarded`), supporting HMAC-SHA256 signatures, an admin UI, and retries. All event types are fully wired into their respective API routes.
 
 ### Farmer Digital Identity Portal
 Agent-assisted onboarding creates farmer accounts. A mobile-first activation page allows phone confirmation and PIN setup. The portal provides pages for farm data, deliveries, payments, training, inputs, and digital identity.
@@ -49,6 +49,15 @@ An interactive force-directed SVG graph using D3-force simulates the supply chai
 
 ### Buyer ESG Portfolio Dashboard
 Aggregates ESG analytics across supplier links, displaying KPIs and charts for compliance, risk, volume, and document coverage.
+
+### Satellite Boundary Comparison
+`lib/services/boundary-analysis.ts` provides `analyzeBoundaryAuthenticity()` to detect fake polygon drawing. Checks 5 dimensions: shape regularity, vertex spacing uniformity, area plausibility, location plausibility, and edge straightness. Returns a 0-100 confidence score. API at `/api/farms/boundary-check`. Results stored in `boundary_analysis` JSONB column on farms. Feeds into EUDR readiness scoring. Visible on farm map page and farm review.
+
+### Yield Prediction Models
+`lib/services/yield-prediction.ts` provides `predictYield()` using weighted historical data, input intensity, regional benchmarks, certifications, and seasonal factors. Returns predicted yield, confidence range, trend (improving/stable/declining), and actionable recommendations. API at `/api/farmer/predictions` (farmer view) and `/api/yield-predictions` (org-wide admin view). Predictions tab on yield-alerts page. Integrated with yield validation — actual collection exceeding prediction by >200% triggers auto-flagging.
+
+### Spot Market / Tender System
+Buyer-side tender management with exporter marketplace. Schema: `tenders` (open/closed/awarded/cancelled, public/invited visibility) and `tender_bids` (submitted/shortlisted/awarded/rejected/withdrawn). APIs at `/api/tenders` and `/api/tenders/[id]/bids`. Buyer page at `/app/buyer/tenders` for creating tenders and comparing bids. Exporter marketplace at `/app/tenders` for browsing and bidding. Auto-calculates compliance score from exporter shipment history. Awarding a bid auto-creates a contract. Webhook events: `tender.created`, `tender.awarded`.
 
 ### Data Storage
 Supabase PostgreSQL is used with Row Level Security (RLS) for multi-tenant isolation, storing core organizational data, processing information, document vault, payment records, buyer portal data, compliance profiles, and DPPs.
@@ -66,7 +75,7 @@ Separates operational dashboards (role-specific, action-oriented) from strategic
 A shipment scoring engine evaluates against 7 regulatory frameworks (EUDR, FSMA 204, UK Environment Act, Lacey Act / UFLPA, China Green Trade, UAE / Halal, Buyer Standards) using distinct rules and data points.
 
 ### Core Features
-Key features include comprehensive Traceability (hybrid bag-batch, network graph), Compliance management (farm review, DDS export, yield validation, profiles for 7 frameworks, certifications), Analytics & Reports (strategic, operational, buyer ESG, report builder), Agent Tools (GPS mapping, offline collection, anti-fraud), Admin Tools (inventory, batch generation, user management, white-label branding), Document Vault (upload, expiry, alerts), Payment Tracking (multi-currency, mobile money disbursement), Farmer Digital Identity Portal (onboarding, yield, training, inputs, QR), Buyer Portal (registration, invitations, contract management, ESG analytics), Compliance Profiles (pre-built templates, geo verification), Digital Product Passports (JSON-LD, public endpoint), Enterprise API (versioned, key management, rate limiting), Shipment Planning (wizard, scoring), Webhook Event Streaming (12 types, signed), Immutable Audit Log, i18n, and a Superadmin Command Tower.
+Key features include comprehensive Traceability (hybrid bag-batch, network graph), Compliance management (farm review, DDS export, yield validation, profiles for 7 frameworks, certifications), Analytics & Reports (strategic, operational, buyer ESG, report builder), Agent Tools (GPS mapping, offline collection, anti-fraud), Admin Tools (inventory, batch generation, user management, white-label branding), Document Vault (upload, expiry, alerts), Payment Tracking (multi-currency, mobile money disbursement), Farmer Digital Identity Portal (onboarding, yield, training, inputs, QR), Buyer Portal (registration, invitations, contract management, ESG analytics, spot market/tenders), Compliance Profiles (pre-built templates, geo verification), Digital Product Passports (JSON-LD, public endpoint), Enterprise API (versioned, key management, rate limiting), Shipment Planning (wizard, scoring), Webhook Event Streaming (14 types, signed), Immutable Audit Log, i18n, Satellite Boundary Comparison (anti-fraud polygon analysis), Yield Prediction Models (historical + input-based forecasting), Spot Market / Tender System (buyer tenders, exporter marketplace, bid comparison), and a Superadmin Command Tower.
 
 ### Marketing Website Design
 The marketing website is positioned as "Trust Infrastructure for Origin-Sensitive Supply Chains," featuring a modern design, animated components, and a focus on compliance (EUDR, FSMA 204, UK Environment Act). It includes SEO-optimized metadata, structured data, and dedicated landing pages.

@@ -36,6 +36,9 @@ import {
   CreditCard,
   Fingerprint,
   Key,
+  ScrollText,
+  Store,
+  Gavel,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -158,10 +161,11 @@ const appNavigation: NavigationConfig = {
     },
     {
       label: 'TRADE',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
       items: [
         { title: 'Buyers', url: '/app/buyers', icon: Handshake, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'buyer_portal' },
         { title: 'Contracts', url: '/app/contracts', icon: FileCheck, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'contracts' },
+        { title: 'Marketplace', url: '/app/tenders', icon: Store, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'contracts' },
       ],
     },
     {
@@ -174,8 +178,9 @@ const appNavigation: NavigationConfig = {
     },
     {
       label: 'GOVERNANCE',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'compliance_officer'],
       items: [
+        { title: 'Audit Log', url: '/app/audit', icon: ScrollText, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'delegations' },
         { title: 'Delegations', url: '/app/delegations', icon: Shield, tourId: 'nav-delegations', allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'delegations' },
       ],
     },
@@ -216,6 +221,13 @@ const buyerNavigation: NavigationConfig = {
         { title: 'Suppliers', url: '/app/buyer/suppliers', icon: Handshake, allowedRoles: ['buyer'] },
         { title: 'Contracts', url: '/app/buyer/contracts', icon: FileCheck, allowedRoles: ['buyer'] },
         { title: 'Shipments', url: '/app/buyer/shipments', icon: Ship, allowedRoles: ['buyer'] },
+      ],
+    },
+    {
+      label: 'SOURCING',
+      allowedRoles: ['buyer'],
+      items: [
+        { title: 'Tenders', url: '/app/buyer/tenders', icon: Gavel, allowedRoles: ['buyer'] },
       ],
     },
     {

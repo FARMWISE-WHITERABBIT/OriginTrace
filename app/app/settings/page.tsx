@@ -1070,6 +1070,28 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Webhooks
+                </CardTitle>
+                <CardDescription>Configure webhook endpoints to receive real-time event notifications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Set up webhook endpoints to receive automated notifications when events occur in your organization, such as shipment updates, document expiry, farm approvals, and more.
+                </p>
+                <Link href="/app/settings/webhooks">
+                  <Button variant="outline" data-testid="button-manage-webhooks">
+                    Manage Webhooks
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* COMPLIANCE TAB */}

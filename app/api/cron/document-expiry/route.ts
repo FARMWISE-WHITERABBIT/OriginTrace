@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDocumentExpiryEmail } from '@/lib/email/templates';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(request: NextRequest) {
   const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 1 });
@@ -216,6 +217,35 @@ export async function GET(request: NextRequest) {
             .update({ status: newStatus })
             .eq('id', doc.id);
         }
+
+        if (newStatus === 'expired') {
+          dispatchWebhookEvent(orgId, 'document.expired', {
+            document_id: doc.id,
+            title: doc.title,
+            document_type: doc.document_type,
+            expiry_date: doc.expiry_date,
+          });
+        }
+      }
+
+      const { data: expiringCerts } = await supabase
+        .from('farm_certifications')
+        .select('id, farm_id, certification_type, expiry_date')
+        .eq('org_id', orgId)
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
+        .gte('expiry_date', now.toISOString().split('T')[0]);
+
+      for (const cert of (expiringCerts || [])) {
+        const certExpiry = new Date(cert.expiry_date);
+        const daysLeft = Math.ceil((certExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        dispatchWebhookEvent(orgId, 'certification.expiring', {
+          certification_id: cert.id,
+          farm_id: cert.farm_id,
+          certification_type: cert.certification_type,
+          expiry_date: cert.expiry_date,
+          days_remaining: daysLeft,
+        });
       }
     }
 

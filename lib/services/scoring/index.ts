@@ -18,6 +18,7 @@ import { scoreUAEHalal } from './uae-halal';
 export type {
   ComplianceProfile,
   FarmDeforestationCheck,
+  FarmBoundaryAnalysis,
   ShipmentScoreInput,
   ScoreDimension,
   RiskFlag,
