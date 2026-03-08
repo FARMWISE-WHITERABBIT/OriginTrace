@@ -20,6 +20,7 @@ interface Organization {
   agent_seat_limit?: number;
   monthly_collection_limit?: number;
   data_region?: string;
+  brand_colors?: { primary?: string; secondary?: string; accent?: string } | null;
 }
 
 interface Profile {

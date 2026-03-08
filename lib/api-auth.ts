@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
 interface ApiKeyValidation {
@@ -10,7 +10,14 @@ interface ApiKeyValidation {
   rateLimitPerHour?: number;
 }
 
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+function getServiceSupabase(): SupabaseClient | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyValidation> {
   const authHeader = request.headers.get('authorization');
@@ -25,16 +32,10 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
   const keyHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
+  const supabase = getServiceSupabase();
+  if (!supabase) {
     return { valid: false };
   }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
 
   const { data: apiKey, error } = await supabase
     .from('api_keys')
@@ -70,22 +71,47 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
   };
 }
 
-export function checkRateLimit(keyPrefix: string, limitPerHour: number = 1000): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const key = `rate:${keyPrefix}`;
-  const entry = rateLimitStore.get(key);
-
-  if (!entry || now >= entry.resetAt) {
-    const resetAt = now + 3600000;
-    rateLimitStore.set(key, { count: 1, resetAt });
-    return { allowed: true, remaining: limitPerHour - 1, resetAt };
+export async function checkRateLimit(keyPrefix: string, limitPerHour: number = 1000): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+  const supabase = getServiceSupabase();
+  if (!supabase) {
+    return { allowed: true, remaining: limitPerHour - 1, resetAt: Date.now() + 3600000 };
   }
 
-  if (entry.count >= limitPerHour) {
-    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + 3600000);
+
+  const { data: existing } = await supabase
+    .from('api_rate_limits')
+    .select('request_count, window_end')
+    .eq('key_prefix', keyPrefix)
+    .single();
+
+  if (!existing || new Date(existing.window_end) <= now) {
+    await supabase
+      .from('api_rate_limits')
+      .upsert({
+        key_prefix: keyPrefix,
+        request_count: 1,
+        window_start: now.toISOString(),
+        window_end: windowEnd.toISOString(),
+      }, { onConflict: 'key_prefix' });
+
+    return { allowed: true, remaining: limitPerHour - 1, resetAt: windowEnd.getTime() };
   }
 
-  entry.count += 1;
-  rateLimitStore.set(key, entry);
-  return { allowed: true, remaining: limitPerHour - entry.count, resetAt: entry.resetAt };
+  if (existing.request_count >= limitPerHour) {
+    return { allowed: false, remaining: 0, resetAt: new Date(existing.window_end).getTime() };
+  }
+
+  const newCount = existing.request_count + 1;
+  await supabase
+    .from('api_rate_limits')
+    .update({ request_count: newCount })
+    .eq('key_prefix', keyPrefix);
+
+  return {
+    allowed: true,
+    remaining: limitPerHour - newCount,
+    resetAt: new Date(existing.window_end).getTime(),
+  };
 }

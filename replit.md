@@ -21,7 +21,16 @@ The UI follows a light-first enterprise design with a primary brand color of Ori
 Developed with Next.js 16 (App Router), `shadcn/ui` (Radix UI, Tailwind CSS) for components, Geist Mono typography, and `recharts` for data visualization. Key features include GPS-based farm mapping, light/dark mode, interactive onboarding, a public QR verification page, and analytics dashboards. The PWA provides offline-first capabilities using IndexedDB.
 
 ### Backend
-Implemented using Next.js serverless functions (App Router API routes) with TypeScript. Authentication is handled by Supabase Auth. APIs are RESTful, with an enterprise API layer (`/api/v1/`) supporting API key authentication (`lib/api-auth.ts`) with scope enforcement and rate limiting.
+Implemented using Next.js serverless functions (App Router API routes) with TypeScript. Authentication is handled by Supabase Auth. APIs are RESTful, with an enterprise API layer (`/api/v1/`) supporting API key authentication (`lib/api-auth.ts`) with scope enforcement, DB-backed rate limiting (`api_rate_limits` table), and tier gating (`lib/api/tier-guard.ts`). The V1 API supports both read (GET) and write (POST/PATCH) operations with `write` scope enforcement for mutations.
+
+### Satellite & Deforestation Monitoring
+Farm map (`app/app/farms/map/satellite-map.tsx`) uses ESRI World Imagery tiles for satellite view (gated by `satellite_overlays` feature flag) with OpenStreetMap as fallback/toggle. Deforestation check API (`app/api/deforestation-check/route.ts`) integrates with Global Forest Watch (GFW) API for polygon-based forest loss analysis, with country-level EUDR risk benchmarking as fallback. Results stored in `deforestation_check` JSONB column on farms table. Medium/high risk triggers email alerts to org admins/compliance officers via Resend.
+
+### Email Notifications
+Email notifications use Resend integration (`lib/email/resend-client.ts`) with templates in `lib/email/templates.ts`. Triggers include: document expiry alerts (cron at `app/api/cron/document-expiry/route.ts`), buyer invitation emails, compliance alerts (yield flags, farm conflicts, deforestation risk). Templates follow OriginTrace branding with Deep Forest header.
+
+### Tenant Customization
+Organizations can set custom brand colors (`brand_colors` JSONB on organizations table) via settings page. `TenantThemeProvider` component (`components/tenant-theme-provider.tsx`) injects CSS custom properties (--tenant-primary, --tenant-secondary, --tenant-accent). Guided tours auto-start on first login per role via `OnboardingProvider` (`lib/hooks/use-onboarding.tsx`).
 
 ### Data Storage
 Supabase PostgreSQL is used with Row Level Security (RLS) for multi-tenant isolation. The schema encompasses core organizational data, processing information, a document vault, payment records (multi-currency), buyer portal data, compliance profiles, Digital Product Passports, and system configurations.

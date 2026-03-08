@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { getResendClient } from '@/lib/email/resend-client';
+import { buildYieldFlagEmail } from '@/lib/email/templates';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -81,6 +83,74 @@ export async function POST(request: NextRequest) {
         ? `Batch weight ${batch_weight}kg exceeds expected maximum ${Math.round(expectedMax)}kg (${Math.round(percentageOver)}% over threshold)`
         : undefined
     };
+
+    if (isFlagged) {
+      try {
+        const { data: org } = await supabaseAdmin
+          .from('organizations')
+          .select('name')
+          .eq('id', profile.org_id)
+          .single();
+
+        const { data: farmDetails } = await supabaseAdmin
+          .from('farms')
+          .select('farmer_name')
+          .eq('id', farm_id)
+          .single();
+
+        const { data: recipients } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name, user_id')
+          .eq('org_id', profile.org_id)
+          .in('role', ['admin', 'quality_manager']);
+
+        if (recipients && recipients.length > 0) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
+
+          for (const recipient of recipients) {
+            const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(recipient.user_id);
+            const recipientEmail = authUser?.user?.email;
+            if (!recipientEmail) continue;
+
+            const emailContent = buildYieldFlagEmail({
+              recipientName: recipient.full_name || 'Team Member',
+              orgName: org?.name || 'Your Organization',
+              farmerName: farmDetails?.farmer_name || 'Unknown',
+              farmId: farm_id,
+              batchWeight: batch_weight,
+              expectedMax: Math.round(expectedMax),
+              percentageOver: Math.round(percentageOver),
+              commodity: farmCommodity,
+              dashboardUrl: `${baseUrl}/app/yield-alerts`,
+            });
+
+            try {
+              const { client, fromEmail } = await getResendClient();
+              await client.emails.send({
+                from: fromEmail,
+                to: recipientEmail,
+                subject: `Yield Alert: Batch flagged for ${farmDetails?.farmer_name || 'Unknown'} - ${org?.name || 'OriginTrace'}`,
+                html: emailContent.html,
+                text: emailContent.text,
+              });
+            } catch (emailErr) {
+              console.error('Failed to send yield flag email:', emailErr);
+            }
+
+            await supabaseAdmin.from('notifications').insert({
+              org_id: profile.org_id,
+              user_id: recipient.user_id,
+              type: 'yield_flag',
+              title: 'Yield Validation Flag',
+              message: `Batch weight ${batch_weight}kg from ${farmDetails?.farmer_name || 'Unknown'} exceeds expected maximum ${Math.round(expectedMax)}kg`,
+              read: false,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error('Failed to send yield flag notifications:', notifErr);
+      }
+    }
 
     return NextResponse.json(result);
     

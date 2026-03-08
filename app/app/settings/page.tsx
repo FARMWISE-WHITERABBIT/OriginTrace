@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck } from 'lucide-react';
+import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -240,6 +240,7 @@ export default function SettingsPage() {
   const [newCommodityUnit, setNewCommodityUnit] = useState('kg');
   const [showAddCommodityDialog, setShowAddCommodityDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [brandColors, setBrandColors] = useState<{ primary: string; secondary: string; accent: string }>({ primary: '', secondary: '', accent: '' });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [states, setStates] = useState<State[]>([]);
@@ -309,6 +310,12 @@ export default function SettingsPage() {
         setSettings(data.organization.settings || {});
         setSelectedCommodities(data.organization.commodity_types || []);
         setActiveLgas(data.organization.active_lgas || []);
+        const bc = data.organization.brand_colors;
+        if (bc && typeof bc === 'object') {
+          setBrandColors({ primary: bc.primary || '', secondary: bc.secondary || '', accent: bc.accent || '' });
+        } else {
+          setBrandColors({ primary: '', secondary: '', accent: '' });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch org settings:', error);
@@ -397,6 +404,7 @@ export default function SettingsPage() {
           settings,
           commodity_types: selectedCommodities,
           active_lgas: activeLgas,
+          brand_colors: (brandColors.primary || brandColors.secondary || brandColors.accent) ? brandColors : null,
         }),
       });
 
@@ -807,6 +815,112 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">
                       This logo will appear in the sidebar for your organization's users
                     </p>
+                  </div>
+                  <div className="space-y-4 pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-base font-medium">Brand Colors</Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Set custom colors to personalize the sidebar, header, and primary action buttons for your team.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="brand-primary">Primary Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="brand-primary"
+                            type="color"
+                            value={brandColors.primary || '#16a34a'}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, primary: e.target.value }))}
+                            className="w-12 h-9 p-1 cursor-pointer"
+                            data-testid="input-brand-primary"
+                          />
+                          <Input
+                            value={brandColors.primary}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, primary: e.target.value }))}
+                            placeholder="#16a34a"
+                            className="flex-1 font-mono text-sm"
+                            data-testid="input-brand-primary-hex"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="brand-secondary">Secondary Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="brand-secondary"
+                            type="color"
+                            value={brandColors.secondary || '#64748b'}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, secondary: e.target.value }))}
+                            className="w-12 h-9 p-1 cursor-pointer"
+                            data-testid="input-brand-secondary"
+                          />
+                          <Input
+                            value={brandColors.secondary}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, secondary: e.target.value }))}
+                            placeholder="#64748b"
+                            className="flex-1 font-mono text-sm"
+                            data-testid="input-brand-secondary-hex"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="brand-accent">Accent Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="brand-accent"
+                            type="color"
+                            value={brandColors.accent || '#f59e0b'}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, accent: e.target.value }))}
+                            className="w-12 h-9 p-1 cursor-pointer"
+                            data-testid="input-brand-accent"
+                          />
+                          <Input
+                            value={brandColors.accent}
+                            onChange={(e) => setBrandColors(prev => ({ ...prev, accent: e.target.value }))}
+                            placeholder="#f59e0b"
+                            className="flex-1 font-mono text-sm"
+                            data-testid="input-brand-accent-hex"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {(brandColors.primary || brandColors.secondary || brandColors.accent) && (
+                      <div className="flex items-center gap-3 p-3 rounded-md bg-muted/30 border">
+                        <span className="text-sm text-muted-foreground">Preview:</span>
+                        <div className="flex gap-2">
+                          {brandColors.primary && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: brandColors.primary }} />
+                              <span className="text-xs text-muted-foreground">Primary</span>
+                            </div>
+                          )}
+                          {brandColors.secondary && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: brandColors.secondary }} />
+                              <span className="text-xs text-muted-foreground">Secondary</span>
+                            </div>
+                          )}
+                          {brandColors.accent && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: brandColors.accent }} />
+                              <span className="text-xs text-muted-foreground">Accent</span>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setBrandColors({ primary: '', secondary: '', accent: '' })}
+                          className="ml-auto"
+                          data-testid="button-reset-colors"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Reset
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <Button 
                     onClick={() => handleUpdateOrg('Branding')} 

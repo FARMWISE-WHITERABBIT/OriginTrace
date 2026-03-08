@@ -441,6 +441,7 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS feature_flags JSONB DEFAULT '
   "financing": false,
   "api_access": false
 }';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_colors JSONB DEFAULT NULL;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS agent_seat_limit INTEGER DEFAULT 5;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS monthly_collection_limit INTEGER DEFAULT 1000;
 
@@ -1281,3 +1282,23 @@ CREATE POLICY "System admins can manage all API keys" ON api_keys
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
+
+-- ============================================
+-- API RATE LIMITS (Database-backed)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+  key_prefix TEXT NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 1,
+  window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  window_end TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (key_prefix)
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_rate_limits_window ON api_rate_limits(window_end);
+
+-- ============================================
+-- DEFORESTATION CHECK (Phase 10)
+-- ============================================
+
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;

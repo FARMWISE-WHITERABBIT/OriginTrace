@@ -26,6 +26,11 @@ import {
   X,
   Search,
   User,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  TreePine,
+  Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -38,6 +43,16 @@ interface Farm {
   community: string;
   boundary?: any;
   area_hectares?: number;
+  deforestation_check?: DeforestationResult | null;
+}
+
+interface DeforestationResult {
+  deforestation_free: boolean;
+  forest_loss_hectares: number;
+  forest_loss_percentage: number;
+  analysis_date: string;
+  data_source: string;
+  risk_level: 'low' | 'medium' | 'high';
 }
 
 const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, loading: () => (
@@ -81,6 +96,9 @@ function HybridFarmMappingContent() {
   const [farmSearch, setFarmSearch] = useState('');
   const [showFarmPicker, setShowFarmPicker] = useState(false);
 
+  const [deforestationResult, setDeforestationResult] = useState<DeforestationResult | null>(null);
+  const [isCheckingDeforestation, setIsCheckingDeforestation] = useState(false);
+
   const farmIdParam = searchParams.get('farm_id');
 
   useEffect(() => {
@@ -89,7 +107,7 @@ function HybridFarmMappingContent() {
       try {
         const { data } = await supabase
           .from('farms')
-          .select('id, farmer_name, community, boundary, area_hectares')
+          .select('id, farmer_name, community, boundary, area_hectares, deforestation_check')
           .eq('org_id', organization.id)
           .order('farmer_name');
         setFarms(data || []);
@@ -101,6 +119,38 @@ function HybridFarmMappingContent() {
     }
     loadFarms();
   }, [organization, supabase, farmIdParam]);
+
+  useEffect(() => {
+    if (selectedFarm?.deforestation_check) {
+      setDeforestationResult(selectedFarm.deforestation_check);
+    } else {
+      setDeforestationResult(null);
+    }
+  }, [selectedFarm]);
+
+  const checkDeforestation = useCallback(async () => {
+    if (!selectedFarm) return;
+    setIsCheckingDeforestation(true);
+    try {
+      const res = await fetch('/api/deforestation-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farm_id: selectedFarm.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setDeforestationResult(data.result);
+        setSelectedFarm(prev => prev ? { ...prev, deforestation_check: data.result } : prev);
+        toast({ title: 'Deforestation Check Complete', description: data.result.deforestation_free ? 'Farm is deforestation-free.' : 'Risk detected — review the results.' });
+      } else {
+        toast({ title: 'Check Failed', description: data.error || 'Could not complete deforestation check.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to run deforestation check.', variant: 'destructive' });
+    } finally {
+      setIsCheckingDeforestation(false);
+    }
+  }, [selectedFarm, toast]);
 
   const filteredFarms = farmSearch.trim()
     ? farms.filter(f =>
@@ -263,7 +313,7 @@ function HybridFarmMappingContent() {
                   <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); }} data-testid="button-change-farmer">
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); }} data-testid="button-change-farmer">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -429,6 +479,7 @@ function HybridFarmMappingContent() {
                   coordinates={coordinates}
                   onPointsChange={handleSatellitePoints}
                   center={currentLocation || { lat: 7.4, lng: 3.9 }}
+                  satelliteEnabled={!!(organization?.feature_flags as Record<string, boolean> | undefined)?.satellite_overlays}
                 />
 
                 {coordinates.length > 0 && (
@@ -463,6 +514,105 @@ function HybridFarmMappingContent() {
                 Save Boundary ({areaHectares} ha)
               </Button>
             </div>
+          )}
+
+          {(selectedFarm.boundary || isSuccess) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TreePine className="h-4 w-4 text-primary" />
+                  Deforestation Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {deforestationResult ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {deforestationResult.deforestation_free ? (
+                        <Badge className="bg-green-600 text-white" data-testid="badge-deforestation-free">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Deforestation-Free
+                        </Badge>
+                      ) : deforestationResult.risk_level === 'high' ? (
+                        <Badge className="bg-red-600 text-white" data-testid="badge-deforestation-risk">
+                          <ShieldAlert className="h-3 w-3 mr-1" />
+                          Risk Detected
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-medium">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Medium Risk
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {deforestationResult.risk_level} risk
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-2 bg-muted/50 rounded-md">
+                        <div className="text-xs text-muted-foreground">Forest Loss</div>
+                        <div className="text-sm font-medium" data-testid="text-forest-loss-hectares">
+                          {deforestationResult.forest_loss_hectares} ha
+                        </div>
+                      </div>
+                      <div className="p-2 bg-muted/50 rounded-md">
+                        <div className="text-xs text-muted-foreground">Loss Percentage</div>
+                        <div className="text-sm font-medium" data-testid="text-forest-loss-percentage">
+                          {deforestationResult.forest_loss_percentage}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Source: {deforestationResult.data_source} — Checked{' '}
+                        {new Date(deforestationResult.analysis_date).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={checkDeforestation}
+                      disabled={isCheckingDeforestation}
+                      className="w-full"
+                      data-testid="button-recheck-deforestation"
+                    >
+                      {isCheckingDeforestation ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                      ) : (
+                        <><RotateCcw className="h-4 w-4 mr-2" />Re-check Deforestation Status</>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-amber-600" data-testid="badge-deforestation-pending">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Check Pending
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No deforestation check has been run for this farm yet.
+                    </p>
+                    <Button
+                      onClick={checkDeforestation}
+                      disabled={isCheckingDeforestation}
+                      className="w-full"
+                      data-testid="button-check-deforestation"
+                    >
+                      {isCheckingDeforestation ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                      ) : (
+                        <><TreePine className="h-4 w-4 mr-2" />Check Deforestation Status</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </>
       )}

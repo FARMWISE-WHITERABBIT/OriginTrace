@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, checkRateLimit } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,11 +10,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired API key' }, { status: 401 });
     }
 
+    const tierError = await enforceTier(auth.orgId, 'enterprise_api');
+    if (tierError) return tierError;
+
     if (!auth.scopes?.includes('read')) {
       return NextResponse.json({ error: 'Insufficient scope. Required: read' }, { status: 403 });
     }
 
-    const rateLimit = checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
+    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
