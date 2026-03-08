@@ -60,6 +60,22 @@ const TEMPLATES: Record<string, {
     geo_verification_level: 'basic',
     min_traceability_depth: 1,
   },
+  LACEY_UFLPA: {
+    name: 'US Lacey Act / UFLPA Compliance',
+    destination_market: 'United States',
+    regulation_framework: 'Lacey_Act_UFLPA',
+    required_documents: [
+      'Certificate of Origin',
+      'Species / product identification',
+      'Import declaration',
+      'Forced labor declaration',
+      'Supply chain mapping',
+      'Country-of-origin documentation',
+    ],
+    required_certifications: ['Chain of Custody', 'FSC/PEFC'],
+    geo_verification_level: 'polygon',
+    min_traceability_depth: 3,
+  },
 };
 
 export async function GET() {
@@ -172,7 +188,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'custom'];
+    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'custom'];
     if (!validFrameworks.includes(regulation_framework)) {
       return NextResponse.json({ error: 'Invalid regulation_framework' }, { status: 400 });
     }

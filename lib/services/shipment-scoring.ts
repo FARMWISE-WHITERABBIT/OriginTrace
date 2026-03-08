@@ -445,6 +445,8 @@ function scoreRegulatoryAlignment(
       'EUDR': 'EUDR',
       'FSMA_204': 'FSMA 204',
       'UK_Environment_Act': 'UK Environment Act',
+      'Lacey_Act_UFLPA': 'Lacey Act / UFLPA',
+      'custom': 'Buyer Standards',
     };
     const mapped = frameworkMap[profile.regulation_framework] || profile.regulation_framework;
     if (!effectiveRegulations.some((r) => r.toLowerCase().includes(mapped.toLowerCase()))) {
@@ -587,43 +589,436 @@ function scoreRegulatoryAlignment(
 
       details.push(`EUDR: ${met}/${total} requirements met`);
     } else if (regLower.includes('fsma') || regLower.includes('204')) {
-      total = 2;
-      if (allTraceable) met++;
-      else {
+      total = 5;
+
+      if (allTraceable) {
+        met++;
+        details.push('FSMA 204: Complete chain of custody verified');
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'FSMA 204',
+          message: 'Lot-level traceability chain is incomplete',
+          is_hard_fail: false,
+        });
         remediation.push({
           priority: 'urgent',
-          title: 'FSMA 204: Supply chain records incomplete',
-          description: 'FSMA 204 requires complete supply chain records for all items.',
+          title: 'FSMA 204: Complete chain of custody required',
+          description: 'FSMA 204 requires lot-level traceability with complete chain of custody for all items.',
           dimension: 'Regulatory Alignment',
         });
       }
+
+      const hasKDE = doc_status['kde_records'] === true || doc_status['key_data_elements'] === true;
+      if (hasKDE) {
+        met++;
+        details.push('FSMA 204: Key Data Elements (KDE) records present');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'FSMA 204: Key Data Elements (KDE) records missing',
+          description: 'KDE records capturing who, what, when, where for each traceability event are required under FSMA 204.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const hasCTE = doc_status['cte_log'] === true || doc_status['critical_tracking_events'] === true;
+      if (hasCTE) {
+        met++;
+        details.push('FSMA 204: Critical Tracking Events (CTE) log present');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'FSMA 204: Critical Tracking Events (CTE) log missing',
+          description: 'CTE log documenting growing, receiving, creating, transforming, and shipping events is required.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
       const hasLotTracking = items.every((i) => {
         if (i.item_type === 'batch' && i.batch_data) return i.batch_data.dispatched;
         if (i.item_type === 'finished_good' && i.finished_good_data) return i.finished_good_data.pedigree_verified;
         return false;
       });
-      if (hasLotTracking) met++;
-      else {
+      if (hasLotTracking) {
+        met++;
+      } else {
         remediation.push({
           priority: 'important',
-          title: 'FSMA 204: Lot tracking gaps',
-          description: 'All items must have verified lot tracking for FSMA 204 compliance.',
+          title: 'FSMA 204: Lot tracking verification gaps',
+          description: 'All items must have verified lot tracking (dispatched batches, pedigree-verified finished goods).',
           dimension: 'Regulatory Alignment',
         });
       }
+
+      const hasSupplierKYC = input.org_compliance_status === 'verified' || input.org_compliance_status === 'approved';
+      const hasFoodSafety = doc_status['food_safety_plan'] === true || doc_status['haccp_certificate'] === true;
+      if (hasSupplierKYC && hasFoodSafety) {
+        met++;
+        details.push('FSMA 204: Supplier KYC and food safety certifications verified');
+      } else {
+        if (!hasSupplierKYC) {
+          riskFlags.push({
+            severity: 'warning',
+            category: 'FSMA 204',
+            message: 'Supplier KYC status not verified',
+            is_hard_fail: false,
+          });
+          remediation.push({
+            priority: 'important',
+            title: 'FSMA 204: Supplier KYC verification needed',
+            description: 'Supplier know-your-customer verification is required for FSMA 204 compliance.',
+            dimension: 'Regulatory Alignment',
+          });
+        }
+        if (!hasFoodSafety) {
+          remediation.push({
+            priority: 'important',
+            title: 'FSMA 204: Food safety certification missing',
+            description: 'A food safety plan or HACCP certificate is required for FSMA 204 compliance.',
+            dimension: 'Regulatory Alignment',
+          });
+        }
+      }
+
+      if (met < 3) {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'FSMA 204',
+          message: `FSMA 204 compliance critically low: only ${met}/${total} requirements met`,
+          is_hard_fail: false,
+        });
+      }
+
       details.push(`FSMA 204: ${met}/${total} requirements met`);
     } else if (regLower.includes('environment act')) {
-      total = 1;
-      if (doc_status['deforestation_free_declaration'] === true) met++;
-      else {
+      total = 5;
+
+      if (doc_status['due_diligence_assessment'] === true || doc_status['due_diligence_statement'] === true) {
+        met++;
+        details.push('UK Environment Act: Due diligence assessment present');
+      } else {
         remediation.push({
           priority: 'urgent',
-          title: 'Environment Act: Deforestation-free declaration needed',
-          description: 'The UK Environment Act requires a deforestation-free declaration.',
+          title: 'UK Environment Act: Due diligence assessment required',
+          description: 'A due diligence assessment demonstrating steps taken to assess and mitigate risk is required.',
           dimension: 'Regulatory Alignment',
         });
       }
-      details.push(`Environment Act: ${met}/${total} requirements met`);
+
+      if (doc_status['risk_assessment_report'] === true || doc_status['risk_assessment'] === true) {
+        met++;
+        details.push('UK Environment Act: Risk assessment scoring complete');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'UK Environment Act: Risk assessment scoring needed',
+          description: 'A risk assessment report with scoring for supply chain environmental risk is required.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      if (allHaveGps) {
+        met++;
+        details.push('UK Environment Act: Polygon-level geo-verification satisfied');
+      } else {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'UK Environment Act',
+          message: 'Polygon-level geo-verification incomplete for linked farms',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'UK Environment Act: Polygon geo-verification required',
+          description: 'Farm plots must have polygon-level GPS boundaries for UK Environment Act compliance.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const hasLandTitle = doc_status['land_title'] === true || doc_status['land_use_documentation'] === true || doc_status['land_title___ownership_proof'] === true;
+      if (hasLandTitle) {
+        met++;
+        details.push('UK Environment Act: Legality verification (land title docs) present');
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'UK Environment Act: Land title documentation needed',
+          description: 'Legality verification through land title or ownership documentation is required.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const destCountry = shipment.destination_country?.toLowerCase() || '';
+      const isHighRiskCountry = ['nigeria', 'brazil', 'indonesia', 'congo', 'cameroon', 'ghana', 'ivory coast'].some(c => destCountry.includes(c));
+      if (destCountry && !isHighRiskCountry) {
+        met++;
+        details.push('UK Environment Act: Country risk classified as standard');
+      } else if (isHighRiskCountry) {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'UK Environment Act',
+          message: `Source country classified as high-risk for deforestation`,
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'UK Environment Act: High-risk country — enhanced due diligence needed',
+          description: 'The source region is classified as high-risk for deforestation. Enhanced due diligence measures are required.',
+          dimension: 'Regulatory Alignment',
+        });
+      } else {
+        remediation.push({
+          priority: 'recommended',
+          title: 'UK Environment Act: Country risk classification pending',
+          description: 'Set destination country to enable automatic country risk classification.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      if (met < 3) {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'UK Environment Act',
+          message: `UK Environment Act compliance critically low: only ${met}/${total} requirements met`,
+          is_hard_fail: false,
+        });
+      }
+
+      details.push(`UK Environment Act: ${met}/${total} requirements met`);
+    } else if (regLower.includes('lacey') || regLower.includes('uflpa')) {
+      total = 6;
+
+      if (allTraceable) {
+        met++;
+        details.push('Lacey Act / UFLPA: Supply chain transparency verified');
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'Lacey Act / UFLPA',
+          message: 'Supply chain transparency verification failed — incomplete traceability',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'urgent',
+          title: 'Lacey Act / UFLPA: Supply chain transparency required',
+          description: 'Complete supply chain transparency with full traceability is required to verify lawful sourcing.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const hasCOO = doc_status['certificate_of_origin'] === true || doc_status['country_of_origin'] === true;
+      if (hasCOO) {
+        met++;
+        details.push('Lacey Act / UFLPA: Country-of-origin documentation present');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'Lacey Act / UFLPA: Country-of-origin documentation missing',
+          description: 'Country-of-origin documentation is required to verify lawful harvesting and sourcing.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const forcedLaborRiskCountries = ['china', 'xinjiang', 'north korea', 'myanmar', 'eritrea', 'turkmenistan'];
+      const sourceCountry = shipment.destination_country?.toLowerCase() || '';
+      const hasForcedLaborRisk = forcedLaborRiskCountries.some(c => sourceCountry.includes(c));
+      const hasForcedLaborDecl = doc_status['forced_labor_declaration'] === true || doc_status['uflpa_declaration'] === true;
+      if (!hasForcedLaborRisk || hasForcedLaborDecl) {
+        met++;
+        if (hasForcedLaborRisk) {
+          details.push('Lacey Act / UFLPA: Forced labor risk region — declaration obtained');
+        } else {
+          details.push('Lacey Act / UFLPA: Forced labor risk assessment — low risk');
+        }
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'Lacey Act / UFLPA',
+          message: 'Forced labor risk detected — UFLPA declaration missing',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'urgent',
+          title: 'UFLPA: Forced labor risk declaration required',
+          description: 'Source region flagged for forced labor risk. A UFLPA forced labor declaration is required for import.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const hasSpeciesID = doc_status['species_identification'] === true || doc_status['product_identification'] === true;
+      if (hasSpeciesID) {
+        met++;
+        details.push('Lacey Act / UFLPA: Species/product identification present');
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'Lacey Act: Species/product identification needed',
+          description: 'Species identification or product classification documentation is required for Lacey Act compliance (timber/minerals).',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const hasImportDecl = doc_status['import_declaration'] === true || doc_status['lacey_act_declaration'] === true;
+      if (hasImportDecl) {
+        met++;
+        details.push('Lacey Act / UFLPA: Import declaration compliance verified');
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'Lacey Act: Import declaration required',
+          description: 'An import declaration with species, quantity, and country of origin is required under the Lacey Act.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const totalFarms = items.reduce((sum, i) => sum + i.farm_count, 0);
+      const allFarmsLinked = items.every(i => i.farm_count > 0);
+      const allBagsLinked = batches.length === 0 || batches.every(b => b.batch_data!.bags_with_farm_link >= b.batch_data!.bag_count * 0.8);
+      if (allFarmsLinked && allBagsLinked && totalFarms > 0) {
+        met++;
+        details.push(`Lacey Act / UFLPA: Supply chain mapping complete (${totalFarms} farms mapped)`);
+      } else {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'Lacey Act / UFLPA',
+          message: 'Supply chain mapping incomplete — not all nodes verified',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'Lacey Act / UFLPA: Complete supply chain mapping',
+          description: 'Full supply chain mapping from source to export point is required for compliance verification.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      if (met < 3) {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'Lacey Act / UFLPA',
+          message: `Lacey Act / UFLPA compliance critically low: only ${met}/${total} requirements met`,
+          is_hard_fail: false,
+        });
+      }
+
+      details.push(`Lacey Act / UFLPA: ${met}/${total} requirements met`);
+    } else if (regLower.includes('buyer') || regLower.includes('custom')) {
+      const customRules = profile?.custom_rules || {};
+      total = 5;
+
+      const profileDocs = profile?.required_documents || [];
+      if (profileDocs.length > 0) {
+        const presentDocs = profileDocs.filter(doc => {
+          const key = doc.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+          return doc_status[key] === true || Object.keys(doc_status).some(k =>
+            k.toLowerCase().replace(/[^a-z0-9]+/g, '_') === key && doc_status[k] === true
+          );
+        });
+        if (presentDocs.length >= profileDocs.length) {
+          met++;
+          details.push(`Buyer Standards: All ${profileDocs.length} required documents present`);
+        } else {
+          const missingCount = profileDocs.length - presentDocs.length;
+          riskFlags.push({
+            severity: missingCount > profileDocs.length / 2 ? 'critical' : 'warning',
+            category: 'Buyer Standards',
+            message: `${missingCount} buyer-required document(s) missing`,
+            is_hard_fail: false,
+          });
+          remediation.push({
+            priority: 'important',
+            title: 'Buyer Standards: Complete required documentation',
+            description: `${missingCount} of ${profileDocs.length} buyer-required documents are missing. Review the buyer compliance profile for specifics.`,
+            dimension: 'Regulatory Alignment',
+          });
+        }
+      } else {
+        met++;
+        details.push('Buyer Standards: No specific document requirements defined');
+      }
+
+      const requiredGeoLevel = profile?.geo_verification_level || 'basic';
+      const geoLevelMap: Record<string, number> = { basic: 1, polygon: 2, satellite: 3 };
+      const achievedGeoLevel = allHaveGps ? (requiredGeoLevel === 'satellite' ? 3 : 2) : 1;
+      if (achievedGeoLevel >= (geoLevelMap[requiredGeoLevel] || 1)) {
+        met++;
+        details.push(`Buyer Standards: Geo-verification level met (${requiredGeoLevel})`);
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: `Buyer Standards: ${requiredGeoLevel}-level geo-verification required`,
+          description: `Buyer profile requires ${requiredGeoLevel}-level geo-verification. Current data does not meet this threshold.`,
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const requiredDepth = profile?.min_traceability_depth || 1;
+      const avgFarmCount = items.length > 0 ? items.reduce((sum, i) => sum + i.farm_count, 0) / items.length : 0;
+      if (allTraceable && avgFarmCount >= requiredDepth) {
+        met++;
+        details.push(`Buyer Standards: Traceability depth met (depth ${requiredDepth})`);
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'Buyer Standards: Traceability depth insufficient',
+          description: `Buyer requires traceability depth of ${requiredDepth}. Ensure all items have complete traceability chains.`,
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      const requiredCerts = profile?.required_certifications || [];
+      if (requiredCerts.length > 0) {
+        const certKeys = requiredCerts.map(c => c.toLowerCase().replace(/[^a-z0-9]+/g, '_'));
+        const hasCerts = certKeys.every(ck =>
+          doc_status[ck] === true || Object.keys(doc_status).some(k =>
+            k.toLowerCase().replace(/[^a-z0-9]+/g, '_').includes(ck) && doc_status[k] === true
+          )
+        );
+        if (hasCerts) {
+          met++;
+          details.push(`Buyer Standards: All ${requiredCerts.length} buyer certifications verified`);
+        } else {
+          remediation.push({
+            priority: 'important',
+            title: 'Buyer Standards: Buyer-specific certifications missing',
+            description: `Required certifications: ${requiredCerts.join(', ')}. Ensure all are obtained and uploaded.`,
+            dimension: 'Regulatory Alignment',
+          });
+        }
+      } else {
+        met++;
+        details.push('Buyer Standards: No specific certifications required');
+      }
+
+      const esgMetrics = customRules?.esg_metrics || {};
+      const labThresholds = customRules?.lab_test_thresholds || {};
+      const hasCustomChecks = Object.keys(esgMetrics).length > 0 || Object.keys(labThresholds).length > 0;
+      if (hasCustomChecks) {
+        const hasLabTest = doc_status['lab_test_certificate'] === true;
+        if (hasLabTest || Object.keys(labThresholds).length === 0) {
+          met++;
+          details.push('Buyer Standards: ESG/lab test thresholds satisfied');
+        } else {
+          riskFlags.push({
+            severity: 'warning',
+            category: 'Buyer Standards',
+            message: 'Custom lab test thresholds defined but lab test certificate missing',
+            is_hard_fail: false,
+          });
+          remediation.push({
+            priority: 'important',
+            title: 'Buyer Standards: Lab test results needed for custom thresholds',
+            description: 'Buyer has defined custom lab test thresholds. Upload lab test certificate for verification.',
+            dimension: 'Regulatory Alignment',
+          });
+        }
+      } else {
+        met++;
+        details.push('Buyer Standards: No custom ESG/lab thresholds defined');
+      }
+
+      details.push(`Buyer Standards: ${met}/${total} requirements met`);
     } else {
       total = 1;
       if (doc_status['quality_certificate'] === true) met++;

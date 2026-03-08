@@ -4,21 +4,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/client';
 import { useOrg } from '@/lib/contexts/org-context';
-import { ComplianceGauge } from '@/components/compliance-gauge';
-import { LiveSupplyMap } from '@/components/live-supply-map';
-import { DDSExportModal } from '@/components/dds-export-modal';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Package, Map, Users, Scale, FileDown, ClipboardCheck, UserPlus,
-  TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck
+  PieDonutChart,
+  VerticalBarChart,
+  HorizontalBarChart,
+  TrendLineChart,
+} from '@/components/charts';
+import {
+  Package, Map, Users, Scale,
+  TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck,
+  AlertTriangle, Ship, FileText, Activity
 } from 'lucide-react';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area
-} from 'recharts';
-import Link from 'next/link';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -31,6 +28,13 @@ interface AnalyticsData {
   farmSummary: { total: number; approved: number; pending: number; rejected: number };
   compliance: { farmRate: number; batchRate: number; bagRate: number; flaggedBatches: number };
   agentPerformance: Array<{ id: string; name: string; weight: number; bags: number; batches: number }>;
+  commodityBreakdown?: Array<{ name: string; weight: number; batches: number; complianceRate: number; totalFarms: number }>;
+  gradeDistribution?: Array<{ grade: string; count: number }>;
+  farmComplianceBreakdown?: Array<{ status: string; count: number }>;
+  shipmentDecisions?: Array<{ decision: string; count: number }>;
+  documentHealth?: Array<{ status: string; count: number }>;
+  riskIntelligence?: Array<{ type: string; count: number }>;
+  shipmentScores?: Array<{ id: string; name: string; overall: number; decision: string }>;
 }
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
@@ -39,6 +43,26 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: '90d', label: '90 Days' },
   { value: '1y', label: '1 Year' },
 ];
+
+const COMPLIANCE_COLORS: Record<string, string> = {
+  'Approved': '#16a34a',
+  'Pending': '#f59e0b',
+  'Rejected': '#dc2626',
+  'Not Reviewed': '#94a3b8',
+};
+
+const DECISION_COLORS: Record<string, string> = {
+  'Go': '#16a34a',
+  'Conditional': '#f59e0b',
+  'No Go': '#dc2626',
+  'Pending': '#94a3b8',
+};
+
+const DOC_HEALTH_COLORS: Record<string, string> = {
+  'Valid': '#2E7D6B',
+  'Expiring Soon': '#f59e0b',
+  'Expired': '#dc2626',
+};
 
 function TrendIndicator({ value }: { value: number }) {
   if (value > 0) {
@@ -75,7 +99,7 @@ export function AdminDashboard() {
     if (!organization) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}`);
+      const res = await fetch(`/api/analytics?period=${period}&section=all`);
       if (res.ok) {
         const data = await res.json();
         setAnalytics(data);
@@ -91,41 +115,120 @@ export function AdminDashboard() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
+  const overallComplianceRate = analytics
+    ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
+    : 0;
+
+  const activeShipments = analytics?.shipmentDecisions
+    ? analytics.shipmentDecisions.reduce((s, d) => s + d.count, 0)
+    : 0;
+
   const statCards = [
     {
       title: 'Total Farms',
       value: analytics?.farmSummary.total || 0,
       icon: Map,
-      description: 'Registered farms',
+      description: `${analytics?.farmSummary.approved || 0} approved`,
       trend: null as number | null,
+      color: 'text-emerald-600 dark:text-emerald-400',
     },
     {
-      title: 'Total Bags',
-      value: analytics?.bagSummary.total || 0,
-      icon: Package,
-      description: 'Bag inventory',
-      trend: analytics?.bagSummary.trend ?? null,
-    },
-    {
-      title: 'Total Weight',
+      title: 'Collection Volume',
       value: `${(analytics?.weightSummary.current || 0).toLocaleString()} kg`,
       icon: Scale,
-      description: `In selected period`,
+      description: `${analytics?.batchSummary.current || 0} batches collected`,
       trend: analytics?.weightSummary.trend ?? null,
+      color: 'text-blue-600 dark:text-blue-400',
     },
     {
-      title: 'Pending Review',
-      value: analytics?.farmSummary.pending || 0,
-      icon: Users,
-      description: 'Compliance pending',
+      title: 'Active Shipments',
+      value: activeShipments,
+      icon: Ship,
+      description: 'Recent shipments tracked',
       trend: null as number | null,
+      color: 'text-violet-600 dark:text-violet-400',
+    },
+    {
+      title: 'Compliance Rate',
+      value: `${overallComplianceRate}%`,
+      icon: ShieldCheck,
+      description: 'Avg across farms/batches/bags',
+      trend: null as number | null,
+      color: overallComplianceRate >= 80
+        ? 'text-green-600 dark:text-green-400'
+        : overallComplianceRate >= 50
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400',
     },
   ];
 
+  const flagItems = [
+    ...(analytics?.compliance.flaggedBatches
+      ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle }]
+      : []),
+    ...(analytics?.farmSummary.pending
+      ? [{ label: `${analytics.farmSummary.pending} farms pending compliance review`, priority: 'medium' as const, icon: Activity }]
+      : []),
+    ...(analytics?.farmSummary.rejected
+      ? [{ label: `${analytics.farmSummary.rejected} farm${analytics.farmSummary.rejected !== 1 ? 's' : ''} rejected`, priority: 'high' as const, icon: AlertTriangle }]
+      : []),
+    ...((analytics?.documentHealth || []).filter(d => d.status === 'Expired').map(d => ({
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expired`, priority: 'high' as const, icon: FileText,
+    }))),
+    ...((analytics?.documentHealth || []).filter(d => d.status === 'Expiring Soon').map(d => ({
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText,
+    }))),
+  ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
+
+  const commodityPieData = (analytics?.commodityBreakdown || []).map(c => ({
+    name: c.name,
+    value: Math.round(c.weight),
+  }));
+
+  const complianceDonutData = (analytics?.farmComplianceBreakdown || []).map(item => ({
+    name: item.status,
+    value: item.count,
+    color: COMPLIANCE_COLORS[item.status] || '#94a3b8',
+  }));
+
+  const gradeBarData = (analytics?.gradeDistribution || []).map(g => ({
+    grade: g.grade,
+    count: g.count,
+  }));
+
+  const shipmentDecisionData = (analytics?.shipmentDecisions || []).map(d => ({
+    name: d.decision,
+    value: d.count,
+    color: DECISION_COLORS[d.decision] || '#94a3b8',
+  }));
+
+  const agentBarData = (analytics?.agentPerformance || []).slice(0, 10).map(a => ({
+    name: a.name,
+    weight: Math.round(a.weight),
+  }));
+
+  const docHealthData = (analytics?.documentHealth || []).map(d => ({
+    name: d.status,
+    value: d.count,
+    color: DOC_HEALTH_COLORS[d.status] || '#94a3b8',
+  }));
+
+  const volumeTrendData = (analytics?.volumeTrends || []).map(v => ({
+    date: v.date,
+    weight: v.weight,
+    bags: v.bags,
+  }));
+
+  const loadingPlaceholder = (
+    <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+      Loading chart...
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="admin-dashboard">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold">Dashboard Overview</h2>
+        <h2 className="text-lg font-semibold" data-testid="text-dashboard-title">Dashboard Overview</h2>
         <div className="flex items-center gap-1" data-testid="period-selector">
           {PERIOD_OPTIONS.map((opt) => (
             <Button
@@ -141,15 +244,15 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stat-cards-row">
         {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(' ', '-')}`}>
+          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(' ', '-')}`}>
+              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
                 {isLoading ? '...' : stat.value}
               </div>
               <div className="flex items-center justify-between flex-wrap gap-1">
@@ -161,244 +264,232 @@ export function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3" data-testid="row-volume-commodity">
         <Card className="lg:col-span-2" data-testid="chart-volume-trends">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
               Volume Trends
             </CardTitle>
-            <CardDescription>Collection weight over time</CardDescription>
+            <CardDescription>Collection weight and bag count over time</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Loading chart...
+            {isLoading ? loadingPlaceholder : (
+              <TrendLineChart
+                data={volumeTrendData}
+                xKey="date"
+                series={[
+                  { dataKey: 'weight', label: 'Weight (kg)' },
+                  { dataKey: 'bags', label: 'Bags', color: '#6FB8A8' },
+                ]}
+                height={280}
+                xTickFormatter={(val) => {
+                  if (period === '1y') return val;
+                  const d = new Date(val);
+                  return `${d.getMonth() + 1}/${d.getDate()}`;
+                }}
+                valueFormatter={(v) => v.toLocaleString()}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-commodity-distribution">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Commodity Distribution
+            </CardTitle>
+            <CardDescription>Weight by commodity type</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : commodityPieData.length > 0 ? (
+              <PieDonutChart
+                data={commodityPieData}
+                donut
+                height={280}
+                showLabels={false}
+                labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No commodity data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-flags-shipments">
+        <Card data-testid="card-active-flags">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Active Flags Requiring Action
+            </CardTitle>
+            <CardDescription>Issues needing immediate attention</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : flagItems.length > 0 ? (
+              <div className="space-y-3">
+                {flagItems.map((flag, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50"
+                    data-testid={`flag-item-${idx}`}
+                  >
+                    <flag.icon className={`h-4 w-4 flex-shrink-0 ${
+                      flag.priority === 'high'
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-amber-500 dark:text-amber-400'
+                    }`} />
+                    <span className="text-sm flex-1">{flag.label}</span>
+                    <Badge
+                      variant={flag.priority === 'high' ? 'destructive' : 'secondary'}
+                      className="text-xs"
+                      data-testid={`badge-priority-${idx}`}
+                    >
+                      {flag.priority}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={analytics?.volumeTrends || []}>
-                  <defs>
-                    <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    tickFormatter={(val) => {
-                      if (period === '1y') return val;
-                      const d = new Date(val);
-                      return `${d.getMonth() + 1}/${d.getDate()}`;
-                    }}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value) => [`${Number(value || 0).toLocaleString()} kg`, 'Weight']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="weight"
-                    stroke="hsl(var(--primary))"
-                    fill="url(#weightGradient)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                No active flags
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card data-testid="card-compliance-overview">
-          <CardHeader>
+        <Card data-testid="chart-shipment-readiness">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Ship className="h-5 w-5" />
+              Shipment Readiness Summary
+            </CardTitle>
+            <CardDescription>Go / Conditional / No-Go distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : shipmentDecisionData.length > 0 ? (
+              <PieDonutChart
+                data={shipmentDecisionData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No shipment data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-compliance-grade">
+        <Card data-testid="chart-compliance-breakdown">
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5" />
-              Compliance Overview
+              Compliance Status Breakdown
             </CardTitle>
-            <CardDescription>Current compliance rates</CardDescription>
+            <CardDescription>Farm compliance distribution</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <span className="text-sm">Farm Compliance</span>
-                <span className="text-sm font-semibold" data-testid="value-farm-compliance">
-                  {isLoading ? '...' : `${analytics?.compliance.farmRate || 0}%`}
-                </span>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : complianceDonutData.length > 0 ? (
+              <PieDonutChart
+                data={complianceDonutData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No compliance data available
               </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-green-500 transition-all"
-                  style={{ width: `${analytics?.compliance.farmRate || 0}%` }}
-                />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <span className="text-sm">Batch Compliance</span>
-                <span className="text-sm font-semibold" data-testid="value-batch-compliance">
-                  {isLoading ? '...' : `${analytics?.compliance.batchRate || 0}%`}
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${analytics?.compliance.batchRate || 0}%` }}
-                />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <span className="text-sm">Bag Compliance</span>
-                <span className="text-sm font-semibold" data-testid="value-bag-compliance">
-                  {isLoading ? '...' : `${analytics?.compliance.bagRate || 0}%`}
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-purple-500 transition-all"
-                  style={{ width: `${analytics?.compliance.bagRate || 0}%` }}
-                />
-              </div>
-            </div>
-            {(analytics?.compliance.flaggedBatches || 0) > 0 && (
-              <div className="p-3 rounded-md bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
-                <p className="text-sm text-orange-700 dark:text-orange-400" data-testid="text-flagged-batches">
-                  {analytics?.compliance.flaggedBatches} batch{analytics?.compliance.flaggedBatches !== 1 ? 'es' : ''} flagged for review
-                </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-grade-distribution">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Grade Distribution
+            </CardTitle>
+            <CardDescription>Bag grades across inventory</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : gradeBarData.length > 0 ? (
+              <VerticalBarChart
+                data={gradeBarData}
+                dataKey="count"
+                categoryKey="grade"
+                height={280}
+                barLabel="Count"
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No grade data available
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <ComplianceGauge
-          approvedCount={analytics?.farmSummary.approved || 0}
-          totalCount={analytics?.farmSummary.total || 0}
-        />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <DDSExportModal
-              trigger={
-                <Button variant="outline" className="w-full justify-start" data-testid="button-dds-export">
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export DDS (EU TRACES)
-                </Button>
-              }
-            />
-            <Link href="/app/compliance">
-              <Button variant="outline" className="w-full justify-start" data-testid="button-compliance-review">
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Review Compliance
-              </Button>
-            </Link>
-            <Link href="/app/settings?tab=team">
-              <Button variant="outline" className="w-full justify-start" data-testid="button-manage-team">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Manage Team
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-batch-summary">
-          <CardHeader>
-            <CardTitle>Period Summary</CardTitle>
-            <CardDescription>Activity in selected period</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <span className="text-sm text-muted-foreground">Batches</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold" data-testid="value-period-batches">
-                  {isLoading ? '...' : analytics?.batchSummary.current || 0}
-                </span>
-                {analytics?.batchSummary.trend !== undefined && (
-                  <TrendIndicator value={analytics.batchSummary.trend} />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <span className="text-sm text-muted-foreground">Bags Collected</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold" data-testid="value-period-bags">
-                  {isLoading ? '...' : analytics?.bagSummary.current || 0}
-                </span>
-                {analytics?.bagSummary.trend !== undefined && (
-                  <TrendIndicator value={analytics.bagSummary.trend} />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <span className="text-sm text-muted-foreground">Weight (kg)</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold" data-testid="value-period-weight">
-                  {isLoading ? '...' : (analytics?.weightSummary.current || 0).toLocaleString()}
-                </span>
-                {analytics?.weightSummary.trend !== undefined && (
-                  <TrendIndicator value={analytics.weightSummary.trend} />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <span className="text-sm text-muted-foreground">Active Agents</span>
-              <span className="font-semibold" data-testid="value-active-agents">
-                {isLoading ? '...' : analytics?.agentPerformance.length || 0}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {(analytics?.agentPerformance?.length || 0) > 0 && (
-        <Card data-testid="card-agent-performance">
-          <CardHeader>
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-agent-docs">
+        <Card data-testid="chart-agent-performance">
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Agent Performance
             </CardTitle>
-            <CardDescription>Top performing agents in selected period</CardDescription>
+            <CardDescription>Top agents by collection weight (kg)</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Agent</TableHead>
-                  <TableHead className="text-right">Batches</TableHead>
-                  <TableHead className="text-right">Bags</TableHead>
-                  <TableHead className="text-right">Weight (kg)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {analytics?.agentPerformance.map((agent, idx) => (
-                  <TableRow key={agent.id} data-testid={`row-agent-${idx}`}>
-                    <TableCell className="font-medium">{agent.name}</TableCell>
-                    <TableCell className="text-right">{agent.batches}</TableCell>
-                    <TableCell className="text-right">{agent.bags}</TableCell>
-                    <TableCell className="text-right">{agent.weight.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {isLoading ? loadingPlaceholder : agentBarData.length > 0 ? (
+              <HorizontalBarChart
+                data={agentBarData}
+                dataKey="weight"
+                categoryKey="name"
+                height={280}
+                barLabel="Weight (kg)"
+                color="#2E7D6B"
+                valueFormatter={(v) => `${v.toLocaleString()} kg`}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No agent data available
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
-      <LiveSupplyMap />
+        <Card data-testid="chart-document-health">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Document Health
+            </CardTitle>
+            <CardDescription>Expiring and expired documents needing attention</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : docHealthData.length > 0 ? (
+              <PieDonutChart
+                data={docHealthData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No document data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

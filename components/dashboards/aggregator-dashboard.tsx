@@ -19,13 +19,20 @@ import {
   Minus,
   Users,
   Plus,
-  BarChart3
+  BarChart3,
+  Leaf,
+  Wheat
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import {
+  PieDonutChart,
+  VerticalBarChart,
+  HorizontalBarChart,
+} from '@/components/charts';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -101,6 +108,10 @@ export function AggregatorDashboard() {
   const [trendPeriod, setTrendPeriod] = useState<Period>('30d');
   const [weightTrend, setWeightTrend] = useState(0);
   const [isTrendLoading, setIsTrendLoading] = useState(true);
+  const [commodityData, setCommodityData] = useState<Array<{ name: string; value: number }>>([]);
+  const [gradeData, setGradeData] = useState<Array<{ grade: string; count: number }>>([]);
+  const [agentData, setAgentData] = useState<Array<{ name: string; weight: number }>>([]);
+  const [deforestationData, setDeforestationData] = useState<Array<{ name: string; value: number }>>([]);
   const { organization } = useOrg();
   const supabase = createClient();
 
@@ -179,6 +190,31 @@ export function AggregatorDashboard() {
         const data = await res.json();
         setVolumeTrends(data.volumeTrends || []);
         setWeightTrend(data.weightSummary?.trend || 0);
+
+        if (data.commodityBreakdown) {
+          setCommodityData(
+            data.commodityBreakdown.map((c: any) => ({ name: c.name, value: Math.round(c.weight) }))
+          );
+        }
+
+        if (data.gradeDistribution) {
+          setGradeData(data.gradeDistribution);
+        }
+
+        if (data.agentPerformance) {
+          setAgentData(
+            data.agentPerformance.slice(0, 10).map((a: any) => ({
+              name: a.name,
+              weight: Math.round(a.weight),
+            }))
+          );
+        }
+
+        if (data.deforestationRisk) {
+          setDeforestationData(
+            data.deforestationRisk.map((d: any) => ({ name: d.level, value: d.count }))
+          );
+        }
       }
     } catch (error) {
       console.error('Failed to fetch trends:', error);
@@ -205,17 +241,19 @@ export function AggregatorDashboard() {
     { label: 'Total Dispatched', value: stats.totalWeight },
   ];
 
+  const DEFORESTATION_COLORS = ['#2E7D6B', '#6FB8A8', '#E9A23B', '#D84315'];
+
   return (
-    <>
+    <div data-testid="aggregator-dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
+          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
                 {isLoading ? '...' : stat.value}
               </div>
             </CardContent>
@@ -297,6 +335,126 @@ export function AggregatorDashboard() {
         </CardContent>
       </Card>
 
+      <div className="grid gap-4 md:grid-cols-2 mt-4">
+        <Card data-testid="card-commodity-distribution">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wheat className="h-5 w-5" />
+              Commodity Distribution
+            </CardTitle>
+            <CardDescription>Collection volume by commodity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isTrendLoading ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                Loading chart...
+              </div>
+            ) : commodityData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground" data-testid="text-no-commodity-data">
+                No commodity data available
+              </div>
+            ) : (
+              <PieDonutChart
+                data={commodityData}
+                donut
+                height={280}
+                labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-grade-distribution">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Grade Distribution
+            </CardTitle>
+            <CardDescription>Bags by quality grade</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isTrendLoading ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                Loading chart...
+              </div>
+            ) : gradeData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground" data-testid="text-no-grade-data">
+                No grade data available
+              </div>
+            ) : (
+              <VerticalBarChart
+                data={gradeData}
+                dataKey="count"
+                categoryKey="grade"
+                height={280}
+                barLabel="Bags"
+                colors={['#2E7D6B', '#1F5F52', '#6FB8A8', '#3A9B8A', '#8ECDC0']}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 mt-4">
+        <Card data-testid="card-agent-ranking">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Agent Performance Ranking
+            </CardTitle>
+            <CardDescription>Top agents by collection weight (kg)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isTrendLoading ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                Loading chart...
+              </div>
+            ) : agentData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground" data-testid="text-no-agent-data">
+                No agent data available
+              </div>
+            ) : (
+              <HorizontalBarChart
+                data={agentData}
+                dataKey="weight"
+                categoryKey="name"
+                height={280}
+                barLabel="Weight (kg)"
+                valueFormatter={(v) => `${v.toLocaleString()} kg`}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-deforestation-risk">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Leaf className="h-5 w-5" />
+              Deforestation Risk
+            </CardTitle>
+            <CardDescription>Farm risk distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isTrendLoading ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                Loading chart...
+              </div>
+            ) : deforestationData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground" data-testid="text-no-deforestation-data">
+                No deforestation data available
+              </div>
+            ) : (
+              <PieDonutChart
+                data={deforestationData}
+                donut
+                height={280}
+                colors={DEFORESTATION_COLORS}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -309,7 +467,7 @@ export function AggregatorDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {weightCards.map((item) => (
-                <div key={item.label} className="text-center p-4 rounded-lg bg-muted/50">
+                <div key={item.label} className="text-center p-4 rounded-md bg-muted/50" data-testid={`weight-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
                   <p className="text-sm text-muted-foreground">{item.label}</p>
                   <p className="text-2xl font-bold mt-1">
                     {isLoading ? '...' : item.value.toLocaleString()}
@@ -321,7 +479,7 @@ export function AggregatorDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-compliance-health">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -331,14 +489,14 @@ export function AggregatorDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <div className="text-4xl font-bold text-green-600">
+              <div className="text-4xl font-bold text-green-600" data-testid="value-compliance-score">
                 {isLoading ? '...' : `${stats.complianceScore}%`}
               </div>
               <p className="text-sm text-muted-foreground">Compliance Score</p>
             </div>
             <Progress value={stats.complianceScore} className="h-2" />
             {stats.flaggedBatches > 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center gap-2 p-3 rounded-md bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800" data-testid="alert-flagged-batches">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
                 <span className="text-sm text-orange-700 dark:text-orange-400">
                   {stats.flaggedBatches} batch{stats.flaggedBatches !== 1 ? 'es' : ''} flagged
@@ -350,7 +508,7 @@ export function AggregatorDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 mt-4">
-        <Card>
+        <Card data-testid="card-open-batches">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-orange-500" />
@@ -363,11 +521,11 @@ export function AggregatorDashboard() {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">Collecting</Badge>
-                  <span className="font-medium">{stats.collectingBatches}</span>
+                  <span className="font-medium" data-testid="value-collecting">{stats.collectingBatches}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="default">Ready to Dispatch</Badge>
-                  <span className="font-medium">{stats.resolvedBatches}</span>
+                  <span className="font-medium" data-testid="value-ready-dispatch">{stats.resolvedBatches}</span>
                 </div>
               </div>
               {(stats.collectingBatches > 0 || stats.resolvedBatches > 0) && (
@@ -382,7 +540,7 @@ export function AggregatorDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-quick-actions">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -412,6 +570,6 @@ export function AggregatorDashboard() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

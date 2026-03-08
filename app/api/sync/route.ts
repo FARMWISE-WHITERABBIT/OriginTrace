@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,62 +11,18 @@ function createServiceClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  
-  const token = authHeader.split(' ')[1];
-  const supabase = createServiceClient();
-  
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  
-  return user;
-}
-
-async function getUserFromCookies(request: NextRequest) {
-  const supabase = createServiceClient();
-  const cookieHeader = request.headers.get('cookie');
-  
-  if (!cookieHeader) return null;
-  
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(c => {
-      const [key, ...val] = c.trim().split('=');
-      return [key, val.join('=')];
-    })
-  );
-  
-  const accessToken = cookies['sb-access-token'] || 
-    Object.entries(cookies).find(([k]) => k.includes('auth-token'))?.[1];
-  
-  if (!accessToken) return null;
-  
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-    if (error || !user) return null;
-    return user;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-    
-    if (!user) {
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const { data: profile, error: profileError } = await supabase
+
+    const serviceClient = createServiceClient();
+
+    const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
       .select('id, org_id, role')
       .eq('user_id', user.id)
@@ -76,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (profile.role === 'admin' || profile.role === 'aggregator') {
-      const { data: syncStatus, error } = await supabase
+      const { data: syncStatus, error } = await serviceClient
         .from('agent_sync_status')
         .select(`
           *,
@@ -86,13 +43,16 @@ export async function GET(request: NextRequest) {
         .order('last_seen_at', { ascending: false });
       
       if (error) {
+        if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
+          return NextResponse.json({ sync_status: [] });
+        }
         console.error('Sync status fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
       }
       
       return NextResponse.json({ sync_status: syncStatus || [] });
     } else {
-      const { data: syncStatus, error } = await supabase
+      const { data: syncStatus, error } = await serviceClient
         .from('agent_sync_status')
         .select('*')
         .eq('agent_id', profile.id)
@@ -100,6 +60,9 @@ export async function GET(request: NextRequest) {
         .limit(1);
       
       if (error) {
+        if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
+          return NextResponse.json({ sync_status: null });
+        }
         console.error('Sync status fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
       }
@@ -115,18 +78,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-    
-    if (!user) {
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const { data: profile, error: profileError } = await supabase
+
+    const serviceClient = createServiceClient();
+
+    const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
       .select('id, org_id, role')
       .eq('user_id', user.id)
@@ -139,24 +100,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { device_id, pending_batches, pending_bags, app_version, is_online } = body;
     
-    const { data: syncStatus, error } = await supabase
+    const upsertPayload: Record<string, any> = {
+      org_id: profile.org_id,
+      agent_id: profile.id,
+      last_seen_at: new Date().toISOString(),
+      pending_batches: pending_batches || 0,
+      pending_bags: pending_bags || 0,
+      is_online: is_online !== false
+    };
+
+    let { data: syncStatus, error } = await serviceClient
       .from('agent_sync_status')
-      .upsert({
-        org_id: profile.org_id,
-        agent_id: profile.id,
-        device_id: device_id || 'web',
-        last_seen_at: new Date().toISOString(),
-        pending_batches: pending_batches || 0,
-        pending_bags: pending_bags || 0,
-        app_version: app_version || '1.0.0',
-        is_online: is_online !== false
-      }, {
-        onConflict: 'agent_id,device_id'
+      .upsert(upsertPayload, {
+        onConflict: 'agent_id'
       })
       .select()
       .single();
     
     if (error) {
+      if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
+        return NextResponse.json({ sync_status: null, success: true });
+      }
       console.error('Error updating sync status:', error);
       return NextResponse.json({ error: 'Failed to update sync status' }, { status: 500 });
     }
@@ -171,18 +135,16 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    
-    let user = await getAuthenticatedUser(request);
-    if (!user) {
-      user = await getUserFromCookies(request);
-    }
-    
-    if (!user) {
+    const supabase = await createServerClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const { data: profile, error: profileError } = await supabase
+
+    const serviceClient = createServiceClient();
+
+    const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
       .select('id, org_id, role')
       .eq('user_id', user.id)
@@ -204,7 +166,7 @@ export async function PUT(request: NextRequest) {
     for (const batch of batches) {
       const { local_id, batch_id, farm_id, commodity, state, lga, community, gps_lat, gps_lng, contributors, bags, notes, collected_at } = batch;
       
-      const { data: existingBatch } = await supabase
+      const { data: existingBatch } = await serviceClient
         .from('collection_batches')
         .select('id')
         .eq('local_id', local_id)
@@ -223,7 +185,7 @@ export async function PUT(request: NextRequest) {
       
       const parsedFarmId = farm_id && farm_id !== 'unknown' ? (parseInt(farm_id) || null) : null;
       
-      const { data: newBatch, error: batchError } = await supabase
+      const { data: newBatch, error: batchError } = await serviceClient
         .from('collection_batches')
         .insert({
           org_id: profile.org_id,
@@ -255,7 +217,7 @@ export async function PUT(request: NextRequest) {
         for (const contrib of contributors) {
           if (contrib.bag_count > 0) {
             try {
-              await supabase
+              await serviceClient
                 .from('batch_contributions')
                 .insert({
                   batch_id: newBatch.id,
@@ -273,7 +235,7 @@ export async function PUT(request: NextRequest) {
       if (bags && bags.length > 0) {
         for (const bag of bags) {
           if (bag.serial) {
-            await supabase
+            await serviceClient
               .from('bags')
               .update({
                 collection_batch_id: newBatch.id,
@@ -290,7 +252,7 @@ export async function PUT(request: NextRequest) {
       results.push({ local_id, status: 'synced', id: newBatch.id });
     }
     
-    await supabase
+    await serviceClient
       .from('agent_sync_status')
       .update({ 
         pending_batches: 0, 
