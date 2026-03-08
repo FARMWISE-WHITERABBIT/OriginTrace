@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import HeroBackground from '@/components/marketing/hero-background';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -179,6 +180,7 @@ export default function UAECompliancePage() {
     <>
       <MarketingNav />
 
+      <FAQSchema faqs={faqs} />
       <main className="min-h-screen">
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
           <HeroBackground />
@@ -497,6 +499,7 @@ export default function UAECompliancePage() {
                       <button
                         onClick={() => setOpenFaq(openFaq === index ? null : index)}
                         className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                        aria-expanded={openFaq === index}
                         data-testid={`button-faq-${index}`}
                       >
                         <span className="text-sm font-semibold text-slate-900 dark:text-white">{faq.question}</span>

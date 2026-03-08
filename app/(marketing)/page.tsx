@@ -188,8 +188,32 @@ const blogPosts = [
 export default function HomePage() {
   const [openCapability, setOpenCapability] = useState(0);
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'OriginTrace',
+    url: 'https://origintrace.trade',
+    logo: 'https://origintrace.trade/images/logo-green.png',
+    description: 'Trust infrastructure for origin-sensitive supply chains. Supply chain traceability, compliance verification, and export readiness platform.',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'hello@origintrace.trade',
+      contactType: 'sales',
+    },
+  };
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'OriginTrace',
+    url: 'https://origintrace.trade',
+    description: 'Trust infrastructure for origin-sensitive supply chains.',
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
       <MarketingNav />
 
       <main>

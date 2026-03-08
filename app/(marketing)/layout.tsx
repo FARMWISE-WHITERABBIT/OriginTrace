@@ -14,6 +14,11 @@ export const metadata: Metadata = {
     title: 'OriginTrace — Supply Chain Compliance & Traceability Platform',
     description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'OriginTrace — Supply Chain Compliance & Traceability Platform',
+    description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
+  },
 };
 
 export default function MarketingLayout({

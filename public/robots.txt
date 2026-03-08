@@ -4,6 +4,17 @@ Allow: /solutions
 Allow: /pedigree
 Allow: /processors
 Allow: /demo
+Allow: /api-docs
+Allow: /compliance
+Allow: /compliance/eudr
+Allow: /compliance/usa
+Allow: /compliance/uk
+Allow: /compliance/china
+Allow: /compliance/uae
+Allow: /industries/agriculture
+Allow: /industries/timber
+Allow: /industries/textiles
+Allow: /industries/minerals
 
 Disallow: /app/
 Disallow: /superadmin/
