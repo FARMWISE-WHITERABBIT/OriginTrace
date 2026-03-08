@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   Search,
   TrendingDown,
-  Ban
+  Ban,
+  ArrowRight
 } from 'lucide-react';
 
 const segments = [
@@ -89,152 +90,176 @@ const segments = [
 
 export default function SolutionsPage() {
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      <MarketingNav />
+    <>
+<div className="min-h-screen bg-background overflow-x-hidden">
+        <MarketingNav />
 
-      <main>
-        <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden bg-slate-50 dark:bg-slate-900/20">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-          
-          <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <FadeIn>
-              <div className="max-w-3xl">
-                <p className="text-sm font-medium text-primary mb-4 tracking-wide uppercase">
-                  Solutions by Role
-                </p>
-                <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50">
-                  Built for Every Role in the Export Chain
-                </h1>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                  Whether you are sourcing from smallholders, processing for export, managing compliance documentation, or overseeing national trade performance — OriginTrace provides the infrastructure you need to reduce rejection risk.
-                </p>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
-
-        {segments.map((segment, segIdx) => (
-          <section 
-            key={segment.id} 
-            id={segment.id}
-            className={`py-16 md:py-20 ${segIdx % 2 === 1 ? 'bg-muted/30' : ''} border-t`}
-          >
-            <div className="max-w-6xl mx-auto px-6">
+        <main>
+          <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden bg-slate-50 dark:bg-slate-900/20">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
+            
+            <div className="max-w-6xl mx-auto px-6 relative z-10">
               <FadeIn>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <segment.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <p className="text-xs font-medium text-primary tracking-wide uppercase">
-                    {segment.label}
+                <div className="max-w-3xl">
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-hero">
+                    [ Solutions by Role ]
+                  </p>
+                  <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50" data-testid="text-hero-heading">
+                    Built for Every Role in the Export Chain
+                  </h1>
+                  <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl" data-testid="text-hero-description">
+                    Whether you are sourcing from smallholders, processing for export, managing compliance documentation, or overseeing national trade performance — OriginTrace provides the infrastructure you need to reduce rejection risk.
                   </p>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-semibold mb-3">
-                  {segment.headline}
-                </h2>
-                <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">
-                  {segment.description}
+              </FadeIn>
+            </div>
+          </section>
+
+          {segments.map((segment, segIdx) => (
+            <section 
+              key={segment.id} 
+              id={segment.id}
+              className={`py-20 md:py-28 border-t border-slate-200 dark:border-slate-800 ${
+                segIdx % 2 === 1 
+                  ? 'bg-slate-50 dark:bg-slate-900/30' 
+                  : 'bg-background'
+              }`}
+              data-testid={`section-${segment.id}`}
+            >
+              <div className="max-w-6xl mx-auto px-6">
+                <FadeIn>
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid={`text-section-label-${segment.id}`}>
+                    [ {segment.label} ]
+                  </p>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-9 w-9 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                      <segment.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                      {segment.tagline}
+                    </p>
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid={`text-heading-${segment.id}`}>
+                    {segment.headline}
+                  </h2>
+                  <p className="text-muted-foreground mb-10 max-w-2xl leading-relaxed text-base" data-testid={`text-description-${segment.id}`}>
+                    {segment.description}
+                  </p>
+                </FadeIn>
+
+                <StaggerContainer className="grid md:grid-cols-2 gap-6 mb-10">
+                  {segment.features.map((feature, i) => (
+                    <StaggerItem key={i}>
+                      <Card className="h-full hover-elevate" data-testid={`card-feature-${segment.id}-${i}`}>
+                        <CardContent className="p-6">
+                          <div className="flex gap-4">
+                            <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                              <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold mb-1 text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-${segment.id}-${i}`}>{feature.title}</h3>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {feature.desc}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+
+                <FadeIn>
+                  <div className="flex items-center gap-4">
+                    <Link href="/demo">
+                      <Button className="gap-2 bg-emerald-600 text-white" data-testid={`button-demo-${segment.id}`}>
+                        See How It Works
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href="/compliance/eudr" className="text-sm text-emerald-600 dark:text-emerald-400 font-medium hover:underline" data-testid={`link-compliance-${segment.id}`}>
+                      View compliance coverage
+                    </Link>
+                  </div>
+                </FadeIn>
+              </div>
+            </section>
+          ))}
+
+          <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-200 dark:border-slate-800">
+            <div className="max-w-6xl mx-auto px-6">
+              <FadeIn className="text-center mb-14">
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-field-ops">
+                  [ Field Operations ]
                 </p>
-                <p className="text-sm font-medium text-primary mb-8">
-                  Focus: {segment.tagline}
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-field-ops">
+                  Designed for Real-World Export Operations
+                </h2>
+                <p className="text-muted-foreground max-w-xl mx-auto text-base">
+                  Your field agents work in remote areas with limited connectivity. 
+                  OriginTrace is built to capture reliable data in the most challenging conditions.
                 </p>
               </FadeIn>
-
-              <StaggerContainer className="grid md:grid-cols-2 gap-6">
-                {segment.features.map((feature, i) => (
-                  <StaggerItem key={i}>
-                    <Card className="h-full">
-                      <CardContent className="p-6">
-                        <div className="flex gap-4">
-                          <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <feature.icon className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium mb-1">{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {feature.desc}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
+              
+              <StaggerContainer className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <StaggerItem className="text-center">
+                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                    <Smartphone className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-pwa">Mobile-First PWA</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Works on any smartphone without app store downloads
+                  </p>
+                </StaggerItem>
+                
+                <StaggerItem className="text-center">
+                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                    <Wifi className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-offline">Offline-First Design</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Collect data without connectivity. Auto-syncs when network returns
+                  </p>
+                </StaggerItem>
+                
+                <StaggerItem className="text-center">
+                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-hc-ui">High Contrast UI</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Large touch targets and readable text for outdoor use
+                  </p>
+                </StaggerItem>
               </StaggerContainer>
             </div>
           </section>
-        ))}
 
-        <section className="py-16 bg-muted/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-primary mb-3 tracking-wide uppercase">
-                Field Operations
-              </p>
-              <h2 className="text-2xl md:text-3xl font-semibold mb-4">
-                Designed for Real-World Export Operations
-              </h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Your field agents work in remote areas with limited connectivity. 
-                OriginTrace is built to capture reliable data in the most challenging conditions.
-              </p>
-            </FadeIn>
-            
-            <StaggerContainer className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <StaggerItem className="text-center">
-                <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Smartphone className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-medium mb-2">Mobile-First PWA</h3>
-                <p className="text-sm text-muted-foreground">
-                  Works on any smartphone without app store downloads
+          <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
+            <div className="max-w-6xl mx-auto px-6 text-center">
+              <FadeIn>
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-cta">
+                  [ Get Started ]
                 </p>
-              </StaggerItem>
-              
-              <StaggerItem className="text-center">
-                <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Wifi className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-medium mb-2">Offline-First Design</h3>
-                <p className="text-sm text-muted-foreground">
-                  Collect data without connectivity. Auto-syncs when network returns
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-cta">
+                  Ready to reduce shipment rejection risk?
+                </h2>
+                <p className="text-muted-foreground max-w-lg mx-auto mb-8 text-base">
+                  Schedule a consultation to see how OriginTrace fits your export compliance workflow.
                 </p>
-              </StaggerItem>
-              
-              <StaggerItem className="text-center">
-                <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-medium mb-2">High Contrast UI</h3>
-                <p className="text-sm text-muted-foreground">
-                  Large touch targets and readable text for outdoor use
-                </p>
-              </StaggerItem>
-            </StaggerContainer>
-          </div>
-        </section>
+                <Link href="/demo">
+                  <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-request-demo">
+                    Request Demo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </FadeIn>
+            </div>
+          </section>
+        </main>
 
-        <section className="py-20">
-          <div className="max-w-6xl mx-auto px-6 text-center">
-            <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-semibold mb-4">
-                Ready to reduce shipment rejection risk?
-              </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                Schedule a consultation to see how OriginTrace fits your export compliance workflow.
-              </p>
-              <Link href="/demo">
-                <Button size="lg" className="gap-2" data-testid="button-request-demo">
-                  Request Demo
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </FadeIn>
-          </div>
-        </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+        <MarketingFooter />
+      </div>
+    </>
   );
 }

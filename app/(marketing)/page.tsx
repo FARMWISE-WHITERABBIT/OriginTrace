@@ -197,18 +197,18 @@ export default function HomePage() {
               </FadeIn>
 
               <FadeIn delay={0.1}>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 text-slate-900 dark:text-white" data-testid="text-hero-headline">
-                  Compliance Infrastructure{' '}
-                  <span className="block mt-2">
-                    for <IndustryTicker />
-                  </span>
+                <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight leading-[1.1] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
+                  Compliance Infrastructure
+                  <br />
+                  for <IndustryTicker />
                 </h1>
               </FadeIn>
 
               <FadeIn delay={0.2}>
                 <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed mb-10 max-w-2xl mx-auto">
-                  Prevent shipment rejections with pre-shipment compliance scoring, 
-                  offline-first field operations, and end-to-end traceability from origin to destination.
+                  OriginTrace is the all-in-one platform for supply chain traceability, 
+                  compliance verification, and export readiness — helping exporters prevent 
+                  shipment rejections before cargo reaches port.
                 </p>
               </FadeIn>
 
@@ -271,7 +271,7 @@ export default function HomePage() {
               </FadeIn>
 
               <FadeIn direction="left">
-                <h2 className="text-2xl md:text-3xl font-bold mb-6 text-slate-900 dark:text-white">
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-6 text-slate-900 dark:text-white">
                   Whether you're an exporter, processor, or buyer — we help you ship with confidence.
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
@@ -320,7 +320,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ The Problem ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-problem-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-problem-headline">
                 Why Shipments Get Rejected
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -360,7 +360,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Platform Capabilities ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-capabilities-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-capabilities-headline">
                 Everything You Need to Ship with Confidence
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-6">
@@ -425,7 +425,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Shipment Readiness Score ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-readiness-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-readiness-headline">
                 Know Before You Ship
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -543,7 +543,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Use Cases ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-usecases-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-usecases-headline">
                 How OriginTrace Works Across Verticals
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -591,7 +591,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Regulatory Coverage ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-compliance-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-compliance-headline">
                 Multi-Regulatory Compliance Coverage
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -633,7 +633,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ End-to-End Visibility ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-flow-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-flow-headline">
                 Origin-to-Destination Visibility
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -680,7 +680,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ What Our Clients Say ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-testimonials-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-testimonials-headline">
                 Trusted by Exporters Worldwide
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -702,7 +702,7 @@ export default function HomePage() {
 
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start mt-10">
               <FadeIn direction="right">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white">
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white">
                   Regulatory Readiness Assessment
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
@@ -759,7 +759,7 @@ export default function HomePage() {
                   <div className="grid md:grid-cols-2 gap-8 items-center">
                     <div>
                       <span className="text-xs font-medium text-emerald-300 uppercase tracking-[0.2em] mb-4 block">[ Product Pedigree ]</span>
-                      <h2 className="text-2xl md:text-3xl font-bold mb-4">
+                      <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
                         The Non-Falsifiable Pedigree
                       </h2>
                       <p className="text-emerald-100/80 mb-6 leading-relaxed">
@@ -819,7 +819,7 @@ export default function HomePage() {
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Insights ]</span>
             </FadeIn>
             <FadeIn className="text-center mb-14">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-blog-headline">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-blog-headline">
                 Expert Insights & Compliance Updates
               </h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
@@ -855,7 +855,7 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>
               <div className="max-w-3xl mx-auto text-center">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 dark:text-white" data-testid="text-final-cta-headline">
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-final-cta-headline">
                   Ready to build trust into your supply chain?
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-10">
