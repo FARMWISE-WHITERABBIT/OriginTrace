@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith('/auth');
   const publicPages = ['/', '/solutions', '/pedigree', '/demo', '/processors', '/api-docs', '/superadmin/login'];
-  const isPublicPage = publicPages.includes(pathname) || pathname.startsWith('/verify') || pathname.startsWith('/compliance');
+  const isPublicPage = publicPages.includes(pathname) || pathname.startsWith('/verify') || pathname.startsWith('/compliance') || pathname.startsWith('/industries');
   const isResetPasswordPage = pathname === '/auth/reset-password';
   const isApiRoute = pathname.startsWith('/api');
   const isSuperadminPage = pathname.startsWith('/superadmin');

@@ -5,7 +5,7 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
       <div className="max-w-6xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10">
           <div className="col-span-2 md:col-span-1">
             <Image 
               src="/images/logo-green.png" 
@@ -58,6 +58,16 @@ export function MarketingFooter() {
             </ul>
           </div>
           
+          <div>
+            <h4 className="text-sm font-semibold mb-4 text-slate-900 dark:text-white">Industries</h4>
+            <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
+              <li><Link href="/industries/agriculture" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-agriculture">Agriculture</Link></li>
+              <li><Link href="/industries/timber" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-timber">Timber</Link></li>
+              <li><Link href="/industries/textiles" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-textiles">Textiles</Link></li>
+              <li><Link href="/industries/minerals" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-minerals">Minerals</Link></li>
+            </ul>
+          </div>
+
           <div>
             <h4 className="text-sm font-semibold mb-4 text-slate-900 dark:text-white">Company</h4>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">

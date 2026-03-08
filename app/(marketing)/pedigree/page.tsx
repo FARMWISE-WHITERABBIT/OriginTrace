@@ -21,7 +21,16 @@ import {
   FileCheck,
   Layers,
   Fingerprint,
-  ArrowRight
+  ArrowRight,
+  Code2,
+  ExternalLink,
+  Leaf,
+  Link2,
+  ScanLine,
+  Database,
+  FileJson,
+  BadgeCheck,
+  Share2
 } from 'lucide-react';
 
 export default function PedigreePage() {
@@ -37,14 +46,15 @@ export default function PedigreePage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <FadeIn direction="right">
                 <p className="text-sm font-semibold text-primary mb-4 tracking-widest uppercase" data-testid="text-section-label-hero">
-                  [ Product Pedigree ]
+                  [ Pedigree & Digital Product Passport ]
                 </p>
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50" data-testid="text-hero-heading">
-                  The Non-Falsifiable Pedigree.
+                  The Non-Falsifiable Pedigree. The Digital Product Passport.
                 </h1>
                 <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8" data-testid="text-hero-description">
                   A single QR code on your finished good links back to the exact GPS coordinates 
-                  of every contributing farm. Auditors verify in seconds, not days.
+                  of every contributing farm. Generate machine-readable Digital Product Passports with 
+                  JSON-LD output and public verification — auditors verify in seconds, not days.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
                   <Link href="/demo">
@@ -139,29 +149,172 @@ export default function PedigreePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-primary/5 border-t">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <FadeIn>
-              <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase">
-                [ Get Started ]
+        <section className="py-20 md:py-28 border-t bg-primary/5">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="text-center mb-16">
+              <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase" data-testid="text-section-label-dpp">
+                [ Digital Product Passport ]
               </p>
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4" data-testid="text-mid-cta-heading">
-                See Pedigree in Action
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4" data-testid="text-dpp-heading">
+                From Pedigree to Digital Product Passport
               </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                Walk through a live pedigree verification — from farm GPS to finished product QR — in a 15-minute demo.
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Generate machine-readable Digital Product Passports from your finished goods — complete with 
+                structured data, sustainability claims, and public verification endpoints.
               </p>
-              <Link href="/demo">
-                <Button size="lg" className="gap-2" data-testid="button-request-demo-mid">
-                  Schedule a Demo
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </Link>
             </FadeIn>
+
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <FadeIn direction="right">
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileJson className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1" data-testid="text-dpp-json-ld">JSON-LD Structured Output</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Every DPP is generated as JSON-LD — the W3C standard for linked data. Machine-readable by customs systems, 
+                        buyer platforms, and regulatory portals without manual data entry.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <ExternalLink className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1" data-testid="text-dpp-public-verification">Public Verification Endpoint</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Each DPP has a unique public URL — no login required. Auditors, customs officers, and buyers 
+                        access the full provenance record instantly via any web browser.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Leaf className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1" data-testid="text-dpp-sustainability">Sustainability Claims</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Attach verified sustainability claims — deforestation-free status, organic certification, 
+                        fair trade compliance — directly to the DPP with supporting evidence.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Link2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1" data-testid="text-dpp-chain-custody">Chain of Custody Tracking</h3>
+                      <p className="text-sm text-muted-foreground">
+                        The DPP embeds the complete chain of custody — every handoff, transformation, and quality check 
+                        from farm gate through processing to finished good.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+
+              <FadeIn direction="left" delay={0.2}>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <Code2 className="h-4 w-4" />
+                      <span>DPP JSON-LD Output</span>
+                    </div>
+                    <div className="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto">
+                      <pre className="whitespace-pre-wrap">{`{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Cocoa Butter — FW-2026-CB-0847",
+  "identifier": "DPP-OT-2026-0847",
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "Lagos Processing Co."
+  },
+  "material": [{
+    "@type": "Product",
+    "name": "Raw Cocoa Beans",
+    "productionDate": "2026-01-15",
+    "originAddress": {
+      "addressCountry": "NG",
+      "geo": { "latitude": 7.38, "longitude": 3.94 }
+    }
+  }],
+  "sustainabilityClaim": [
+    "Deforestation-Free",
+    "GPS-Verified Origin"
+  ],
+  "verificationUrl": "/verify/DPP-OT-2026-0847"
+}`}</pre>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            </div>
           </div>
         </section>
 
         <section className="py-20 md:py-28 border-t">
+          <div className="max-w-6xl mx-auto px-6">
+            <FadeIn className="text-center mb-16">
+              <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase" data-testid="text-section-label-qr-verification">
+                [ QR-Based Verification ]
+              </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4" data-testid="text-qr-verification-heading">
+                Scan. Verify. Trust.
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Every finished good carries a QR code that links directly to its Digital Product Passport — 
+                accessible by anyone, anywhere, without authentication.
+              </p>
+            </FadeIn>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <FadeIn delay={0}>
+                <div className="text-center">
+                  <div className="h-16 w-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <ScanLine className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-primary mb-2" data-testid="text-qr-step-1">01</div>
+                  <h3 className="font-semibold mb-2">Scan the Code</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use any smartphone camera or QR reader to scan the code printed on the finished good packaging.
+                  </p>
+                </div>
+              </FadeIn>
+              <FadeIn delay={0.1}>
+                <div className="text-center">
+                  <div className="h-16 w-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Database className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-primary mb-2" data-testid="text-qr-step-2">02</div>
+                  <h3 className="font-semibold mb-2">Access the Passport</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Instantly view the full Digital Product Passport — origin farms, processing records, compliance status, and sustainability claims.
+                  </p>
+                </div>
+              </FadeIn>
+              <FadeIn delay={0.2}>
+                <div className="text-center">
+                  <div className="h-16 w-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <BadgeCheck className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-primary mb-2" data-testid="text-qr-step-3">03</div>
+                  <h3 className="font-semibold mb-2">Confirm Compliance</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Verify deforestation-free status, regulatory compliance scores, and export readiness — all backed by GPS and documentation evidence.
+                  </p>
+                </div>
+              </FadeIn>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 md:py-28 bg-muted/30 border-t">
           <div className="max-w-6xl mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <FadeIn direction="right">
@@ -197,6 +350,10 @@ export default function PedigreePage() {
                     <Check className="h-5 w-5 text-primary shrink-0" />
                     <span className="text-sm">Downloadable GeoJSON for regulatory submission</span>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-sm">JSON-LD Digital Product Passport data</span>
+                  </div>
                 </div>
               </FadeIn>
               
@@ -220,6 +377,10 @@ export default function PedigreePage() {
                         <span className="text-muted-foreground">Source Farms</span>
                         <span className="font-medium">247 verified</span>
                       </div>
+                      <div className="flex justify-between gap-4 text-sm p-3 bg-background rounded-lg">
+                        <span className="text-muted-foreground">DPP ID</span>
+                        <span className="font-mono text-xs">DPP-OT-2026-0847</span>
+                      </div>
                       <div className="flex justify-between gap-4 text-sm p-3 bg-primary/10 rounded-lg">
                         <span className="text-primary">Compliance Status</span>
                         <span className="text-primary font-medium">Export Ready</span>
@@ -232,21 +393,21 @@ export default function PedigreePage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28 bg-muted/30 border-t">
+        <section className="py-20 md:py-28 border-t">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn className="text-center mb-16">
               <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase" data-testid="text-section-label-why">
-                [ Why Pedigree ]
+                [ Why Pedigree & DPP ]
               </p>
               <h2 className="text-3xl md:text-4xl font-extrabold mb-4" data-testid="text-why-heading">
-                Why Pedigree Matters
+                Why Pedigree & DPP Matter
               </h2>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                In a multi-regulatory landscape, your documentation is your export license.
+                In a multi-regulatory landscape, your documentation is your export license — and your Digital Product Passport is your competitive advantage.
               </p>
             </FadeIn>
             
-            <StaggerContainer className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <StaggerItem className="text-center">
                 <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Shield className="h-6 w-6 text-primary" />
@@ -263,7 +424,7 @@ export default function PedigreePage() {
                 </div>
                 <h3 className="font-semibold mb-2" data-testid="text-benefit-instant-access">Instant Access</h3>
                 <p className="text-sm text-muted-foreground">
-                  Generate compliance reports in seconds, not weeks
+                  Generate compliance reports and DPPs in seconds, not weeks
                 </p>
               </StaggerItem>
               
@@ -276,11 +437,21 @@ export default function PedigreePage() {
                   Meet EU, UK, US, and buyer-driven import requirements
                 </p>
               </StaggerItem>
+
+              <StaggerItem className="text-center">
+                <div className="h-12 w-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Share2 className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2" data-testid="text-benefit-interoperable">Interoperable</h3>
+                <p className="text-sm text-muted-foreground">
+                  JSON-LD output integrates with any customs or buyer system
+                </p>
+              </StaggerItem>
             </StaggerContainer>
           </div>
         </section>
 
-        <section className="py-20 md:py-28 border-t">
+        <section className="py-20 md:py-28 bg-muted/30 border-t">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn className="text-center mb-16">
               <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase" data-testid="text-section-label-capabilities">
@@ -290,7 +461,7 @@ export default function PedigreePage() {
                 Built for Compliance at Scale
               </h2>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                Every layer of the pedigree is designed for regulatory verification and buyer confidence.
+                Every layer of the pedigree and DPP is designed for regulatory verification and buyer confidence.
               </p>
             </FadeIn>
 
@@ -389,10 +560,10 @@ export default function PedigreePage() {
                 [ Start Today ]
               </p>
               <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-white" data-testid="text-cta-heading">
-                Ready to Build Your Pedigree?
+                Ready to Build Your Pedigree & DPP?
               </h2>
               <p className="text-slate-400 max-w-lg mx-auto mb-8">
-                See how OriginTrace gives your products verifiable provenance that satisfies 
+                See how OriginTrace gives your products verifiable provenance and Digital Product Passports that satisfy 
                 every regulator and every buyer.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
