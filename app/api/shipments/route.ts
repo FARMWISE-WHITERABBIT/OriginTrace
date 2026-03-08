@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
@@ -37,6 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
@@ -100,6 +102,10 @@ export async function POST(request: NextRequest) {
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];

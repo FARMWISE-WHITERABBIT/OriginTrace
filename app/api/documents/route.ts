@@ -42,6 +42,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
     const tierBlock = await enforceTier(profile.org_id, 'documents');
     if (tierBlock) return tierBlock;
 
@@ -137,7 +144,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('org_id')
+      .select('org_id, role')
       .eq('user_id', user.id)
       .single();
 
@@ -145,6 +152,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
+      );
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const allowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
+    if (!allowedRoles.includes(profile.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
       );
     }
 

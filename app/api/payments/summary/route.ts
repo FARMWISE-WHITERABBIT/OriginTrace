@@ -39,6 +39,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
     const { data: payments, error: paymentsError } = await supabaseAdmin
       .from('payments')
       .select('amount, currency, payee_type, payment_method, payment_date, status')

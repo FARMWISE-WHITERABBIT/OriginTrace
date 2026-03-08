@@ -5,6 +5,7 @@ import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 async function getAuthProfile(supabaseAdmin: ReturnType<typeof createServiceClient>) {
   const { profile } = await getAuthenticatedProfile();
   if (!profile || profile.role !== 'admin') return null;
+  if (!profile.org_id) return null;
   return profile;
 }
 

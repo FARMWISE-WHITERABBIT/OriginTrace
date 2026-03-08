@@ -27,12 +27,7 @@ export async function GET(request: NextRequest) {
         lot_number,
         production_date,
         expiry_date,
-        destination_country,
-        buyer_name,
-        buyer_company,
         dds_submitted,
-        dds_submitted_at,
-        dds_reference,
         pedigree_verified,
         verification_notes,
         created_at,
@@ -156,14 +151,14 @@ export async function GET(request: NextRequest) {
     if (finishedGood.dds_submitted) {
       timeline.push({
         event: 'DDS Submitted',
-        date: finishedGood.dds_submitted_at,
-        details: `EU TRACES Portal - Ref: ${finishedGood.dds_reference || 'Pending'}`,
+        date: null,
+        details: 'Due diligence statement submitted',
         icon: 'certificate'
       });
     }
 
-    const { buyer_name, buyer_company, organizations, ...sanitizedGood } = finishedGood as any;
-    const { mass_balance_variance, ...sanitizedRun } = processingRun as any;
+    const { organizations, ...sanitizedGood } = finishedGood as any;
+    const { mass_balance_variance, org_id, ...sanitizedRun } = processingRun as any;
 
     return NextResponse.json({
       finishedGood: {

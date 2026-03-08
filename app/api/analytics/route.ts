@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
@@ -111,6 +109,10 @@ export async function GET(request: NextRequest) {
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const allowedRoles = ['admin', 'aggregator', 'quality_manager', 'compliance_officer'];

@@ -1972,3 +1972,158 @@ CREATE POLICY "System admins can manage all delegation audit logs" ON delegation
 
 CREATE INDEX IF NOT EXISTS idx_delegation_audit_log_delegation ON delegation_audit_log(delegation_id);
 CREATE INDEX IF NOT EXISTS idx_delegation_audit_log_org ON delegation_audit_log(org_id);
+
+-- ============================================
+-- TENANT HEALTH METRICS (Superadmin dashboard)
+-- Stores aggregated per-org health snapshots
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tenant_health_metrics (
+  org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,
+  org_name TEXT,
+  subscription_tier TEXT,
+  org_created_at TIMESTAMPTZ,
+  total_users INTEGER DEFAULT 0,
+  agent_count INTEGER DEFAULT 0,
+  total_farms INTEGER DEFAULT 0,
+  total_batches INTEGER DEFAULT 0,
+  flagged_batches INTEGER DEFAULT 0,
+  total_weight_kg NUMERIC(14,2) DEFAULT 0,
+  last_collection_date TIMESTAMPTZ,
+  growth_trend TEXT CHECK (growth_trend IN ('growing', 'stable', 'declining')),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (org_id)
+);
+
+ALTER TABLE tenant_health_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "System admins can view tenant health metrics" ON tenant_health_metrics
+  FOR SELECT USING (is_system_admin());
+
+CREATE POLICY "Service role can manage tenant health metrics" ON tenant_health_metrics
+  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "System admins can manage all tenant health metrics" ON tenant_health_metrics
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_tier ON tenant_health_metrics(subscription_tier);
+CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_trend ON tenant_health_metrics(growth_trend);
+
+-- ============================================
+-- FARMER PERFORMANCE LEDGER TABLE
+-- Stores per-farm per-season performance snapshots
+-- (Separate from the farmer_performance_ledger VIEW
+--  which provides real-time aggregation)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_performance_ledger_table (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  season TEXT NOT NULL,
+  total_collections INTEGER DEFAULT 0,
+  total_weight_kg NUMERIC(12,2) DEFAULT 0,
+  avg_grade TEXT,
+  yield_per_hectare NUMERIC(10,2),
+  compliance_score INTEGER DEFAULT 0,
+  payment_reliability INTEGER DEFAULT 100,
+  quality_consistency INTEGER DEFAULT 100,
+  credit_score INTEGER,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(org_id, farm_id, season)
+);
+
+ALTER TABLE farmer_performance_ledger_table ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view farmer performance in their org" ON farmer_performance_ledger_table
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage farmer performance in their org" ON farmer_performance_ledger_table
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all farmer performance" ON farmer_performance_ledger_table
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_org ON farmer_performance_ledger_table(org_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_farm ON farmer_performance_ledger_table(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_season ON farmer_performance_ledger_table(season);
+
+CREATE TRIGGER update_farmer_performance_ledger_updated_at BEFORE UPDATE ON farmer_performance_ledger_table
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- PEDIGREE VERIFICATION TABLE
+-- Stores verified pedigree records as immutable snapshots
+-- (Separate from the pedigree_verification VIEW
+--  which provides real-time joins)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS pedigree_verification_records (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  finished_good_id UUID NOT NULL REFERENCES finished_goods(id) ON DELETE CASCADE,
+  pedigree_code TEXT NOT NULL,
+  product_name TEXT NOT NULL,
+  product_type TEXT NOT NULL,
+  finished_weight_kg NUMERIC(12,2),
+  production_date DATE,
+  destination_country TEXT,
+  buyer_name TEXT,
+  buyer_company TEXT,
+  dds_submitted BOOLEAN DEFAULT false,
+  dds_submitted_at TIMESTAMPTZ,
+  dds_reference TEXT,
+  pedigree_verified BOOLEAN DEFAULT true,
+  verification_notes TEXT,
+  processing_run_code TEXT,
+  facility_name TEXT,
+  facility_location TEXT,
+  raw_input_kg NUMERIC(12,2),
+  processed_output_kg NUMERIC(12,2),
+  recovery_rate NUMERIC(5,2),
+  standard_recovery_rate NUMERIC(5,2),
+  mass_balance_valid BOOLEAN DEFAULT true,
+  mass_balance_variance NUMERIC(5,2),
+  processed_at TIMESTAMPTZ,
+  organization_name TEXT,
+  organization_logo TEXT,
+  source_farms JSONB,
+  total_smallholders INTEGER DEFAULT 0,
+  total_farm_area_hectares NUMERIC(12,2),
+  verified_by UUID REFERENCES auth.users(id),
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(finished_good_id)
+);
+
+ALTER TABLE pedigree_verification_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view pedigree records in their org" ON pedigree_verification_records
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Admins can manage pedigree records" ON pedigree_verification_records
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all pedigree records" ON pedigree_verification_records
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Public can view verified pedigree records" ON pedigree_verification_records
+  FOR SELECT USING (pedigree_verified = true);
+
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_fg ON pedigree_verification_records(finished_good_id);
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_code ON pedigree_verification_records(pedigree_code);
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_verified ON pedigree_verification_records(pedigree_verified);
+
+CREATE TRIGGER update_pedigree_verification_updated_at BEFORE UPDATE ON pedigree_verification_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
