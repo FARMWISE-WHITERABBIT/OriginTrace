@@ -8,9 +8,7 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle2, Shield, Leaf } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-export default function FarmerActivatePage() {
+function FarmerActivateContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [step, setStep] = useState<'loading' | 'confirm' | 'pin' | 'success' | 'error'>('loading');
@@ -193,5 +191,21 @@ export default function FarmerActivatePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function FarmerActivatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-[#F8FAF9] to-[#E8F0ED] flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Loading...
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <FarmerActivateContent />
+    </Suspense>
   );
 }
