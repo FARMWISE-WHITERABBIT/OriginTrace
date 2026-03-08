@@ -1,16 +1,12 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  return createAdminClient();
 }
 
 function getPeriodStart(period: string): string {
@@ -390,7 +386,7 @@ export async function GET(request: NextRequest) {
 
         const decisionCounts = [
           { decision: 'Go', count: shipments.filter(s => s.readiness_decision === 'go').length },
-          { decision: 'Conditional', count: shipments.filter(s => s.readiness_decision === 'conditional_go').length },
+          { decision: 'Conditional', count: shipments.filter(s => s.readiness_decision === 'conditional').length },
           { decision: 'No Go', count: shipments.filter(s => s.readiness_decision === 'no_go').length },
           { decision: 'Pending', count: shipments.filter(s => !s.readiness_decision || s.readiness_decision === 'unknown').length },
         ].filter(item => item.count > 0);

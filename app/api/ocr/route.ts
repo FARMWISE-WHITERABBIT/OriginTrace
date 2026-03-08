@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const base64Data = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',

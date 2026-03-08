@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -32,9 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use service role client for secure admin operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     // 1. Create the user account using admin API
     // email_confirm: false requires user to verify email before accessing /app
