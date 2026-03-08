@@ -15,20 +15,7 @@ async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
       .select('id')
       .eq('user_id', userId)
       .single();
-    
-    if (data) return true;
-    
-    // Auto-bootstrap first user as system admin
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-    
-    if (count === 0) {
-      await supabase.from('system_admins').insert({ user_id: userId });
-      return true;
-    }
-    
-    return false;
+    return !!data;
   } catch (err) {
     console.error('System admin check error:', err);
     return false;
@@ -125,8 +112,9 @@ export async function POST(request: NextRequest) {
             started_at: new Date().toISOString()
           }
         });
-      } catch {
-        console.log('Audit log skipped (table may not exist)');
+      } catch (auditErr) {
+        // Audit log failure is non-fatal but must be surfaced — never silently swallowed
+        console.error('[audit] Failed to write impersonation_start audit log:', auditErr);
       }
       
       const response = NextResponse.json({
@@ -165,8 +153,8 @@ export async function POST(request: NextRequest) {
                 ended_at: new Date().toISOString()
               }
             });
-          } catch {
-            console.log('Audit log skipped (table may not exist)');
+          } catch (auditErr) {
+            console.error('[audit] Failed to write impersonation_end audit log:', auditErr);
           }
         } catch (e) {}
       }

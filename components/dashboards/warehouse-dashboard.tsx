@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import {
   Warehouse,
   Package,
@@ -40,34 +38,19 @@ export function WarehouseDashboard() {
     recentBatches: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { organization } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase || !organization) return;
-
       try {
-        const [
-          unusedRes,
-          collectedRes,
-          processedRes,
-          totalRes,
-          recentBatchesRes,
-        ] = await Promise.all([
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'unused'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'collected'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('status', 'processed'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('collection_batches').select('id, status, bag_count, total_weight, created_at').eq('org_id', organization.id).order('created_at', { ascending: false }).limit(5),
-        ]);
-
+        const res = await fetch('/api/dashboard?view=warehouse_supervisor');
+        if (!res.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await res.json();
         setStats({
-          unusedBags: unusedRes.count || 0,
-          collectedBags: collectedRes.count || 0,
-          processedBags: processedRes.count || 0,
-          totalBags: totalRes.count || 0,
-          recentBatches: (recentBatchesRes.data || []) as WarehouseStats['recentBatches'],
+          unusedBags: data.unusedBags || 0,
+          collectedBags: data.collectedBags || 0,
+          processedBags: data.processedBags || 0,
+          totalBags: data.totalBags || 0,
+          recentBatches: data.recentBatches || [],
         });
       } catch (error) {
         console.error('Failed to fetch warehouse stats:', error);
@@ -75,9 +58,8 @@ export function WarehouseDashboard() {
         setIsLoading(false);
       }
     }
-
     fetchStats();
-  }, [organization]);
+  }, []);
 
   const inventoryCards = [
     { title: 'Total Bags', value: stats.totalBags, icon: Package, color: 'text-blue-600' },

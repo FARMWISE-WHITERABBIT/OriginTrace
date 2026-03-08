@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   logo_url TEXT,
   settings JSONB DEFAULT '{}',
   commodities TEXT[] DEFAULT ARRAY['cocoa'],
-  subscription_tier TEXT DEFAULT 'starter',
+  subscription_tier TEXT DEFAULT 'starter' CHECK (subscription_tier IN ('starter', 'basic', 'pro', 'enterprise')),
   feature_flags JSONB DEFAULT '{"financing": false, "api_access": false, "advanced_mapping": false, "satellite_overlays": false}',
   agent_seat_limit INTEGER DEFAULT 5,
   monthly_collection_limit INTEGER DEFAULT 1000,
@@ -172,15 +172,6 @@ CREATE TABLE IF NOT EXISTS compliance_files (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- DDS Exports
-CREATE TABLE IF NOT EXISTS dds_exports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  geojson JSONB NOT NULL,
-  export_date TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_profiles_org_id ON profiles(org_id);
@@ -437,8 +428,11 @@ ALTER TABLE bags
 -- ============================================
 
 -- Add SaaS columns to organizations
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter' 
-  CHECK (subscription_tier IN ('starter', 'professional', 'enterprise'));
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter';
+-- Drop old constraint if it exists (wrong tier values), then add the correct one
+ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_subscription_tier_check;
+ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_tier_check
+  CHECK (subscription_tier IN ('starter', 'basic', 'pro', 'enterprise'));
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS feature_flags JSONB DEFAULT '{
   "satellite_overlays": false,
   "advanced_mapping": false,
@@ -1306,3 +1300,365 @@ CREATE INDEX IF NOT EXISTS idx_api_rate_limits_window ON api_rate_limits(window_
 -- ============================================
 
 ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;
+
+-- ============================================
+-- AUDIT LOG (immutable event trail)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     TEXT NOT NULL,
+  action      TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  metadata    JSONB DEFAULT '{}',
+  ip_address  TEXT,
+  user_agent  TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit logs are append-only: no UPDATE or DELETE allowed
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Only superadmins (via service role) can read audit logs
+-- Regular users have no access
+CREATE POLICY "Service role only" ON audit_logs
+  USING (false);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id    ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action     ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+-- ============================================
+-- T003: BAGS weight → weight_kg (idempotent)
+-- ============================================
+
+DO $$
+BEGIN
+  -- Rename weight to weight_kg if the old column exists and the new one doesn't
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight_kg'
+  ) THEN
+    ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
+    -- Adjust precision to match app expectations
+    ALTER TABLE bags ALTER COLUMN weight_kg TYPE NUMERIC(12,2);
+  END IF;
+
+  -- If weight_kg already exists, ensure correct type
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight_kg'
+  ) THEN
+    ALTER TABLE bags ALTER COLUMN weight_kg TYPE NUMERIC(12,2);
+  END IF;
+END $$;
+
+-- ============================================
+-- T003: SHIPMENTS TABLE (missing from schema)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'booked', 'in_transit', 'delivered', 'cancelled')),
+  destination_country TEXT,
+  destination_port TEXT,
+  target_regulations TEXT[] DEFAULT ARRAY[]::TEXT[],
+  compliance_profile_id UUID REFERENCES compliance_profiles(id),
+  doc_status JSONB DEFAULT '{}',
+  storage_controls JSONB DEFAULT '{}',
+  total_weight_kg NUMERIC(12,2),
+  readiness_score NUMERIC(5,2),
+  readiness_decision TEXT CHECK (readiness_decision IN ('go', 'conditional', 'no_go', 'pending')),
+  risk_flags JSONB DEFAULT '[]',
+  score_breakdown JSONB DEFAULT '{}',
+  estimated_ship_date TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access_shipments" ON shipments
+  FOR ALL USING (org_id = get_user_org_id());
+
+CREATE INDEX IF NOT EXISTS idx_shipments_org_id ON shipments(org_id);
+CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
+CREATE INDEX IF NOT EXISTS idx_shipments_created_at ON shipments(created_at DESC);
+
+-- Shipment items
+CREATE TABLE IF NOT EXISTS shipment_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good', 'lot')),
+  batch_id UUID,
+  finished_good_id UUID,
+  weight_kg NUMERIC(12,2) DEFAULT 0,
+  farm_count INTEGER DEFAULT 0,
+  traceability_complete BOOLEAN DEFAULT false,
+  compliance_status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment_id ON shipment_items(shipment_id);
+
+ALTER TABLE shipment_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_shipment_items" ON shipment_items
+  FOR ALL USING (org_id = get_user_org_id());
+
+-- Shipment outcomes (for historical rejection rate tracking)
+CREATE TABLE IF NOT EXISTS shipment_outcomes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID REFERENCES shipments(id),
+  outcome TEXT NOT NULL CHECK (outcome IN ('accepted', 'rejected', 'conditional', 'withdrawn')),
+  reason TEXT,
+  destination_country TEXT,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipment_outcomes_org_id ON shipment_outcomes(org_id);
+
+ALTER TABLE shipment_outcomes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_shipment_outcomes" ON shipment_outcomes
+  FOR ALL USING (org_id = get_user_org_id());
+
+-- Cold chain logs
+CREATE TABLE IF NOT EXISTS cold_chain_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  temperature_celsius NUMERIC(6,2),
+  humidity_percent NUMERIC(5,2),
+  location TEXT,
+  is_alert BOOLEAN DEFAULT false,
+  alert_reason TEXT,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cold_chain_logs_shipment_id ON cold_chain_logs(shipment_id);
+
+ALTER TABLE cold_chain_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_cold_chain_logs" ON cold_chain_logs
+  FOR ALL USING (org_id = get_user_org_id());
+
+-- Shipment lots (mass balance tracking)
+CREATE TABLE IF NOT EXISTS shipment_lots (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  lot_number TEXT NOT NULL,
+  weight_kg NUMERIC(12,2),
+  mass_balance_valid BOOLEAN DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipment_lots_shipment_id ON shipment_lots(shipment_id);
+
+ALTER TABLE shipment_lots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_shipment_lots" ON shipment_lots
+  FOR ALL USING (org_id = get_user_org_id());
+
+-- DDS exports log
+CREATE TABLE IF NOT EXISTS dds_exports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID REFERENCES shipments(id),
+  created_by TEXT,
+  format TEXT DEFAULT 'json',
+  dds_data JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_dds_exports_org_id ON dds_exports(org_id);
+CREATE INDEX IF NOT EXISTS idx_dds_exports_shipment_id ON dds_exports(shipment_id);
+
+ALTER TABLE dds_exports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_dds_exports" ON dds_exports
+  FOR ALL USING (org_id = get_user_org_id());
+
+-- ============================================
+-- T002: COMMODITY_MASTER + RLS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS commodity_master (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,  -- null = global/system commodity
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  category TEXT,
+  hs_code TEXT,
+  scientific_name TEXT,
+  is_eudr_regulated BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(org_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_commodity_master_org_id ON commodity_master(org_id);
+CREATE INDEX IF NOT EXISTS idx_commodity_master_slug ON commodity_master(slug);
+
+ALTER TABLE commodity_master ENABLE ROW LEVEL SECURITY;
+
+-- SELECT: users can see global commodities (org_id IS NULL) and their own org's commodities
+CREATE POLICY "commodity_master_select" ON commodity_master
+  FOR SELECT USING (org_id IS NULL OR org_id = get_user_org_id());
+
+-- INSERT: org users can insert their own commodity overrides
+CREATE POLICY "commodity_master_insert" ON commodity_master
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
+
+-- UPDATE: org users can update their own commodities
+CREATE POLICY "commodity_master_update" ON commodity_master
+  FOR UPDATE USING (org_id = get_user_org_id());
+
+-- DELETE: org users can delete their own commodities (not global ones)
+CREATE POLICY "commodity_master_delete" ON commodity_master
+  FOR DELETE USING (org_id = get_user_org_id() AND org_id IS NOT NULL);
+
+-- Seed global commodity records (idempotent)
+INSERT INTO commodity_master (id, org_id, name, slug, category, hs_code, scientific_name, is_eudr_regulated, is_active)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', NULL, 'Cocoa', 'cocoa', 'tree_crop', '1801.00', 'Theobroma cacao', true, true),
+  ('00000000-0000-0000-0000-000000000002', NULL, 'Coffee', 'coffee', 'tree_crop', '0901.11', 'Coffea arabica', true, true),
+  ('00000000-0000-0000-0000-000000000003', NULL, 'Palm Oil', 'palm_oil', 'tree_crop', '1511.10', 'Elaeis guineensis', true, true),
+  ('00000000-0000-0000-0000-000000000004', NULL, 'Rubber', 'rubber', 'tree_crop', '4001.10', 'Hevea brasiliensis', true, true),
+  ('00000000-0000-0000-0000-000000000005', NULL, 'Soya', 'soya', 'grain', '1201.90', 'Glycine max', true, true),
+  ('00000000-0000-0000-0000-000000000006', NULL, 'Cashew', 'cashew', 'tree_crop', '0801.31', 'Anacardium occidentale', false, true),
+  ('00000000-0000-0000-0000-000000000007', NULL, 'Shea', 'shea', 'tree_crop', '1515.90', 'Vitellaria paradoxa', false, true),
+  ('00000000-0000-0000-0000-000000000008', NULL, 'Sesame', 'sesame', 'seed_crop', '1207.40', 'Sesamum indicum', false, true),
+  ('00000000-0000-0000-0000-000000000009', NULL, 'Ginger', 'ginger', 'root_crop', '0910.11', 'Zingiber officinale', false, true),
+  ('00000000-0000-0000-0000-000000000010', NULL, 'Plantain', 'plantain', 'tree_crop', '0803.90', 'Musa paradisiaca', false, true)
+ON CONFLICT (org_id, slug) DO NOTHING;
+
+-- ============================================
+-- T010: MISSING TABLES — pedigree_verification, tenant_health_metrics, farmer_performance_ledger
+-- ============================================
+
+-- Pedigree Verification Records
+-- Stores the chain-of-custody verification record for each finished good DPP.
+-- Queried by app/api/dpp/route.ts to build the chain_of_custody timeline.
+CREATE TABLE IF NOT EXISTS pedigree_verification (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  finished_good_id UUID NOT NULL REFERENCES finished_goods(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  -- Organisation / processing metadata
+  organization_name TEXT NOT NULL,
+  facility_name TEXT,
+  facility_location TEXT,
+  -- Processing run link
+  processing_run_id UUID REFERENCES processing_runs(id),
+  processing_run_code TEXT,
+  -- Mass balance / traceability metrics
+  raw_input_kg NUMERIC,
+  processed_output_kg NUMERIC,
+  recovery_rate NUMERIC,
+  mass_balance_valid BOOLEAN DEFAULT true,
+  -- Compliance flags
+  pedigree_verified BOOLEAN DEFAULT false,
+  dds_submitted BOOLEAN DEFAULT false,
+  -- Farm source summary (JSONB array of farm-level provenance records)
+  -- Each element: { farm_id, farmer_name, community, state, collection_date, weight_kg, compliance_status }
+  source_farms JSONB DEFAULT '[]',
+  -- Aggregate stats
+  total_smallholders INTEGER DEFAULT 0,
+  total_farm_area_hectares NUMERIC DEFAULT 0,
+  verified_at TIMESTAMPTZ,
+  verified_by UUID REFERENCES auth.users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_finished_good ON pedigree_verification(finished_good_id);
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_org ON pedigree_verification(org_id);
+
+ALTER TABLE pedigree_verification ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_pedigree_verification" ON pedigree_verification
+  FOR ALL USING (org_id = get_user_org_id());
+
+
+-- Tenant Health Metrics (Materialized view equivalent for superadmin dashboard)
+-- Queried by app/api/tenant-health/route.ts (superadmin only).
+-- This is a summary/reporting table refreshed periodically — not a live operational table.
+-- It should be populated by a scheduled cron job or trigger on key events.
+CREATE TABLE IF NOT EXISTS tenant_health_metrics (
+  org_id UUID PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  org_name TEXT,
+  subscription_tier TEXT DEFAULT 'starter',
+  org_created_at TIMESTAMPTZ,
+  -- User counts
+  total_users INTEGER DEFAULT 0,
+  agent_count INTEGER DEFAULT 0,
+  -- Farm & collection stats
+  total_farms INTEGER DEFAULT 0,
+  total_batches INTEGER DEFAULT 0,
+  flagged_batches INTEGER DEFAULT 0,
+  total_weight_kg NUMERIC DEFAULT 0,
+  -- Activity signals
+  last_collection_date TIMESTAMPTZ,
+  last_sync_date TIMESTAMPTZ,
+  -- Growth classification: 'growing', 'stable', 'declining', 'inactive'
+  growth_trend TEXT DEFAULT 'inactive',
+  -- Refreshed timestamp
+  refreshed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- No RLS — superadmin access only. Route already enforces isSystemAdmin().
+-- Populate via: INSERT INTO tenant_health_metrics ... ON CONFLICT (org_id) DO UPDATE ...
+-- in a pg_cron job or application-level background task.
+
+
+-- Farmer Performance Ledger
+-- Per-farmer aggregate performance record used in /app/farmers listing
+-- and strategic analytics. Queried by app/api/farmers/route.ts as fallback
+-- when the get_org_farmers RPC is unavailable.
+CREATE TABLE IF NOT EXISTS farmer_performance_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  -- Identity
+  farmer_name TEXT NOT NULL,
+  community TEXT,
+  state TEXT,
+  -- Volume metrics
+  total_delivery_kg NUMERIC DEFAULT 0,
+  total_bag_count INTEGER DEFAULT 0,
+  total_batch_count INTEGER DEFAULT 0,
+  -- Quality metrics
+  avg_quality_score NUMERIC DEFAULT 0,        -- 0–100
+  grade_a_percentage NUMERIC DEFAULT 0,
+  grade_b_percentage NUMERIC DEFAULT 0,
+  grade_c_percentage NUMERIC DEFAULT 0,
+  -- Compliance & reliability
+  compliance_status TEXT DEFAULT 'pending' CHECK (compliance_status IN ('pending', 'verified', 'flagged')),
+  consent_collected BOOLEAN DEFAULT false,
+  gps_recorded BOOLEAN DEFAULT false,
+  deforestation_free BOOLEAN DEFAULT true,
+  -- Payments
+  total_payments_ngn NUMERIC DEFAULT 0,
+  payment_reliability INTEGER DEFAULT 100,    -- 0–100 score
+  -- Season tracking
+  current_season TEXT,
+  last_delivery_date TIMESTAMPTZ,
+  -- Timestamps
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_farmer_ledger_org_farm ON farmer_performance_ledger(org_id, farm_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_ledger_org ON farmer_performance_ledger(org_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_ledger_delivery ON farmer_performance_ledger(org_id, total_delivery_kg DESC);
+
+ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger
+  FOR ALL USING (org_id = get_user_org_id());

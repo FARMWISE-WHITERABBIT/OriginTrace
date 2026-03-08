@@ -1,24 +1,18 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { hasTierAccess, getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function enforceTier(orgId: number | string, feature: TierFeature): Promise<NextResponse | null> {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabase = createAdminClient();
 
     const { data: org } = await supabase
       .from('organizations')
-      .select('settings')
+      .select('subscription_tier')
       .eq('id', orgId)
       .single();
 
-    const settings = org?.settings as Record<string, unknown> | null;
-    const tier = (settings?.subscription_tier as string) || 'starter';
+    const tier = (org?.subscription_tier as string) || 'starter';
 
     if (!hasTierAccess(tier, feature)) {
       const requiredTier = getRequiredTier(feature);
@@ -41,5 +35,33 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
       { error: 'Unable to verify subscription tier. Access denied.' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Lightweight tier check used by shipment and other routes.
+ * Returns true if org has access to the given feature, false otherwise.
+ * Caller is responsible for returning the appropriate 403 response.
+ */
+export async function checkTierAccess(
+  supabaseOrOrgId: any,
+  orgId: string,
+  feature: TierFeature = 'shipment_readiness'
+): Promise<boolean> {
+  try {
+    // Accept either a supabase client (legacy) or skip and use admin client
+    const client = typeof supabaseOrOrgId === 'string' ? createAdminClient() : (supabaseOrOrgId ?? createAdminClient());
+    const resolvedOrgId = typeof supabaseOrOrgId === 'string' ? supabaseOrOrgId : orgId;
+
+    const { data: org } = await client
+      .from('organizations')
+      .select('subscription_tier, feature_flags')
+      .eq('id', resolvedOrgId)
+      .single();
+
+    const tier = (org?.subscription_tier as string) || 'starter';
+    return hasTierAccess(tier, feature);
+  } catch {
+    return false;
   }
 }

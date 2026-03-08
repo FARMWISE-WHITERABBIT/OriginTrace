@@ -45,10 +45,10 @@ export default function ReportBuilderPage() {
   const currentTierLevel = TIER_LEVELS[currentTier] ?? 0;
 
   const generateReport = useCallback(async () => {
-    if (!organization || !selectedReport) return;
+    if (!selectedReport) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}&section=all`);
+      const res = await fetch(`/api/reports?type=${selectedReport}&period=${period}`);
       if (res.ok) {
         const result = await res.json();
         setData(result);
@@ -58,7 +58,7 @@ export default function ReportBuilderPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [organization, selectedReport, period]);
+  }, [selectedReport, period]);
 
   useEffect(() => {
     if (selectedReport) {

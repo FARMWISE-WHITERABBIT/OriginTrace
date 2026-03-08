@@ -19,6 +19,7 @@ export async function GET(
 
     const { data: dpp, error } = await supabaseAdmin
       .from('digital_product_passports')
+      // Public DPP — strip commercially sensitive fields (destination_country, buyer_company)
       .select(`
         *,
         finished_goods (
@@ -26,8 +27,6 @@ export async function GET(
           product_type,
           pedigree_code,
           weight_kg,
-          destination_country,
-          buyer_company,
           production_date
         )
       `)
@@ -44,8 +43,6 @@ export async function GET(
             product_type,
             pedigree_code,
             weight_kg,
-            destination_country,
-            buyer_company,
             production_date
           )
         `)

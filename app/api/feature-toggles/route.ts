@@ -169,9 +169,18 @@ export async function PATCH(request: NextRequest) {
       settingsUpdate.monthly_collection_limit = monthly_collection_limit;
     }
 
+    // tier-guard reads from top-level subscription_tier column — must keep in sync with settings JSONB
+    const topLevelUpdate: Record<string, unknown> = {
+      settings: settingsUpdate,
+      updated_at: new Date().toISOString(),
+    };
+    if (subscription_tier) {
+      topLevelUpdate.subscription_tier = subscription_tier;
+    }
+
     const { data: organization, error: updateError } = await supabaseAdmin
       .from('organizations')
-      .update({ settings: settingsUpdate, updated_at: new Date().toISOString() })
+      .update(topLevelUpdate)
       .eq('id', org_id)
       .select()
       .single();

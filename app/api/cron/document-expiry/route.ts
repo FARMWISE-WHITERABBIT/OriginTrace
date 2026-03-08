@@ -7,7 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret) {
+      console.error('[CRON] CRON_SECRET env var is not set — refusing to run cron job');
+      return NextResponse.json({ error: 'Server misconfiguration: CRON_SECRET is required' }, { status: 500 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

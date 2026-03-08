@@ -446,6 +446,8 @@ function scoreRegulatoryAlignment(
       'FSMA_204': 'FSMA 204',
       'UK_Environment_Act': 'UK Environment Act',
       'Lacey_Act_UFLPA': 'Lacey Act / UFLPA',
+      'China_Green_Trade': 'China Green Trade',
+      'UAE_Halal': 'UAE/Halal',
       'custom': 'Buyer Standards',
     };
     const mapped = frameworkMap[profile.regulation_framework] || profile.regulation_framework;
@@ -903,6 +905,280 @@ function scoreRegulatoryAlignment(
       }
 
       details.push(`Lacey Act / UFLPA: ${met}/${total} requirements met`);
+
+    // ── China Green Trade Requirements ────────────────────────────────────────
+    } else if (regLower.includes('china') || regLower.includes('green trade') || regLower.includes('china_green')) {
+      total = 6;
+      // China Green Trade focuses on: environmental certification, supply chain transparency,
+      // phytosanitary compliance, carbon footprint documentation, quality standards,
+      // and origin verification aligned with China's import regulations
+
+      // 1. Environmental/organic certification
+      const hasChinaEnvCert = (
+        doc_status['china_green_certification'] === true ||
+        doc_status['organic_certificate'] === true ||
+        doc_status['green_food_certification'] === true ||
+        doc_status['china_compulsory_certificate'] === true
+      );
+      if (hasChinaEnvCert) {
+        met++;
+        details.push('China Green Trade: Environmental/green certification verified');
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'China Green Trade',
+          message: 'China Green Trade: Environmental certification missing',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'urgent',
+          title: 'China Green Trade: Environmental certification required',
+          description: 'China\'s Green Food or organic certification (or equivalent) is required for green trade designation. Obtain China Compulsory Certificate (CCC) or equivalent for commodities.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 2. Phytosanitary certificate
+      const hasPhytosanitary = (
+        doc_status['phytosanitary_certificate'] === true ||
+        doc_status['plant_health_certificate'] === true
+      );
+      if (hasPhytosanitary) {
+        met++;
+        details.push('China Green Trade: Phytosanitary certificate present');
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'China Green Trade',
+          message: 'Phytosanitary certificate missing — required for agricultural imports to China',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'urgent',
+          title: 'China Green Trade: Phytosanitary certificate required',
+          description: 'China requires a phytosanitary/plant health certificate from the exporting country\'s national plant protection authority for all agricultural commodities.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 3. Full supply chain traceability (China requires farm-to-port visibility)
+      if (allTraceable && items.every(i => i.farm_count > 0)) {
+        met++;
+        details.push('China Green Trade: Farm-to-export traceability chain complete');
+      } else {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'China Green Trade',
+          message: 'Supply chain traceability incomplete — China requires farm-to-port visibility',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'China Green Trade: Complete supply chain traceability',
+          description: 'China\'s green trade framework requires full farm-to-port traceability. Ensure all items are linked to verified farm origins.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 4. GPS/boundary data (China checks land use legitimacy)
+      if (allHaveGps) {
+        met++;
+        details.push('China Green Trade: GPS origin verification complete');
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'China Green Trade: GPS farm polygon data needed',
+          description: 'China\'s green import framework increasingly requires verified GPS boundary data to confirm legitimate land use and deforestation-free sourcing.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 5. Quality and lab certificate
+      const hasQualityDoc = (
+        doc_status['quality_certificate'] === true ||
+        doc_status['lab_test_certificate'] === true ||
+        doc_status['pesticide_residue_test'] === true ||
+        doc_status['aflatoxin_test'] === true
+      );
+      if (hasQualityDoc) {
+        met++;
+        details.push('China Green Trade: Quality/lab certificate present');
+      } else {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'China Green Trade',
+          message: 'Quality certificate or lab test results missing',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'China Green Trade: Quality certificate and pesticide/aflatoxin test required',
+          description: 'China requires quality certificates and lab test results (pesticide residues, aflatoxin levels) meeting Chinese National Standards (GB) for food safety.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 6. Certificate of Origin + customs compliance
+      const hasCOO = (
+        doc_status['certificate_of_origin'] === true ||
+        doc_status['country_of_origin'] === true
+      );
+      const hasCustomsDoc = doc_status['customs_declaration'] === true || doc_status['commercial_invoice'] === true;
+      if (hasCOO && hasCustomsDoc) {
+        met++;
+        details.push('China Green Trade: Certificate of origin and customs documentation present');
+      } else {
+        const missing = [!hasCOO && 'certificate of origin', !hasCustomsDoc && 'customs/commercial documentation'].filter(Boolean).join(', ');
+        remediation.push({
+          priority: 'important',
+          title: 'China Green Trade: Origin and customs documentation incomplete',
+          description: `Missing: ${missing}. China customs requires certificate of origin and full commercial documentation for all agricultural imports.`,
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      if (met < 4) {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'China Green Trade',
+          message: `China Green Trade compliance critically low: only ${met}/${total} requirements met`,
+          is_hard_fail: false,
+        });
+      }
+
+      details.push(`China Green Trade: ${met}/${total} requirements met`);
+
+    // ── UAE / Middle East Halal & Traceability ────────────────────────────────
+    } else if (regLower.includes('uae') || regLower.includes('halal') || regLower.includes('middle east') || regLower.includes('gulf')) {
+      total = 6;
+      // UAE/Middle East Halal framework: Halal certification, origin traceability,
+      // ESMA standards, phytosanitary compliance, religious slaughter compliance (if applicable),
+      // and quality mark compliance
+
+      // 1. Halal certification
+      const hasHalalCert = (
+        doc_status['halal_certificate'] === true ||
+        doc_status['halal_certification'] === true ||
+        doc_status['islamic_certification'] === true
+      );
+      if (hasHalalCert) {
+        met++;
+        details.push('UAE/Halal: Halal certification verified');
+      } else {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'UAE/Halal',
+          message: 'Halal certification missing — mandatory for UAE/GCC food imports',
+          is_hard_fail: true, // Hard fail: no halal cert = banned from UAE shelves
+        });
+        remediation.push({
+          priority: 'urgent',
+          title: 'UAE/Halal: Halal certification required',
+          description: 'UAE Federal Law requires all food imports to carry valid Halal certification from an ESMA-accredited certification body. Without this, the shipment will be refused entry.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 2. ESMA conformity / UAE food safety standards
+      const hasEsmaDoc = (
+        doc_status['esma_certificate'] === true ||
+        doc_status['uae_conformity_certificate'] === true ||
+        doc_status['gulf_standards_certificate'] === true ||
+        doc_status['quality_certificate'] === true
+      );
+      if (hasEsmaDoc) {
+        met++;
+        details.push('UAE/Halal: ESMA/UAE conformity documentation present');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'UAE/Halal: ESMA/conformity certificate required',
+          description: 'UAE requires conformity with ESMA (Emirates Authority for Standardization and Metrology) standards. Obtain certification from an accredited conformity assessment body.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 3. Full traceability to farm level
+      if (allTraceable && items.every(i => i.farm_count > 0)) {
+        met++;
+        details.push('UAE/Halal: Farm-level traceability chain complete');
+      } else {
+        riskFlags.push({
+          severity: 'warning',
+          category: 'UAE/Halal',
+          message: 'UAE: Full farm-origin traceability required for halal food assurance',
+          is_hard_fail: false,
+        });
+        remediation.push({
+          priority: 'important',
+          title: 'UAE/Halal: Complete farm-origin traceability required',
+          description: 'UAE halal standards increasingly require farm-to-port traceability to verify the entire supply chain meets halal requirements.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 4. Certificate of Origin (critical for GCC customs)
+      const hasCOO = (
+        doc_status['certificate_of_origin'] === true ||
+        doc_status['country_of_origin'] === true
+      );
+      if (hasCOO) {
+        met++;
+        details.push('UAE/Halal: Certificate of origin verified');
+      } else {
+        remediation.push({
+          priority: 'urgent',
+          title: 'UAE/Halal: Certificate of origin required',
+          description: 'GCC customs requires a certificate of origin for all food imports. This document is also required to verify the halal supply chain.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 5. Phytosanitary / food safety test
+      const hasPhytoOrLabTest = (
+        doc_status['phytosanitary_certificate'] === true ||
+        doc_status['lab_test_certificate'] === true ||
+        doc_status['food_safety_certificate'] === true ||
+        doc_status['pesticide_residue_test'] === true
+      );
+      if (hasPhytoOrLabTest) {
+        met++;
+        details.push('UAE/Halal: Phytosanitary/food safety documentation present');
+      } else {
+        remediation.push({
+          priority: 'important',
+          title: 'UAE/Halal: Phytosanitary or food safety certificate required',
+          description: 'UAE food import regulations require phytosanitary certificates and/or lab test results confirming product meets UAE food safety standards.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      // 6. GPS / deforestation-free verification (UAE ESG sourcing)
+      const hasDeforestationCheck = (input.farm_deforestation_checks || []).length > 0;
+      const allDefoFree = (input.farm_deforestation_checks || []).every(c => c.deforestation_free);
+      if (allHaveGps && (hasDeforestationCheck ? allDefoFree : true)) {
+        met++;
+        details.push('UAE/Halal: GPS origin and deforestation verification satisfactory');
+      } else {
+        remediation.push({
+          priority: 'recommended',
+          title: 'UAE/Halal: GPS origin verification strengthens ESG compliance',
+          description: 'UAE buyers increasingly require verified GPS farm boundaries and deforestation-free status as part of responsible sourcing standards.',
+          dimension: 'Regulatory Alignment',
+        });
+      }
+
+      if (met < 4) {
+        riskFlags.push({
+          severity: 'critical',
+          category: 'UAE/Halal',
+          message: `UAE/Halal compliance critically low: only ${met}/${total} requirements met`,
+          is_hard_fail: false,
+        });
+      }
+
+      details.push(`UAE/Halal: ${met}/${total} requirements met`);
+
     } else if (regLower.includes('buyer') || regLower.includes('custom')) {
       const customRules = profile?.custom_rules || {};
       total = 5;

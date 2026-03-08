@@ -159,6 +159,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limiting — deforestation check calls Global Forest Watch API
+    const { checkRateLimit, RATE_LIMIT_PRESETS } = await import('@/lib/api/rate-limit');
+    const rateLimitResponse = checkRateLimit(request, profile.org_id, RATE_LIMIT_PRESETS.deforestationCheck);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
     const { farm_id, polygon, country_code } = body;
 
