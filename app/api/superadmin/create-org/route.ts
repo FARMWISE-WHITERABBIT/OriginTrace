@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { getResendClient } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { buildWelcomeEmail } from '@/lib/email/templates';
+import { logSuperadminAction } from '@/lib/superadmin-audit';
 
 
 function generateTempPassword(): string {
@@ -124,7 +125,6 @@ export async function POST(request: NextRequest) {
     let emailSent = false;
     let emailError = '';
     try {
-      const { client: resend, fromEmail } = await getResendClient();
       const { html, text } = buildWelcomeEmail({
         orgName,
         adminName,
@@ -132,18 +132,14 @@ export async function POST(request: NextRequest) {
         temporaryPassword: tempPassword,
         loginUrl,
       });
-
-      const { error: sendError } = await resend.emails.send({
-        from: fromEmail || 'OriginTrace <onboarding@resend.dev>',
+      const result = await sendEmail({
         to: adminEmail,
         subject: `Welcome to OriginTrace - Your ${orgName} account is ready`,
         html,
         text,
       });
-
-      if (sendError) {
-        console.error('Email send error:', sendError);
-        emailError = sendError.message || 'Failed to send email';
+      if (!result.success) {
+        emailError = result.error || 'Failed to send email';
       } else {
         emailSent = true;
       }
@@ -169,6 +165,17 @@ export async function POST(request: NextRequest) {
     } catch (auditErr) {
       console.error('Audit log insert failed:', auditErr);
     }
+
+    // Superadmin audit trail
+    await logSuperadminAction({
+      superadminId: user.id,
+      action: 'create_organization',
+      targetType: 'organization',
+      targetId: orgData.id.toString(),
+      targetLabel: orgName,
+      afterState: { org_id: orgData.id, admin_email: adminEmail, email_sent: emailSent },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

@@ -101,7 +101,7 @@ export const documentCreateSchema = z.object({
 // ---------------------------------------------------------------------------
 export const featureToggleSchema = z.object({
   org_id:                    uuidSchema,
-  subscription_tier:         z.enum(['free', 'starter', 'growth', 'enterprise']),
+  subscription_tier:         z.enum(['starter', 'basic', 'pro', 'enterprise']),
   feature_flags:             z.record(z.boolean()).optional(),
   agent_seat_limit:          z.number().int().min(0).optional(),
   monthly_collection_limit:  z.number().int().min(0).optional(),

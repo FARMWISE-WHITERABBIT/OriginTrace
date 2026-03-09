@@ -1,43 +1,69 @@
 import { Resend } from 'resend';
 
-let connectionSettings: any;
+// ---------------------------------------------------------------------------
+// Resend email client — production-ready, no Replit dependency
+// Set RESEND_API_KEY in your environment.
+// Set EMAIL_FROM to your verified sending address (e.g. no-reply@origintrace.trade)
+// Falls back to onboarding@resend.dev for local/staging use.
+// ---------------------------------------------------------------------------
 
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL
-    : null;
+let _client: Resend | null = null;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
+function getClient(): Resend {
+  if (!_client) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not set. Email sending is unavailable.');
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || !connectionSettings.settings.api_key) {
-    throw new Error('Resend not connected');
+    _client = new Resend(apiKey);
   }
-  return {
-    apiKey: connectionSettings.settings.api_key,
-    fromEmail: connectionSettings.settings.from_email
-  };
+  return _client;
 }
 
-// Resend integration - get fresh client each call (tokens may expire)
+export const FROM_ADDRESS =
+  process.env.EMAIL_FROM || 'OriginTrace <onboarding@resend.dev>';
+
+export interface SendEmailParams {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+}
+
+/**
+ * Send a transactional email via Resend.
+ * Returns { success: true } or { success: false, error: string }.
+ */
+export async function sendEmail(
+  params: SendEmailParams
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const resend = getClient();
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: Array.isArray(params.to) ? params.to : [params.to],
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+      reply_to: params.replyTo,
+    });
+    if (error) {
+      console.error('[email] Resend error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[email] Failed to send email:', err);
+    return { success: false, error: err?.message || 'Unknown error' };
+  }
+}
+
+/**
+ * @deprecated Use sendEmail() directly.
+ * Kept for backwards compatibility with routes that call getResendClient().
+ */
 export async function getResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
-  return {
-    client: new Resend(apiKey),
-    fromEmail
-  };
+  const client = getClient();
+  return { client, fromEmail: FROM_ADDRESS };
 }
