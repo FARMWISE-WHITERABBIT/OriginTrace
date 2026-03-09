@@ -1,34 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-
-async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('subscription_tier, feature_flags')
-    .eq('id', orgId)
-    .single();
-  if (!org) return false;
-  const tier = org.subscription_tier || 'starter';
-  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
-  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
-}
+const shipmentCreateSchema = z.object({
+  destination_country: z.string().min(1, 'Destination country is required'),
+  commodity: z.string().min(1, 'Commodity is required'),
+  buyer_company: z.string().optional(),
+  buyer_contact: z.string().optional(),
+  target_regulations: z.array(z.string()).optional(),
+  destination_port: z.string().optional(),
+  notes: z.string().optional(),
+  estimated_ship_date: z.string().optional(),
+  compliance_profile_id: z.number().optional(),
+  contract_id: z.number().optional(),
+  document_ids: z.array(z.number()).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,8 +37,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
@@ -88,9 +88,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -104,8 +104,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentWriteRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
@@ -114,15 +119,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { destination_country, commodity } = body;
 
-    if (!destination_country) {
-      return NextResponse.json({ error: 'Destination country is required' }, { status: 400 });
+    const parsed = shipmentCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    if (!commodity) {
-      return NextResponse.json({ error: 'Commodity is required' }, { status: 400 });
-    }
+    const { destination_country, commodity, buyer_company, buyer_contact, target_regulations, destination_port, notes, estimated_ship_date, compliance_profile_id, contract_id, document_ids } = parsed.data;
 
     const shipmentCode = `SHP-${profile.org_id}-${Date.now().toString(36).toUpperCase()}`;
 
@@ -135,13 +141,13 @@ export async function POST(request: NextRequest) {
       commodity,
     };
 
-    if (body.buyer_company !== undefined) insertData.buyer_company = body.buyer_company;
-    if (body.buyer_contact !== undefined) insertData.buyer_contact = body.buyer_contact;
-    if (body.target_regulations !== undefined) insertData.target_regulations = body.target_regulations;
-    if (body.destination_port !== undefined) insertData.destination_port = body.destination_port;
-    if (body.notes !== undefined) insertData.notes = body.notes;
-    if (body.estimated_ship_date !== undefined) insertData.estimated_ship_date = body.estimated_ship_date;
-    if (body.compliance_profile_id !== undefined) insertData.compliance_profile_id = body.compliance_profile_id;
+    if (buyer_company !== undefined) insertData.buyer_company = buyer_company;
+    if (buyer_contact !== undefined) insertData.buyer_contact = buyer_contact;
+    if (target_regulations !== undefined) insertData.target_regulations = target_regulations;
+    if (destination_port !== undefined) insertData.destination_port = destination_port;
+    if (notes !== undefined) insertData.notes = notes;
+    if (estimated_ship_date !== undefined) insertData.estimated_ship_date = estimated_ship_date;
+    if (compliance_profile_id !== undefined) insertData.compliance_profile_id = compliance_profile_id;
 
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
@@ -154,14 +160,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: shipmentError.message }, { status: 500 });
     }
 
-    if (body.contract_id && shipment) {
+    if (contract_id && shipment) {
       await supabase
         .from('contract_shipments')
-        .insert({ contract_id: body.contract_id, shipment_id: shipment.id });
+        .insert({ contract_id, shipment_id: shipment.id });
     }
 
-    if (body.document_ids && Array.isArray(body.document_ids) && shipment) {
-      for (const docId of body.document_ids) {
+    if (document_ids && document_ids.length > 0 && shipment) {
+      for (const docId of document_ids) {
         await supabase
           .from('documents')
           .update({ linked_entity_type: 'shipment', linked_entity_id: shipment.id })
@@ -169,6 +175,20 @@ export async function POST(request: NextRequest) {
           .eq('org_id', profile.org_id);
       }
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'shipment.created',
+      resourceType: 'shipment',
+      resourceId: shipment.id?.toString(),
+      metadata: { shipment_code: shipmentCode, destination_country, commodity },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'shipment.created', {
+      shipment_id: shipment.id, shipment_code: shipmentCode, destination_country, commodity,
+    });
 
     return NextResponse.json({ shipment, success: true });
 

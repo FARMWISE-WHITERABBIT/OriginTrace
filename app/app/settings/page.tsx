@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette } from 'lucide-react';
+import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,11 @@ import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useLocale } from '@/lib/i18n/locale-provider';
+import { locales, localeNames, type Locale } from '@/i18n';
+import { AuditLogContent } from '@/app/app/audit/audit-content';
+import { WebhooksContent } from '@/components/settings/webhooks-content';
+import { ApiKeysContent } from '@/components/settings/api-keys-content';
 
 interface OrgSettings {
   require_polygon?: boolean;
@@ -221,6 +226,76 @@ function ComplianceFrameworkSection({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function LanguagePreferenceSection() {
+  const { locale, setLocale } = useLocale();
+  const { toast } = useToast();
+  const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSelectedLocale(locale);
+  }, [locale]);
+
+  const handleSaveLanguage = async () => {
+    setSaving(true);
+    try {
+      setLocale(selectedLocale);
+      try {
+        await fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preferred_locale: selectedLocale }),
+        });
+      } catch {}
+      toast({
+        title: selectedLocale === 'fr' ? 'Langue mise à jour' : selectedLocale === 'ar' ? 'تم تحديث اللغة' : 'Language Updated',
+        description: selectedLocale === 'fr' ? 'Votre préférence linguistique a été enregistrée.' : selectedLocale === 'ar' ? 'تم حفظ تفضيل اللغة الخاص بك.' : 'Your language preference has been saved.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Could not update language preference.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Interface Language</Label>
+        <Select value={selectedLocale} onValueChange={(v) => setSelectedLocale(v as Locale)}>
+          <SelectTrigger className="w-full" data-testid="select-language">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {locales.map((loc) => (
+              <SelectItem key={loc} value={loc} data-testid={`language-option-${loc}`}>
+                {localeNames[loc]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {selectedLocale === 'ar' && 'Arabic enables right-to-left (RTL) layout'}
+          {selectedLocale === 'fr' && 'Le français sera appliqué à toute l\'interface'}
+          {selectedLocale === 'en' && 'English is the default interface language'}
+        </p>
+      </div>
+      <Button
+        onClick={handleSaveLanguage}
+        disabled={saving || selectedLocale === locale}
+        data-testid="button-save-language"
+      >
+        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {selectedLocale === 'fr' ? 'Enregistrer la langue' : selectedLocale === 'ar' ? 'حفظ اللغة' : 'Save Language'}
+      </Button>
     </div>
   );
 }
@@ -716,7 +791,21 @@ export default function SettingsPage() {
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Data Import
               </TabsTrigger>
+              <TabsTrigger value="webhooks" data-testid="tab-webhooks">
+                <Webhook className="h-4 w-4 mr-2" />
+                Webhooks
+              </TabsTrigger>
+              <TabsTrigger value="api-keys" data-testid="tab-api-keys">
+                <Key className="h-4 w-4 mr-2" />
+                API Keys
+              </TabsTrigger>
             </>
+          )}
+          {(isAdmin || profile.role === 'compliance_officer') && (
+            <TabsTrigger value="audit" data-testid="tab-audit">
+              <ScrollText className="h-4 w-4 mr-2" />
+              Audit Log
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -761,6 +850,19 @@ export default function SettingsPage() {
                     Save Changes
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Language Preference
+                </CardTitle>
+                <CardDescription>Choose your preferred language for the interface</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <LanguagePreferenceSection />
               </CardContent>
             </Card>
 
@@ -985,6 +1087,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
         </TabsContent>
 
         {/* COMPLIANCE TAB */}
@@ -1673,6 +1776,24 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {(isAdmin || profile.role === 'compliance_officer') && (
+          <TabsContent value="audit" className="space-y-6">
+            <AuditLogContent />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="webhooks" className="space-y-6">
+            <WebhooksContent />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="api-keys" className="space-y-6">
+            <ApiKeysContent />
           </TabsContent>
         )}
       </Tabs>

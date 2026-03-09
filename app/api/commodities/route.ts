@@ -1,15 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-}
+import { createServiceClient } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,6 +23,10 @@ export async function GET(request: NextRequest) {
     const includeInactive = searchParams.get('include_inactive') === 'true';
 
     const userOrgId = profile?.org_id;
+
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
     
     let query = supabase
       .from('commodity_master')
@@ -44,29 +39,14 @@ export async function GET(request: NextRequest) {
     
     if (globalOnly) {
       query = query.eq('is_global', true);
-    } else if (userOrgId) {
-      query = query.or(`is_global.eq.true,created_by_org_id.eq.${userOrgId}`);
     } else {
-      query = query.eq('is_global', true);
+      const orgIdFilter = 'is_global.eq.true,created_by_org_id.eq.' + String(userOrgId);
+      query = query.or(orgIdFilter);
     }
     
     const { data: commodities, error } = await query;
     
     if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        const defaultCommodities = [
-          { id: 1, name: 'Cocoa', code: 'COCOA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 2, name: 'Cashew', code: 'CASHEW', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 5, moisture_max: 8, collection_metrics: {} },
-          { id: 3, name: 'Palm Oil', code: 'PALM', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 4, name: 'Ginger', code: 'GINGER', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 10, moisture_max: 12, collection_metrics: {} },
-          { id: 5, name: 'Sesame', code: 'SESAME', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 6, name: 'Shea', code: 'SHEA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 7, name: 'Timber', code: 'TIMBER', category: 'forestry', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 8, name: 'Minerals', code: 'MINERALS', category: 'minerals', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 9, name: 'Seafood', code: 'SEAFOOD', category: 'seafood', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-        ];
-        return NextResponse.json({ commodities: defaultCommodities, source: 'defaults' });
-      }
       console.error('Commodities fetch error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -95,6 +75,10 @@ export async function POST(request: NextRequest) {
       .single();
     if (!profile || !['admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
     
     const body = await request.json();

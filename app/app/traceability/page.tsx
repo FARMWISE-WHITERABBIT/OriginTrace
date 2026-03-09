@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Sheet,
   SheetContent,
@@ -14,8 +15,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { TraceabilityTimeline } from '@/components/traceability-timeline';
+import { SupplyChainGraph } from '@/components/supply-chain-graph';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Package, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, Package, AlertTriangle, Network } from 'lucide-react';
 import Link from 'next/link';
 import { TierGate } from '@/components/tier-gate';
 
@@ -119,17 +121,17 @@ export default function TraceabilityPage() {
 
   return (
     <TierGate feature="traceability" requiredTier="starter" featureLabel="Traceability">
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bag-to-Bush Traceability</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Traceability</h1>
         <p className="text-muted-foreground">
-          Track produce from farm to warehouse using bag serial numbers
+          Track produce from farm to warehouse and visualize your supply chain
         </p>
       </div>
 
       {flaggedCount > 0 && (
         <Link href="/app/yield-alerts">
-          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:border-amber-600 transition-colors" data-testid="flagged-batches-alert">
+          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:border-amber-600 transition-colors max-w-2xl" data-testid="flagged-batches-alert">
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -148,69 +150,90 @@ export default function TraceabilityPage() {
         </Link>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Search by Bag Serial</CardTitle>
-          <CardDescription>
-            Enter a bag serial number to trace its complete journey
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch} className="flex gap-3">
-            <div className="flex-1">
-              <Input
-                value={searchSerial}
-                onChange={(e) => setSearchSerial(e.target.value.toUpperCase())}
-                placeholder="e.g., FW-B123-0001"
-                className="touch-target font-mono"
-                data-testid="input-trace-serial"
-              />
-            </div>
-            <Button type="submit" disabled={isSearching || !searchSerial.trim()} data-testid="button-search">
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="search" className="space-y-4">
+        <TabsList data-testid="tabs-traceability">
+          <TabsTrigger value="search" data-testid="tab-bag-search">
+            <Search className="h-4 w-4 mr-1.5" />
+            Bag Search
+          </TabsTrigger>
+          <TabsTrigger value="graph" data-testid="tab-network-graph">
+            <Network className="h-4 w-4 mr-1.5" />
+            Network Graph
+          </TabsTrigger>
+        </TabsList>
 
-      {notFound && (
-        <Card className="border-orange-500/50">
-          <CardContent className="py-8 text-center">
-            <Package className="h-12 w-12 mx-auto mb-4 text-orange-500" />
-            <h3 className="text-lg font-semibold">Bag Not Found</h3>
-            <p className="text-muted-foreground">
-              No bag with serial "{searchSerial}" was found in your organization.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="search">
+          <div className="space-y-6 max-w-2xl">
+            <Card>
+              <CardHeader>
+                <CardTitle>Search by Bag Serial</CardTitle>
+                <CardDescription>
+                  Enter a bag serial number to trace its complete journey
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSearch} className="flex gap-3">
+                  <div className="flex-1">
+                    <Input
+                      value={searchSerial}
+                      onChange={(e) => setSearchSerial(e.target.value.toUpperCase())}
+                      placeholder="e.g., FW-B123-0001"
+                      className="touch-target font-mono"
+                      data-testid="input-trace-serial"
+                    />
+                  </div>
+                  <Button type="submit" disabled={isSearching || !searchSerial.trim()} data-testid="button-search">
+                    {isSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
 
-      {result && !sheetOpen && (
-        <Card 
-          className="cursor-pointer hover:border-primary/50 transition-colors"
-          onClick={() => setSheetOpen(true)}
-          data-testid="trace-result"
-        >
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="font-mono">{result.bag.serial}</CardTitle>
-              {getStatusBadge(result.bag.status)}
-            </div>
-            <CardDescription>
-              {result.farm ? `${result.farm.farmer_name} - ${result.farm.community}` : 'No collection data'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Click to view full traceability timeline
-            </p>
-          </CardContent>
-        </Card>
-      )}
+            {notFound && (
+              <Card className="border-orange-500/50">
+                <CardContent className="py-8 text-center">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-orange-500" />
+                  <h3 className="text-lg font-semibold">Bag Not Found</h3>
+                  <p className="text-muted-foreground">
+                    No bag with serial "{searchSerial}" was found in your organization.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {result && !sheetOpen && (
+              <Card 
+                className="cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => setSheetOpen(true)}
+                data-testid="trace-result"
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4">
+                    <CardTitle className="font-mono">{result.bag.serial}</CardTitle>
+                    {getStatusBadge(result.bag.status)}
+                  </div>
+                  <CardDescription>
+                    {result.farm ? `${result.farm.farmer_name} - ${result.farm.community}` : 'No collection data'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Click to view full traceability timeline
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="graph">
+          <SupplyChainGraph />
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">

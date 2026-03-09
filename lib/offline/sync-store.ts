@@ -179,8 +179,7 @@ export async function getSyncStats(): Promise<{
       error: batches.filter(b => b.status === 'error').length,
     };
   } catch (error) {
-    console.warn('Failed to get sync stats, attempting recovery:', error);
-    await resetDB();
+    console.warn('Failed to get sync stats:', error);
     return { pending: 0, syncing: 0, synced: 0, error: 0 };
   }
 }

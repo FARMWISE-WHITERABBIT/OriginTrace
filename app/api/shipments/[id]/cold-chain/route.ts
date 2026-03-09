@@ -1,27 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-
-async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('subscription_tier, feature_flags')
-    .eq('id', orgId)
-    .single();
-  if (!org) return false;
-  const tier = org.subscription_tier || 'starter';
-  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
-  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
-}
+import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
@@ -29,9 +7,9 @@ export async function GET(
 ) {
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -45,8 +23,13 @@ export async function GET(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
@@ -92,9 +75,9 @@ export async function POST(
 ) {
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -108,8 +91,13 @@ export async function POST(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    if (!shipmentRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);

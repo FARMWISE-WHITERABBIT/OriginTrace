@@ -54,10 +54,7 @@ export type TierFeature =
   | 'analytics'
   | 'documents'
   | 'payments'
-  | 'supplier_scorecards'
-  | 'cost_analysis'
   | 'compliance_profiles'
-  | 'shipment_planning'
   | 'buyer_portal'
   | 'contracts'
   | 'digital_product_passport'
@@ -89,10 +86,7 @@ export const FEATURE_LABELS: Record<TierFeature, string> = {
   analytics: 'Analytics & Reporting',
   documents: 'Document Vault',
   payments: 'Payment Tracking',
-  supplier_scorecards: 'Supplier Scorecards',
-  cost_analysis: 'Cost & Revenue Analysis',
   compliance_profiles: 'Compliance Profiles',
-  shipment_planning: 'Shipment Planning Workspace',
   buyer_portal: 'Buyer Portal',
   contracts: 'Contract Management',
   digital_product_passport: 'Digital Product Passport',
@@ -126,10 +120,7 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   delegations: 'pro',
   resolve: 'pro',
   shipment_readiness: 'pro',
-  supplier_scorecards: 'pro',
-  cost_analysis: 'pro',
   compliance_profiles: 'pro',
-  shipment_planning: 'pro',
   buyer_portal: 'pro',
   contracts: 'pro',
 

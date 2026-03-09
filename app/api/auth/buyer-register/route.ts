@@ -1,24 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+const buyerRegisterSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  companyName: z.string().min(1, 'Company name is required'),
+  country: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, fullName, companyName, country, contactEmail } = body;
 
-    if (!email || !password || !fullName || !companyName) {
+    const parsed = buyerRegisterSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Email, password, full name, and company name are required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
-        { status: 400 }
-      );
-    }
+    const { email, password, fullName, companyName, country, contactEmail } = parsed.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,9 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,

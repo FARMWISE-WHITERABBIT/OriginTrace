@@ -1,18 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildFarmConflictEmail } from '@/lib/email/templates';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const conflictPatchSchema = z.object({
+  conflict_id: z.number({ required_error: 'Conflict ID is required' }),
+  action: z.enum(['keep_a', 'keep_b', 'merge', 'dismiss'], { required_error: 'Action is required' }),
+  notes: z.string().optional(),
+});
+
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -29,6 +32,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const tierBlock = await enforceTier(profile.org_id, 'boundary_conflicts');
@@ -132,9 +139,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -151,6 +156,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -264,9 +273,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -289,16 +296,16 @@ export async function PATCH(request: NextRequest) {
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
-    const { conflict_id, action, notes } = body;
 
-    if (!conflict_id || !action) {
-      return NextResponse.json({ error: 'Conflict ID and action required' }, { status: 400 });
+    const parsed = conflictPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const validActions = ['keep_a', 'keep_b', 'merge', 'dismiss'];
-    if (!validActions.includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+    const { conflict_id, action, notes } = parsed.data;
 
     const { data: conflict, error: fetchError } = await supabaseAdmin
       .from('farm_conflicts')

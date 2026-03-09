@@ -1,15 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-}
+import { checkRateLimit } from '@/lib/rate-limit';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { createServiceClient } from '@/lib/api-auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 function getPeriodStart(period: string): string {
   const now = new Date();
@@ -96,6 +89,9 @@ function groupByInterval(
 }
 
 export async function GET(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 30 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
     const supabase = createServiceClient();
     const authClient = await createServerClient();
@@ -115,34 +111,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const allowedRoles = ['admin', 'aggregator', 'quality_manager', 'compliance_officer'];
     if (!allowedRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('subscription_tier')
-      .eq('id', profile.org_id)
-      .single();
+    const tierBlock = await enforceTier(profile.org_id, 'analytics');
+    if (tierBlock) return tierBlock;
 
-    const tier = org?.subscription_tier || 'starter';
-    const tierLevel: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-    if ((tierLevel[tier] ?? 0) < 1) {
-      return NextResponse.json({ error: 'Analytics requires Basic tier or higher' }, { status: 403 });
-    }
-
-    // Rate limiting — analytics fans out to 4+ large DB queries
-    const { checkRateLimit, RATE_LIMIT_PRESETS } = await import('@/lib/api/rate-limit');
-    const rateLimitResponse = checkRateLimit(request, profile.org_id, RATE_LIMIT_PRESETS.analytics);
-    if (rateLimitResponse) return rateLimitResponse;
-
-    // Validate query parameters
-    const { validateQuery, AnalyticsQuerySchema } = await import('@/lib/api/validation');
     const { searchParams } = new URL(request.url);
-    const qv = validateQuery(searchParams, AnalyticsQuerySchema);
-    if (qv.error) return qv.error;
-    const { period, section } = qv.data;
+    const period = searchParams.get('period') || '30d';
+    const section = searchParams.get('section') || 'all';
     const periodStart = getPeriodStart(period);
     const interval = getIntervalLabel(period);
     const prevStart = new Date(new Date(periodStart).getTime() - (new Date().getTime() - new Date(periodStart).getTime())).toISOString();
@@ -150,44 +133,54 @@ export async function GET(request: NextRequest) {
 
     const result: Record<string, any> = { period };
 
-    // Fetch shared base data — farms, batches, bags used by multiple sections
-    const [batchesRes, prevBatchesRes, farmsRes, bagsRes] = await Promise.all([
-      supabase
-        .from('collection_batches')
-        .select('id, created_at, total_weight, bag_count, status, agent_id, yield_flag_reason, commodity, state, farm_id')
-        .eq('org_id', orgId)
-        .gte('created_at', periodStart)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('collection_batches')
-        .select('id, total_weight, bag_count')
-        .eq('org_id', orgId)
-        .gte('created_at', prevStart)
-        .lt('created_at', periodStart),
-      supabase
-        .from('farms')
-        .select('id, compliance_status, commodity, area_hectares, state, deforestation_check, boundary_geo')
-        .eq('org_id', orgId),
-      supabase
-        .from('bags')
-        .select('id, grade, status, weight_kg, commodity, is_compliant')
-        .eq('org_id', orgId),
-    ]);
+    const calcTrend = (curr: number, prev: number) =>
+      prev > 0 ? Math.round(((curr - prev) / prev) * 100) : curr > 0 ? 100 : 0;
 
-    const batches = batchesRes.data || [];
-    const prevBatches = prevBatchesRes.data || [];
-    const farms = farmsRes.data || [];
-    const bags = bagsRes.data || [];
+    let batches: any[] = [];
+    let prevBatches: any[] = [];
+    let farms: any[] = [];
+    let bags: any[] = [];
+
+    try {
+      const [batchesRes, prevBatchesRes, farmsRes, bagsRes] = await Promise.all([
+        supabase
+          .from('collection_batches')
+          .select('id, created_at, total_weight, bag_count, status, agent_id, yield_flag_reason, commodity, state, farm_id')
+          .eq('org_id', orgId)
+          .gte('created_at', periodStart)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('collection_batches')
+          .select('id, total_weight, bag_count')
+          .eq('org_id', orgId)
+          .gte('created_at', prevStart)
+          .lt('created_at', periodStart),
+        supabase
+          .from('farms')
+          .select('id, compliance_status, commodity, area_hectares, state, deforestation_check, boundary_geo')
+          .eq('org_id', orgId),
+        supabase
+          .from('bags')
+          .select('id, grade, status, weight_kg, commodity, is_compliant')
+          .eq('org_id', orgId),
+      ]);
+      if (batchesRes.error) console.error('[analytics] batches query error:', batchesRes.error);
+      if (prevBatchesRes.error) console.error('[analytics] prevBatches query error:', prevBatchesRes.error);
+      if (farmsRes.error) console.error('[analytics] farms query error:', farmsRes.error);
+      if (bagsRes.error) console.error('[analytics] bags query error:', bagsRes.error);
+      batches = batchesRes.data || [];
+      prevBatches = prevBatchesRes.data || [];
+      farms = farmsRes.data || [];
+      bags = bagsRes.data || [];
+    } catch (coreError) {
+      console.error('[analytics] core data fetch failed:', coreError);
+    }
 
     const currentWeight = batches.reduce((s, r) => s + Number(r.total_weight || 0), 0);
     const previousWeight = prevBatches.reduce((s, r) => s + Number(r.total_weight || 0), 0);
     const currentBags = batches.reduce((s, b) => s + Number(b.bag_count || 0), 0);
     const previousBags = prevBatches.reduce((s, b) => s + Number(b.bag_count || 0), 0);
 
-    const calcTrend = (curr: number, prev: number) =>
-      prev > 0 ? Math.round(((curr - prev) / prev) * 100) : curr > 0 ? 100 : 0;
-
-    // ── Section: operational ──────────────────────────────────────────────────
     if (section === 'all' || section === 'operational') {
       try {
         const volumeTrends = groupByInterval(
@@ -196,7 +189,8 @@ export async function GET(request: NextRequest) {
         );
 
         const agentMap = new Map<string, { name: string; weight: number; bags: number; batches: number }>();
-        for (const record of batches.filter(b => b.agent_id)) {
+        const agentBatches = batches.filter(b => b.agent_id);
+        for (const record of agentBatches) {
           const agentId = record.agent_id;
           const existing = agentMap.get(agentId) || { name: `Agent ${agentId?.slice(0, 6)}`, weight: 0, bags: 0, batches: 0 };
           existing.weight += Number(record.total_weight || 0);
@@ -205,12 +199,14 @@ export async function GET(request: NextRequest) {
           agentMap.set(agentId, existing);
         }
 
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         const agentIds = Array.from(agentMap.keys()).filter(Boolean);
-        if (agentIds.length > 0) {
+        const validUuidAgentIds = agentIds.filter(id => uuidRegex.test(id));
+        if (validUuidAgentIds.length > 0) {
           const { data: agentProfiles } = await supabase
             .from('profiles')
             .select('user_id, full_name')
-            .in('user_id', agentIds);
+            .in('user_id', validUuidAgentIds);
           for (const ap of (agentProfiles || [])) {
             const agent = agentMap.get(ap.user_id);
             if (agent) agent.name = ap.full_name || agent.name;
@@ -241,13 +237,18 @@ export async function GET(request: NextRequest) {
           flaggedBatches: flaggedCount,
         };
         result.agentPerformance = agents;
-      } catch (err) {
-        console.error('[analytics] operational section failed:', err);
-        result.operationalError = 'Failed to load operational data';
+      } catch (sectionError) {
+        console.error('[analytics] operational section failed:', sectionError);
+        result.volumeTrends = [];
+        result.weightSummary = { current: 0, previous: 0, trend: 0 };
+        result.batchSummary = { current: 0, previous: 0, trend: 0 };
+        result.bagSummary = { current: 0, previous: 0, trend: 0, total: 0 };
+        result.farmSummary = { total: 0, approved: 0, pending: 0, rejected: 0 };
+        result.compliance = { farmRate: 0, batchRate: 0, bagRate: 0, flaggedBatches: 0 };
+        result.agentPerformance = [];
       }
     }
 
-    // ── Section: strategic ────────────────────────────────────────────────────
     if (section === 'all' || section === 'strategic') {
       try {
         const commodityMap = new Map<string, { weight: number; batches: number; compliantFarms: number; totalFarms: number }>();
@@ -275,23 +276,26 @@ export async function GET(request: NextRequest) {
 
         const gradeMap = new Map<string, number>();
         for (const bag of bags) {
-          gradeMap.set(bag.grade || 'Ungraded', (gradeMap.get(bag.grade || 'Ungraded') || 0) + 1);
+          const grade = bag.grade || 'Ungraded';
+          gradeMap.set(grade, (gradeMap.get(grade) || 0) + 1);
         }
         result.gradeDistribution = Array.from(gradeMap.entries()).map(([grade, count]) => ({ grade, count })).sort((a, b) => a.grade.localeCompare(b.grade));
 
-        result.farmComplianceBreakdown = [
+        const farmComplianceBreakdown = [
           { status: 'Approved', count: farms.filter(f => f.compliance_status === 'approved').length },
           { status: 'Pending', count: farms.filter(f => f.compliance_status === 'pending').length },
           { status: 'Rejected', count: farms.filter(f => f.compliance_status === 'rejected').length },
           { status: 'Not Reviewed', count: farms.filter(f => !f.compliance_status || f.compliance_status === 'not_reviewed').length },
         ].filter(item => item.count > 0);
+        result.farmComplianceBreakdown = farmComplianceBreakdown;
 
         const deforestationRisk: Record<string, number> = { 'None Detected': 0, 'Low': 0, 'Medium': 0, 'High': 0 };
         for (const farm of farms) {
           const check = farm.deforestation_check as any;
-          if (check?.risk_level) {
+          if (check && check.risk_level) {
             const level = check.risk_level.charAt(0).toUpperCase() + check.risk_level.slice(1);
-            deforestationRisk[level] = (deforestationRisk[level] ?? 0) + 1;
+            if (deforestationRisk[level] !== undefined) deforestationRisk[level]++;
+            else deforestationRisk['None Detected']++;
           } else {
             deforestationRisk['None Detected']++;
           }
@@ -310,12 +314,13 @@ export async function GET(request: NextRequest) {
           region, weight: Math.round(data.weight * 100) / 100, batches: data.batches,
         })).sort((a, b) => b.weight - a.weight);
 
-        result.riskIntelligence = [
+        const failureTypes = [
           { type: 'Yield Anomalies', count: batches.filter(b => b.yield_flag_reason).length },
           { type: 'Missing GPS', count: farms.filter(f => !f.boundary_geo).length },
           { type: 'Non-Compliant Farms', count: farms.filter(f => f.compliance_status === 'rejected').length },
           { type: 'Low Grade (C)', count: bags.filter(b => b.grade === 'C').length },
         ].filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+        result.riskIntelligence = failureTypes;
 
         const totalHectares = farms.reduce((s, f) => s + Number(f.area_hectares || 0), 0);
         const verifiedFarms = farms.filter(f => f.boundary_geo).length;
@@ -325,24 +330,33 @@ export async function GET(request: NextRequest) {
           unverifiedFarms: farms.length - verifiedFarms,
           totalHectares: Math.round(totalHectares * 100) / 100,
         };
-      } catch (err) {
-        console.error('[analytics] strategic section failed:', err);
-        result.strategicError = 'Failed to load strategic data';
+      } catch (sectionError) {
+        console.error('[analytics] strategic section failed:', sectionError);
+        result.commodityBreakdown = [];
+        result.gradeDistribution = [];
+        result.farmComplianceBreakdown = [];
+        result.deforestationRisk = [];
+        result.regionalBreakdown = [];
+        result.riskIntelligence = [];
+        result.supplyChainNodes = { totalFarms: 0, verifiedFarms: 0, unverifiedFarms: 0, totalHectares: 0 };
       }
     }
 
-    // ── Section: shipments ────────────────────────────────────────────────────
     if (section === 'all' || section === 'shipments') {
       try {
-        const { data: shipments } = await supabase
+        const shipmentsRes = await supabase
           .from('shipments')
           .select('id, status, destination_country, total_weight_kg, readiness_score, readiness_decision, risk_flags, score_breakdown, created_at, compliance_profile_id')
           .eq('org_id', orgId)
           .order('created_at', { ascending: false })
           .limit(50);
-        const shipmentList = shipments || [];
 
-        result.shipmentScores = shipmentList.filter(s => s.score_breakdown).map(s => {
+        if (shipmentsRes.error) {
+          throw shipmentsRes.error;
+        }
+        const shipments = shipmentsRes.data || [];
+
+        const shipmentScores = shipments.filter(s => s.score_breakdown).map(s => {
           const breakdown = s.score_breakdown as any;
           return {
             id: s.id,
@@ -356,25 +370,27 @@ export async function GET(request: NextRequest) {
             decision: s.readiness_decision || 'unknown',
           };
         });
+        result.shipmentScores = shipmentScores;
 
         const destinationMap = new Map<string, number>();
-        for (const s of shipmentList) {
+        for (const s of shipments) {
           const dest = s.destination_country || 'Unknown';
           destinationMap.set(dest, (destinationMap.get(dest) || 0) + 1);
         }
         result.shipmentsByDestination = Array.from(destinationMap.entries()).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count);
 
-        result.shipmentDecisions = [
-          { decision: 'Go', count: shipmentList.filter(s => s.readiness_decision === 'go').length },
-          { decision: 'Conditional', count: shipmentList.filter(s => s.readiness_decision === 'conditional').length },
-          { decision: 'No Go', count: shipmentList.filter(s => s.readiness_decision === 'no_go').length },
-          { decision: 'Pending', count: shipmentList.filter(s => !s.readiness_decision || s.readiness_decision === 'unknown' || s.readiness_decision === 'pending').length },
+        const decisionCounts = [
+          { decision: 'Go', count: shipments.filter(s => s.readiness_decision === 'go').length },
+          { decision: 'Conditional', count: shipments.filter(s => s.readiness_decision === 'conditional').length },
+          { decision: 'No Go', count: shipments.filter(s => s.readiness_decision === 'no_go').length },
+          { decision: 'Pending', count: shipments.filter(s => !s.readiness_decision || s.readiness_decision === 'unknown').length },
         ].filter(item => item.count > 0);
+        result.shipmentDecisions = decisionCounts;
 
         const riskFlagMap = new Map<string, number>();
-        for (const s of shipmentList) {
+        for (const s of shipments) {
           const flags = s.risk_flags as any[];
-          if (Array.isArray(flags)) {
+          if (flags && Array.isArray(flags)) {
             for (const flag of flags) {
               const category = flag.category || flag.type || 'Other';
               riskFlagMap.set(category, (riskFlagMap.get(category) || 0) + 1);
@@ -382,55 +398,63 @@ export async function GET(request: NextRequest) {
           }
         }
         result.shipmentRiskFlags = Array.from(riskFlagMap.entries()).map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
-      } catch (err) {
-        console.error('[analytics] shipments section failed:', err);
-        result.shipmentsError = 'Failed to load shipment data';
+      } catch (sectionError) {
+        console.error('[analytics] shipments section failed:', sectionError);
+        result.shipmentScores = [];
+        result.shipmentsByDestination = [];
+        result.shipmentDecisions = [];
+        result.shipmentRiskFlags = [];
       }
     }
 
-    // ── Section: documents ────────────────────────────────────────────────────
     if (section === 'all' || section === 'documents') {
       try {
-        const { data: documents } = await supabase
+        const { data: documents, error: docError } = await supabase
           .from('documents')
           .select('id, type, status, expiry_date')
           .eq('org_id', orgId);
+
+        if (docError) throw docError;
         const docs = documents || [];
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+        const validDocs = docs.filter(d => !d.expiry_date || new Date(d.expiry_date) > thirtyDaysFromNow).length;
+        const expiringSoon = docs.filter(d => d.expiry_date && new Date(d.expiry_date) <= thirtyDaysFromNow && new Date(d.expiry_date) > now).length;
+        const expired = docs.filter(d => d.expiry_date && new Date(d.expiry_date) <= now).length;
+
         result.documentHealth = [
-          { status: 'Valid', count: docs.filter(d => !d.expiry_date || new Date(d.expiry_date) > thirtyDaysFromNow).length },
-          { status: 'Expiring Soon', count: docs.filter(d => d.expiry_date && new Date(d.expiry_date) <= thirtyDaysFromNow && new Date(d.expiry_date) > now).length },
-          { status: 'Expired', count: docs.filter(d => d.expiry_date && new Date(d.expiry_date) <= now).length },
+          { status: 'Valid', count: validDocs },
+          { status: 'Expiring Soon', count: expiringSoon },
+          { status: 'Expired', count: expired },
         ].filter(item => item.count > 0);
 
         const docTypeMap = new Map<string, number>();
-        for (const doc of docs) docTypeMap.set(doc.type || 'Other', (docTypeMap.get(doc.type || 'Other') || 0) + 1);
+        for (const doc of docs) {
+          const type = doc.type || 'Other';
+          docTypeMap.set(type, (docTypeMap.get(type) || 0) + 1);
+        }
         result.documentsByType = Array.from(docTypeMap.entries()).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
-      } catch (err) {
-        console.error('[analytics] documents section failed:', err);
-        result.documentsError = 'Failed to load document data';
+      } catch (sectionError) {
+        console.error('[analytics] documents section failed:', sectionError);
+        result.documentHealth = [];
+        result.documentsByType = [];
       }
     }
 
-    // ── Section: financial ────────────────────────────────────────────────────
     if (section === 'all' || section === 'financial') {
       try {
-        const { data: payments } = await supabase
+        const { data: payments, error: payError } = await supabase
           .from('payments')
           .select('id, amount, currency, status, payment_method, payment_date, payee_type')
           .eq('org_id', orgId);
+
+        if (payError) throw payError;
         const paymentData = payments || [];
 
-        // Group amounts by currency before summing to avoid mixing NGN + EUR
         const paymentStatusMap = new Map<string, number>();
         const paymentMethodMap = new Map<string, number>();
-        // Use USD-equivalent amounts — for now sum as-is but tag currency mismatch
-        const currencySet = new Set(paymentData.map(p => p.currency || 'USD'));
-        const mixedCurrencies = currencySet.size > 1;
         let totalPayments = 0;
-
         for (const p of paymentData) {
           const status = p.status || 'unknown';
           const method = p.payment_method || 'Other';
@@ -440,40 +464,46 @@ export async function GET(request: NextRequest) {
           totalPayments += amount;
         }
 
-        result.paymentsByStatus = Array.from(paymentStatusMap.entries()).map(([status, amount]) => ({ status, amount: Math.round(amount * 100) / 100 }));
-        result.paymentsByMethod = Array.from(paymentMethodMap.entries()).map(([method, amount]) => ({ method, amount: Math.round(amount * 100) / 100 }));
-        result.paymentSummary = {
-          total: Math.round(totalPayments * 100) / 100,
-          count: paymentData.length,
-          mixedCurrencies,
-          currencies: Array.from(currencySet),
-        };
+        result.paymentsByStatus = Array.from(paymentStatusMap.entries()).map(([status, amount]) => ({
+          status, amount: Math.round(amount * 100) / 100,
+        }));
+        result.paymentsByMethod = Array.from(paymentMethodMap.entries()).map(([method, amount]) => ({
+          method, amount: Math.round(amount * 100) / 100,
+        }));
+        result.paymentSummary = { total: Math.round(totalPayments * 100) / 100, count: paymentData.length };
 
-        const { data: contracts } = await supabase
+        const { data: contracts, error: contractError } = await supabase
           .from('contracts')
           .select('id, status, quantity_mt, price_per_unit, delivery_deadline')
           .eq('exporter_org_id', orgId);
+
+        if (contractError) throw contractError;
         const contractData = contracts || [];
-        result.contractStatus = [
+        const contractStatus = [
           { status: 'Active', count: contractData.filter(c => c.status === 'active').length },
           { status: 'Completed', count: contractData.filter(c => c.status === 'completed').length },
           { status: 'Pending', count: contractData.filter(c => c.status === 'pending' || c.status === 'draft').length },
           { status: 'Cancelled', count: contractData.filter(c => c.status === 'cancelled').length },
         ].filter(item => item.count > 0);
+        result.contractStatus = contractStatus;
         result.contractSummary = {
           total: contractData.length,
           totalVolumeMT: contractData.reduce((s, c) => s + Number(c.quantity_mt || 0), 0),
           totalValue: contractData.reduce((s, c) => s + (Number(c.quantity_mt || 0) * Number(c.price_per_unit || 0)), 0),
         };
-      } catch (err) {
-        console.error('[analytics] financial section failed:', err);
-        result.financialError = 'Failed to load financial data';
+      } catch (sectionError) {
+        console.error('[analytics] financial section failed:', sectionError);
+        result.paymentsByStatus = [];
+        result.paymentsByMethod = [];
+        result.paymentSummary = { total: 0, count: 0 };
+        result.contractStatus = [];
+        result.contractSummary = { total: 0, totalVolumeMT: 0, totalValue: 0 };
       }
     }
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('[analytics] outer handler failed:', error);
+    console.error('[analytics] fatal error (auth/profile):', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

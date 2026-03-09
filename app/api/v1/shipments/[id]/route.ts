@@ -88,7 +88,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('V1 Shipments PATCH DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to update shipment' }, { status: 500 });
     }
 
     return NextResponse.json({ data: shipment }, {

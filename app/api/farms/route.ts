@@ -1,6 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent, getClientIp } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
+
+const farmCreateSchema = z.object({
+  farmer_name: z.string().min(1, 'Farmer name is required'),
+  farmer_id: z.string().optional(),
+  phone: z.string().optional(),
+  community: z.string().min(1, 'Community is required'),
+  boundary: z.object({
+    type: z.string().optional(),
+    coordinates: z.array(z.any()).optional(),
+  }).nullable().optional(),
+  area_hectares: z.number().positive().nullable().optional(),
+  legality_doc_url: z.string().url().nullable().optional(),
+});
+
+const farmPatchSchema = z.object({
+  id: z.number({ required_error: 'Farm ID is required' }),
+  compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  compliance_notes: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,9 +47,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     // Get user's org_id from their profile
     const { data: profile } = await supabaseAdmin
@@ -41,6 +62,16 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -103,9 +134,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -120,15 +149,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { farmer_name, farmer_id, phone, community, boundary, area_hectares, legality_doc_url } = body;
-
-    if (!farmer_name || !community) {
+    if (!profile.org_id) {
       return NextResponse.json(
-        { error: 'Farmer name and community are required' },
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
+
+    const body = await request.json();
+
+    const parsed = farmCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { farmer_name, farmer_id, phone, community, boundary, area_hectares, legality_doc_url } = parsed.data;
 
     const { data: org } = await supabaseAdmin
       .from('organizations')
@@ -184,6 +225,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: profile.user_id,
+      actorEmail: user.email,
+      action: 'farm.created',
+      resourceType: 'farm',
+      resourceId: farm.id?.toString(),
+      metadata: { farmer_name, community },
+      ipAddress: getClientIp(request),
+    });
+
+    if (phone) {
+      const inviteToken = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+      await supabaseAdmin.from('farmer_accounts').insert({
+        farm_id: farm.id,
+        org_id: profile.org_id,
+        phone,
+        farmer_code: farmer_id || null,
+        status: 'invited',
+        invite_token: inviteToken,
+        created_by: profile.user_id,
+      });
+    }
+
     return NextResponse.json({ farm, success: true });
 
   } catch (error) {
@@ -198,22 +263,16 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, compliance_status, compliance_notes } = body;
 
-    if (!id) {
+    const parsed = farmPatchSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Farm ID is required' },
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const allowedStatuses = ['pending', 'approved', 'rejected'];
-    if (compliance_status && !allowedStatuses.includes(compliance_status)) {
-      return NextResponse.json(
-        { error: 'Invalid compliance status' },
-        { status: 400 }
-      );
-    }
+    const { id, compliance_status, compliance_notes } = parsed.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -235,9 +294,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     // Verify user has access to this farm's organization
     const { data: profile } = await supabaseAdmin
@@ -252,6 +309,9 @@ export async function PATCH(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    if (tierBlock) return tierBlock;
 
     // Verify farm belongs to user's org
     const { data: farm } = await supabaseAdmin
@@ -284,6 +344,38 @@ export async function PATCH(request: NextRequest) {
         { error: 'Failed to update farm', details: updateError.message },
         { status: 500 }
       );
+    }
+
+    if (compliance_status === 'approved' || compliance_status === 'rejected') {
+      const action = compliance_status === 'approved' ? 'farm.approved' : 'farm.rejected';
+      await logAuditEvent({
+        orgId: String(profile.org_id),
+        actorId: user.id,
+        actorEmail: user.email,
+        action,
+        resourceType: 'farm',
+        resourceId: String(id),
+        metadata: { compliance_status, compliance_notes },
+        ipAddress: getClientIp(request),
+      });
+
+      const webhookEvent = compliance_status === 'approved' ? 'farm.approved' : 'farm.rejected';
+      dispatchWebhookEvent(String(profile.org_id), webhookEvent, {
+        farm_id: id,
+        compliance_status,
+        compliance_notes,
+        farmer_name: updatedFarm.farmer_name,
+        community: updatedFarm.community,
+      });
+    }
+
+    if (compliance_status && compliance_status !== 'pending') {
+      dispatchWebhookEvent(String(profile.org_id), 'compliance.changed', {
+        resource_type: 'farm',
+        farm_id: id,
+        new_status: compliance_status,
+        compliance_notes,
+      });
     }
 
     return NextResponse.json({ farm: updatedFarm });

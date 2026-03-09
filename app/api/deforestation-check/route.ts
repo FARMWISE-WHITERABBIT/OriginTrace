@@ -1,8 +1,42 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+const coordinatePairSchema = z.tuple([
+  z.number().min(-180).max(180),
+  z.number().min(-90).max(90),
+]);
+
+const polygonSchema = z.object({
+  type: z.literal('Polygon'),
+  coordinates: z
+    .array(
+      z.array(coordinatePairSchema).min(4)
+    )
+    .min(1),
+}).refine(
+  (val) => {
+    const ring = val.coordinates[0];
+    if (!ring || ring.length < 4) return false;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    return first[0] === last[0] && first[1] === last[1];
+  },
+  { message: 'Polygon outer ring must be closed (first and last coordinates must match)' }
+);
+
+const deforestationCheckBodySchema = z.object({
+  farm_id: z.union([z.string(), z.number()]).optional(),
+  polygon: polygonSchema.optional(),
+  country_code: z.string().length(2).optional(),
+}).refine(
+  (val) => val.farm_id !== undefined || val.polygon !== undefined,
+  { message: 'Either farm_id or polygon is required' }
+);
 
 const COUNTRY_RISK_MAP: Record<string, { risk_level: 'low' | 'medium' | 'high'; forest_loss_percentage: number }> = {
   'NG': { risk_level: 'high', forest_loss_percentage: 5.2 },
@@ -121,17 +155,10 @@ function getFallbackResult(areaHectares: number, countryCode: string = 'NG'): De
 }
 
 export async function POST(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 10 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: 'Supabase is not properly configured' },
-        { status: 500 }
-      );
-    }
-
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -142,9 +169,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -159,20 +184,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting — deforestation check calls Global Forest Watch API
-    const { checkRateLimit, RATE_LIMIT_PRESETS } = await import('@/lib/api/rate-limit');
-    const rateLimitResponse = checkRateLimit(request, profile.org_id, RATE_LIMIT_PRESETS.deforestationCheck);
-    if (rateLimitResponse) return rateLimitResponse;
-
-    const body = await request.json();
-    const { farm_id, polygon, country_code } = body;
-
-    if (!farm_id && !polygon) {
+    if (!profile.org_id) {
       return NextResponse.json(
-        { error: 'Either farm_id or polygon is required' },
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const deforestAllowedRoles = ['admin', 'aggregator', 'quality_manager'];
+    if (!deforestAllowedRoles.includes(profile.role as string)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
         { status: 400 }
       );
     }
+
+    const parsed = deforestationCheckBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { farm_id, polygon, country_code } = parsed.data;
 
     let farmPolygon = polygon;
     let farmAreaHectares = 0;
@@ -282,7 +327,7 @@ export async function POST(request: NextRequest) {
             });
           }
         } catch (emailErr) {
-          console.warn('Failed to send deforestation risk email:', emailErr);
+          console.error('Failed to send deforestation risk email:', emailErr);
         }
       }
     }
@@ -324,9 +369,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')

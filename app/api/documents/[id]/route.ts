@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -21,9 +22,7 @@ async function getAuthAndProfile(): Promise<AuthResult> {
     return { error: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  const supabaseAdmin = createAdminClient();
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
@@ -33,6 +32,10 @@ async function getAuthAndProfile(): Promise<AuthResult> {
 
   if (!profile) {
     return { error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
+  }
+
+  if (!profile.org_id) {
+    return { error: NextResponse.json({ error: 'No organization assigned' }, { status: 403 }) };
   }
 
   return { user, profile: profile as { org_id: string; role: string }, supabaseAdmin };
@@ -77,6 +80,11 @@ export async function PATCH(
     const auth = await getAuthAndProfile();
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
+
+    const patchAllowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
+    if (!patchAllowedRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
 
     const { data: existing } = await supabaseAdmin
       .from('documents')
@@ -136,6 +144,11 @@ export async function DELETE(
     const auth = await getAuthAndProfile();
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
+
+    const deleteAllowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
+    if (!deleteAllowedRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
 
     const { data: existing } = await supabaseAdmin
       .from('documents')

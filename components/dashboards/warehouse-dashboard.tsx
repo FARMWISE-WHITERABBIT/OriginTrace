@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useOrg } from '@/lib/contexts/org-context';
 import {
   Warehouse,
   Package,
@@ -38,28 +39,27 @@ export function WarehouseDashboard() {
     recentBatches: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const { organization } = useOrg();
 
   useEffect(() => {
     async function fetchStats() {
+      if (!organization) return;
+
       try {
-        const res = await fetch('/api/dashboard?view=warehouse_supervisor');
-        if (!res.ok) throw new Error('Failed to fetch dashboard data');
-        const data = await res.json();
-        setStats({
-          unusedBags: data.unusedBags || 0,
-          collectedBags: data.collectedBags || 0,
-          processedBags: data.processedBags || 0,
-          totalBags: data.totalBags || 0,
-          recentBatches: data.recentBatches || [],
-        });
+        const res = await fetch('/api/dashboard?role=warehouse');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch warehouse stats:', error);
       } finally {
         setIsLoading(false);
       }
     }
+
     fetchStats();
-  }, []);
+  }, [organization]);
 
   const inventoryCards = [
     { title: 'Total Bags', value: stats.totalBags, icon: Package, color: 'text-blue-600' },

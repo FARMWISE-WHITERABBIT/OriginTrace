@@ -1,8 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function GET(
   request: NextRequest,
@@ -13,9 +11,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format');
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: dpp, error } = await supabaseAdmin
       .from('digital_product_passports')
@@ -63,7 +59,30 @@ export async function GET(
   }
 }
 
-function renderDpp(dpp: any, format: string | null) {
+function anonymizeChainOfCustody(chain: any[]): any[] {
+  if (!Array.isArray(chain)) return chain;
+  return chain.map((item: any) => {
+    if (item.stage && item.stage.toLowerCase() === 'collection') {
+      return { ...item, actor: 'Smallholder Farmer' };
+    }
+    return item;
+  });
+}
+
+function sanitizeDpp(dpp: any): any {
+  const sanitized = { ...dpp };
+  if (sanitized.chain_of_custody) {
+    sanitized.chain_of_custody = anonymizeChainOfCustody(sanitized.chain_of_custody);
+  }
+  if (sanitized.finished_goods) {
+    const { buyer_company, destination_country, ...fg } = sanitized.finished_goods;
+    sanitized.finished_goods = fg;
+  }
+  return sanitized;
+}
+
+function renderDpp(rawDpp: any, format: string | null) {
+  const dpp = sanitizeDpp(rawDpp);
   if (format === 'jsonld') {
     return NextResponse.json(
       dpp.machine_readable_data || {},

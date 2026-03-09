@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle,
   XCircle,
@@ -19,6 +18,7 @@ import {
   Globe,
 } from 'lucide-react';
 import Image from 'next/image';
+import { StatusBadge } from '@/lib/status-badge';
 
 interface VerificationData {
   verified: boolean;
@@ -353,14 +353,5 @@ function InfoItem({ icon: Icon, label, value, mono, capitalize, ...props }: {
 }
 
 function ComplianceBadge({ status }: { status: string }) {
-  switch (status) {
-    case 'approved':
-      return <Badge variant="outline" className="text-green-600 border-green-300">Approved</Badge>;
-    case 'pending':
-      return <Badge variant="outline" className="text-amber-600 border-amber-300">Pending</Badge>;
-    case 'rejected':
-      return <Badge variant="outline" className="text-red-600 border-red-300">Rejected</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
-  }
+  return <StatusBadge domain="compliance" status={status} />;
 }

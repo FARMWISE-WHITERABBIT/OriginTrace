@@ -13,6 +13,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { CacheWarmer } from '@/components/cache-warmer';
 import { AutoSync } from '@/components/auto-sync';
 import { TenantThemeProvider } from '@/components/tenant-theme-provider';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +29,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
             <ConnectivityIndicator />
             <NotificationCenter />
             <HelpButton />
+            <LocaleSwitcher />
             <ThemeToggle />
           </div>
         </header>

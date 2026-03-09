@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { hasTierAccess, getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasTierAccess, getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
 
 export async function enforceTier(orgId: number | string, feature: TierFeature): Promise<NextResponse | null> {
   try {

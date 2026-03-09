@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { useOrg } from '@/lib/contexts/org-context';
 import {
   ShieldCheck,
   FileText,
@@ -46,22 +47,27 @@ export function ComplianceOfficerDashboard() {
     recentActivity: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const { organization } = useOrg();
 
   useEffect(() => {
     async function fetchStats() {
+      if (!organization) return;
+
       try {
-        const res = await fetch('/api/dashboard?view=compliance_officer');
-        if (!res.ok) throw new Error('Failed to fetch dashboard data');
-        const data = await res.json();
-        setStats(data);
+        const res = await fetch('/api/dashboard?role=compliance_officer');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch compliance stats:', error);
       } finally {
         setIsLoading(false);
       }
     }
+
     fetchStats();
-  }, []);
+  }, [organization]);
 
   const statCards = [
     { title: 'Compliance Rate', value: `${stats.complianceRate}%`, icon: ShieldCheck, color: 'text-green-600' },

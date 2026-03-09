@@ -1,15 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const { searchParams } = new URL(request.url);
     const pedigreeCode = searchParams.get('code');
@@ -19,9 +15,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Pedigree code or ID required' }, { status: 400 });
     }
 
-    // Public endpoint — strip all commercially sensitive fields.
-    // buyer_name, buyer_company, dds_reference, dds_submitted_at, destination_country
-    // are confidential trade details and must never be returned to unauthenticated callers.
     let query = supabaseAdmin
       .from('finished_goods')
       .select(`
@@ -34,6 +27,7 @@ export async function GET(request: NextRequest) {
         lot_number,
         production_date,
         expiry_date,
+        dds_submitted,
         pedigree_verified,
         verification_notes,
         created_at,
@@ -49,7 +43,8 @@ export async function GET(request: NextRequest) {
           standard_recovery_rate,
           mass_balance_valid,
           mass_balance_variance,
-          processed_at
+          processed_at,
+          org_id
         ),
         organizations (
           id,
@@ -109,18 +104,18 @@ export async function GET(request: NextRequest) {
     const sourceFarms = (runBatches || []).map((rb: any) => {
       const batch = rb.collection_batches;
       const farm = batch?.farms;
+      const farmIdStr = farm?.id ? String(farm.id) : '';
       return {
         batchId: batch?.id,
         collectionDate: batch?.created_at,
         farmId: farm?.id,
-        farmerName: farm?.farmer_name,
+        farmerName: farmIdStr ? `Farmer ${farmIdStr.substring(0, 4).toUpperCase()}` : 'Unknown Farmer',
         community: farm?.community,
         state: farm?.states?.name,
         areaHectares: farm?.area_hectares,
         commodity: farm?.commodity,
         complianceStatus: farm?.compliance_status,
         weightContribution: rb.weight_contribution_kg,
-        boundaryGeo: farm?.boundary_geo
       };
     }).filter((f: any) => f.farmId);
 
@@ -153,13 +148,24 @@ export async function GET(request: NextRequest) {
       }
     ];
 
+    if (finishedGood.dds_submitted) {
+      timeline.push({
+        event: 'DDS Submitted',
+        date: null,
+        details: 'Due diligence statement submitted',
+        icon: 'certificate'
+      });
+    }
+
+    const { organizations, ...sanitizedGood } = finishedGood as any;
+    const { mass_balance_variance, org_id, ...sanitizedRun } = processingRun as any;
 
     return NextResponse.json({
       finishedGood: {
-        ...finishedGood,
-        organization: finishedGood.organizations
+        ...sanitizedGood,
+        organization: organizations
       },
-      processingRun,
+      processingRun: sanitizedRun,
       sourceFarms,
       summary: {
         totalSmallholders: uniqueFarmers,
@@ -169,7 +175,6 @@ export async function GET(request: NextRequest) {
         processedOutputKg: processingRun.output_weight_kg,
         recoveryRate: processingRun.recovery_rate,
         massBalanceValid: processingRun.mass_balance_valid,
-        massBalanceVariance: processingRun.mass_balance_variance
       },
       timeline
     });

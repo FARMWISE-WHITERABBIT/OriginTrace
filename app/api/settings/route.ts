@@ -1,10 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const settingsPatchSchema = z.object({
+  name: z.string().min(2).optional(),
+  logo_url: z.string().url().nullable().optional(),
+  settings: z.record(z.any()).optional(),
+  active_lgas: z.array(z.string()).optional(),
+  commodity_types: z.array(z.string()).optional(),
+  commodities: z.array(z.string()).optional(),
+  brand_colors: z.object({
+    primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    accent: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  }).nullable().optional(),
+});
+
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
 
 async function getImpersonatedOrgId(): Promise<number | null> {
@@ -35,9 +48,7 @@ async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -119,9 +130,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -160,11 +169,20 @@ export async function PATCH(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { name, logo_url, settings, active_lgas, commodity_types, commodities, brand_colors } = body;
+
+    const parsed = settingsPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { name, logo_url, settings, active_lgas, commodity_types, commodities, brand_colors } = parsed.data;
     
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     
-    if (name && typeof name === 'string' && name.trim().length >= 2) {
+    if (name) {
       updates.name = name.trim();
     }
     
@@ -172,7 +190,7 @@ export async function PATCH(request: NextRequest) {
       updates.logo_url = logo_url || null;
     }
     
-    if (settings && typeof settings === 'object') {
+    if (settings) {
       const { data: currentOrg } = await supabaseAdmin
         .from('organizations')
         .select('settings')
@@ -182,24 +200,23 @@ export async function PATCH(request: NextRequest) {
       updates.settings = { ...(currentOrg?.settings || {}), ...settings };
     }
     
-    if (Array.isArray(active_lgas)) {
+    if (active_lgas !== undefined) {
       updates.active_lgas = active_lgas;
     }
     
-    if (Array.isArray(commodity_types)) {
+    if (commodity_types !== undefined) {
       updates.commodity_types = commodity_types;
     }
     
-    if (Array.isArray(commodities)) {
+    if (commodities !== undefined) {
       updates.commodities = commodities;
     }
     
     if (brand_colors !== undefined) {
-      if (brand_colors && typeof brand_colors === 'object') {
+      if (brand_colors) {
         const validColors: Record<string, string> = {};
-        const hexRegex = /^#[0-9a-fA-F]{6}$/;
-        for (const key of ['primary', 'secondary', 'accent']) {
-          if (brand_colors[key] && hexRegex.test(brand_colors[key])) {
+        for (const key of ['primary', 'secondary', 'accent'] as const) {
+          if (brand_colors[key]) {
             validColors[key] = brand_colors[key];
           }
         }
@@ -231,9 +248,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();

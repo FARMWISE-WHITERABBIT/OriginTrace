@@ -37,82 +37,117 @@ interface Conflict {
   farm_b: Farm;
 }
 
-function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm; overlayMode: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+function buildPolygonPath(ctx: CanvasRenderingContext2D, coords: number[][], toPixel: (lng: number, lat: number) => { x: number; y: number }) {
+  if (coords.length < 3) return;
+  ctx.beginPath();
+  const first = toPixel(coords[0][0], coords[0][1]);
+  ctx.moveTo(first.x, first.y);
+  for (let i = 1; i < coords.length; i++) {
+    const pt = toPixel(coords[i][0], coords[i][1]);
+    ctx.lineTo(pt.x, pt.y);
+  }
+  ctx.closePath();
+}
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+function drawConflictCanvas(
+  canvas: HTMLCanvasElement,
+  farmA: Farm,
+  farmB: Farm,
+  overlayMode: boolean,
+  compact: boolean = false
+) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
 
-    ctx.fillStyle = 'hsl(120, 5%, 95%)';
-    ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'hsl(120, 5%, 95%)';
+  ctx.fillRect(0, 0, w, h);
 
-    const coordsA = farmA.boundary?.coordinates?.[0] || [];
-    const coordsB = farmB.boundary?.coordinates?.[0] || [];
+  const coordsA = farmA.boundary?.coordinates?.[0] || [];
+  const coordsB = farmB.boundary?.coordinates?.[0] || [];
 
-    if (coordsA.length === 0 && coordsB.length === 0) {
-      ctx.fillStyle = 'hsl(150, 10%, 40%)';
-      ctx.font = '13px var(--font-mono, monospace)';
-      ctx.textAlign = 'center';
-      ctx.fillText('No boundary data available', w / 2, h / 2);
-      return;
-    }
+  if (coordsA.length === 0 && coordsB.length === 0) {
+    ctx.fillStyle = 'hsl(150, 10%, 40%)';
+    ctx.font = compact ? '10px var(--font-mono, monospace)' : '13px var(--font-mono, monospace)';
+    ctx.textAlign = 'center';
+    ctx.fillText('No boundary data', w / 2, h / 2);
+    return;
+  }
 
-    const allCoords = [...coordsA, ...coordsB];
-    const lngs = allCoords.map(c => c[0]);
-    const lats = allCoords.map(c => c[1]);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
+  const allCoords = [...coordsA, ...coordsB];
+  const lngs = allCoords.map(c => c[0]);
+  const lats = allCoords.map(c => c[1]);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
 
-    const padding = 30;
-    const drawW = w - padding * 2;
-    const drawH = h - padding * 2;
-    const rangeLng = maxLng - minLng || 0.001;
-    const rangeLat = maxLat - minLat || 0.001;
-    const scale = Math.min(drawW / rangeLng, drawH / rangeLat);
+  const padding = compact ? 8 : 30;
+  const legendHeight = compact ? 0 : 50;
+  const drawW = w - padding * 2;
+  const drawH = h - padding * 2 - legendHeight;
+  const rangeLng = maxLng - minLng || 0.001;
+  const rangeLat = maxLat - minLat || 0.001;
+  const scale = Math.min(drawW / rangeLng, drawH / rangeLat);
 
-    const toPixel = (lng: number, lat: number) => ({
-      x: padding + (lng - minLng) * scale + (drawW - rangeLng * scale) / 2,
-      y: padding + (maxLat - lat) * scale + (drawH - rangeLat * scale) / 2,
-    });
+  const toPixel = (lng: number, lat: number) => ({
+    x: padding + (lng - minLng) * scale + (drawW - rangeLng * scale) / 2,
+    y: padding + (maxLat - lat) * scale + (drawH - rangeLat * scale) / 2,
+  });
 
-    const drawPolygon = (coords: number[][], fillColor: string, strokeColor: string, lineWidth: number) => {
-      if (coords.length < 3) return;
-      ctx.beginPath();
-      const first = toPixel(coords[0][0], coords[0][1]);
-      ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < coords.length; i++) {
-        const pt = toPixel(coords[i][0], coords[i][1]);
-        ctx.lineTo(pt.x, pt.y);
-      }
-      ctx.closePath();
-      ctx.fillStyle = fillColor;
-      ctx.fill();
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = lineWidth;
+  const fillAlpha = overlayMode ? 0.25 : 0.15;
+  const strokeAlpha = overlayMode ? 0.8 : 0.6;
+  const lineW = compact ? 1.5 : 2;
+
+  if (coordsA.length >= 3) {
+    buildPolygonPath(ctx, coordsA, toPixel);
+    ctx.fillStyle = `rgba(239, 68, 68, ${fillAlpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(239, 68, 68, ${strokeAlpha})`;
+    ctx.lineWidth = lineW;
+    ctx.stroke();
+  }
+
+  if (coordsB.length >= 3) {
+    buildPolygonPath(ctx, coordsB, toPixel);
+    ctx.fillStyle = `rgba(59, 130, 246, ${fillAlpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(59, 130, 246, ${strokeAlpha})`;
+    ctx.lineWidth = lineW;
+    ctx.stroke();
+  }
+
+  if (coordsA.length >= 3 && coordsB.length >= 3) {
+    ctx.save();
+    buildPolygonPath(ctx, coordsA, toPixel);
+    ctx.clip();
+    buildPolygonPath(ctx, coordsB, toPixel);
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
+    ctx.fill();
+    ctx.restore();
+
+    if (!compact) {
+      ctx.save();
+      buildPolygonPath(ctx, coordsA, toPixel);
+      ctx.clip();
+      buildPolygonPath(ctx, coordsB, toPixel);
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.9)';
+      ctx.lineWidth = 2;
       ctx.stroke();
-    };
-
-    if (overlayMode) {
-      drawPolygon(coordsA, 'rgba(239, 68, 68, 0.25)', 'rgba(239, 68, 68, 0.8)', 2);
-      drawPolygon(coordsB, 'rgba(59, 130, 246, 0.25)', 'rgba(59, 130, 246, 0.8)', 2);
-    } else {
-      drawPolygon(coordsA, 'rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.6)', 2);
-      drawPolygon(coordsB, 'rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.6)', 2);
+      ctx.restore();
     }
+  }
 
-    coordsA.slice(0, -1).forEach((c, i) => {
+  if (!compact) {
+    const dotR = 4;
+    coordsA.slice(0, -1).forEach((c) => {
       const pt = toPixel(c[0], c[1]);
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, dotR, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
       ctx.fill();
       ctx.strokeStyle = '#fff';
@@ -120,10 +155,10 @@ function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm
       ctx.stroke();
     });
 
-    coordsB.slice(0, -1).forEach((c, i) => {
+    coordsB.slice(0, -1).forEach((c) => {
       const pt = toPixel(c[0], c[1]);
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, dotR, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
       ctx.fill();
       ctx.strokeStyle = '#fff';
@@ -131,27 +166,65 @@ function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm
       ctx.stroke();
     });
 
+    const legendY = h - legendHeight + 8;
     ctx.font = '11px var(--font-mono, monospace)';
     ctx.textAlign = 'left';
+
     ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
-    ctx.fillRect(8, h - 40, 10, 10);
+    ctx.fillRect(8, legendY, 10, 10);
     ctx.fillStyle = 'hsl(150, 10%, 15%)';
-    ctx.fillText(farmA.farmer_name, 22, h - 31);
+    ctx.fillText(`Farm A: ${farmA.farmer_name}`, 22, legendY + 9);
 
     ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
-    ctx.fillRect(8, h - 24, 10, 10);
+    ctx.fillRect(8, legendY + 16, 10, 10);
     ctx.fillStyle = 'hsl(150, 10%, 15%)';
-    ctx.fillText(farmB.farmer_name, 22, h - 15);
+    ctx.fillText(`Farm B: ${farmB.farmer_name}`, 22, legendY + 25);
+
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.6)';
+    ctx.fillRect(8, legendY + 32, 10, 10);
+    ctx.fillStyle = 'hsl(150, 10%, 15%)';
+    ctx.fillText('Overlap Zone', 22, legendY + 41);
+  }
+}
+
+function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm; overlayMode: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    drawConflictCanvas(canvas, farmA, farmB, overlayMode, false);
   }, [farmA, farmB, overlayMode]);
 
   return (
     <canvas
       ref={canvasRef}
       width={480}
-      height={320}
+      height={360}
       className="w-full rounded-lg border"
-      style={{ height: '240px' }}
+      style={{ height: '280px' }}
       data-testid="canvas-conflict-overlay"
+    />
+  );
+}
+
+function MiniOverlapCanvas({ farmA, farmB }: { farmA: Farm; farmB: Farm }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    drawConflictCanvas(canvas, farmA, farmB, true, true);
+  }, [farmA, farmB]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={80}
+      height={60}
+      className="rounded border"
+      style={{ width: '60px', height: '44px' }}
+      data-testid={`canvas-mini-overlap-${farmA.id}-${farmB.id}`}
     />
   );
 }
@@ -351,6 +424,7 @@ export default function ConflictsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Preview</TableHead>
                 <TableHead>Farm A</TableHead>
                 <TableHead>Farm B</TableHead>
                 <TableHead>Community</TableHead>
@@ -362,7 +436,7 @@ export default function ConflictsPage() {
             <TableBody>
               {conflicts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <CheckCircle2 className="h-8 w-8 text-green-500" />
                       <span>No pending conflicts - all boundaries are clear</span>
@@ -372,6 +446,9 @@ export default function ConflictsPage() {
               ) : (
                 conflicts.map((conflict) => (
                   <TableRow key={conflict.id} data-testid={`conflict-row-${conflict.id}`}>
+                    <TableCell>
+                      <MiniOverlapCanvas farmA={conflict.farm_a} farmB={conflict.farm_b} />
+                    </TableCell>
                     <TableCell className="font-medium">{conflict.farm_a.farmer_name}</TableCell>
                     <TableCell className="font-medium">{conflict.farm_b.farmer_name}</TableCell>
                     <TableCell>{conflict.farm_a.community || conflict.farm_b.community || '-'}</TableCell>

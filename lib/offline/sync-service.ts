@@ -24,25 +24,27 @@ export async function syncPendingBatches(): Promise<{
   synced: number;
   failed: number;
   errors: string[];
+  warnings: Array<{ type: string; message: string; details?: any }>;
 }> {
   if (isSyncing) {
-    return { synced: 0, failed: 0, errors: ['Sync already in progress'] };
+    return { synced: 0, failed: 0, errors: ['Sync already in progress'], warnings: [] };
   }
   
   if (!navigator.onLine) {
-    return { synced: 0, failed: 0, errors: ['Device is offline'] };
+    return { synced: 0, failed: 0, errors: ['Device is offline'], warnings: [] };
   }
   
   isSyncing = true;
   let synced = 0;
   let failed = 0;
   const errors: string[] = [];
+  let warnings: Array<{ type: string; message: string; details?: any }> = [];
   
   try {
     const pendingBatches = await getPendingBatches();
     
     if (pendingBatches.length === 0) {
-      return { synced: 0, failed: 0, errors: [] };
+      return { synced: 0, failed: 0, errors: [], warnings: [] };
     }
     
     for (const batch of pendingBatches) {
@@ -80,6 +82,10 @@ export async function syncPendingBatches(): Promise<{
       
       const result = await response.json();
       
+      if (result.warnings && Array.isArray(result.warnings)) {
+        warnings = result.warnings;
+      }
+      
       for (const syncResult of result.results) {
         const batch = pendingBatches.find(b => b.local_id === syncResult.local_id);
         if (batch) {
@@ -107,7 +113,7 @@ export async function syncPendingBatches(): Promise<{
     isSyncing = false;
   }
   
-  return { synced, failed, errors };
+  return { synced, failed, errors, warnings };
 }
 
 export async function updateSyncStatus(deviceId?: string): Promise<void> {

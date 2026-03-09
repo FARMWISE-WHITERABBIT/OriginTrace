@@ -1,497 +1,390 @@
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
-import { hasTierAccess } from '@/lib/config/tier-gating';
+import { checkRateLimit } from '@/lib/rate-limit';
 
-/**
- * GET /api/reports?type=shipment_dds|supplier_audit|regulatory_readiness|buyer_intelligence|period_performance
- *
- * Each report type has its own dedicated data query — not a re-skin of analytics.
- */
+function getDateRange(period: string): { start: string; end: string } {
+  const now = new Date();
+  const end = now.toISOString();
+  const ms: Record<string, number> = {
+    '7d': 7 * 86400000,
+    '30d': 30 * 86400000,
+    '90d': 90 * 86400000,
+    '1y': 365 * 86400000,
+  };
+  const start = new Date(now.getTime() - (ms[period] || ms['30d'])).toISOString();
+  return { start, end };
+}
+
 export async function GET(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 15 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
-    const authClient = await createServerClient();
-    const { data: { user }, error: authErr } = await authClient.auth.getUser();
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const supabase = createAdminClient();
+    const authClient = await createServerClient();
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { data: profile } = await supabase
-      .from('profiles').select('org_id, role').eq('user_id', user.id).single();
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      .from('profiles')
+      .select('id, org_id, role')
+      .eq('user_id', user.id)
+      .single();
 
-    const { data: org } = await supabase
-      .from('organizations').select('subscription_tier').eq('id', profile.org_id).single();
-    const tier = org?.subscription_tier || 'starter';
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
 
-    const rateLimitResponse = checkRateLimit(request, profile.org_id, RATE_LIMIT_PRESETS.analytics);
-    if (rateLimitResponse) return rateLimitResponse;
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
 
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'period_performance';
-    const period = searchParams.get('period') || '30d';
     const orgId = profile.org_id;
+    const type = request.nextUrl.searchParams.get('type');
+    const period = request.nextUrl.searchParams.get('period') || '30d';
+    const { start, end } = getDateRange(period);
 
-    const periodStart = getPeriodStart(period);
+    if (!type) {
+      return NextResponse.json({ error: 'Report type is required' }, { status: 400 });
+    }
 
     switch (type) {
       case 'period_performance':
-        if (!hasTierAccess(tier, 'analytics')) {
-          return NextResponse.json({ error: 'Analytics requires Basic tier or higher' }, { status: 403 });
-        }
-        return NextResponse.json(await buildPeriodPerformanceReport(supabase, orgId, periodStart));
-
+        return NextResponse.json(await buildPeriodPerformance(supabase, orgId, start, end, period));
       case 'shipment_dds':
-        if (!hasTierAccess(tier, 'shipment_readiness')) {
-          return NextResponse.json({ error: 'Shipment DDS report requires Pro tier' }, { status: 403 });
-        }
-        return NextResponse.json(await buildShipmentDDSReport(supabase, orgId, periodStart));
-
+        return NextResponse.json(await buildShipmentDDS(supabase, orgId, start, end));
       case 'supplier_audit':
-        if (!hasTierAccess(tier, 'compliance_review')) {
-          return NextResponse.json({ error: 'Supplier Audit report requires Pro tier' }, { status: 403 });
-        }
-        return NextResponse.json(await buildSupplierAuditReport(supabase, orgId));
-
+        return NextResponse.json(await buildSupplierAudit(supabase, orgId, start, end));
       case 'regulatory_readiness':
-        if (!hasTierAccess(tier, 'shipment_readiness')) {
-          return NextResponse.json({ error: 'Regulatory Readiness report requires Pro tier' }, { status: 403 });
-        }
-        return NextResponse.json(await buildRegulatoryReadinessReport(supabase, orgId));
-
+        return NextResponse.json(await buildRegulatoryReadiness(supabase, orgId, start, end));
       case 'buyer_intelligence':
-        if (!hasTierAccess(tier, 'buyer_portal')) {
-          return NextResponse.json({ error: 'Buyer Intelligence report requires Enterprise tier' }, { status: 403 });
-        }
-        return NextResponse.json(await buildBuyerIntelligenceReport(supabase, orgId));
-
+        return NextResponse.json(await buildBuyerIntelligence(supabase, orgId, start, end));
       default:
-        return NextResponse.json({ error: 'Unknown report type' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid report type' }, { status: 400 });
     }
-  } catch (err) {
-    console.error('[reports] error:', err);
+  } catch (error) {
+    console.error('Reports API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// ---------------------------------------------------------------------------
-// Report builders
-// ---------------------------------------------------------------------------
-
-async function buildPeriodPerformanceReport(supabase: any, orgId: string, periodStart: string) {
-  const [batchesRes, farmsRes, bagsRes, shipmentsRes, paymentsRes] = await Promise.all([
-    supabase.from('collection_batches').select('id, created_at, total_weight, bag_count, status, commodity, state, yield_flag_reason').eq('org_id', orgId).gte('created_at', periodStart).order('created_at', { ascending: true }),
-    supabase.from('farms').select('id, compliance_status, commodity, area_hectares, deforestation_check').eq('org_id', orgId),
-    supabase.from('bags').select('id, grade, is_compliant, weight_kg').eq('org_id', orgId),
-    supabase.from('shipments').select('id, readiness_score, readiness_decision, destination_country, total_weight_kg, created_at').eq('org_id', orgId).gte('created_at', periodStart),
-    supabase.from('payments').select('id, amount, currency, status').eq('org_id', orgId).gte('created_at', periodStart),
+async function buildPeriodPerformance(supabase: any, orgId: number, start: string, end: string, period: string) {
+  const [batchesRes, farmsRes, paymentsRes, docsRes] = await Promise.all([
+    supabase.from('collection_batches').select('id, total_weight, bag_count, commodity, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
+    supabase.from('farms').select('id, compliance_status, commodity, area_hectares').eq('org_id', orgId),
+    supabase.from('payments').select('id, amount, currency, status, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
+    supabase.from('documents').select('id, status, expiry_date, document_type').eq('org_id', orgId),
   ]);
 
   const batches = batchesRes.data || [];
   const farms = farmsRes.data || [];
-  const bags = bagsRes.data || [];
-  const shipments = shipmentsRes.data || [];
   const payments = paymentsRes.data || [];
+  const docs = docsRes.data || [];
 
-  const totalWeight = batches.reduce((s: number, b: any) => s + Number(b.total_weight || 0), 0);
-  const flagged = batches.filter((b: any) => b.yield_flag_reason).length;
-  const approved = farms.filter((f: any) => f.compliance_status === 'approved').length;
-  const compliantBags = bags.filter((b: any) => b.is_compliant).length;
-  const totalPayments = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+  const totalWeight = batches.reduce((s: number, b: any) => s + (b.total_weight || 0), 0);
+  const totalBatches = batches.length;
+  const approvedFarms = farms.filter((f: any) => f.compliance_status === 'approved').length;
+  const farmComplianceRate = farms.length > 0 ? Math.round((approvedFarms / farms.length) * 100) : 0;
+  const totalPayments = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + (p.amount || 0), 0);
 
-  // Volume trend by week
-  const weekMap = new Map<string, number>();
+  const commodityMap = new Map<string, { weight: number; batches: number; farms: number; approvedFarms: number }>();
   for (const b of batches) {
-    const week = getWeekLabel(b.created_at);
-    weekMap.set(week, (weekMap.get(week) || 0) + Number(b.total_weight || 0));
+    const key = b.commodity || 'Unknown';
+    const entry = commodityMap.get(key) || { weight: 0, batches: 0, farms: 0, approvedFarms: 0 };
+    entry.weight += b.total_weight || 0;
+    entry.batches += 1;
+    commodityMap.set(key, entry);
   }
-  const volumeTrend = Array.from(weekMap.entries()).map(([week, weight]) => ({ week, weight: Math.round(weight * 100) / 100 }));
-
-  return {
-    reportType: 'period_performance',
-    generatedAt: new Date().toISOString(),
-    summary: {
-      totalBatches: batches.length,
-      totalWeightKg: Math.round(totalWeight * 100) / 100,
-      flaggedBatches: flagged,
-      batchComplianceRate: batches.length > 0 ? Math.round(((batches.length - flagged) / batches.length) * 100) : 100,
-      totalFarms: farms.length,
-      farmComplianceRate: farms.length > 0 ? Math.round((approved / farms.length) * 100) : 0,
-      totalBags: bags.length,
-      bagComplianceRate: bags.length > 0 ? Math.round((compliantBags / bags.length) * 100) : 100,
-      totalShipments: shipments.length,
-      averageReadinessScore: shipments.length > 0 ? Math.round(shipments.reduce((s: number, sh: any) => s + (sh.readiness_score || 0), 0) / shipments.length) : null,
-      totalPaymentsDisbursed: Math.round(totalPayments * 100) / 100,
-    },
-    volumeTrend,
-    commodityBreakdown: buildCommodityBreakdown(batches, farms),
-    gradeDistribution: buildGradeDistribution(bags),
-    regionalBreakdown: buildRegionalBreakdown(batches),
-  };
-}
-
-async function buildShipmentDDSReport(supabase: any, orgId: string, periodStart: string) {
-  const { data: shipments } = await supabase
-    .from('shipments')
-    .select('id, destination_country, target_regulations, readiness_score, readiness_decision, risk_flags, score_breakdown, created_at, status, total_weight_kg, compliance_profile_id')
-    .eq('org_id', orgId)
-    .gte('created_at', periodStart)
-    .order('readiness_score', { ascending: false });
-
-  const shipmentList = shipments || [];
-
-  // For each shipment, count linked farm polygons and deforestation checks
-  const shipmentIds = shipmentList.map((s: any) => s.id);
-  const itemsRes = shipmentIds.length > 0
-    ? await supabase.from('shipment_items').select('shipment_id, batch_id').in('shipment_id', shipmentIds)
-    : { data: [] };
-
-  const batchIdsByShipment = new Map<string, string[]>();
-  for (const item of (itemsRes.data || [])) {
-    if (item.batch_id) {
-      const arr = batchIdsByShipment.get(item.shipment_id) || [];
-      arr.push(item.batch_id);
-      batchIdsByShipment.set(item.shipment_id, arr);
-    }
+  for (const f of farms) {
+    const key = f.commodity || 'Unknown';
+    const entry = commodityMap.get(key) || { weight: 0, batches: 0, farms: 0, approvedFarms: 0 };
+    entry.farms += 1;
+    if (f.compliance_status === 'approved') entry.approvedFarms += 1;
+    commodityMap.set(key, entry);
   }
 
-  const allBatchIds = Array.from(new Set((itemsRes.data || []).map((i: any) => i.batch_id).filter(Boolean)));
-  const farmIdsRes = allBatchIds.length > 0
-    ? await supabase.from('collection_batches').select('id, farm_id').in('id', allBatchIds)
-    : { data: [] };
-
-  const farmIdByBatch = new Map((farmIdsRes.data || []).map((b: any) => [b.id, b.farm_id]));
-  const farmIds = Array.from(new Set((farmIdsRes.data || []).map((b: any) => b.farm_id).filter(Boolean)));
-  const farmsRes = farmIds.length > 0
-    ? await supabase.from('farms').select('id, compliance_status, boundary_geo, deforestation_check').in('id', farmIds)
-    : { data: [] };
-  const farmDetailMap = new Map((farmsRes.data || []).map((f: any) => [String(f.id), f]));
-
-  const enrichedShipments = shipmentList.map((s: any) => {
-    const batchIds = batchIdsByShipment.get(s.id) || [];
-    const linkedFarmIds = batchIds.map(bid => farmIdByBatch.get(bid)).filter(Boolean).map(String);
-    const uniqueFarmIds = [...new Set(linkedFarmIds)];
-    const linkedFarms = uniqueFarmIds.map(fid => farmDetailMap.get(fid)).filter(Boolean);
-
-    return {
-      id: s.id,
-      destinationCountry: s.destination_country,
-      targetRegulations: s.target_regulations || [],
-      readinessScore: s.readiness_score,
-      readinessDecision: s.readiness_decision,
-      totalWeightKg: s.total_weight_kg,
-      createdAt: s.created_at,
-      status: s.status,
-      farmCount: uniqueFarmIds.length,
-      farmsWithPolygon: linkedFarms.filter((f: any) => !!f.boundary_geo).length,
-      farmsDeforestationVerified: linkedFarms.filter((f: any) => !!f.deforestation_check).length,
-      farmsDeforestationFree: linkedFarms.filter((f: any) => f.deforestation_check?.deforestation_free).length,
-      riskFlags: s.risk_flags || [],
-      scoreBreakdown: s.score_breakdown || {},
-    };
-  });
-
-  const goCount = shipmentList.filter((s: any) => s.readiness_decision === 'go').length;
-  const conditionalCount = shipmentList.filter((s: any) => s.readiness_decision === 'conditional').length;
-  const noGoCount = shipmentList.filter((s: any) => s.readiness_decision === 'no_go').length;
-
-  return {
-    reportType: 'shipment_dds',
-    generatedAt: new Date().toISOString(),
-    summary: {
-      totalShipments: shipmentList.length,
-      goDecisions: goCount,
-      conditionalDecisions: conditionalCount,
-      noGoDecisions: noGoCount,
-      averageReadinessScore: shipmentList.length > 0
-        ? Math.round(shipmentList.reduce((s: number, sh: any) => s + (sh.readiness_score || 0), 0) / shipmentList.length)
-        : null,
-    },
-    shipments: enrichedShipments,
-  };
-}
-
-async function buildSupplierAuditReport(supabase: any, orgId: string) {
-  const [farmsRes, agentsRes, batchesRes] = await Promise.all([
-    supabase.from('farms').select('id, farmer_name, community, state, commodity, area_hectares, gps_latitude, gps_longitude, boundary_geo, compliance_status, deforestation_check, created_at').eq('org_id', orgId),
-    supabase.from('profiles').select('user_id, full_name, role, created_at').eq('org_id', orgId).eq('role', 'agent'),
-    supabase.from('collection_batches').select('id, farm_id, agent_id, total_weight, yield_flag_reason, status').eq('org_id', orgId),
-  ]);
-
-  const farms = farmsRes.data || [];
-  const agents = agentsRes.data || [];
-  const batches = batchesRes.data || [];
-
-  // Farm-level audit stats
-  const farmAuditRows = farms.map((farm: any) => {
-    const farmBatches = batches.filter((b: any) => String(b.farm_id) === String(farm.id));
-    const totalWeight = farmBatches.reduce((s: number, b: any) => s + Number(b.total_weight || 0), 0);
-    const flaggedBatches = farmBatches.filter((b: any) => b.yield_flag_reason).length;
-    const defoCheck = farm.deforestation_check as any;
-
-    return {
-      farmId: farm.id,
-      farmerName: farm.farmer_name,
-      community: farm.community,
-      state: farm.state,
-      commodity: farm.commodity,
-      areaHectares: farm.area_hectares,
-      hasGps: !!(farm.gps_latitude && farm.gps_longitude),
-      hasPolygon: !!farm.boundary_geo,
-      complianceStatus: farm.compliance_status || 'pending',
-      deforestationFree: defoCheck?.deforestation_free ?? null,
-      deforestationRisk: defoCheck?.risk_level ?? 'unchecked',
-      totalBatches: farmBatches.length,
-      totalWeightKg: Math.round(totalWeight * 100) / 100,
-      flaggedBatches,
-      flagRate: farmBatches.length > 0 ? Math.round((flaggedBatches / farmBatches.length) * 100) : 0,
-      registeredAt: farm.created_at,
-    };
-  });
-
-  // GPS verification rates
-  const gpsVerified = farms.filter((f: any) => !!(f.gps_latitude && f.gps_longitude)).length;
-  const polygonVerified = farms.filter((f: any) => !!f.boundary_geo).length;
-  const defoChecked = farms.filter((f: any) => !!f.deforestation_check).length;
-  const defoFree = farms.filter((f: any) => (f.deforestation_check as any)?.deforestation_free).length;
-
-  // Agent performance
-  const agentRows = agents.map((agent: any) => {
-    const agentBatches = batches.filter((b: any) => b.agent_id === agent.user_id);
-    const totalWeight = agentBatches.reduce((s: number, b: any) => s + Number(b.total_weight || 0), 0);
-    const flagged = agentBatches.filter((b: any) => b.yield_flag_reason).length;
-    return {
-      agentId: agent.user_id,
-      agentName: agent.full_name,
-      totalBatches: agentBatches.length,
-      totalWeightKg: Math.round(totalWeight * 100) / 100,
-      flaggedBatches: flagged,
-      flagRate: agentBatches.length > 0 ? Math.round((flagged / agentBatches.length) * 100) : 0,
-    };
-  });
-
-  return {
-    reportType: 'supplier_audit',
-    generatedAt: new Date().toISOString(),
-    summary: {
-      totalFarms: farms.length,
-      gpsVerificationRate: farms.length > 0 ? Math.round((gpsVerified / farms.length) * 100) : 0,
-      polygonVerificationRate: farms.length > 0 ? Math.round((polygonVerified / farms.length) * 100) : 0,
-      deforestationCheckCoverage: farms.length > 0 ? Math.round((defoChecked / farms.length) * 100) : 0,
-      deforestationFreeRate: defoChecked > 0 ? Math.round((defoFree / defoChecked) * 100) : null,
-      approvedFarms: farms.filter((f: any) => f.compliance_status === 'approved').length,
-      pendingFarms: farms.filter((f: any) => f.compliance_status === 'pending').length,
-      rejectedFarms: farms.filter((f: any) => f.compliance_status === 'rejected').length,
-      totalAgents: agents.length,
-    },
-    farms: farmAuditRows,
-    agents: agentRows,
-  };
-}
-
-async function buildRegulatoryReadinessReport(supabase: any, orgId: string) {
-  const { data: shipments } = await supabase
-    .from('shipments')
-    .select('id, destination_country, target_regulations, readiness_score, readiness_decision, score_breakdown, risk_flags')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  const shipmentList = shipments || [];
-
-  // Aggregate scores per regulatory framework
-  const frameworkStats: Record<string, { count: number; totalScore: number; goCount: number; flagCount: number }> = {};
-
-  const FRAMEWORKS = ['EUDR', 'UK Environment Act', 'Lacey Act / UFLPA', 'FSMA 204', 'China Green Trade', 'UAE/Halal'];
-
-  for (const fw of FRAMEWORKS) {
-    frameworkStats[fw] = { count: 0, totalScore: 0, goCount: 0, flagCount: 0 };
-  }
-
-  for (const s of shipmentList) {
-    const regs: string[] = s.target_regulations || [];
-    for (const reg of regs) {
-      // Match to framework
-      const fw = FRAMEWORKS.find(f => f.toLowerCase().includes(reg.toLowerCase()) || reg.toLowerCase().includes(f.toLowerCase().split(' ')[0]));
-      if (fw && frameworkStats[fw]) {
-        frameworkStats[fw].count++;
-        frameworkStats[fw].totalScore += s.readiness_score || 0;
-        if (s.readiness_decision === 'go') frameworkStats[fw].goCount++;
-        // Count relevant risk flags
-        const flags = (s.risk_flags as any[]) || [];
-        frameworkStats[fw].flagCount += flags.filter(f => f.category && fw.toLowerCase().includes(f.category.toLowerCase().split(' ')[0])).length;
-      }
-    }
-  }
-
-  const frameworkSummary = FRAMEWORKS.map(fw => ({
-    framework: fw,
-    shipmentCount: frameworkStats[fw].count,
-    averageScore: frameworkStats[fw].count > 0 ? Math.round(frameworkStats[fw].totalScore / frameworkStats[fw].count) : null,
-    approvalRate: frameworkStats[fw].count > 0 ? Math.round((frameworkStats[fw].goCount / frameworkStats[fw].count) * 100) : null,
-    totalRiskFlags: frameworkStats[fw].flagCount,
+  const commodityBreakdown = Array.from(commodityMap.entries()).map(([name, v]) => ({
+    name,
+    weight: Math.round(v.weight * 100) / 100,
+    batches: v.batches,
+    totalFarms: v.farms,
+    complianceRate: v.farms > 0 ? Math.round((v.approvedFarms / v.farms) * 100) : 0,
   }));
 
-  // Overall compliance portfolio
-  const goCount = shipmentList.filter((s: any) => s.readiness_decision === 'go').length;
-  const avgScore = shipmentList.length > 0
-    ? Math.round(shipmentList.reduce((s: number, sh: any) => s + (sh.readiness_score || 0), 0) / shipmentList.length)
-    : null;
-
-  // Destination country breakdown
-  const destMap = new Map<string, { count: number; avgScore: number }>();
-  for (const s of shipmentList) {
-    const dest = s.destination_country || 'Unknown';
-    const existing = destMap.get(dest) || { count: 0, avgScore: 0 };
-    existing.count++;
-    existing.avgScore = Math.round(((existing.avgScore * (existing.count - 1)) + (s.readiness_score || 0)) / existing.count);
-    destMap.set(dest, existing);
+  const dayMs = 86400000;
+  const volumeTrends: Array<{ date: string; weight: number; batches: number }> = [];
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  const bucketSize = period === '7d' ? dayMs : period === '30d' ? dayMs : period === '90d' ? 7 * dayMs : 30 * dayMs;
+  for (let t = startMs; t < endMs; t += bucketSize) {
+    const bucketStart = new Date(t).toISOString();
+    const bucketEnd = new Date(t + bucketSize).toISOString();
+    const inBucket = batches.filter((b: any) => b.created_at >= bucketStart && b.created_at < bucketEnd);
+    volumeTrends.push({
+      date: new Date(t).toISOString().split('T')[0],
+      weight: Math.round(inBucket.reduce((s: number, b: any) => s + (b.total_weight || 0), 0) * 100) / 100,
+      batches: inBucket.length,
+    });
   }
 
+  const expiredDocs = docs.filter((d: any) => d.expiry_date && new Date(d.expiry_date) < new Date()).length;
+  const validDocs = docs.filter((d: any) => d.status === 'active' || d.status === 'verified').length;
+
   return {
-    reportType: 'regulatory_readiness',
-    generatedAt: new Date().toISOString(),
-    summary: {
-      totalShipments: shipmentList.length,
-      overallApprovalRate: shipmentList.length > 0 ? Math.round((goCount / shipmentList.length) * 100) : null,
-      averageReadinessScore: avgScore,
-      activeFrameworks: FRAMEWORKS.filter(fw => frameworkStats[fw].count > 0).length,
-    },
-    frameworkSummary,
-    destinationBreakdown: Array.from(destMap.entries()).map(([country, data]) => ({ country, ...data })).sort((a, b) => b.count - a.count),
+    weightSummary: { current: Math.round(totalWeight * 100) / 100 },
+    batchSummary: { current: totalBatches },
+    compliance: { farmRate: farmComplianceRate, approvedFarms, totalFarms: farms.length },
+    paymentSummary: { total: Math.round(totalPayments * 100) / 100, count: payments.length },
+    commodityBreakdown,
+    volumeTrends,
+    documentHealth: { total: docs.length, valid: validDocs, expired: expiredDocs },
   };
 }
 
-async function buildBuyerIntelligenceReport(supabase: any, orgId: string) {
-  const [contractsRes, shipmentsRes, farmsRes] = await Promise.all([
-    supabase.from('contracts').select('id, status, buyer_org_id, quantity_mt, price_per_unit, commodity, delivery_deadline').eq('exporter_org_id', orgId),
-    supabase.from('shipments').select('id, destination_country, readiness_score, readiness_decision, total_weight_kg, status, risk_flags, score_breakdown').eq('org_id', orgId).order('created_at', { ascending: false }).limit(50),
-    supabase.from('farms').select('id, compliance_status, deforestation_check, boundary_geo').eq('org_id', orgId),
+async function buildShipmentDDS(supabase: any, orgId: number, start: string, end: string) {
+  const { data: shipments } = await supabase
+    .from('shipments')
+    .select('id, destination_country, commodity, status, shipment_score, compliance_score, documentation_score, quality_score, logistics_score, created_at, decision')
+    .eq('org_id', orgId)
+    .gte('created_at', start)
+    .lte('created_at', end)
+    .order('created_at', { ascending: false });
+
+  const shipmentList = shipments || [];
+
+  const shipmentDetails = await Promise.all(
+    shipmentList.slice(0, 50).map(async (s: any) => {
+      const [itemsRes, lotsRes, outcomesRes] = await Promise.all([
+        supabase.from('shipment_items').select('id, item_type, batch_id, finished_good_id').eq('shipment_id', s.id),
+        supabase.from('shipment_lots').select('id, lot_number, weight_kg, source_batch_id').eq('shipment_id', s.id),
+        supabase.from('shipment_outcomes').select('id, outcome_type, status, notes').eq('shipment_id', s.id),
+      ]);
+
+      return {
+        id: s.id,
+        destination_country: s.destination_country,
+        commodity: s.commodity,
+        status: s.status,
+        decision: s.decision,
+        created_at: s.created_at,
+        scores: {
+          overall: s.shipment_score,
+          compliance: s.compliance_score,
+          documentation: s.documentation_score,
+          quality: s.quality_score,
+          logistics: s.logistics_score,
+        },
+        item_count: (itemsRes.data || []).length,
+        lot_count: (lotsRes.data || []).length,
+        outcomes: (outcomesRes.data || []).map((o: any) => ({ type: o.outcome_type, status: o.status })),
+      };
+    })
+  );
+
+  const scoreDistribution = {
+    go: shipmentList.filter((s: any) => s.decision === 'go').length,
+    conditional: shipmentList.filter((s: any) => s.decision === 'conditional').length,
+    no_go: shipmentList.filter((s: any) => s.decision === 'no_go').length,
+    pending: shipmentList.filter((s: any) => !s.decision || s.decision === 'pending').length,
+  };
+
+  const avgScore = shipmentList.length > 0
+    ? Math.round(shipmentList.reduce((s: number, sh: any) => s + (sh.shipment_score || 0), 0) / shipmentList.length)
+    : 0;
+
+  return {
+    summary: { totalShipments: shipmentList.length, averageScore: avgScore, scoreDistribution },
+    shipments: shipmentDetails,
+  };
+}
+
+async function buildSupplierAudit(supabase: any, orgId: number, start: string, end: string) {
+  const [farmsRes, batchesRes] = await Promise.all([
+    supabase.from('farms').select('id, farmer_name, community, state, compliance_status, boundary_geo, area_hectares, commodity, created_at, updated_at').eq('org_id', orgId),
+    supabase.from('collection_batches').select('id, farm_id, total_weight, bag_count, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
+  ]);
+
+  const farms = farmsRes.data || [];
+  const batches = batchesRes.data || [];
+
+  const farmVolumes = new Map<number, { weight: number; batches: number; bags: number }>();
+  for (const b of batches) {
+    if (!b.farm_id) continue;
+    const entry = farmVolumes.get(b.farm_id) || { weight: 0, batches: 0, bags: 0 };
+    entry.weight += b.total_weight || 0;
+    entry.batches += 1;
+    entry.bags += b.bag_count || 0;
+    farmVolumes.set(b.farm_id, entry);
+  }
+
+  const farmDetails = farms.map((f: any) => {
+    const vol = farmVolumes.get(f.id) || { weight: 0, batches: 0, bags: 0 };
+    return {
+      id: f.id,
+      farmer_name: f.farmer_name,
+      community: f.community,
+      state: f.state,
+      commodity: f.commodity,
+      compliance_status: f.compliance_status,
+      has_boundary: !!f.boundary_geo,
+      area_hectares: f.area_hectares,
+      period_weight: Math.round(vol.weight * 100) / 100,
+      period_batches: vol.batches,
+      period_bags: vol.bags,
+    };
+  });
+
+  const gpsVerifiedCount = farms.filter((f: any) => f.boundary_geo).length;
+  const complianceBreakdown = {
+    approved: farms.filter((f: any) => f.compliance_status === 'approved').length,
+    pending: farms.filter((f: any) => f.compliance_status === 'pending' || !f.compliance_status).length,
+    rejected: farms.filter((f: any) => f.compliance_status === 'rejected').length,
+  };
+
+  return {
+    summary: {
+      totalFarms: farms.length,
+      gpsVerifiedCount,
+      gpsVerificationRate: farms.length > 0 ? Math.round((gpsVerifiedCount / farms.length) * 100) : 0,
+      complianceBreakdown,
+    },
+    farms: farmDetails.sort((a: any, b: any) => b.period_weight - a.period_weight),
+  };
+}
+
+async function buildRegulatoryReadiness(supabase: any, orgId: number, start: string, end: string) {
+  const [farmsRes, shipmentsRes, docsRes, profilesRes] = await Promise.all([
+    supabase.from('farms').select('id, compliance_status, boundary_geo, deforestation_check, area_hectares').eq('org_id', orgId),
+    supabase.from('shipments').select('id, compliance_score, shipment_score, decision, compliance_profile_id, destination_country, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
+    supabase.from('documents').select('id, document_type, status, expiry_date').eq('org_id', orgId),
+    supabase.from('compliance_profiles').select('id, name, framework, rules').eq('org_id', orgId),
+  ]);
+
+  const farms = farmsRes.data || [];
+  const shipments = shipmentsRes.data || [];
+  const docs = docsRes.data || [];
+  const profiles = profilesRes.data || [];
+
+  const geoVerified = farms.filter((f: any) => f.boundary_geo).length;
+  const deforestationChecked = farms.filter((f: any) => f.deforestation_check).length;
+  const deforestationClear = farms.filter((f: any) => {
+    const check = f.deforestation_check;
+    return check && (check.deforestation_free === true || check.risk_level === 'low');
+  }).length;
+
+  const requiredDocTypes = ['phytosanitary', 'certificate_of_origin', 'fumigation', 'quality_certificate', 'dds'];
+  const docCoverage: Record<string, { total: number; valid: number }> = {};
+  for (const dt of requiredDocTypes) {
+    const matching = docs.filter((d: any) => d.document_type === dt);
+    const valid = matching.filter((d: any) => d.status === 'active' || d.status === 'verified');
+    docCoverage[dt] = { total: matching.length, valid: valid.length };
+  }
+
+  const frameworks = [
+    {
+      name: 'EUDR',
+      metrics: {
+        geoVerification: farms.length > 0 ? Math.round((geoVerified / farms.length) * 100) : 0,
+        deforestationCheck: farms.length > 0 ? Math.round((deforestationChecked / farms.length) * 100) : 0,
+        deforestationClear: deforestationChecked > 0 ? Math.round((deforestationClear / deforestationChecked) * 100) : 0,
+        ddsReady: (docCoverage['dds']?.valid || 0) > 0,
+      },
+    },
+    {
+      name: 'FSMA 204',
+      metrics: {
+        lotTraceability: shipments.length > 0 ? Math.round(shipments.filter((s: any) => s.shipment_score >= 70).length / shipments.length * 100) : 0,
+        kdeCompleteness: (docCoverage['quality_certificate']?.valid || 0) > 0,
+        cteVerification: farms.length > 0 ? Math.round((geoVerified / farms.length) * 100) : 0,
+      },
+    },
+    {
+      name: 'UK Environment Act',
+      metrics: {
+        dueDiligence: farms.length > 0 ? Math.round((farms.filter((f: any) => f.compliance_status === 'approved').length / farms.length) * 100) : 0,
+        geoVerification: farms.length > 0 ? Math.round((geoVerified / farms.length) * 100) : 0,
+        legalityVerification: (docCoverage['certificate_of_origin']?.valid || 0) > 0,
+      },
+    },
+    {
+      name: 'Lacey Act / UFLPA',
+      metrics: {
+        supplyChainTransparency: farms.length > 0 ? Math.round((geoVerified / farms.length) * 100) : 0,
+        countryOfOriginDocs: (docCoverage['certificate_of_origin']?.valid || 0) > 0,
+        importDeclaration: (docCoverage['phytosanitary']?.valid || 0) > 0,
+      },
+    },
+  ];
+
+  return {
+    summary: {
+      totalFarms: farms.length,
+      totalShipments: shipments.length,
+      geoVerificationRate: farms.length > 0 ? Math.round((geoVerified / farms.length) * 100) : 0,
+      complianceProfiles: profiles.length,
+    },
+    frameworks,
+    documentCoverage: docCoverage,
+  };
+}
+
+async function buildBuyerIntelligence(supabase: any, orgId: number, start: string, end: string) {
+  const [contractsRes, shipmentsRes, docsRes] = await Promise.all([
+    supabase.from('contracts').select('id, buyer_org_id, status, total_value, currency, commodity, created_at').eq('exporter_org_id', orgId),
+    supabase.from('shipments').select('id, destination_country, commodity, status, shipment_score, decision, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
+    supabase.from('documents').select('id, document_type, status').eq('org_id', orgId),
   ]);
 
   const contracts = contractsRes.data || [];
   const shipments = shipmentsRes.data || [];
-  const farms = farmsRes.data || [];
+  const docs = docsRes.data || [];
 
-  // ESG portfolio metrics
-  const polygonRate = farms.length > 0 ? Math.round((farms.filter((f: any) => !!f.boundary_geo).length / farms.length) * 100) : 0;
-  const defoFreeRate = farms.filter((f: any) => !!f.deforestation_check).length > 0
-    ? Math.round((farms.filter((f: any) => (f.deforestation_check as any)?.deforestation_free).length / farms.filter((f: any) => !!f.deforestation_check).length) * 100)
-    : null;
-  const approvedFarmRate = farms.length > 0 ? Math.round((farms.filter((f: any) => f.compliance_status === 'approved').length / farms.length) * 100) : 0;
+  const activeContracts = contracts.filter((c: any) => c.status === 'active').length;
+  const avgShipmentScore = shipments.length > 0
+    ? Math.round(shipments.reduce((s: number, sh: any) => s + (sh.shipment_score || 0), 0) / shipments.length)
+    : 0;
 
-  // Provenance stats
-  const avgReadiness = shipments.length > 0
-    ? Math.round(shipments.reduce((s: number, sh: any) => s + (sh.readiness_score || 0), 0) / shipments.length)
-    : null;
-
-  // Contract value summary
-  const activeContracts = contracts.filter((c: any) => c.status === 'active');
-  const totalContractValue = activeContracts.reduce((s: number, c: any) => s + (Number(c.quantity_mt || 0) * Number(c.price_per_unit || 0)), 0);
-
-  // Risk flag frequency analysis
-  const riskFlagCounts = new Map<string, number>();
+  const destinationMap = new Map<string, { count: number; avgScore: number; totalScore: number }>();
   for (const s of shipments) {
-    const flags = (s.risk_flags as any[]) || [];
-    for (const flag of flags) {
-      const cat = flag.category || 'Other';
-      riskFlagCounts.set(cat, (riskFlagCounts.get(cat) || 0) + 1);
-    }
+    const key = s.destination_country || 'Unknown';
+    const entry = destinationMap.get(key) || { count: 0, avgScore: 0, totalScore: 0 };
+    entry.count += 1;
+    entry.totalScore += s.shipment_score || 0;
+    destinationMap.set(key, entry);
   }
+
+  const byDestination = Array.from(destinationMap.entries()).map(([country, v]) => ({
+    country,
+    shipments: v.count,
+    avgScore: v.count > 0 ? Math.round(v.totalScore / v.count) : 0,
+  })).sort((a, b) => b.shipments - a.shipments);
+
+  const riskFlags = {
+    lowScoreShipments: shipments.filter((s: any) => (s.shipment_score || 0) < 50).length,
+    noGoDecisions: shipments.filter((s: any) => s.decision === 'no_go').length,
+    conditionalDecisions: shipments.filter((s: any) => s.decision === 'conditional').length,
+  };
+
+  const validDocCount = docs.filter((d: any) => d.status === 'active' || d.status === 'verified').length;
+  const docCompleteness = docs.length > 0 ? Math.round((validDocCount / docs.length) * 100) : 0;
 
   return {
-    reportType: 'buyer_intelligence',
-    generatedAt: new Date().toISOString(),
-    esgMetrics: {
-      farmComplianceRate: approvedFarmRate,
-      polygonVerificationRate: polygonRate,
-      deforestationFreeRate: defoFreeRate,
-      averageShipmentReadiness: avgReadiness,
-      goRateLastN: shipments.length > 0
-        ? Math.round((shipments.filter((s: any) => s.readiness_decision === 'go').length / shipments.length) * 100)
-        : null,
-    },
-    contracts: {
-      totalActive: activeContracts.length,
-      totalValue: Math.round(totalContractValue * 100) / 100,
-      commodityMix: Object.fromEntries(
-        contracts.reduce((map: Map<string, number>, c: any) => {
-          const commodity = c.commodity || 'Unknown';
-          map.set(commodity, (map.get(commodity) || 0) + Number(c.quantity_mt || 0));
-          return map;
-        }, new Map<string, number>())
-      ),
-    },
-    provenanceStats: {
+    summary: {
+      activeContracts,
       totalShipments: shipments.length,
-      shipmentsByDestination: Array.from(
-        shipments.reduce((map: Map<string, number>, s: any) => {
-          const dest = s.destination_country || 'Unknown';
-          map.set(dest, (map.get(dest) || 0) + 1);
-          return map;
-        }, new Map<string, number>())
-      ).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count),
+      averageShipmentScore: avgShipmentScore,
+      documentCompleteness: docCompleteness,
     },
-    riskProfile: Array.from(riskFlagCounts.entries())
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count),
+    byDestination,
+    riskFlags,
+    contractSummary: {
+      total: contracts.length,
+      active: activeContracts,
+      completed: contracts.filter((c: any) => c.status === 'completed').length,
+    },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getPeriodStart(period: string): string {
-  const now = new Date();
-  const map: Record<string, () => Date> = {
-    '7d': () => new Date(now.getTime() - 7 * 86400000),
-    '30d': () => new Date(now.getTime() - 30 * 86400000),
-    '90d': () => new Date(now.getTime() - 90 * 86400000),
-    '1y': () => new Date(now.getTime() - 365 * 86400000),
-  };
-  return (map[period] || map['30d'])().toISOString();
-}
-
-function getWeekLabel(dateStr: string): string {
-  const d = new Date(dateStr);
-  const year = d.getFullYear();
-  const weekNum = Math.ceil(((d.getTime() - new Date(year, 0, 1).getTime()) / 86400000 + 1) / 7);
-  return `${year}-W${String(weekNum).padStart(2, '0')}`;
-}
-
-function buildCommodityBreakdown(batches: any[], farms: any[]) {
-  const map = new Map<string, { weight: number; batches: number; farms: number }>();
-  for (const b of batches) {
-    const c = b.commodity || 'Unknown';
-    const e = map.get(c) || { weight: 0, batches: 0, farms: 0 };
-    e.weight += Number(b.total_weight || 0);
-    e.batches++;
-    map.set(c, e);
-  }
-  for (const f of farms) {
-    const c = f.commodity || 'Unknown';
-    const e = map.get(c) || { weight: 0, batches: 0, farms: 0 };
-    e.farms++;
-    map.set(c, e);
-  }
-  return Array.from(map.entries()).map(([commodity, data]) => ({ commodity, ...data, weight: Math.round(data.weight * 100) / 100 })).sort((a, b) => b.weight - a.weight);
-}
-
-function buildGradeDistribution(bags: any[]) {
-  const map = new Map<string, number>();
-  for (const b of bags) map.set(b.grade || 'Ungraded', (map.get(b.grade || 'Ungraded') || 0) + 1);
-  return Array.from(map.entries()).map(([grade, count]) => ({ grade, count })).sort((a, b) => a.grade.localeCompare(b.grade));
-}
-
-function buildRegionalBreakdown(batches: any[]) {
-  const map = new Map<string, { weight: number; batches: number }>();
-  for (const b of batches) {
-    const r = b.state || 'Unknown';
-    const e = map.get(r) || { weight: 0, batches: 0 };
-    e.weight += Number(b.total_weight || 0);
-    e.batches++;
-    map.set(r, e);
-  }
-  return Array.from(map.entries()).map(([region, data]) => ({ region, weight: Math.round(data.weight * 100) / 100, batches: data.batches })).sort((a, b) => b.weight - a.weight);
 }
