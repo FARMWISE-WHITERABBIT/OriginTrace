@@ -215,7 +215,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: contribution } = await supabaseAdmin
       .from('batch_contributions')
-      .select('batch_id')
+      .select('batch_id, org_id')
       .eq('id', contributionId)
       .single();
 
@@ -223,10 +223,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Contribution not found' }, { status: 404 });
     }
 
+    if (contribution.org_id !== profile.org_id) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     const { error } = await supabaseAdmin
       .from('batch_contributions')
       .delete()
-      .eq('id', contributionId);
+      .eq('id', contributionId)
+      .eq('org_id', profile.org_id);
 
     if (error) throw error;
 
