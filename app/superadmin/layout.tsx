@@ -18,7 +18,8 @@ import {
   Activity,
   AlertCircle,
   Wheat,
-  Handshake
+  Handshake,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -105,6 +106,7 @@ export default function SuperadminLayout({
     { href: '/superadmin/tenant-health', label: 'Tenant Health', icon: Activity },
     { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
     { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
+    { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
     { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
     { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
     { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },
