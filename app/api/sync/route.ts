@@ -68,9 +68,6 @@ export async function GET(request: NextRequest) {
         .order('last_seen_at', { ascending: false });
       
       if (error) {
-        if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
-          return NextResponse.json({ sync_status: [] });
-        }
         console.error('Sync status fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
       }
@@ -85,9 +82,6 @@ export async function GET(request: NextRequest) {
         .limit(1);
       
       if (error) {
-        if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
-          return NextResponse.json({ sync_status: null });
-        }
         console.error('Sync status fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
       }
@@ -147,9 +141,6 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (error) {
-      if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
-        return NextResponse.json({ sync_status: null, success: true });
-      }
       console.error('Error updating sync status:', error);
       return NextResponse.json({ error: 'Failed to update sync status' }, { status: 500 });
     }
@@ -265,7 +256,9 @@ export async function PUT(request: NextRequest) {
                   bag_count: contrib.bag_count,
                   org_id: profile.org_id,
                 });
-            } catch {}
+            } catch (contribErr) {
+              console.error('Failed to insert batch contribution:', contribErr);
+            }
           }
         }
       }
