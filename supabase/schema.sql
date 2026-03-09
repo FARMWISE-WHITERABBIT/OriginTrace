@@ -11,6 +11,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Enable PostGIS for geographic data
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+-- Ensure PostGIS functions (ST_GeogFromGeoJSON, ST_Area, ST_Intersects, ST_AsGeoJSON etc.)
+-- are resolvable. In Supabase, PostGIS is installed in the 'extensions' schema.
+-- Adding extensions to the search_path makes all ST_ functions work without schema-qualifying.
+ALTER DATABASE postgres SET search_path TO public, extensions;
+
 -- System Admins (superadmin access)
 CREATE TABLE IF NOT EXISTS system_admins (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -214,7 +219,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 CREATE TRIGGER sync_farm_boundary BEFORE INSERT OR UPDATE ON farms
   FOR EACH ROW EXECUTE FUNCTION sync_farm_boundary_geo();
@@ -576,7 +581,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 -- Create farm overlap trigger
 DROP TRIGGER IF EXISTS trigger_check_farm_overlap ON farms;
@@ -1544,47 +1549,6 @@ ON CONFLICT (org_id, slug) DO NOTHING;
 -- T010: MISSING TABLES — pedigree_verification, tenant_health_metrics, farmer_performance_ledger
 -- ============================================
 
--- Pedigree Verification Records
--- Stores the chain-of-custody verification record for each finished good DPP.
--- Queried by app/api/dpp/route.ts to build the chain_of_custody timeline.
-CREATE TABLE IF NOT EXISTS pedigree_verification (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  finished_good_id UUID NOT NULL REFERENCES finished_goods(id) ON DELETE CASCADE,
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  -- Organisation / processing metadata
-  organization_name TEXT NOT NULL,
-  facility_name TEXT,
-  facility_location TEXT,
-  -- Processing run link
-  processing_run_id UUID REFERENCES processing_runs(id),
-  processing_run_code TEXT,
-  -- Mass balance / traceability metrics
-  raw_input_kg NUMERIC,
-  processed_output_kg NUMERIC,
-  recovery_rate NUMERIC,
-  mass_balance_valid BOOLEAN DEFAULT true,
-  -- Compliance flags
-  pedigree_verified BOOLEAN DEFAULT false,
-  dds_submitted BOOLEAN DEFAULT false,
-  -- Farm source summary (JSONB array of farm-level provenance records)
-  -- Each element: { farm_id, farmer_name, community, state, collection_date, weight_kg, compliance_status }
-  source_farms JSONB DEFAULT '[]',
-  -- Aggregate stats
-  total_smallholders INTEGER DEFAULT 0,
-  total_farm_area_hectares NUMERIC DEFAULT 0,
-  verified_at TIMESTAMPTZ,
-  verified_by UUID REFERENCES auth.users(id),
-  notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_pedigree_verification_finished_good ON pedigree_verification(finished_good_id);
-CREATE INDEX IF NOT EXISTS idx_pedigree_verification_org ON pedigree_verification(org_id);
-
-ALTER TABLE pedigree_verification ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "org_access_pedigree_verification" ON pedigree_verification
-  FOR ALL USING (org_id = get_user_org_id());
 
 
 -- Tenant Health Metrics (Materialized view equivalent for superadmin dashboard)
