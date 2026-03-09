@@ -88,12 +88,18 @@ const nextConfig = {
 
 // Sentry wraps the config to inject build-time source map uploads
 const sentryConfig = {
-  silent: true,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
+  org:          process.env.SENTRY_ORG,
+  project:      process.env.SENTRY_PROJECT,
+  authToken:    process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload wider set of client source files for better stack trace resolution
   widenClientFileUpload: true,
-  hideSourceMaps: true,
-  disableLogger: true,
+
+  // Proxy Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: '/monitoring',
+
+  // Suppress non-CI build output
+  silent: !process.env.CI,
 };
 
 export default withSentryConfig(withPWA(nextConfig), sentryConfig);
