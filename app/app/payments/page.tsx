@@ -354,7 +354,7 @@ export default function PaymentsPage() {
   const currencyEntries = summary ? Object.entries(summary.byCurrency) : [];
 
   return (
-    <TierGate feature="payments" requiredTier="basic" featureLabel="Payment Tracking">
+    <TierGate feature="payments" requiredTier="starter" featureLabel="Payment Tracking">
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
