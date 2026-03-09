@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const validTiers = ['starter', 'basic', 'pro', 'enterprise'];
-    const validFeatureKeys = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access'];
+    const validFeatureKeys = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access', 'buyer_portal_access', 'dpp_access'];
 
     for (const tier of validTiers) {
       if (!templates[tier]) {
@@ -116,22 +116,22 @@ export async function PUT(request: NextRequest) {
 function getDefaultTemplates() {
   return {
     starter: {
-      features: { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false },
+      features: { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false },
       agent_seat_limit: 5,
       monthly_collection_limit: 500
     },
     basic: {
-      features: { satellite_overlays: false, advanced_mapping: true, financing: false, api_access: false },
+      features: { satellite_overlays: false, advanced_mapping: true, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false },
       agent_seat_limit: 15,
       monthly_collection_limit: 5000
     },
     pro: {
-      features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true },
+      features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true, buyer_portal_access: true, dpp_access: false },
       agent_seat_limit: 100,
       monthly_collection_limit: 50000
     },
     enterprise: {
-      features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true },
+      features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true, buyer_portal_access: true, dpp_access: true },
       agent_seat_limit: -1,
       monthly_collection_limit: -1
     }
