@@ -65,10 +65,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (error.code === '42P01') {
-        return NextResponse.json({ contributions: [], table_missing: true });
-      }
-      throw error;
+      console.error('Batch contributions fetch error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ contributions: contributions || [] });

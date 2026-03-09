@@ -60,7 +60,7 @@ Aggregates ESG analytics across supplier links, displaying KPIs and charts for c
 Buyer-side tender management with exporter marketplace. Schema: `tenders` (open/closed/awarded/cancelled, public/invited visibility) and `tender_bids` (submitted/shortlisted/awarded/rejected/withdrawn). APIs at `/api/tenders` and `/api/tenders/[id]/bids`. Buyer page at `/app/buyer/tenders` for creating tenders and comparing bids. Exporter marketplace at `/app/tenders` for browsing and bidding. Auto-calculates compliance score from exporter shipment history. Awarding a bid auto-creates a contract. Webhook events: `tender.created`, `tender.awarded`.
 
 ### Data Storage
-Supabase PostgreSQL is used with Row Level Security (RLS) for multi-tenant isolation, storing core organizational data, processing information, document vault, payment records, buyer portal data, compliance profiles, and DPPs.
+Supabase PostgreSQL is used exclusively (no Replit PostgreSQL) with Row Level Security (RLS) for multi-tenant isolation, storing core organizational data, processing information, document vault, payment records, buyer portal data, compliance profiles, and DPPs. All database tables are defined in `supabase/schema.sql` with a migration script at `supabase/migration-missing-tables.sql`. The `commodity_master` table stores platform commodities. No Drizzle ORM or Replit database is used.
 
 ### Tier System
 Four subscription tiers (Starter, Basic, Pro, Enterprise) offer increasing features, with tier enforcement centralized in `lib/api/tier-guard.ts` and `lib/config/tier-gating.ts`.
