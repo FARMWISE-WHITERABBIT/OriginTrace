@@ -88,12 +88,17 @@ const VALID_DOC_TYPES = [
 ] as const;
 
 export const documentCreateSchema = z.object({
-  title:         z.string().min(1).max(200),
-  document_type: z.enum(VALID_DOC_TYPES),
-  file_url:      z.string().url().optional().nullable(),
-  expiry_date:   dateSchema.optional().nullable(),
-  shipment_id:   uuidSchema.optional().nullable(),
-  notes:         z.string().max(1000).optional().nullable(),
+  title:              z.string().min(1).max(200),
+  document_type:      z.enum(VALID_DOC_TYPES),
+  file_url:           z.string().url().optional().nullable(),
+  file_name:          z.string().max(500).optional().nullable(),
+  file_size:          z.number().int().optional().nullable(),
+  issued_date:        dateSchema.optional().nullable(),
+  expiry_date:        dateSchema.optional().nullable(),
+  linked_entity_type: z.string().max(100).optional().nullable(),
+  linked_entity_id:   z.string().max(200).optional().nullable(),
+  shipment_id:        uuidSchema.optional().nullable(),
+  notes:              z.string().max(1000).optional().nullable(),
 });
 
 // ---------------------------------------------------------------------------
