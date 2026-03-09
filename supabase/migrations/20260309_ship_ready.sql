@@ -101,6 +101,12 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_expires_at TIMES
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS grace_period_ends_at    TIMESTAMPTZ;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active';
 
+-- Normalise any existing rows to a valid value before adding constraint
+UPDATE organizations
+SET subscription_status = 'active'
+WHERE subscription_status IS NULL
+   OR subscription_status NOT IN ('active','grace_period','expired','cancelled');
+
 -- Add subscription_status constraint safely
 ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_subscription_status_check;
 ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_status_check
@@ -109,7 +115,12 @@ ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_status_check
 CREATE INDEX IF NOT EXISTS idx_org_sub_expires ON organizations(subscription_expires_at)
   WHERE subscription_expires_at IS NOT NULL;
 
--- 6. Fix tier constraint
+-- 6. Fix tier constraint — normalise existing rows first
+UPDATE organizations
+SET subscription_tier = 'starter'
+WHERE subscription_tier IS NULL
+   OR subscription_tier NOT IN ('starter','basic','pro','enterprise');
+
 ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_subscription_tier_check;
 ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_tier_check
   CHECK (subscription_tier IN ('starter','basic','pro','enterprise'));
