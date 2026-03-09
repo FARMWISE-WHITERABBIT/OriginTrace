@@ -161,10 +161,11 @@ async function getOrgTier(supabase: any, userId: string): Promise<string | undef
     if (!profile?.org_id) return undefined;
     const { data: org } = await supabase
       .from('organizations')
-      .select('subscription_tier')
+      .select('settings')
       .eq('id', profile.org_id)
       .single();
-    return org?.subscription_tier || undefined;
+    const settings = (org?.settings as Record<string, any>) || {};
+    return settings.subscription_tier || undefined;
   } catch {
     return undefined;
   }

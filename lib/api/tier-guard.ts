@@ -8,11 +8,12 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
 
     const { data: org } = await supabase
       .from('organizations')
-      .select('subscription_tier')
+      .select('settings')
       .eq('id', orgId)
       .single();
 
-    const tier = (org?.subscription_tier as string) || 'starter';
+    const settings = (org?.settings as Record<string, unknown>) || {};
+    const tier = (settings.subscription_tier as string) || 'starter';
 
     if (!hasTierAccess(tier, feature)) {
       const requiredTier = getRequiredTier(feature);

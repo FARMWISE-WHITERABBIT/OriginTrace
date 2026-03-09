@@ -173,9 +173,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updatePayload: Record<string, unknown> = { settings: settingsUpdate, updated_at: new Date().toISOString() };
-    if (settingsUpdate.subscription_tier) {
-      updatePayload.subscription_tier = settingsUpdate.subscription_tier;
-    }
 
     const { data: organization, error: updateError } = await supabaseAdmin
       .from('organizations')
