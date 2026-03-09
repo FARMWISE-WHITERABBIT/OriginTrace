@@ -6,6 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createClient } from '@/lib/supabase/client';
+import { useOrg } from '@/lib/contexts/org-context';
 import { Package, ChevronDown, Search, Loader2 } from 'lucide-react';
 
 interface Commodity {
@@ -34,17 +36,33 @@ export function CommoditySelector({
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const { organization } = useOrg();
+  const supabase = createClient();
 
   useEffect(() => {
     async function fetchCommodities() {
+      if (!supabase) return;
+      
       try {
-        const res = await fetch('/api/commodities?global_only=false');
-        if (res.ok) {
-          const data = await res.json();
-          setCommodities(data.commodities || []);
+        let query = supabase
+          .from('commodity_master')
+          .select('id, name, is_global, is_active')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (organization) {
+          query = query.or(`is_global.eq.true,created_by_org_id.eq.${organization.id}`);
         } else {
-          console.error('Commodities fetch error:', await res.text());
+          query = query.eq('is_global', true);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Commodities fetch error:', error.message);
           setCommodities([]);
+        } else {
+          setCommodities(data || []);
         }
       } catch (error: any) {
         console.error('Failed to fetch commodities:', error?.message || error);
@@ -55,7 +73,7 @@ export function CommoditySelector({
     }
 
     fetchCommodities();
-  }, []);
+  }, [supabase, organization]);
 
   const filteredCommodities = useMemo(() => {
     if (!search) return commodities;
