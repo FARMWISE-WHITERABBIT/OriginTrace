@@ -6,19 +6,14 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development' && process.env.ENABLE_PWA_DEV !== 'true',
-  fallbacks: {
-    document: '/offline.html',
-  },
+  fallbacks: { document: '/offline.html' },
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'supabase-api-cache',
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 60 * 60,
-        },
+        expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
         networkTimeoutSeconds: 10,
       },
     },
@@ -27,10 +22,7 @@ const withPWA = withPWAInit({
       handler: 'CacheFirst',
       options: {
         cacheName: 'supabase-storage-cache',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24 * 7,
-        },
+        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
       },
     },
     {
@@ -38,21 +30,41 @@ const withPWA = withPWAInit({
       handler: 'CacheFirst',
       options: {
         cacheName: 'next-static-cache',
-        expiration: {
-          maxEntries: 200,
-          maxAgeSeconds: 60 * 60 * 24 * 365,
-        },
+        expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
       },
     },
   ],
 });
 
+// ── Security headers ────────────────────────────────────────────────────────
+const securityHeaders = [
+  { key: 'X-DNS-Prefetch-Control',  value: 'on' },
+  { key: 'X-Frame-Options',         value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options',  value: 'nosniff' },
+  { key: 'Referrer-Policy',         value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy',      value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co",
+      "frame-src 'self' https://js.paystack.co",
+      "worker-src 'self' blob:",
+      "media-src 'self' blob:",
+    ].join('; '),
+  },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '10mb',
     },
   },
   images: {
@@ -64,41 +76,33 @@ const nextConfig = {
       },
     ],
   },
+  async headers() {
+    return [{ source: '/(.*)', headers: securityHeaders }];
+  },
 };
 
 export default withSentryConfig(withPWA(nextConfig), {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+  org:     'whiterabbit-agro-limited',
+  project: 'javascript-nextjs',
 
-  org: "whiterabbit-agro-limited",
-
-  project: "javascript-nextjs",
+  // Source map upload auth token
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  // Upload wider set of source files for better stack traces
   widenClientFileUpload: true,
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
+  // Proxy Sentry requests through Next.js to bypass ad-blockers
+  tunnelRoute: '/monitoring',
 
   webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
+    // Auto-instrument Vercel Cron jobs
     automaticVercelMonitors: true,
 
-    // Tree-shaking options for reducing bundle size
+    // Tree-shake Sentry logger statements to reduce bundle size
     treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
       removeDebugLogging: true,
     },
   },
