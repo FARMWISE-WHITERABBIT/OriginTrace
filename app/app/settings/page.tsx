@@ -1051,11 +1051,19 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium">{organization.name}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Subscription</Label>
-                  <div>
-                    <Badge variant="outline" className="capitalize">
-                      {organization.subscription_status || 'trial'}
+                  <Label>Subscription Plan</Label>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="capitalize font-medium">
+                      {(organization as any).subscription_tier || 'starter'}
                     </Badge>
+                    <Badge variant="secondary" className="capitalize text-xs">
+                      {(organization as any).subscription_status || 'active'}
+                    </Badge>
+                    <Link href="/app/settings/subscription">
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary">
+                        Manage →
+                      </Button>
+                    </Link>
                   </div>
                 </div>
                 <div className="space-y-2">
