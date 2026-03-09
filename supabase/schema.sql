@@ -2127,3 +2127,40 @@ CREATE INDEX IF NOT EXISTS idx_pedigree_verification_verified ON pedigree_verifi
 
 CREATE TRIGGER update_pedigree_verification_updated_at BEFORE UPDATE ON pedigree_verification_records
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Commodity Master
+CREATE TABLE IF NOT EXISTS commodity_master (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  code TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'crop',
+  unit TEXT NOT NULL DEFAULT 'kg',
+  is_active BOOLEAN DEFAULT true,
+  created_by_org_id INTEGER,
+  is_global BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  grades TEXT[] DEFAULT '{}',
+  moisture_min NUMERIC,
+  moisture_max NUMERIC,
+  collection_metrics JSONB DEFAULT '{}'
+);
+
+ALTER TABLE commodity_master ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read commodities" ON commodity_master
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Admins can insert commodities" ON commodity_master
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Admins can update commodities" ON commodity_master
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR is_system_admin()
+  );
+
+CREATE POLICY "System admins can delete commodities" ON commodity_master
+  FOR DELETE USING (is_system_admin());

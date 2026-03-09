@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Wheat, Plus, Loader2, Check, X, Pencil, Trash2, Save } from 'lucide-react';
+import { Wheat, Plus, Loader2, Check, X, Pencil, Trash2, Save, AlertTriangle, Database } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Commodity {
@@ -59,6 +59,8 @@ export default function CommoditiesPage() {
   const [commodityToDelete, setCommodityToDelete] = useState<Commodity | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [needsInit, setNeedsInit] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const { toast } = useToast();
 
   const [newCommodity, setNewCommodity] = useState({
@@ -88,11 +90,44 @@ export default function CommoditiesPage() {
       if (res.ok) {
         const data = await res.json();
         setCommodities(data.commodities || []);
+        setNeedsInit(data.source === 'defaults');
       }
     } catch (error) {
       console.error('Failed to fetch commodities:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function initializeCommodityTable() {
+    setInitializing(true);
+    try {
+      const res = await fetch('/api/commodities/init', { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        toast({ title: 'Success', description: data.message });
+        setNeedsInit(false);
+        if (data.needsRefresh) {
+          setTimeout(() => fetchCommodities(), 3000);
+        } else {
+          await fetchCommodities();
+        }
+      } else if (data.error === 'automatic_creation_failed') {
+        toast({ 
+          title: 'Manual Setup Required', 
+          description: 'Please run the provided SQL in your Supabase SQL Editor to create the commodity_master table.',
+          variant: 'destructive'
+        });
+        console.log('Run this SQL in Supabase SQL Editor:', data.sql);
+      } else {
+        toast({ title: 'Error', description: data.error || 'Initialization failed', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Failed to initialize commodity table:', error);
+      toast({ title: 'Error', description: 'Failed to initialize commodity table', variant: 'destructive' });
+    } finally {
+      setInitializing(false);
     }
   }
 
@@ -255,6 +290,32 @@ export default function CommoditiesPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {needsInit && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" data-testid="card-init-warning">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-200">Commodity table needs initialization</p>
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  The commodity master table has not been set up yet. Showing default data. Click initialize to create the table and enable editing.
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={initializeCommodityTable} 
+              disabled={initializing}
+              data-testid="button-initialize-commodities"
+            >
+              {initializing ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Initializing...</>
+              ) : (
+                <><Database className="h-4 w-4 mr-2" /> Initialize</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
