@@ -118,7 +118,6 @@ const appNavigation: NavigationConfig = {
         { title: 'Register Farmer', url: '/app/farmers/new', icon: UserPlus, tourId: 'nav-register', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'farmer_registration' },
         { title: 'Map Farm', url: '/app/farms/map', icon: Map, tourId: 'nav-farms', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'farm_mapping' },
         { title: 'Sync Dashboard', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'sync_dashboard' },
-        { title: 'Import Data', url: '/app/import', icon: Upload, allowedRoles: ['admin', 'aggregator'], requiredTier: 'starter' },
       ],
     },
     {

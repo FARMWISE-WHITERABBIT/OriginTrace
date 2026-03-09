@@ -1711,77 +1711,71 @@ export default function SettingsPage() {
         {/* DATA IMPORT TAB */}
         {isAdmin && (
           <TabsContent value="import" className="space-y-6">
-            <CSVImporter 
-              onImport={async (data) => {
+            <CSVImporter
+              onImport={async (data, type) => {
                 if (!organization) {
                   return { success: 0, failed: data.length, errors: ['Not authenticated'] };
                 }
 
-                // Route through API layer for audit logging and role enforcement
-                let success = 0;
-                let failed = 0;
-                const errors: string[] = [];
+                // Build a synthetic CSV from mapped data and send to /api/import
+                // This uses batched server-side processing rather than row-by-row API calls
+                const headerRow = Object.keys(data[0] || {}).join(',');
+                const dataRows = data.map(row =>
+                  Object.values(row).map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+                );
+                const csvContent = [headerRow, ...dataRows].join('\n');
+                const csvFile = new File([csvContent], `import_${type}.csv`, { type: 'text/csv' });
 
-                for (const row of data) {
-                  try {
-                    const res = await fetch('/api/farms', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        farmer_name: row.farmer_name,
-                        phone_number: row.phone_number || null,
-                        community: row.community,
-                        state: row.state || null,
-                        lga: row.lga || null,
-                        area_hectares: row.farm_size ? parseFloat(row.farm_size) : null,
-                        primary_commodity: row.commodity || null,
-                        national_id: row.national_id || null,
-                        compliance_status: 'pending',
-                      }),
-                    });
-                    if (!res.ok) {
-                      const e = await res.json().catch(() => ({}));
-                      throw new Error(e.error || `HTTP ${res.status}`);
-                    }
-                    success++;
-                  } catch (err: any) {
-                    failed++;
-                    errors.push(`Row ${success + failed}: ${err.message || 'Unknown error'}`);
+                const form = new FormData();
+                form.append('file', csvFile);
+                form.append('type', type);
+                form.append('dry_run', 'false');
+
+                try {
+                  const res = await fetch('/api/import', { method: 'POST', body: form });
+                  const result = await res.json();
+                  if (!res.ok) {
+                    return { success: 0, failed: data.length, errors: [result.error || 'Import failed'] };
                   }
+                  return {
+                    success: result.imported || 0,
+                    failed: result.skipped || 0,
+                    errors: result.errors || [],
+                  };
+                } catch (err: any) {
+                  return { success: 0, failed: data.length, errors: [err.message || 'Network error'] };
                 }
-
-                return { success, failed, errors };
               }}
             />
 
             <Card>
               <CardHeader>
-                <CardTitle>Import Guidelines</CardTitle>
-                <CardDescription>Best practices for bulk data import</CardDescription>
+                <CardTitle>Migration Guide</CardTitle>
+                <CardDescription>Migrating from KoBoToolbox, ODK, CommCare, or spreadsheets</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-medium">Required Fields:</h4>
-                  <ul className="list-disc list-inside text-muted-foreground">
-                    <li>Farmer Name - Full name of the farmer</li>
-                    <li>Community - Village or community name</li>
-                    <li>State - Nigerian state name</li>
-                    <li>LGA - Local Government Area</li>
-                  </ul>
+              <CardContent className="space-y-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Step 1 — Export from your current tool</h4>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                      <li>KoBoToolbox: Data → Downloads → CSV</li>
+                      <li>ODK: Submissions → Export → CSV</li>
+                      <li>Excel / Google Sheets: File → Download → CSV</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Step 2 — Import order matters</h4>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                      <li>Import <strong>Farmers & Farms</strong> first</li>
+                      <li>Then import <strong>Collection Batches</strong></li>
+                      <li>Batches match to farmers by name</li>
+                    </ul>
+                  </div>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-medium">Optional Fields:</h4>
-                  <ul className="list-disc list-inside text-muted-foreground">
-                    <li>Phone Number - Contact number (e.g., +234...)</li>
-                    <li>Farm Size - Area in hectares</li>
-                    <li>Primary Commodity - Main crop type</li>
-                    <li>National ID - NIN or other ID number</li>
-                  </ul>
-                </div>
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Note:</strong> Imported farms will need GPS boundary mapping to be EUDR compliant. 
-                    Assign agents to visit these farms and capture their polygon boundaries.
+                <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <p className="text-muted-foreground">
+                    <strong>EUDR compliance note:</strong> Imported farms need GPS boundary mapping to be export-ready.
+                    After import, assign field agents to visit farms and capture polygon boundaries.
                   </p>
                 </div>
               </CardContent>
