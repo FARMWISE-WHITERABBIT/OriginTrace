@@ -176,7 +176,7 @@ export default function DocumentsPage() {
   const alertCount = expiringCount + expiredCount;
 
   return (
-    <TierGate feature="documents" requiredTier="basic" featureLabel="Document Vault">
+    <TierGate feature="documents" requiredTier="starter" featureLabel="Document Vault">
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
