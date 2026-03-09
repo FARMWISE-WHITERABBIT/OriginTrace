@@ -31,6 +31,7 @@ interface Organization {
   id: number;
   name: string;
   slug: string;
+  subscription_tier: string;
   subscription_status: string;
   logo_url: string | null;
   commodities: string[];
@@ -67,7 +68,7 @@ export default function OrganizationsPage() {
     adminName: '',
     adminEmail: '',
     commodities: '',
-    subscriptionStatus: 'trial',
+    subscriptionStatus: 'starter',
   });
   const { toast } = useToast();
   const router = useRouter();
@@ -196,7 +197,7 @@ export default function OrganizationsPage() {
   }
 
   function resetCreateDialog() {
-    setNewOrg({ orgName: '', adminName: '', adminEmail: '', commodities: '', subscriptionStatus: 'trial' });
+    setNewOrg({ orgName: '', adminName: '', adminEmail: '', commodities: '', subscriptionStatus: 'starter' });
     setCreateResult(null);
     setCopiedPassword(false);
     setCreateDialogOpen(false);
@@ -280,7 +281,12 @@ export default function OrganizationsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell><StatusBadge domain="subscription" status={org.subscription_status || 'trial'} /></TableCell>
+                    <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <StatusBadge domain="subscription" status={org.subscription_tier || 'starter'} />
+                          <span className="text-xs text-slate-400 capitalize">{org.subscription_status || 'active'}</span>
+                        </div>
+                      </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -334,17 +340,17 @@ export default function OrganizationsPage() {
                           Access Dashboard
                         </Button>
                         <Select
-                          value={org.subscription_status || 'trial'}
+                          value={org.subscription_tier || 'starter'}
                           onValueChange={(value: string) => updateOrgStatus(org.id, value)}
                         >
-                          <SelectTrigger className="w-[100px]" data-testid={`select-status-${org.id}`}>
+                          <SelectTrigger className="w-[110px]" data-testid={`select-status-${org.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="trial">Trial</SelectItem>
-                            <SelectItem value="suspended">Suspended</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="starter">Starter</SelectItem>
+                            <SelectItem value="basic">Basic</SelectItem>
+                            <SelectItem value="pro">Pro</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -372,7 +378,10 @@ export default function OrganizationsPage() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Status</div>
-                  <div><StatusBadge domain="subscription" status={selectedOrg.subscription_status || 'trial'} /></div>
+                  <div className="flex flex-col gap-1">
+                    <StatusBadge domain="subscription" status={selectedOrg.subscription_tier || 'starter'} />
+                    <span className="text-xs text-slate-400 capitalize">{selectedOrg.subscription_status || 'active'}</span>
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Commodities</div>
@@ -543,7 +552,7 @@ export default function OrganizationsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Subscription Status</Label>
+                <Label>Starting Tier</Label>
                 <Select
                   value={newOrg.subscriptionStatus}
                   onValueChange={(value) => setNewOrg(prev => ({ ...prev, subscriptionStatus: value }))}
@@ -552,8 +561,10 @@ export default function OrganizationsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
