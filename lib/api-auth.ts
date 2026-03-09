@@ -42,13 +42,15 @@ export async function getAuthenticatedProfile(request?: NextRequest) {
 export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
   const { data: org } = await supabase
     .from('organizations')
-    .select('subscription_tier, feature_flags')
+    .select('settings')
     .eq('id', orgId)
     .single();
   if (!org) return false;
-  const tier = org.subscription_tier || 'starter';
+  const settings = (org.settings as Record<string, any>) || {};
+  const tier = settings.subscription_tier || 'starter';
+  const featureFlags = settings.feature_flags || {};
   const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-  const hasFeatureFlag = org.feature_flags?.shipment_readiness === true;
+  const hasFeatureFlag = featureFlags.shipment_readiness === true;
   return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
 }
 
