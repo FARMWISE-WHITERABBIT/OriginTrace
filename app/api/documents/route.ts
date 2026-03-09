@@ -5,6 +5,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { documentCreateSchema, parseBody } from '@/lib/api/validation';
+import { requireRole } from '@/lib/rbac';
 
 
 export async function GET(request: NextRequest) {
