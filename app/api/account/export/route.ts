@@ -33,13 +33,14 @@ export async function GET(request: NextRequest) {
       notifications: notifRes.data || [],
     };
 
-    await supabaseAdmin.from('audit_logs').insert({
+    // Fire-and-forget audit log — ignore errors so export is never blocked
+    void supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'account.data_exported',
       resource_type: 'user',
       resource_id: user.id,
       metadata: { exported_at: exportData.exported_at },
-    }).catch(() => {});
+    });
 
     const filename = `origintrace-data-export-${new Date().toISOString().split('T')[0]}.json`;
     return new NextResponse(JSON.stringify(exportData, null, 2), {

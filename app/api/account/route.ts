@@ -45,13 +45,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Log the deletion request before wiping
-    await supabaseAdmin.from('audit_logs').insert({
+    void supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'account.delete_requested',
       resource_type: 'user',
       resource_id: user.id,
       metadata: { reason: parsed.data.reason, email: profile?.email },
-    }).catch(() => {});
+    });
 
     // Delete profile (cascade will handle related records per FK rules)
     await supabaseAdmin.from('profiles').delete().eq('user_id', user.id);

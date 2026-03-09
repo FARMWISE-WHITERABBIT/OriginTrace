@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the request
-    await supabaseAdmin.from('audit_logs').insert({
+    void supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'subscription.upgrade_requested',
       resource_type: 'organization',
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         to_tier: parsed.data.tier,
         note: parsed.data.note,
       },
-    }).catch(() => {});
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
