@@ -479,36 +479,6 @@ VALUES
   ('rubber', 'nigeria', 1500.00, 'kg')
 ON CONFLICT (commodity, region) DO NOTHING;
 
--- Commodity Master table
-CREATE TABLE IF NOT EXISTS commodity_master (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  code TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'crop',
-  unit TEXT NOT NULL DEFAULT 'kg',
-  is_active BOOLEAN DEFAULT true,
-  created_by_org_id INTEGER,
-  is_global BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  grades TEXT[] DEFAULT '{}',
-  moisture_min NUMERIC,
-  moisture_max NUMERIC,
-  collection_metrics JSONB DEFAULT '{}'
-);
-
-INSERT INTO commodity_master (name, code, category, unit, is_active, is_global, grades, moisture_min, moisture_max, collection_metrics)
-VALUES
-  ('Cocoa', 'COCOA', 'crop', 'kg', true, true, ARRAY['A','B','C'], 6, 8, '{}'),
-  ('Cashew', 'CASHEW', 'crop', 'kg', true, true, ARRAY['A','B','C'], 5, 8, '{}'),
-  ('Palm Oil', 'PALM', 'crop', 'kg', true, true, ARRAY['A','B'], NULL, NULL, '{}'),
-  ('Ginger', 'GINGER', 'crop', 'kg', true, true, ARRAY['A','B','C'], 10, 12, '{}'),
-  ('Sesame', 'SESAME', 'crop', 'kg', true, true, ARRAY['A','B','C'], 6, 8, '{}'),
-  ('Shea', 'SHEA', 'crop', 'kg', true, true, ARRAY['A','B'], 6, 8, '{}'),
-  ('Timber', 'TIMBER', 'forestry', 'kg', true, true, ARRAY['A','B','C'], NULL, NULL, '{}'),
-  ('Minerals', 'MINERALS', 'minerals', 'kg', true, true, ARRAY['A','B'], NULL, NULL, '{}'),
-  ('Seafood', 'SEAFOOD', 'seafood', 'kg', true, true, ARRAY['A','B','C'], NULL, NULL, '{}')
-ON CONFLICT DO NOTHING;
-
 -- Farm Conflicts table for spatial conflict detection
 CREATE TABLE IF NOT EXISTS farm_conflicts (
   id SERIAL PRIMARY KEY,

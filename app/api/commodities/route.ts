@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import pool from '@/lib/db';
-
-async function getAuthProfile(supabase: any, userId: string) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role')
-    .eq('user_id', userId)
-    .single();
-  return profile;
-}
-
-async function checkSystemAdmin(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from('system_admins')
-    .select('id')
-    .eq('user_id', userId)
-    .single();
-  return !!data;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +12,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getAuthProfile(supabase, user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id, role')
+      .eq('user_id', user.id)
+      .single();
 
     const { searchParams } = new URL(request.url);
     const globalOnly = searchParams.get('global_only') === 'true';
@@ -43,31 +28,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
     
-    let sql = 'SELECT * FROM commodity_master';
-    const conditions: string[] = [];
-    const params: any[] = [];
-    let paramIndex = 1;
+    let query = supabase
+      .from('commodity_master')
+      .select('*')
+      .order('name');
     
     if (!includeInactive) {
-      conditions.push('is_active = true');
+      query = query.eq('is_active', true);
     }
     
     if (globalOnly) {
-      conditions.push('is_global = true');
+      query = query.eq('is_global', true);
     } else {
-      conditions.push(`(is_global = true OR created_by_org_id = $${paramIndex})`);
-      params.push(userOrgId);
-      paramIndex++;
+      const orgIdFilter = 'is_global.eq.true,created_by_org_id.eq.' + String(userOrgId);
+      query = query.or(orgIdFilter);
     }
     
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
+    const { data: commodities, error } = await query;
+    
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+        const defaultCommodities = [
+          { id: 1, name: 'Cocoa', code: 'COCOA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+          { id: 2, name: 'Cashew', code: 'CASHEW', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 5, moisture_max: 8, collection_metrics: {} },
+          { id: 3, name: 'Palm Oil', code: 'PALM', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+          { id: 4, name: 'Ginger', code: 'GINGER', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 10, moisture_max: 12, collection_metrics: {} },
+          { id: 5, name: 'Sesame', code: 'SESAME', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+          { id: 6, name: 'Shea', code: 'SHEA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+          { id: 7, name: 'Timber', code: 'TIMBER', category: 'forestry', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+          { id: 8, name: 'Minerals', code: 'MINERALS', category: 'minerals', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+          { id: 9, name: 'Seafood', code: 'SEAFOOD', category: 'seafood', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+        ];
+        return NextResponse.json({ commodities: defaultCommodities, source: 'defaults' });
+      }
+      console.error('Commodities fetch error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    sql += ' ORDER BY name';
     
-    const result = await pool.query(sql, params);
-    
-    return NextResponse.json({ commodities: result.rows });
+    return NextResponse.json({ commodities: commodities || [] });
   } catch (error) {
     console.error('Commodities API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -84,7 +82,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getAuthProfile(supabase, user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id, role')
+      .eq('user_id', user.id)
+      .single();
     if (!profile || !['admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -102,28 +104,39 @@ export async function POST(request: NextRequest) {
     
     let canCreateGlobal = false;
     if (is_global) {
-      canCreateGlobal = await checkSystemAdmin(supabase, user.id);
+      const { data: adminCheck } = await supabase
+        .from('system_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      canCreateGlobal = !!adminCheck;
     }
     
-    const result = await pool.query(
-      `INSERT INTO commodity_master (name, code, category, unit, is_global, created_by_org_id, grades, moisture_min, moisture_max, collection_metrics)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *`,
-      [
-        name,
-        code.toUpperCase().replace(/\s+/g, '_'),
-        category || 'crop',
-        unit || 'kg',
-        canCreateGlobal && is_global,
-        profile.org_id,
-        grades || [],
-        moisture_min ? parseFloat(moisture_min) : null,
-        moisture_max ? parseFloat(moisture_max) : null,
-        JSON.stringify(collection_metrics || {})
-      ]
-    );
+    const insertData: any = {
+      name,
+      code: code.toUpperCase().replace(/\s+/g, '_'),
+      category: category || 'crop',
+      unit: unit || 'kg',
+      is_global: canCreateGlobal && is_global,
+      created_by_org_id: profile.org_id,
+      grades: grades || [],
+      moisture_min: moisture_min ? parseFloat(moisture_min) : null,
+      moisture_max: moisture_max ? parseFloat(moisture_max) : null,
+      collection_metrics: collection_metrics || {}
+    };
     
-    return NextResponse.json({ commodity: result.rows[0] });
+    const { data: commodity, error } = await supabase
+      .from('commodity_master')
+      .insert(insertData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Commodity create error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    
+    return NextResponse.json({ commodity });
   } catch (error) {
     console.error('Commodities API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -140,12 +153,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getAuthProfile(supabase, user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id, role')
+      .eq('user_id', user.id)
+      .single();
     if (!profile || !['admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const isSystemAdmin = await checkSystemAdmin(supabase, user.id);
+    const isSystemAdmin = !!(await supabase
+      .from('system_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()).data;
     
     const body = await request.json();
     const { id, name, category, unit, is_active, is_global, grades, moisture_min, moisture_max, collection_metrics } = body;
@@ -154,12 +175,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Commodity ID required' }, { status: 400 });
     }
 
-    const existingResult = await pool.query(
-      'SELECT id, is_global, created_by_org_id FROM commodity_master WHERE id = $1',
-      [id]
-    );
-    const existing = existingResult.rows[0];
-    
+    const { data: existing } = await supabase
+      .from('commodity_master')
+      .select('id, is_global, created_by_org_id')
+      .eq('id', id)
+      .single();
     if (!existing) {
       return NextResponse.json({ error: 'Commodity not found' }, { status: 404 });
     }
@@ -170,31 +190,32 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
     
-    const setClauses: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
-    
-    if (name !== undefined) { setClauses.push(`name = $${paramIndex++}`); values.push(name); }
-    if (category !== undefined) { setClauses.push(`category = $${paramIndex++}`); values.push(category); }
-    if (unit !== undefined) { setClauses.push(`unit = $${paramIndex++}`); values.push(unit); }
-    if (is_active !== undefined) { setClauses.push(`is_active = $${paramIndex++}`); values.push(is_active); }
-    if (grades !== undefined) { setClauses.push(`grades = $${paramIndex++}`); values.push(grades); }
-    if (moisture_min !== undefined) { setClauses.push(`moisture_min = $${paramIndex++}`); values.push(moisture_min ? parseFloat(moisture_min) : null); }
-    if (moisture_max !== undefined) { setClauses.push(`moisture_max = $${paramIndex++}`); values.push(moisture_max ? parseFloat(moisture_max) : null); }
-    if (collection_metrics !== undefined) { setClauses.push(`collection_metrics = $${paramIndex++}`); values.push(JSON.stringify(collection_metrics)); }
-    if (is_global !== undefined && isSystemAdmin) { setClauses.push(`is_global = $${paramIndex++}`); values.push(is_global); }
-    
-    if (setClauses.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (category !== undefined) updates.category = category;
+    if (unit !== undefined) updates.unit = unit;
+    if (is_active !== undefined) updates.is_active = is_active;
+    if (grades !== undefined) updates.grades = grades;
+    if (moisture_min !== undefined) updates.moisture_min = moisture_min ? parseFloat(moisture_min) : null;
+    if (moisture_max !== undefined) updates.moisture_max = moisture_max ? parseFloat(moisture_max) : null;
+    if (collection_metrics !== undefined) updates.collection_metrics = collection_metrics;
+    if (is_global !== undefined && isSystemAdmin) {
+      updates.is_global = is_global;
     }
     
-    values.push(id);
-    const result = await pool.query(
-      `UPDATE commodity_master SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
-    );
+    const { data: commodity, error } = await supabase
+      .from('commodity_master')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
     
-    return NextResponse.json({ commodity: result.rows[0] });
+    if (error) {
+      console.error('Commodity update error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    
+    return NextResponse.json({ commodity });
   } catch (error) {
     console.error('Commodities API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -211,12 +232,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getAuthProfile(supabase, user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id, role')
+      .eq('user_id', user.id)
+      .single();
     if (!profile || !['admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const isSystemAdmin = await checkSystemAdmin(supabase, user.id);
+    const isSystemAdmin = !!(await supabase
+      .from('system_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()).data;
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -225,12 +254,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Commodity ID required' }, { status: 400 });
     }
 
-    const existingResult = await pool.query(
-      'SELECT id, is_global, created_by_org_id FROM commodity_master WHERE id = $1',
-      [id]
-    );
-    const existing = existingResult.rows[0];
-    
+    const { data: existing } = await supabase
+      .from('commodity_master')
+      .select('id, is_global, created_by_org_id')
+      .eq('id', id)
+      .single();
     if (!existing) {
       return NextResponse.json({ error: 'Commodity not found' }, { status: 404 });
     }
@@ -241,7 +269,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
     
-    await pool.query('UPDATE commodity_master SET is_active = false WHERE id = $1', [id]);
+    const { error } = await supabase
+      .from('commodity_master')
+      .update({ is_active: false })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Commodity delete error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {
