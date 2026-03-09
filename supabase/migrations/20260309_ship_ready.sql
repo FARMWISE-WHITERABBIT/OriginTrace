@@ -1,8 +1,8 @@
 -- ============================================================
 -- Ship-ready migration — apply to live Supabase DB
 -- Generated: 2026-03-09
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor)
--- Safe to run multiple times (uses IF NOT EXISTS / ON CONFLICT DO NOTHING)
+-- Safe to run multiple times (IF NOT EXISTS / ON CONFLICT DO NOTHING)
+-- Paste full contents into Supabase SQL Editor → Run
 -- ============================================================
 
 -- 1. Superadmin audit log
@@ -10,7 +10,10 @@ CREATE TABLE IF NOT EXISTS superadmin_audit_logs (
   id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   superadmin_id    UUID NOT NULL,
   action           TEXT NOT NULL,
-  target_type      TEXT NOT NULL CHECK (target_type IN ('organization','user','subscription','feature_toggle','impersonation','payment_link','system')),
+  target_type      TEXT NOT NULL CHECK (target_type IN (
+                     'organization','user','subscription','feature_toggle',
+                     'impersonation','payment_link','system'
+                   )),
   target_id        TEXT,
   target_label     TEXT,
   before_state     JSONB,
@@ -24,12 +27,15 @@ CREATE INDEX IF NOT EXISTS idx_superadmin_audit_target  ON superadmin_audit_logs
 CREATE INDEX IF NOT EXISTS idx_superadmin_audit_created ON superadmin_audit_logs(created_at DESC);
 ALTER TABLE superadmin_audit_logs ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='superadmin_audit_logs' AND policyname='superadmin_audit_service_only') THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename='superadmin_audit_logs' AND policyname='superadmin_audit_service_only'
+  ) THEN
     CREATE POLICY "superadmin_audit_service_only" ON superadmin_audit_logs USING (false);
   END IF;
 END $$;
 
--- 2. Subscription plans
+-- 2. Subscription plans (reference table)
 CREATE TABLE IF NOT EXISTS subscription_plans (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tier           TEXT NOT NULL CHECK (tier IN ('starter','basic','pro','enterprise')),
@@ -44,7 +50,10 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
 );
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='subscription_plans' AND policyname='plans_public_read') THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename='subscription_plans' AND policyname='plans_public_read'
+  ) THEN
     CREATE POLICY "plans_public_read" ON subscription_plans FOR SELECT USING (true);
   END IF;
 END $$;
@@ -76,24 +85,35 @@ CREATE INDEX IF NOT EXISTS idx_payment_links_ref    ON payment_links(paystack_re
 CREATE INDEX IF NOT EXISTS idx_payment_links_status ON payment_links(status);
 ALTER TABLE payment_links ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_links' AND policyname='payment_links_service_only') THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename='payment_links' AND policyname='payment_links_service_only'
+  ) THEN
     CREATE POLICY "payment_links_service_only" ON payment_links USING (false);
   END IF;
 END $$;
 
--- 4. Org subscription tracking columns
+-- 4. Add subscription_tier column first (required before constraint below)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'starter';
+
+-- 5. Org subscription tracking columns
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS grace_period_ends_at    TIMESTAMPTZ;
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_status      TEXT DEFAULT 'active'
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active';
+
+-- Add subscription_status constraint safely
+ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_subscription_status_check;
+ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_status_check
   CHECK (subscription_status IN ('active','grace_period','expired','cancelled'));
+
 CREATE INDEX IF NOT EXISTS idx_org_sub_expires ON organizations(subscription_expires_at)
   WHERE subscription_expires_at IS NOT NULL;
 
--- 5. QR code columns on digital_product_passports
-ALTER TABLE digital_product_passports ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
-ALTER TABLE digital_product_passports ADD COLUMN IF NOT EXISTS verify_url  TEXT;
-
--- 6. Fix tier constraint (ensures starter/basic/pro/enterprise only)
+-- 6. Fix tier constraint
 ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_subscription_tier_check;
 ALTER TABLE organizations ADD CONSTRAINT organizations_subscription_tier_check
   CHECK (subscription_tier IN ('starter','basic','pro','enterprise'));
+
+-- 7. QR code columns on digital_product_passports
+ALTER TABLE digital_product_passports ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
+ALTER TABLE digital_product_passports ADD COLUMN IF NOT EXISTS verify_url  TEXT;
