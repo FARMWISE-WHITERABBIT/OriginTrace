@@ -12,11 +12,20 @@ async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
   return !!data;
 }
 
+const DEFAULT_FEATURE_FLAGS: Record<string, boolean> = {
+  satellite_overlays: false,
+  advanced_mapping: false,
+  financing: false,
+  api_access: false,
+  buyer_portal_access: false,
+  dpp_access: false,
+};
+
 function extractTierFromSettings(settings: Record<string, unknown> | null) {
-  if (!settings) return { subscription_tier: 'starter', feature_flags: {}, agent_seat_limit: 5, monthly_collection_limit: 1000 };
+  if (!settings) return { subscription_tier: 'starter', feature_flags: { ...DEFAULT_FEATURE_FLAGS }, agent_seat_limit: 5, monthly_collection_limit: 500 };
   return {
     subscription_tier: (settings.subscription_tier as string) || 'starter',
-    feature_flags: (settings.feature_flags as Record<string, boolean>) || {},
+    feature_flags: { ...DEFAULT_FEATURE_FLAGS, ...(settings.feature_flags as Record<string, boolean>) },
     agent_seat_limit: (settings.agent_seat_limit as number) ?? 5,
     monthly_collection_limit: (settings.monthly_collection_limit as number) ?? 1000,
   };
@@ -66,7 +75,7 @@ export async function GET(request: NextRequest) {
 }
 
 const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
-const VALID_FEATURE_KEYS = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access'];
+const VALID_FEATURE_KEYS = ['satellite_overlays', 'advanced_mapping', 'financing', 'api_access', 'buyer_portal_access', 'dpp_access'];
 
 function validateFeatureFlags(flags: unknown): flags is Record<string, boolean> {
   if (!flags || typeof flags !== 'object') return false;
@@ -127,16 +136,16 @@ export async function PATCH(request: NextRequest) {
         .single();
 
       const fallbackDefaults: Record<string, { features: Record<string, boolean>; agent_seat_limit: number; monthly_collection_limit: number }> = {
-        starter: { features: { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false }, agent_seat_limit: 5, monthly_collection_limit: 500 },
-        basic: { features: { satellite_overlays: false, advanced_mapping: true, financing: false, api_access: false }, agent_seat_limit: 15, monthly_collection_limit: 5000 },
-        pro: { features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true }, agent_seat_limit: 100, monthly_collection_limit: 50000 },
-        enterprise: { features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true }, agent_seat_limit: -1, monthly_collection_limit: -1 }
+        starter: { features: { satellite_overlays: false, advanced_mapping: false, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false }, agent_seat_limit: 5, monthly_collection_limit: 500 },
+        basic: { features: { satellite_overlays: false, advanced_mapping: true, financing: false, api_access: false, buyer_portal_access: false, dpp_access: false }, agent_seat_limit: 15, monthly_collection_limit: 5000 },
+        pro: { features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true, buyer_portal_access: true, dpp_access: false }, agent_seat_limit: 100, monthly_collection_limit: 50000 },
+        enterprise: { features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true, buyer_portal_access: true, dpp_access: true }, agent_seat_limit: -1, monthly_collection_limit: -1 }
       };
 
       const tierTemplates = configRow?.value || fallbackDefaults;
       const defaults = tierTemplates[subscription_tier] || fallbackDefaults[subscription_tier];
       if (defaults) {
-        settingsUpdate.feature_flags = defaults.features;
+        settingsUpdate.feature_flags = { ...DEFAULT_FEATURE_FLAGS, ...(defaults.features || {}) };
         settingsUpdate.agent_seat_limit = defaults.agent_seat_limit;
         settingsUpdate.monthly_collection_limit = defaults.monthly_collection_limit;
       }
