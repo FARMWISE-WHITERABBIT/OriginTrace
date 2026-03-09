@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { getResendClient } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
@@ -301,8 +301,6 @@ export async function POST(request: NextRequest) {
 
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://origintrace.trade';
 
-          const resendClient = await getResendClient();
-
           for (const admin of (admins || [])) {
             const email = userEmailMap[admin.user_id];
             if (!email) continue;
@@ -318,8 +316,7 @@ export async function POST(request: NextRequest) {
               dashboardUrl: `${baseUrl}/app/farms/map`,
             });
 
-            await resendClient.client.emails.send({
-              from: resendClient.fromEmail,
+            await await sendEmail({
               to: email,
               subject: `[OriginTrace] Deforestation Risk Alert - ${result.risk_level.toUpperCase()} Risk`,
               html,

@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { documentCreateSchema, parseBody } from '@/lib/api/validation';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -118,17 +120,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: 'Supabase is not properly configured' },
-        { status: 500 }
-      );
-    }
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(documentCreateSchema, rawBody);
+    if (validationError) return validationError;
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -162,36 +156,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
-    if (!allowedRoles.includes(profile.role)) {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
+    const roleError = requireRole(profile, ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator']);
+    if (roleError) return roleError;
 
     const tierBlock = await enforceTier(profile.org_id, 'documents');
     if (tierBlock) return tierBlock;
 
-    if (!body.title || !body.document_type) {
-      return NextResponse.json(
-        { error: 'Title and document_type are required' },
-        { status: 400 }
-      );
-    }
-
-    const validTypes = [
-      'export_license', 'phytosanitary', 'fumigation', 'organic_cert', 'insurance',
-      'lab_result', 'customs_declaration', 'bill_of_lading', 'certificate_of_origin',
-      'quality_cert', 'other'
-    ];
-
-    if (!validTypes.includes(body.document_type)) {
-      return NextResponse.json(
-        { error: 'Invalid document_type' },
-        { status: 400 }
-      );
-    }
+    // Validation handled by documentCreateSchema above
 
     let status = 'active';
     if (body.expiry_date) {

@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { getResendClient } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { buildDocumentExpiryEmail } from '@/lib/email/templates';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
@@ -113,9 +113,8 @@ export async function GET(request: NextRequest) {
     let notificationsCreated = 0;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://origintrace.trade';
 
-    let resendClient: Awaited<ReturnType<typeof getResendClient>> | null = null;
     try {
-      resendClient = await getResendClient();
+      resendClient = null /* removed */;
     } catch (e) {
       console.error('Resend not configured, skipping emails:', e);
     }
@@ -193,8 +192,7 @@ export async function GET(request: NextRequest) {
               documentVaultUrl: `${baseUrl}/app/documents`,
             });
 
-            await resendClient.client.emails.send({
-              from: resendClient.fromEmail,
+            await await sendEmail({
               to: admin.email,
               subject: `[OriginTrace] ${urgencyPrefix} - ${orgName}`,
               html,

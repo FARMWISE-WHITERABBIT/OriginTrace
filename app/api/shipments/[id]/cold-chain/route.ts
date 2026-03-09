@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
+import { coldChainLogSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(
   request: NextRequest,
@@ -105,7 +106,9 @@ export async function POST(
       return NextResponse.json({ error: 'Shipment Readiness requires Pro tier or above' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(coldChainLogSchema, rawBody);
+    if (validationError) return validationError;
     const { log_type, value } = body;
 
     if (!log_type) {

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { tierTemplatesSchema, parseBody } from '@/lib/api/validation';
 
 
 async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
@@ -61,7 +62,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Superadmin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(tierTemplatesSchema, rawBody);
+    if (validationError) return validationError;
     const { templates } = body;
 
     if (!templates || typeof templates !== 'object') {

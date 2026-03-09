@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { bagCreateSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,15 +79,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(bagCreateSchema, rawBody);
+    if (validationError) return validationError;
     const { count } = body;
-
-    if (!count || typeof count !== 'number' || count < 1 || count > 100) {
-      return NextResponse.json(
-        { error: 'Count must be between 1 and 100' },
-        { status: 400 }
-      );
-    }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

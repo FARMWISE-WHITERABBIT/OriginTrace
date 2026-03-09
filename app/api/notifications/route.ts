@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { notificationUpdateSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -62,7 +63,9 @@ export async function PATCH(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(notificationUpdateSchema, rawBody);
+    if (validationError) return validationError;
     const { notification_id, mark_all_read } = body;
 
     const { error: rpcError } = await supabase.rpc('mark_notification_read', {

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { keyCreateSchema, parseBody } from '@/lib/api/validation';
 
 async function getAuthProfile(supabaseAdmin: ReturnType<typeof createServiceClient>) {
   const { profile } = await getAuthenticatedProfile();
@@ -42,7 +43,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized or admin access required' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(keyCreateSchema, rawBody);
+    if (validationError) return validationError;
     const { name, scopes, expires_in_days, rate_limit_per_hour } = body;
 
     if (!name) {

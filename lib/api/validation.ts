@@ -1,154 +1,223 @@
-import { z, ZodSchema } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * Shared Zod schemas for all OriginTrace API routes.
+ * Import the schema you need rather than re-declaring inline.
+ */
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// Generic request body validator
+// Primitives
 // ---------------------------------------------------------------------------
-export async function validateBody<T>(
-  request: NextRequest,
-  schema: ZodSchema<T>
-): Promise<{ data: T; error: null } | { data: null; error: NextResponse }> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return {
-      data: null,
-      error: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }),
-    };
-  }
+export const uuidSchema = z.string().uuid('Invalid UUID');
+export const orgIdSchema = uuidSchema;
+export const phoneSchema = z.string().min(7).max(20).regex(/^\+?[\d\s\-().]+$/, 'Invalid phone number');
+export const dateSchema = z.string().refine(s => !isNaN(Date.parse(s)), { message: 'Invalid date' });
+export const paginationSchema = z.object({
+  page:  z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
 
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+export const farmerLoginSchema = z.object({
+  phone: phoneSchema,
+  pin:   z.string().length(4, 'PIN must be 4 digits').regex(/^\d{4}$/, 'PIN must be numeric'),
+});
+
+export const farmerActivateSchema = z.object({
+  token: z.string().min(1, 'Token required'),
+  pin:   z.string().length(4).regex(/^\d{4}$/),
+});
+
+// ---------------------------------------------------------------------------
+// Bags
+// ---------------------------------------------------------------------------
+export const bagCreateSchema = z.object({
+  count: z.number().int().min(1).max(10_000),
+});
+
+// ---------------------------------------------------------------------------
+// Keys (API keys)
+// ---------------------------------------------------------------------------
+export const keyCreateSchema = z.object({
+  name:               z.string().min(1).max(100),
+  scopes:             z.array(z.enum(['read', 'write', 'admin'])).min(1),
+  expires_in_days:    z.number().int().min(1).max(365).optional(),
+  rate_limit_per_hour: z.number().int().min(1).max(10_000).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+export const notificationUpdateSchema = z.object({
+  notification_id: uuidSchema.optional(),
+  mark_all_read:   z.boolean().optional(),
+}).refine(d => d.notification_id || d.mark_all_read, {
+  message: 'Provide notification_id or mark_all_read: true',
+});
+
+// ---------------------------------------------------------------------------
+// Profile
+// ---------------------------------------------------------------------------
+export const profileUpdateSchema = z.object({
+  full_name: z.string().min(1).max(200),
+});
+
+// ---------------------------------------------------------------------------
+// Delegations
+// ---------------------------------------------------------------------------
+export const delegationCreateSchema = z.object({
+  delegated_to:  uuidSchema,
+  permission:    z.enum(['read', 'write', 'admin']),
+  region_scope:  z.string().optional(),
+  expires_at:    dateSchema.optional(),
+});
+
+export const delegationActionSchema = z.object({
+  delegation_id: uuidSchema,
+  action:        z.enum(['revoke', 'extend']),
+});
+
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+const VALID_DOC_TYPES = [
+  'certificate_of_origin', 'phytosanitary', 'bill_of_lading', 'packing_list',
+  'commercial_invoice', 'fumigation_certificate', 'lab_report', 'customs_declaration',
+  'insurance_certificate', 'other',
+] as const;
+
+export const documentCreateSchema = z.object({
+  title:         z.string().min(1).max(200),
+  document_type: z.enum(VALID_DOC_TYPES),
+  file_url:      z.string().url().optional().nullable(),
+  expiry_date:   dateSchema.optional().nullable(),
+  shipment_id:   uuidSchema.optional().nullable(),
+  notes:         z.string().max(1000).optional().nullable(),
+});
+
+// ---------------------------------------------------------------------------
+// Feature toggles (superadmin)
+// ---------------------------------------------------------------------------
+export const featureToggleSchema = z.object({
+  org_id:                    uuidSchema,
+  subscription_tier:         z.enum(['starter', 'basic', 'pro', 'enterprise']),
+  feature_flags:             z.record(z.boolean()).optional(),
+  agent_seat_limit:          z.number().int().min(0).optional(),
+  monthly_collection_limit:  z.number().int().min(0).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Tier templates (superadmin)
+// ---------------------------------------------------------------------------
+export const tierTemplatesSchema = z.object({
+  templates: z.record(z.object({
+    features:                  z.record(z.boolean()),
+    agent_seat_limit:          z.number().int().min(0),
+    monthly_collection_limit:  z.number().int().min(0),
+  })),
+});
+
+// ---------------------------------------------------------------------------
+// Compliance profiles
+// ---------------------------------------------------------------------------
+export const complianceProfileCreateSchema = z.object({
+  profile_name:        z.string().min(1).max(200),
+  standard_type:       z.string().min(1),
+  target_market:       z.string().min(1),
+  requirements:        z.record(z.unknown()).optional(),
+  auto_apply_to_farms: z.boolean().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Supply chain links
+// ---------------------------------------------------------------------------
+export const supplyChainLinkSchema = z.object({
+  exporter_org_name: z.string().min(1).max(200),
+  exporter_email:    z.string().email(),
+});
+
+// ---------------------------------------------------------------------------
+// Cold chain logs
+// ---------------------------------------------------------------------------
+export const coldChainLogSchema = z.object({
+  log_type:      z.enum(['temperature', 'humidity', 'shock', 'location']),
+  value:         z.number(),
+  unit:          z.string().max(20).optional(),
+  location:      z.string().max(200).optional(),
+  recorded_at:   dateSchema.optional(),
+  threshold_min: z.number().optional(),
+  threshold_max: z.number().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Shipment lots
+// ---------------------------------------------------------------------------
+export const lotCreateSchema = z.object({
+  lot_number:      z.string().min(1).max(100),
+  weight_kg:       z.number().positive(),
+  source_batch_id: uuidSchema.optional().nullable(),
+  commodity:       z.string().optional(),
+  notes:           z.string().max(1000).optional(),
+});
+
+export const lotUpdateSchema = z.object({
+  lot_id:       uuidSchema,
+  add_items:    z.array(z.object({ item_type: z.string(), batch_id: uuidSchema.optional() })).optional(),
+  remove_items: z.array(uuidSchema).optional(),
+  update:       z.record(z.unknown()).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Shipment outcomes
+// ---------------------------------------------------------------------------
+const VALID_REJECTION_CATEGORIES = [
+  'documentation', 'quality', 'contamination', 'customs', 'labelling', 'other',
+] as const;
+
+export const shipmentOutcomeSchema = z.object({
+  outcome:              z.enum(['accepted', 'rejected', 'conditional', 'pending']),
+  outcome_date:         dateSchema.optional(),
+  rejection_category:   z.enum(VALID_REJECTION_CATEGORIES).optional(),
+  rejection_reason:     z.string().max(1000).optional(),
+  port_of_entry:        z.string().max(200).optional(),
+  customs_reference:    z.string().max(200).optional(),
+  inspector_notes:      z.string().max(2000).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Yield validation
+// ---------------------------------------------------------------------------
+export const yieldValidationSchema = z.object({
+  farm_id:       uuidSchema,
+  batch_weight:  z.number().positive(),
+  commodity:     z.string().min(1),
+});
+
+export const yieldReviewSchema = z.object({
+  batch_id: uuidSchema,
+  action:   z.enum(['approve', 'reject', 'flag']),
+  notes:    z.string().max(1000).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Helper: parse + return typed error
+// ---------------------------------------------------------------------------
+import { NextResponse } from 'next/server';
+
+export function parseBody<T>(
+  schema: z.ZodSchema<T>,
+  body: unknown
+): { data: T; error: null } | { data: null; error: NextResponse } {
   const result = schema.safeParse(body);
   if (!result.success) {
-    const issues = result.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
     return {
       data: null,
-      error: NextResponse.json({ error: 'Validation failed', issues }, { status: 422 }),
+      error: NextResponse.json(
+        { error: 'Validation failed', details: result.error.flatten().fieldErrors },
+        { status: 400 }
+      ),
     };
   }
-
   return { data: result.data, error: null };
 }
-
-// ---------------------------------------------------------------------------
-// Query param validator
-// ---------------------------------------------------------------------------
-export function validateQuery<T>(
-  searchParams: URLSearchParams,
-  schema: ZodSchema<T>
-): { data: T; error: null } | { data: null; error: NextResponse } {
-  const raw: Record<string, string> = {};
-  searchParams.forEach((v, k) => { raw[k] = v; });
-
-  const result = schema.safeParse(raw);
-  if (!result.success) {
-    const issues = result.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return {
-      data: null,
-      error: NextResponse.json({ error: 'Invalid query parameters', issues }, { status: 422 }),
-    };
-  }
-
-  return { data: result.data, error: null };
-}
-
-// ---------------------------------------------------------------------------
-// Common reusable schemas
-// ---------------------------------------------------------------------------
-export const UUIDParam = z.string().uuid('Must be a valid UUID');
-export const OrgIdParam = z.string().min(1);
-export const PaginationSchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).default('1'),
-  limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(200)).default('50'),
-});
-
-// Shipment schemas
-export const CreateShipmentSchema = z.object({
-  destination_country: z.string().min(2).max(100),
-  target_regulations: z.array(z.string()).default([]),
-  compliance_profile_id: z.string().uuid().optional().nullable(),
-  notes: z.string().max(2000).optional(),
-  estimated_ship_date: z.string().datetime({ offset: true }).optional().nullable(),
-});
-
-export const UpdateShipmentSchema = z.object({
-  destination_country: z.string().min(2).max(100).optional(),
-  status: z.enum(['draft', 'pending', 'booked', 'in_transit', 'delivered', 'cancelled']).optional(),
-  notes: z.string().max(2000).optional(),
-  estimated_ship_date: z.string().datetime({ offset: true }).optional().nullable(),
-  compliance_profile_id: z.string().uuid().optional().nullable(),
-  add_items: z.array(z.object({
-    item_type: z.enum(['batch', 'finished_good']),
-    batch_id: z.string().uuid().optional().nullable(),
-    finished_good_id: z.string().uuid().optional().nullable(),
-    weight_kg: z.number().min(0),
-    farm_count: z.number().min(0).default(0),
-  })).optional(),
-  remove_item_ids: z.array(z.string().uuid()).optional(),
-});
-
-// Farm schemas
-export const CreateFarmSchema = z.object({
-  farmer_name: z.string().min(1).max(200),
-  community: z.string().max(200).optional(),
-  state: z.string().max(100).optional(),
-  commodity: z.string().max(100).optional(),
-  area_hectares: z.number().min(0).max(100000).optional(),
-  gps_latitude: z.number().min(-90).max(90).optional().nullable(),
-  gps_longitude: z.number().min(-180).max(180).optional().nullable(),
-  boundary_geo: z.any().optional().nullable(),
-});
-
-// Batch schemas
-export const CreateBatchSchema = z.object({
-  batch_id: z.string().min(1).max(100),
-  farm_id: z.string().uuid().optional().nullable(),
-  commodity: z.string().min(1).max(100),
-  total_weight: z.number().min(0),
-  bag_count: z.number().int().min(0),
-  notes: z.string().max(2000).optional(),
-});
-
-// Document schemas
-export const CreateDocumentSchema = z.object({
-  name: z.string().min(1).max(300),
-  type: z.string().min(1).max(100),
-  file_url: z.string().url(),
-  expiry_date: z.string().datetime({ offset: true }).optional().nullable(),
-  linked_entity_type: z.enum(['farm', 'batch', 'shipment', 'finished_good', 'org']).optional(),
-  linked_entity_id: z.string().uuid().optional().nullable(),
-});
-
-// Payment schemas
-export const CreatePaymentSchema = z.object({
-  payee_type: z.enum(['farmer', 'agent', 'supplier', 'other']),
-  payee_id: z.string().uuid().optional().nullable(),
-  amount: z.number().min(0),
-  currency: z.string().length(3).default('NGN'),
-  payment_method: z.enum(['bank_transfer', 'mobile_money', 'cash', 'cheque', 'other']),
-  notes: z.string().max(2000).optional(),
-});
-
-// Compliance profile schemas
-export const CreateComplianceProfileSchema = z.object({
-  name: z.string().min(1).max(200),
-  destination_market: z.string().min(1).max(200),
-  regulation_framework: z.enum(['EUDR', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'FSMA_204', 'custom']),
-  required_documents: z.array(z.string()).default([]),
-  required_certifications: z.array(z.string()).default([]),
-  geo_verification_level: z.enum(['basic', 'polygon', 'satellite']).default('basic'),
-  min_traceability_depth: z.number().int().min(1).max(10).default(1),
-  custom_rules: z.record(z.any()).optional(),
-});
-
-// Analytics query schema
-export const AnalyticsQuerySchema = z.object({
-  period: z.enum(['7d', '30d', '90d', '1y']).default('30d'),
-  section: z.enum(['all', 'operational', 'strategic', 'shipments', 'documents', 'financial']).default('all'),
-});
