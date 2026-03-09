@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
-  subscription_status TEXT DEFAULT 'trial' CHECK (subscription_status IN ('active', 'trial', 'suspended', 'cancelled')),
+  subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'grace_period', 'expired', 'cancelled', 'suspended')),
   logo_url TEXT,
   settings JSONB DEFAULT '{}',
   commodities TEXT[] DEFAULT ARRAY['cocoa'],
