@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
               dashboardUrl: `${baseUrl}/app/farms/map`,
             });
 
-            await await sendEmail({
+            await sendEmail({
               to: email,
               subject: `[OriginTrace] Deforestation Risk Alert - ${result.risk_level.toUpperCase()} Risk`,
               html,

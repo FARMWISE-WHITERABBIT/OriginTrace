@@ -143,9 +143,7 @@ export async function POST(request: NextRequest) {
             });
 
             try {
-              const { client, fromEmail } = null /* removed */;
-              await await sendEmail({
-                from: fromEmail,
+              await sendEmail({
                 to: recipientEmail,
                 subject: `Yield Alert: Batch flagged for ${farmDetails?.farmer_name || 'Unknown'} - ${org?.name || 'OriginTrace'}`,
                 html: emailContent.html,

@@ -237,9 +237,7 @@ export async function POST(request: NextRequest) {
           });
 
           try {
-            const { client, fromEmail } = null /* removed */;
-            await await sendEmail({
-              from: fromEmail,
+            await sendEmail({
               to: adminEmail,
               subject: `Farm Boundary Conflict: ${farmA.farmer_name || 'Farm A'} vs ${farmB.farmer_name || 'Farm B'} - ${org?.name || 'OriginTrace'}`,
               html: emailContent.html,

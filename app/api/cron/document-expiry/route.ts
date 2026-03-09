@@ -112,12 +112,7 @@ export async function GET(request: NextRequest) {
     let emailsSent = 0;
     let notificationsCreated = 0;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://origintrace.trade';
-
-    try {
-      resendClient = null /* removed */;
-    } catch (e) {
-      console.error('Resend not configured, skipping emails:', e);
-    }
+    const emailEnabled = !!process.env.RESEND_API_KEY;
 
     for (const orgId of orgIds) {
       const docs = docsByOrg[orgId];
@@ -178,7 +173,7 @@ export async function GET(request: NextRequest) {
           notificationsCreated++;
         }
 
-        if (resendClient) {
+        if (emailEnabled) {
           try {
             const { html, text } = buildDocumentExpiryEmail({
               recipientName: admin.fullName,
@@ -192,7 +187,7 @@ export async function GET(request: NextRequest) {
               documentVaultUrl: `${baseUrl}/app/documents`,
             });
 
-            await await sendEmail({
+            await sendEmail({
               to: admin.email,
               subject: `[OriginTrace] ${urgencyPrefix} - ${orgName}`,
               html,

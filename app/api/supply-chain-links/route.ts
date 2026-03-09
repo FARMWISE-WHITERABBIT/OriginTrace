@@ -159,9 +159,7 @@ export async function POST(request: NextRequest) {
             acceptUrl,
           });
 
-          const { client: resend, fromEmail } = null /* removed */;
-          await resend.emails.send({
-            from: fromEmail,
+          await sendEmail({
             to: adminEmails,
             subject: `Supply Chain Invitation from ${buyerCompanyName} - OriginTrace`,
             html,
