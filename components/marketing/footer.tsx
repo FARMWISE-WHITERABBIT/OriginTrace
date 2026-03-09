@@ -74,8 +74,8 @@ export function MarketingFooter() {
               <li><Link href="/demo" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-demo">Request Demo</Link></li>
               <li><Link href="/auth/login" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-signin">Sign In</Link></li>
               <li><Link href="/auth/buyer-register" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-buyer">Buyer Portal</Link></li>
-              <li><a href="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-privacy">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-terms">Terms of Service</a></li>
+              <li><a href="/legal/privacy" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-privacy">Privacy Policy</a></li>
+              <li><a href="/legal/terms" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-terms">Terms of Service</a></li>
             </ul>
           </div>
 
