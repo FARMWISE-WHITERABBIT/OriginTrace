@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith('/auth');
   const publicPages = ['/', '/solutions', '/pedigree', '/demo', '/processors', '/api-docs', '/superadmin/login'];
-  const isPublicPage = publicPages.includes(pathname) || pathname.startsWith('/verify') || pathname.startsWith('/compliance') || pathname.startsWith('/industries');
+  const isPublicPage = publicPages.includes(pathname) || pathname.startsWith('/verify') || pathname.startsWith('/compliance') || pathname.startsWith('/industries') || pathname.startsWith('/legal') || pathname.startsWith('/pedigree');
   const isResetPasswordPage = pathname === '/auth/reset-password';
   const isApiRoute = pathname.startsWith('/api');
   const isSuperadminPage = pathname.startsWith('/superadmin');
@@ -161,11 +161,16 @@ async function getOrgTier(supabase: any, userId: string): Promise<string | undef
     if (!profile?.org_id) return undefined;
     const { data: org } = await supabase
       .from('organizations')
-      .select('settings')
+      .select('subscription_tier, settings')
       .eq('id', profile.org_id)
       .single();
-    const settings = (org?.settings as Record<string, any>) || {};
-    return settings.subscription_tier || undefined;
+    if (!org) return undefined;
+    // Read from the dedicated column first, then fall back to legacy settings JSONB
+    const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
+    const columnTier = org.subscription_tier as string | undefined;
+    const settingsTier = ((org.settings as Record<string, any>) || {}).subscription_tier as string | undefined;
+    const resolved = VALID_TIERS.includes(columnTier ?? '') ? columnTier : VALID_TIERS.includes(settingsTier ?? '') ? settingsTier : 'starter';
+    return resolved;
   } catch {
     return undefined;
   }
