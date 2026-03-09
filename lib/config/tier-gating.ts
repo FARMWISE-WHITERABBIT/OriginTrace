@@ -15,17 +15,17 @@ export const TIER_LABELS: Record<SubscriptionTier, string> = {
 };
 
 export const TIER_TAGLINES: Record<SubscriptionTier, string> = {
-  starter: 'Proof of Value',
-  basic: 'Operational Traceability',
+  starter: 'Full Traceability from Day One',
+  basic: 'Active Supply Chain Operations',
   pro: 'Export & Compliance Ready',
   enterprise: 'Infrastructure Partner',
 };
 
 export const TIER_DESCRIPTIONS: Record<SubscriptionTier, string> = {
-  starter: 'For pilots, NGOs, and early aggregators demonstrating traceability value.',
-  basic: 'For active supply chains with real throughput — regional aggregators, domestic processors, co-ops.',
-  pro: 'For exporters and processors supplying EU/US markets. Full compliance, buyer portal, and shipment planning.',
-  enterprise: 'OriginTrace as critical trade infrastructure — Digital Product Passports, enterprise API, multinationals.',
+  starter: 'Complete farm-to-batch traceability — farmer registry, GPS farm mapping, batch collection, bag tracking, documents, and QR verification. Everything you need to trace your supply chain.',
+  basic: 'Everything in Starter plus active operations — yield alerts, field agents, dispatch management, payment tracking, and analytics for growing supply chains.',
+  pro: 'Everything in Basic plus export readiness — compliance review, DDS generation, processing runs, pedigree, shipment readiness scoring, buyer portal, and multi-market compliance profiles.',
+  enterprise: 'Everything in Pro plus trade infrastructure — Digital Product Passports, bulk data vault, enterprise API access, and multi-national operations support.',
 };
 
 export type TierFeature =
@@ -94,29 +94,33 @@ export const FEATURE_LABELS: Record<TierFeature, string> = {
 };
 
 const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
-  smart_collect: 'starter',
+  // ── Starter: complete core traceability for pilots, NGOs, early aggregators
+  // Full farm-to-batch traceability chain available from day one
   farmer_registration: 'starter',
   farm_mapping: 'starter',
-  sync_dashboard: 'starter',
-  traceability: 'starter',
   farm_polygons: 'starter',
   farmers_list: 'starter',
+  smart_collect: 'starter',
+  sync_dashboard: 'starter',
+  bags: 'starter',
+  traceability: 'starter',
+  inventory: 'starter',
+  scan_verify: 'starter',
+  documents: 'starter',
 
-  inventory: 'basic',
-  bags: 'basic',
+  // ── Basic: active supply chains — throughput, procurement, field operations
   yield_alerts: 'basic',
   agents: 'basic',
-  scan_verify: 'basic',
   dispatch: 'basic',
   analytics: 'basic',
-  documents: 'basic',
   payments: 'basic',
 
+  // ── Pro: export & compliance readiness — EU/US/UK market access
   compliance_review: 'pro',
+  boundary_conflicts: 'pro',
   dds_export: 'pro',
   processing: 'pro',
   pedigree: 'pro',
-  boundary_conflicts: 'pro',
   delegations: 'pro',
   resolve: 'pro',
   shipment_readiness: 'pro',
@@ -124,6 +128,7 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   buyer_portal: 'pro',
   contracts: 'pro',
 
+  // ── Enterprise: infrastructure — DPP, bulk data, API integrations
   data_vault: 'enterprise',
   digital_product_passport: 'enterprise',
   enterprise_api: 'enterprise',
