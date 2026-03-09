@@ -1,10 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function generateDppCode(): string {
   const year = new Date().getFullYear();
@@ -60,9 +58,7 @@ function buildJsonLd(dpp: any, pedigree: any) {
 
 export async function GET() {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -79,6 +75,10 @@ export async function GET() {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const { data: dpps, error } = await supabaseAdmin
@@ -111,9 +111,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -130,6 +128,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile || !['admin', 'compliance_officer'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin or compliance officer access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();

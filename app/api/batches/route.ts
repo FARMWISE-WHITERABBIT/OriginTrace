@@ -1,22 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function createServiceClient() {
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
+const batchCreateSchema = z.object({
+  farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
+  bags: z.array(z.object({
+    serial: z.string().optional(),
+    weight: z.number().optional(),
+    grade: z.string().optional(),
+    is_compliant: z.boolean().optional(),
+  })).optional(),
+  notes: z.string().optional(),
+  local_id: z.string().optional(),
+  collected_at: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -29,6 +36,13 @@ export async function GET(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -80,9 +94,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -95,13 +108,25 @@ export async function POST(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const body = await request.json();
-    const { farm_id, bags, notes, local_id, collected_at } = body;
-    
-    if (!farm_id) {
-      return NextResponse.json({ error: 'Farm ID is required' }, { status: 400 });
+
+    const parsed = batchCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { farm_id, bags, notes, local_id, collected_at } = parsed.data;
     
     const { data: farm, error: farmError } = await supabase
       .from('farms')
@@ -156,6 +181,20 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'batch.created',
+      resourceType: 'collection_batch',
+      resourceId: batch.id?.toString(),
+      metadata: { farm_id, bag_count: bagCount, total_weight: totalWeight },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'batch.created', {
+      batch_id: batch.id, farm_id, bag_count: bagCount, total_weight: totalWeight,
+    });
     
     return NextResponse.json({ batch, success: true });
     
@@ -169,9 +208,8 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -184,6 +222,13 @@ export async function PATCH(request: NextRequest) {
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
+    if (tierBlock) return tierBlock;
     
     const body = await request.json();
     const { id, status, notes, total_weight, bag_count } = body;

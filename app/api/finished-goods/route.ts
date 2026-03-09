@@ -1,16 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const finishedGoodCreateSchema = z.object({
+  product_name: z.string().min(1, 'Product name is required'),
+  product_type: z.string().optional(),
+  processing_run_id: z.number({ required_error: 'Processing run ID is required' }),
+  weight_kg: z.number().positive('Weight must be positive'),
+  batch_number: z.string().optional(),
+  lot_number: z.string().optional(),
+  production_date: z.string().optional(),
+  destination_country: z.string().optional(),
+  buyer_company: z.string().optional(),
+});
+
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -27,6 +36,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const { data: finishedGoods, error } = await supabaseAdmin
@@ -61,9 +74,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -82,7 +93,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const body = await request.json();
+
+    const parsed = finishedGoodCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const {
       product_name,
       product_type,
@@ -93,13 +117,7 @@ export async function POST(request: NextRequest) {
       production_date,
       destination_country,
       buyer_company
-    } = body;
-
-    if (!product_name || !processing_run_id || !weight_kg) {
-      return NextResponse.json({ 
-        error: 'product_name, processing_run_id, and weight_kg are required' 
-      }, { status: 400 });
-    }
+    } = parsed.data;
 
     const { data: processingRun } = await supabaseAdmin
       .from('processing_runs')
@@ -149,9 +167,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -168,6 +184,10 @@ export async function PATCH(request: NextRequest) {
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();

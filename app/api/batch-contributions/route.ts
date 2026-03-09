@@ -1,15 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ALLOWED_READ_ROLES = ['admin', 'aggregator', 'agent'];
+
+const batchContributionSchema = z.object({
+  batch_id: z.number({ required_error: 'batch_id is required' }).int().positive(),
+  farm_id: z.number({ required_error: 'farm_id is required' }).int().positive(),
+  farmer_name: z.string().nullable().optional(),
+  weight_kg: z.number().min(0).default(0),
+  bag_count: z.number().int().min(0).default(0),
+  notes: z.string().nullable().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -25,6 +32,14 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    if (!ALLOWED_READ_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const batchId = request.nextUrl.searchParams.get('batch_id');
@@ -50,10 +65,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (error.code === '42P01') {
-        return NextResponse.json({ contributions: [], table_missing: true });
-      }
-      throw error;
+      console.error('Batch contributions fetch error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ contributions: contributions || [] });
@@ -65,9 +78,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -85,12 +96,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes } = body;
-
-    if (!batch_id || !farm_id) {
-      return NextResponse.json({ error: 'batch_id and farm_id required' }, { status: 400 });
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
+
+    const body = await request.json();
+    const parsed = batchContributionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes } = parsed.data;
 
     const { data: batch } = await supabaseAdmin
       .from('collection_batches')
@@ -125,11 +145,11 @@ export async function POST(request: NextRequest) {
       .insert({
         batch_id,
         farm_id,
-        farmer_name: farmer_name || null,
-        weight_kg: weight_kg || 0,
-        bag_count: bag_count || 0,
+        farmer_name: farmer_name ?? null,
+        weight_kg,
+        bag_count,
         compliance_status: complianceStatus,
-        notes: notes || null
+        notes: notes ?? null
       })
       .select()
       .single();
@@ -166,9 +186,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -186,6 +204,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const contributionId = request.nextUrl.searchParams.get('id');
     if (!contributionId) {
       return NextResponse.json({ error: 'id required' }, { status: 400 });
@@ -193,7 +215,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: contribution } = await supabaseAdmin
       .from('batch_contributions')
-      .select('batch_id')
+      .select('batch_id, org_id')
       .eq('id', contributionId)
       .single();
 
@@ -201,10 +223,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Contribution not found' }, { status: 404 });
     }
 
+    if (contribution.org_id !== profile.org_id) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     const { error } = await supabaseAdmin
       .from('batch_contributions')
       .delete()
-      .eq('id', contributionId);
+      .eq('id', contributionId)
+      .eq('org_id', profile.org_id);
 
     if (error) throw error;
 

@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import { OrgProvider } from '@/lib/contexts/org-context';
 import { Toaster } from '@/components/ui/toaster';
+import { LocaleProvider } from '@/lib/i18n/locale-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 const jetbrainsMono = JetBrains_Mono({
@@ -65,10 +66,12 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <OrgProvider>
-            {children}
-            <Toaster />
-          </OrgProvider>
+          <LocaleProvider>
+            <OrgProvider>
+              {children}
+              <Toaster />
+            </OrgProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

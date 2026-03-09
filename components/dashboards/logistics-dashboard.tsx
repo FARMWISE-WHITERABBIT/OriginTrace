@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useOrg } from '@/lib/contexts/org-context';
 import {
   Truck,
   Package,
@@ -47,46 +48,27 @@ export function LogisticsDashboard() {
     recentDispatches: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const { organization } = useOrg();
 
   useEffect(() => {
     async function fetchStats() {
-      try {
-        const res = await fetch('/api/dashboard?view=logistics_coordinator');
-        if (!res.ok) throw new Error('Failed to fetch dashboard data');
-        const data = await res.json();
-        // Merge shipment counts from API response
-        let shipmentStats = { total: 0, pending: data.pendingShipments || 0, inTransit: data.activeShipments || 0, delivered: 0 };
-        try {
-          const shipmentRes = await fetch('/api/shipments');
-          if (shipmentRes.ok) {
-            const shipmentData = await shipmentRes.json();
-            const shipments = Array.isArray(shipmentData) ? shipmentData : shipmentData.shipments || [];
-            shipmentStats.total = shipments.length;
-            shipmentStats.pending = shipments.filter((s: any) => s.status === 'pending' || s.status === 'booked').length;
-            shipmentStats.inTransit = shipments.filter((s: any) => s.status === 'in_transit').length;
-            shipmentStats.delivered = shipments.filter((s: any) => s.status === 'delivered').length;
-          }
-        } catch { /* use API defaults */ }
+      if (!organization) return;
 
-        setStats({
-          totalShipments: shipmentStats.total,
-          pendingShipments: shipmentStats.pending,
-          inTransitShipments: shipmentStats.inTransit,
-          deliveredShipments: shipmentStats.delivered,
-          unusedBags: data.unusedBags || 0,
-          collectedBags: data.collectedBags || 0,
-          processedBags: data.processedBags || 0,
-          totalBags: data.totalBags || 0,
-          recentDispatches: data.recentBatches || [],
-        });
+      try {
+        const res = await fetch('/api/dashboard?role=logistics');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch logistics stats:', error);
       } finally {
         setIsLoading(false);
       }
     }
+
     fetchStats();
-  }, []);
+  }, [organization]);
 
   const pipelineCards = [
     { title: 'Total Shipments', value: stats.totalShipments, icon: Truck, color: 'text-blue-600' },

@@ -1,28 +1,11 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-
-function createServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
 async function getAuthProfile(supabaseAdmin: ReturnType<typeof createServiceClient>) {
-  const supabase = await createServerClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('id, org_id, role, user_id')
-    .eq('user_id', user.id)
-    .single();
-
+  const { profile } = await getAuthenticatedProfile();
   if (!profile || profile.role !== 'admin') return null;
+  if (!profile.org_id) return null;
   return profile;
 }
 

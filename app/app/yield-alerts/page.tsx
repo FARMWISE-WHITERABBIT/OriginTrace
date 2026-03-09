@@ -9,7 +9,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFo
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle, CheckCircle2, XCircle, Eye, Scale } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, AlertTriangle, CheckCircle2, XCircle, Eye, Scale, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { TierGate } from '@/components/tier-gate';
 
@@ -45,6 +46,11 @@ export default function YieldAlertsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { profile } = useOrg();
   const { toast } = useToast();
+
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [commoditySummary, setCommoditySummary] = useState<Record<string, any>>({});
+  const [isPredictionsLoading, setIsPredictionsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('alerts');
 
   const canReview = profile?.role === 'admin';
 
@@ -100,6 +106,28 @@ export default function YieldAlertsPage() {
     }
   };
 
+  const fetchPredictions = async () => {
+    setIsPredictionsLoading(true);
+    try {
+      const response = await fetch('/api/yield-predictions');
+      if (response.ok) {
+        const data = await response.json();
+        setPredictions(data.predictions || []);
+        setCommoditySummary(data.commoditySummary || {});
+      }
+    } catch (error) {
+      console.error('Failed to fetch predictions:', error);
+    } finally {
+      setIsPredictionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'predictions' && predictions.length === 0) {
+      fetchPredictions();
+    }
+  }, [activeTab]);
+
   const calculateExpectedYield = (batch: FlaggedBatch) => {
     if (!batch.farms?.area_hectares || !batch.farms?.commodity) return null;
     
@@ -127,11 +155,24 @@ export default function YieldAlertsPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <AlertTriangle className="h-6 w-6 text-amber-500" />
-          Yield Alerts
+          Yield Alerts & Predictions
         </h1>
-        <p className="text-muted-foreground">Review batches flagged for yield anomalies</p>
+        <p className="text-muted-foreground">Review flagged batches and view yield forecasts</p>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="alerts" data-testid="tab-alerts">
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            Alerts {flaggedBatches.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{flaggedBatches.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="predictions" data-testid="tab-predictions">
+            <TrendingUp className="h-4 w-4 mr-1" />
+            Predictions
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="alerts" className="space-y-6 mt-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
@@ -244,6 +285,116 @@ export default function YieldAlertsPage() {
           </Table>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="predictions" className="space-y-6 mt-4">
+          {isPredictionsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {Object.keys(commoditySummary).length > 0 && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {Object.entries(commoditySummary).map(([commodity, summary]: [string, any]) => (
+                    <Card key={commodity}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium capitalize">{commodity}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold" data-testid={`text-predicted-total-${commodity}`}>
+                          {(summary.totalPredictedKg / 1000).toFixed(1)} t
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {summary.farmCount} farm(s) · {summary.avgYieldPerHa} kg/ha avg
+                        </p>
+                        {summary.atRiskCount > 0 && (
+                          <Badge variant="destructive" className="mt-2" data-testid={`badge-at-risk-${commodity}`}>
+                            {summary.atRiskCount} at risk
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Farm Yield Forecasts</CardTitle>
+                  <CardDescription>Predicted yields by farm with trend and risk indicators</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Farmer</TableHead>
+                        <TableHead>Commodity</TableHead>
+                        <TableHead className="text-right">Area (ha)</TableHead>
+                        <TableHead className="text-right">Predicted Yield</TableHead>
+                        <TableHead className="text-right">Confidence Range</TableHead>
+                        <TableHead>Trend</TableHead>
+                        <TableHead>Risk</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {predictions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                              <TrendingUp className="h-8 w-8" />
+                              <span>No prediction data available. Add farms with collection history to see forecasts.</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        predictions.map((pred) => (
+                          <TableRow key={pred.farmId} data-testid={`prediction-farm-${pred.farmId}`}>
+                            <TableCell className="font-medium">{pred.farmerName}</TableCell>
+                            <TableCell className="capitalize">{pred.commodity}</TableCell>
+                            <TableCell className="text-right">{pred.areaHa.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {(pred.predictedYieldKg / 1000).toFixed(1)} t
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground text-xs">
+                              {(pred.confidenceRange.low / 1000).toFixed(1)} – {(pred.confidenceRange.high / 1000).toFixed(1)} t
+                            </TableCell>
+                            <TableCell>
+                              {pred.trend === 'improving' && (
+                                <span className="flex items-center gap-1 text-green-600 text-sm">
+                                  <ArrowUpRight className="h-3 w-3" /> Up
+                                </span>
+                              )}
+                              {pred.trend === 'declining' && (
+                                <span className="flex items-center gap-1 text-red-600 text-sm">
+                                  <ArrowDownRight className="h-3 w-3" /> Down
+                                </span>
+                              )}
+                              {pred.trend === 'stable' && (
+                                <span className="flex items-center gap-1 text-muted-foreground text-sm">
+                                  <Minus className="h-3 w-3" /> Stable
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={pred.risk === 'high' ? 'destructive' : pred.risk === 'medium' ? 'secondary' : 'outline'}
+                                data-testid={`badge-risk-${pred.farmId}`}
+                              >
+                                {pred.risk}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={!!selectedBatch} onOpenChange={(open) => !open && setSelectedBatch(null)}>
         <SheetContent className="sm:max-w-lg">

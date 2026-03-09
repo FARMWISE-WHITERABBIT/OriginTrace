@@ -183,13 +183,15 @@ export default function FarmerRegistrationPage() {
         if (error) throw error;
 
         if (data?.id && Object.keys(complianceData).length > 0) {
-          await supabase.from('compliance_files').insert({
-            org_id: organization.id,
-            farm_id: data.id,
-            file_type: 'compliance_attestation',
-            file_url: JSON.stringify(complianceData),
-            uploaded_by: profile.user_id,
-            verification_status: 'pending',
+          await fetch('/api/compliance-files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              farm_id: data.id,
+              file_type: 'compliance_attestation',
+              file_url: JSON.stringify(complianceData),
+              verification_status: 'pending',
+            }),
           });
         }
 
@@ -198,26 +200,30 @@ export default function FarmerRegistrationPage() {
           if (farmerPhoto) {
             const photoUrl = await uploadKycFile(farmId, farmerPhoto, 'farmer_photo');
             if (photoUrl) {
-              await supabase.from('compliance_files').insert({
-                org_id: organization.id,
-                farm_id: data.id,
-                file_type: 'farmer_photo',
-                file_url: photoUrl,
-                uploaded_by: profile.user_id,
-                verification_status: 'pending',
+              await fetch('/api/compliance-files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  farm_id: data.id,
+                  file_type: 'farmer_photo',
+                  file_url: photoUrl,
+                  verification_status: 'pending',
+                }),
               });
             }
           }
           if (idDocument) {
             const idUrl = await uploadKycFile(farmId, idDocument, 'id_document');
             if (idUrl) {
-              await supabase.from('compliance_files').insert({
-                org_id: organization.id,
-                farm_id: data.id,
-                file_type: 'id_document',
-                file_url: idUrl,
-                uploaded_by: profile.user_id,
-                verification_status: 'pending',
+              await fetch('/api/compliance-files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  farm_id: data.id,
+                  file_type: 'id_document',
+                  file_url: idUrl,
+                  verification_status: 'pending',
+                }),
               });
             }
           }

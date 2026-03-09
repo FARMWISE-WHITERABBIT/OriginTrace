@@ -1,9 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const TEMPLATES: Record<string, {
   name: string;
@@ -76,13 +74,43 @@ const TEMPLATES: Record<string, {
     geo_verification_level: 'polygon',
     min_traceability_depth: 3,
   },
+  CHINA: {
+    name: 'China Green Trade Compliance',
+    destination_market: 'China',
+    regulation_framework: 'China_Green_Trade',
+    required_documents: [
+      'GACC registration certificate',
+      'Phytosanitary certificate',
+      'Fumigation certificate',
+      'Certificate of origin',
+      'GB standards compliance report',
+      'Inspection report',
+    ],
+    required_certifications: ['GACC Registration', 'GB Standards'],
+    geo_verification_level: 'polygon',
+    min_traceability_depth: 2,
+  },
+  UAE: {
+    name: 'UAE / Halal Compliance',
+    destination_market: 'UAE / Middle East',
+    regulation_framework: 'UAE_Halal',
+    required_documents: [
+      'Halal certificate (accredited body)',
+      'ESMA compliance certificate',
+      'MOCCAE import permit',
+      'Certificate of origin',
+      'Health certificate',
+      'Arabic labeling compliance',
+    ],
+    required_certifications: ['Halal Certification', 'ESMA Compliance'],
+    geo_verification_level: 'basic',
+    min_traceability_depth: 1,
+  },
 };
 
 export async function GET() {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -99,6 +127,10 @@ export async function GET() {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const { data: profiles, error } = await supabaseAdmin
@@ -121,9 +153,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -140,6 +170,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile || !['admin', 'compliance_officer'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin or compliance officer access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -188,7 +222,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'custom'];
+    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'];
     if (!validFrameworks.includes(regulation_framework)) {
       return NextResponse.json({ error: 'Invalid regulation_framework' }, { status: 400 });
     }

@@ -1,14 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent } from '@/lib/audit';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
 
-async function getAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseServiceKey) return null;
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+const contractCreateSchema = z.object({
+  exporter_org_id: z.number({ required_error: 'Exporter is required' }),
+  commodity: z.string().min(1, 'Commodity is required'),
+  quantity_mt: z.number().positive().optional(),
+  delivery_deadline: z.string().optional(),
+  destination_port: z.string().optional(),
+  quality_requirements: z.record(z.any()).optional(),
+  notes: z.string().optional(),
+});
+
+const contractPatchSchema = z.object({
+  contract_id: z.number({ required_error: 'contract_id is required' }),
+  status: z.enum(['draft', 'active', 'fulfilled', 'cancelled']).optional(),
+  shipment_id: z.number().optional(),
+});
+
+function getAdminClient() {
+  return createAdminClient();
 }
 
 async function getAuthUser() {
@@ -37,6 +51,11 @@ export async function GET(request: NextRequest) {
       .select('org_id, role')
       .eq('user_id', user.id)
       .single();
+
+    if (exporterProfile) {
+      const tierBlock = await enforceTier(exporterProfile.org_id, 'contracts');
+      if (tierBlock) return tierBlock;
+    }
 
     let contracts = [];
 
@@ -82,11 +101,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { exporter_org_id, commodity, quantity_mt, delivery_deadline, destination_port, quality_requirements, notes } = body;
 
-    if (!exporter_org_id || !commodity) {
-      return NextResponse.json({ error: 'Exporter and commodity are required' }, { status: 400 });
+    const parsed = contractCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { exporter_org_id, commodity, quantity_mt, delivery_deadline, destination_port, quality_requirements, notes } = parsed.data;
 
     const { data: link } = await supabaseAdmin
       .from('supply_chain_links')
@@ -125,6 +149,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 });
     }
 
+    await logAuditEvent({
+      orgId: buyerProfile.buyer_org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'contract.created',
+      resourceType: 'contract',
+      resourceId: contract.id?.toString(),
+      metadata: { commodity, exporter_org_id },
+    });
+
     return NextResponse.json({ contract });
   } catch (error) {
     console.error('Contracts POST error:', error);
@@ -141,11 +175,16 @@ export async function PATCH(request: NextRequest) {
     if (!supabaseAdmin) return NextResponse.json({ error: 'Server config error' }, { status: 500 });
 
     const body = await request.json();
-    const { contract_id, status, shipment_id } = body;
 
-    if (!contract_id) {
-      return NextResponse.json({ error: 'contract_id is required' }, { status: 400 });
+    const parsed = contractPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { contract_id, status, shipment_id } = parsed.data;
 
     const { data: contract } = await supabaseAdmin
       .from('contracts')

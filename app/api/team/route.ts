@@ -1,15 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logAuditEvent, getClientIp } from '@/lib/audit';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const teamCreateSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  role: z.string().min(1, 'Role is required'),
+  assigned_state: z.string().optional(),
+  assigned_lga: z.string().optional(),
+});
+
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -26,6 +33,10 @@ export async function GET(request: NextRequest) {
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
     
     if (profile.role !== 'admin' && profile.role !== 'aggregator') {
@@ -65,9 +76,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -85,20 +94,29 @@ export async function POST(request: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
     
     if (profile.role !== 'admin' && profile.role !== 'aggregator') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
     
     const body = await request.json();
-    const { email, password, fullName, role, assigned_state, assigned_lga } = body;
-    
-    if (!email || !password || !fullName || !role) {
-      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+
+    const parsed = teamCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { email, password, fullName, role, assigned_state, assigned_lga } = parsed.data;
     
     const validRoles = profile.role === 'admin' 
-      ? ['admin', 'aggregator', 'agent']
+      ? ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor']
       : ['agent'];
     
     if (!validRoles.includes(role)) {
@@ -107,10 +125,6 @@ export async function POST(request: NextRequest) {
           ? 'Aggregators can only create agent accounts' 
           : 'Invalid role' 
       }, { status: 400 });
-    }
-    
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
     
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -142,6 +156,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
     }
     
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'team.user_invited',
+      resourceType: 'user',
+      resourceId: authData.user.id,
+      metadata: { invited_email: email, role, full_name: fullName },
+      ipAddress: getClientIp(request),
+    });
+
     return NextResponse.json({
       success: true,
       message: `${role} account created for ${email}`
@@ -155,9 +180,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();

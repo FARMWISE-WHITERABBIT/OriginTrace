@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useOrg } from '@/lib/contexts/org-context';
 import {
   Package,
   CheckCircle,
@@ -110,38 +111,30 @@ export function AggregatorDashboard() {
   const [gradeData, setGradeData] = useState<Array<{ grade: string; count: number }>>([]);
   const [agentData, setAgentData] = useState<Array<{ name: string; weight: number }>>([]);
   const [deforestationData, setDeforestationData] = useState<Array<{ name: string; value: number }>>([]);
+  const { organization } = useOrg();
 
   useEffect(() => {
     async function fetchStats() {
+      if (!organization) return;
+
       try {
-        const res = await fetch('/api/dashboard?view=aggregator');
-        if (!res.ok) throw new Error('Failed to fetch dashboard data');
-        const data = await res.json();
-        const total = data.totalBatches || 0;
-        const flagged = data.flaggedBatches || 0;
-        setStats({
-          totalBatches: total,
-          collectingBatches: data.collectingBatches || 0,
-          resolvedBatches: data.resolvedBatches || 0,
-          dispatchedBatches: data.dispatchedBatches || 0,
-          totalWeight: data.dispatchedWeight || 0,
-          todayWeight: data.todayWeight || 0,
-          weekWeight: data.weekWeight || 0,
-          monthWeight: data.monthWeight || 0,
-          activeAgents: data.agentCount || 0,
-          complianceScore: total > 0 ? Math.round(((total - flagged) / total) * 100) : 100,
-          flaggedBatches: flagged,
-        });
+        const res = await fetch('/api/dashboard?role=aggregator');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       } finally {
         setIsLoading(false);
       }
     }
+
     fetchStats();
-  }, []);
+  }, [organization]);
 
   const fetchTrends = useCallback(async () => {
+    if (!organization) return;
     setIsTrendLoading(true);
     try {
       const res = await fetch(`/api/analytics?period=${trendPeriod}`);
@@ -180,7 +173,7 @@ export function AggregatorDashboard() {
     } finally {
       setIsTrendLoading(false);
     }
-  }, [trendPeriod]);
+  }, [organization, trendPeriod]);
 
   useEffect(() => {
     fetchTrends();

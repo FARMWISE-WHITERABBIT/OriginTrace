@@ -1,16 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildDocumentExpiryEmail } from '@/lib/email/templates';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(request: NextRequest) {
+  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 1 });
+  if (rateCheck.limited) return rateCheck.response!;
+
   try {
-    const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     if (!cronSecret) {
-      console.error('[CRON] CRON_SECRET env var is not set — refusing to run cron job');
-      return NextResponse.json({ error: 'Server misconfiguration: CRON_SECRET is required' }, { status: 500 });
+      console.error('[cron/document-expiry] CRON_SECRET environment variable is not configured');
+      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
     }
+
+    const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -25,9 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabase = createAdminClient();
 
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -113,7 +117,7 @@ export async function GET(request: NextRequest) {
     try {
       resendClient = await getResendClient();
     } catch (e) {
-      console.warn('Resend not configured, skipping emails:', e);
+      console.error('Resend not configured, skipping emails:', e);
     }
 
     for (const orgId of orgIds) {
@@ -213,6 +217,35 @@ export async function GET(request: NextRequest) {
             .update({ status: newStatus })
             .eq('id', doc.id);
         }
+
+        if (newStatus === 'expired') {
+          dispatchWebhookEvent(orgId, 'document.expired', {
+            document_id: doc.id,
+            title: doc.title,
+            document_type: doc.document_type,
+            expiry_date: doc.expiry_date,
+          });
+        }
+      }
+
+      const { data: expiringCerts } = await supabase
+        .from('farm_certifications')
+        .select('id, farm_id, certification_type, expiry_date')
+        .eq('org_id', orgId)
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
+        .gte('expiry_date', now.toISOString().split('T')[0]);
+
+      for (const cert of (expiringCerts || [])) {
+        const certExpiry = new Date(cert.expiry_date);
+        const daysLeft = Math.ceil((certExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        dispatchWebhookEvent(orgId, 'certification.expiring', {
+          certification_id: cert.id,
+          farm_id: cert.farm_id,
+          certification_type: cert.certification_type,
+          expiry_date: cert.expiry_date,
+          days_remaining: daysLeft,
+        });
       }
     }
 

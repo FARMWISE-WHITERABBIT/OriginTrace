@@ -1,17 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const processingRunCreateSchema = z.object({
+  facility_name: z.string().min(1, 'Facility name is required'),
+  facility_location: z.string().optional(),
+  commodity: z.string().min(1, 'Commodity is required'),
+  input_weight_kg: z.number().positive('Input weight must be positive'),
+  output_weight_kg: z.number().positive().optional(),
+  processed_at: z.string().optional(),
+  notes: z.string().optional(),
+  source_batch_ids: z.array(z.number()).optional(),
+  batch_ids: z.array(z.number()).optional(),
+  compliance_attestations: z.record(z.boolean()).optional(),
+});
+
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -28,6 +38,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const tierBlock = await enforceTier(profile.org_id, 'processing');
@@ -61,9 +75,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -82,10 +94,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const tierBlock = await enforceTier(profile.org_id, 'processing');
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
+
+    const parsed = processingRunCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const {
       facility_name,
       facility_location,
@@ -97,14 +122,8 @@ export async function POST(request: NextRequest) {
       source_batch_ids,
       batch_ids,
       compliance_attestations
-    } = body;
+    } = parsed.data;
     const resolvedBatchIds = source_batch_ids || batch_ids;
-
-    if (!facility_name || !commodity || !input_weight_kg) {
-      return NextResponse.json({ 
-        error: 'facility_name, commodity, and input_weight_kg are required' 
-      }, { status: 400 });
-    }
 
     const runCode = `PR-${new Date().getFullYear()}-${nanoid(6).toUpperCase()}`;
 
@@ -164,9 +183,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -183,6 +200,10 @@ export async function PATCH(request: NextRequest) {
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer')),
+  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer', 'farmer')),
   full_name TEXT NOT NULL,
   avatar_url TEXT,
   assigned_state TEXT,
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS bags (
   serial TEXT NOT NULL,
   status TEXT DEFAULT 'unused' CHECK (status IN ('unused', 'collected', 'processed')),
   collection_batch_id UUID, -- FK added after collection_batches table exists
-  weight DECIMAL(10,2),
+  weight_kg NUMERIC(12,2) DEFAULT 0,
   grade TEXT CHECK (grade IN ('A', 'B', 'C')),
   is_compliant BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1084,6 +1084,30 @@ CREATE TABLE IF NOT EXISTS contracts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================
+-- SHIPMENTS (Export Readiness)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  compliance_profile_id UUID,
+  destination_country TEXT,
+  total_weight_kg DECIMAL(12,2),
+  readiness_score DECIMAL(5,2),
+  readiness_decision TEXT CHECK (readiness_decision IN
+    ('go', 'conditional_go', 'no_go', 'pending')),
+  status TEXT DEFAULT 'draft' CHECK (status IN
+    ('draft', 'ready', 'shipped', 'cancelled')),
+  risk_flags JSONB DEFAULT '[]',
+  score_breakdown JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipments_org ON shipments(org_id);
+CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
+
 CREATE TABLE IF NOT EXISTS contract_shipments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
@@ -1092,11 +1116,25 @@ CREATE TABLE IF NOT EXISTS contract_shipments (
   UNIQUE(contract_id, shipment_id)
 );
 
+ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buyer_organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buyer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_chain_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_shipments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view shipments in their org"
+  ON shipments FOR SELECT
+  USING (org_id = public.get_user_org_id());
+
+CREATE POLICY "Admins can manage shipments"
+  ON shipments FOR ALL
+  USING (
+    org_id = public.get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles
+      WHERE user_id = auth.uid()
+      AND role IN ('admin', 'compliance_officer'))
+  );
 
 CREATE POLICY "Buyer users can view their own org" ON buyer_organizations
   FOR SELECT USING (
@@ -1308,7 +1346,7 @@ ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;
 
 -- ============================================
 -- AUDIT LOG (immutable event trail)
--- ============================================
+-- =====================================
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id          BIGSERIAL PRIMARY KEY,
@@ -1336,6 +1374,252 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 
 -- ============================================
 -- T003: BAGS weight → weight_kg (idempotent)
+=======
+-- AUDIT EVENTS (Phase 11 — Immutable Append-Only Log)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+  actor_id UUID,
+  actor_email TEXT,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  metadata JSONB DEFAULT '{}',
+  ip_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can view audit events" ON audit_events
+  FOR SELECT USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_org ON audit_events(org_id);
+CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action);
+CREATE INDEX IF NOT EXISTS idx_audit_events_created ON audit_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_events_resource ON audit_events(resource_type, resource_id);
+
+-- ============================================
+-- WEBHOOK ENDPOINTS & DELIVERIES (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  secret TEXT NOT NULL,
+  events TEXT[] NOT NULL DEFAULT '{}',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'disabled')),
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org admins can manage webhooks" ON webhook_endpoints
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  webhook_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  response_status INTEGER,
+  response_body TEXT,
+  attempts INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'delivered', 'failed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at DESC);
+
+-- ============================================
+-- FARMER DIGITAL IDENTITY (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_accounts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  farmer_code TEXT,
+  status TEXT DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'suspended')),
+  pin_hash TEXT,
+  invite_token TEXT UNIQUE,
+  preferred_locale TEXT DEFAULT 'en',
+  verified_at TIMESTAMPTZ,
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_accounts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Farmers can view own account" ON farmer_accounts
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Org members can view farmer accounts" ON farmer_accounts
+  FOR SELECT USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_phone ON farmer_accounts(phone);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_farm ON farmer_accounts(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_org ON farmer_accounts(org_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_accounts_token ON farmer_accounts(invite_token);
+
+-- ============================================
+-- FARMER TRAINING MODULES (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_training (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farmer_account_id UUID REFERENCES farmer_accounts(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  module_name TEXT NOT NULL,
+  module_type TEXT NOT NULL CHECK (module_type IN ('gap', 'safety', 'sustainability', 'organic', 'child_labor', 'eudr_awareness')),
+  status TEXT DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed')),
+  completed_at TIMESTAMPTZ,
+  score DECIMAL,
+  certificate_url TEXT,
+  assigned_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_training ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage training" ON farmer_training
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_training_farmer ON farmer_training(farmer_account_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_training_org ON farmer_training(org_id);
+
+-- ============================================
+-- FARMER AGRICULTURAL INPUTS (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_inputs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  input_type TEXT NOT NULL CHECK (input_type IN ('fertilizer', 'pesticide', 'herbicide', 'seed', 'organic_amendment')),
+  product_name TEXT,
+  quantity DECIMAL,
+  unit TEXT CHECK (unit IN ('kg', 'liters', 'bags', 'units')),
+  application_date DATE,
+  area_applied_hectares DECIMAL,
+  notes TEXT,
+  recorded_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farmer_inputs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage inputs" ON farmer_inputs
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farmer_inputs_farm ON farmer_inputs(farm_id);
+
+-- ============================================
+-- YIELD BENCHMARKS (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS yield_benchmarks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  commodity TEXT NOT NULL,
+  country TEXT,
+  region TEXT,
+  season TEXT,
+  avg_yield_per_hectare DECIMAL,
+  min_yield DECIMAL,
+  max_yield DECIMAL,
+  source TEXT,
+  year INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed benchmark data for key commodities
+INSERT INTO yield_benchmarks (commodity, country, region, avg_yield_per_hectare, min_yield, max_yield, source, year) VALUES
+  ('Cocoa', 'Nigeria', 'South West', 0.35, 0.15, 0.60, 'ICCO/FAO', 2024),
+  ('Cocoa', 'Ghana', 'Western Region', 0.45, 0.20, 0.80, 'COCOBOD', 2024),
+  ('Cocoa', 'Côte d''Ivoire', 'Sud-Comoé', 0.55, 0.25, 0.90, 'CCC', 2024),
+  ('Coffee', 'Nigeria', 'Plateau', 0.60, 0.30, 1.00, 'FAO', 2024),
+  ('Coffee', 'Côte d''Ivoire', 'Man', 0.50, 0.25, 0.85, 'FAO', 2024),
+  ('Cashew', 'Nigeria', 'Kogi', 0.80, 0.40, 1.50, 'ACA', 2024),
+  ('Cashew', 'Ghana', 'Bono', 0.70, 0.35, 1.20, 'FAO', 2024),
+  ('Sesame', 'Nigeria', 'Nassarawa', 0.45, 0.20, 0.80, 'FAO', 2024),
+  ('Shea', 'Nigeria', 'Niger', 0.25, 0.10, 0.50, 'Global Shea Alliance', 2024),
+  ('Shea', 'Ghana', 'Northern', 0.30, 0.12, 0.55, 'Global Shea Alliance', 2024)
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- FARM CERTIFICATIONS REGISTRY (Phase 11)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farm_certifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  certification_body TEXT NOT NULL CHECK (certification_body IN ('rainforest_alliance', 'utz', 'fairtrade', 'organic', 'globalgap', 'fsc', 'pefc', 'other')),
+  certificate_number TEXT,
+  issued_date DATE,
+  expiry_date DATE,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'revoked', 'pending')),
+  verification_url TEXT,
+  verified_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE farm_certifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org members can manage certifications" ON farm_certifications
+  FOR ALL USING (
+    org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_farm_certifications_farm ON farm_certifications(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_certifications_expiry ON farm_certifications(expiry_date);
+
+-- ============================================
+-- SCHEMA FIXES — Compliance Gaps (Phase 11)
+-- ============================================
+
+-- Fix regulation_framework CHECK to include all 7 frameworks
+ALTER TABLE compliance_profiles DROP CONSTRAINT IF EXISTS compliance_profiles_regulation_framework_check;
+ALTER TABLE compliance_profiles ADD CONSTRAINT compliance_profiles_regulation_framework_check
+  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'));
+
+-- Fix compliance_files file_type CHECK to support all regulatory document types
+ALTER TABLE compliance_files DROP CONSTRAINT IF EXISTS compliance_files_file_type_check;
+ALTER TABLE compliance_files ADD CONSTRAINT compliance_files_file_type_check
+  CHECK (file_type IN (
+    'land_title', 'id_card', 'photo', 'other',
+    'phytosanitary_certificate', 'fumigation_certificate', 'certificate_of_origin',
+    'halal_certificate', 'gacc_certificate', 'food_safety_plan', 'haccp_certificate',
+    'health_certificate', 'inspection_report', 'esma_certificate', 'moccae_permit',
+    'import_permit', 'labeling_compliance', 'training_certificate', 'input_record',
+    'deforestation_declaration', 'due_diligence_statement', 'risk_assessment',
+    'supply_chain_map', 'forced_labor_declaration', 'species_identification'
+  ));
+
+-- Add preferred_locale to profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'en';
+
+-- ============================================
+-- IDEMPOTENT COLUMN RENAMES (Schema Drift Fix)
 -- ============================================
 
 DO $$
@@ -1362,8 +1646,6 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================
--- T003: SHIPMENTS TABLE (missing from schema)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS shipments (
@@ -1626,3 +1908,529 @@ CREATE INDEX IF NOT EXISTS idx_farmer_ledger_delivery ON farmer_performance_ledg
 ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger
   FOR ALL USING (org_id = get_user_org_id());
+=======
+-- BOUNDARY ANALYSIS (Phase 12)
+-- ============================================
+
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS boundary_analysis JSONB;
+
+-- ============================================
+-- SPOT MARKET / TENDER SYSTEM (Phase 12)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tenders (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_org_id UUID NOT NULL REFERENCES buyer_organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  commodity TEXT NOT NULL,
+  quantity_mt DECIMAL(12,2) NOT NULL,
+  target_price_per_mt DECIMAL(12,2),
+  currency TEXT DEFAULT 'USD',
+  delivery_deadline DATE,
+  destination_country TEXT,
+  destination_port TEXT,
+  quality_requirements JSONB DEFAULT '{}',
+  certifications_required TEXT[] DEFAULT '{}',
+  regulation_framework TEXT,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'awarded', 'cancelled')),
+  visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'invited')),
+  invited_orgs UUID[] DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  closes_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS tender_bids (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tender_id UUID NOT NULL REFERENCES tenders(id) ON DELETE CASCADE,
+  exporter_org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  price_per_mt DECIMAL(12,2) NOT NULL,
+  quantity_available_mt DECIMAL(12,2) NOT NULL,
+  delivery_date DATE,
+  notes TEXT,
+  compliance_score DECIMAL(5,2),
+  certifications TEXT[] DEFAULT '{}',
+  status TEXT DEFAULT 'submitted' CHECK (status IN ('submitted', 'shortlisted', 'awarded', 'rejected', 'withdrawn')),
+  submitted_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE tenders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tender_bids ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Buyer orgs can manage their tenders" ON tenders
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id AND role = 'buyer_admin')
+  );
+
+CREATE POLICY "Exporters can view public or invited tenders" ON tenders
+  FOR SELECT USING (
+    (visibility = 'public' AND status = 'open')
+    OR (visibility = 'invited' AND get_user_org_id() = ANY(invited_orgs))
+    OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id)
+    OR is_system_admin()
+  );
+
+CREATE POLICY "System admins can manage all tenders" ON tenders
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Exporters can manage their own bids" ON tender_bids
+  FOR ALL USING (
+    exporter_org_id = get_user_org_id()
+    OR EXISTS (SELECT 1 FROM tenders t WHERE t.id = tender_bids.tender_id AND EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = t.buyer_org_id))
+    OR is_system_admin()
+  );
+
+CREATE INDEX IF NOT EXISTS idx_tenders_buyer_org ON tenders(buyer_org_id);
+CREATE INDEX IF NOT EXISTS idx_tenders_status ON tenders(status);
+CREATE INDEX IF NOT EXISTS idx_tenders_commodity ON tenders(commodity);
+CREATE INDEX IF NOT EXISTS idx_tender_bids_tender ON tender_bids(tender_id);
+CREATE INDEX IF NOT EXISTS idx_tender_bids_exporter ON tender_bids(exporter_org_id);
+
+-- ============================================
+-- MISSING TABLE DEFINITIONS (Schema Completeness)
+-- Tables actively used in the codebase but previously
+-- not documented in this schema file.
+-- ============================================
+
+-- Additional columns on shipments table used in code
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipment_code TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS commodity TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS buyer_company TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS buyer_contact TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS target_regulations TEXT[];
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS destination_port TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS estimated_ship_date DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS total_items INTEGER DEFAULT 0;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+
+-- ============================================
+-- BATCH CONTRIBUTIONS (Multi-farm batch collection)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS batch_contributions (
+  id SERIAL PRIMARY KEY,
+  batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farmer_name TEXT,
+  weight_kg NUMERIC(12,2) DEFAULT 0,
+  bag_count INTEGER DEFAULT 0,
+  compliance_status TEXT DEFAULT 'pending' CHECK (compliance_status IN ('pending', 'verified', 'rejected')),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE batch_contributions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view batch contributions in their org" ON batch_contributions
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM collection_batches cb WHERE cb.id = batch_contributions.batch_id AND cb.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Authorized users can manage batch contributions" ON batch_contributions
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM collection_batches cb WHERE cb.id = batch_contributions.batch_id AND cb.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all batch contributions" ON batch_contributions
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_batch ON batch_contributions(batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_contributions_farm ON batch_contributions(farm_id);
+
+-- ============================================
+-- SHIPMENT ITEMS (Line items within a shipment)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipment_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good')),
+  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  finished_good_id UUID REFERENCES finished_goods(id) ON DELETE SET NULL,
+  farm_id INTEGER REFERENCES farms(id) ON DELETE SET NULL,
+  weight_kg NUMERIC(12,2) DEFAULT 0,
+  farm_count INTEGER DEFAULT 0,
+  traceability_complete BOOLEAN DEFAULT false,
+  compliance_status TEXT DEFAULT 'pending' CHECK (compliance_status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE shipment_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view shipment items in their org" ON shipment_items
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM shipments s WHERE s.id = shipment_items.shipment_id AND s.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Authorized users can manage shipment items" ON shipment_items
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM shipments s WHERE s.id = shipment_items.shipment_id AND s.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all shipment items" ON shipment_items
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment ON shipment_items(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_items_batch ON shipment_items(batch_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_items_finished_good ON shipment_items(finished_good_id);
+
+-- ============================================
+-- SHIPMENT LOTS (Sub-groupings within a shipment)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipment_lots (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lot_code TEXT NOT NULL,
+  commodity TEXT,
+  notes TEXT,
+  total_weight_kg NUMERIC(12,2) DEFAULT 0,
+  total_bags INTEGER DEFAULT 0,
+  farm_count INTEGER DEFAULT 0,
+  mass_balance_valid BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE shipment_lots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view shipment lots in their org" ON shipment_lots
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Authorized users can manage shipment lots" ON shipment_lots
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all shipment lots" ON shipment_lots
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_shipment_lots_shipment ON shipment_lots(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_lots_org ON shipment_lots(org_id);
+
+CREATE TRIGGER update_shipment_lots_updated_at BEFORE UPDATE ON shipment_lots
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- SHIPMENT LOT ITEMS (Items assigned to a lot)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipment_lot_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lot_id UUID NOT NULL REFERENCES shipment_lots(id) ON DELETE CASCADE,
+  shipment_item_id UUID REFERENCES shipment_items(id) ON DELETE SET NULL,
+  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  weight_kg NUMERIC(12,2) DEFAULT 0,
+  bag_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE shipment_lot_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view shipment lot items via lot org" ON shipment_lot_items
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM shipment_lots sl WHERE sl.id = shipment_lot_items.lot_id AND sl.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Authorized users can manage shipment lot items" ON shipment_lot_items
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM shipment_lots sl WHERE sl.id = shipment_lot_items.lot_id AND sl.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all shipment lot items" ON shipment_lot_items
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_shipment_lot_items_lot ON shipment_lot_items(lot_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_lot_items_shipment_item ON shipment_lot_items(shipment_item_id);
+
+-- ============================================
+-- NOTIFICATIONS (User notification inbox)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT,
+  link TEXT,
+  is_read BOOLEAN DEFAULT false,
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own notifications" ON notifications
+  FOR SELECT USING (user_id = auth.uid() OR is_system_admin());
+
+CREATE POLICY "Users can update their own notifications" ON notifications
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "System can insert notifications" ON notifications
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System admins can manage all notifications" ON notifications
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(org_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+
+-- ============================================
+-- AUDIT LOGS (Superadmin action log, distinct from audit_events)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "System admins can view audit logs" ON audit_logs
+  FOR SELECT USING (is_system_admin());
+
+CREATE POLICY "Service role can insert audit logs" ON audit_logs
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System admins can manage all audit logs" ON audit_logs
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+
+-- ============================================
+-- DELEGATIONS (Admin-to-aggregator permission delegation)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS delegations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  delegated_to UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  delegated_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL CHECK (permission IN ('conflict_resolution', 'compliance_review')),
+  region_scope JSONB,
+  is_active BOOLEAN DEFAULT true,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE delegations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view delegations in their org" ON delegations
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage delegations in their org" ON delegations
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "System admins can manage all delegations" ON delegations
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_delegations_org ON delegations(org_id);
+CREATE INDEX IF NOT EXISTS idx_delegations_delegated_to ON delegations(delegated_to);
+CREATE INDEX IF NOT EXISTS idx_delegations_active ON delegations(org_id, is_active);
+
+-- ============================================
+-- DELEGATION AUDIT LOG (Tracks delegation lifecycle events)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS delegation_audit_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  delegation_id UUID NOT NULL REFERENCES delegations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE delegation_audit_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view delegation audit log in their org" ON delegation_audit_log
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "System can insert delegation audit log" ON delegation_audit_log
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System admins can manage all delegation audit logs" ON delegation_audit_log
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_delegation_audit_log_delegation ON delegation_audit_log(delegation_id);
+CREATE INDEX IF NOT EXISTS idx_delegation_audit_log_org ON delegation_audit_log(org_id);
+
+-- ============================================
+-- TENANT HEALTH METRICS (Superadmin dashboard)
+-- Stores aggregated per-org health snapshots
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tenant_health_metrics (
+  org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,
+  org_name TEXT,
+  subscription_tier TEXT,
+  org_created_at TIMESTAMPTZ,
+  total_users INTEGER DEFAULT 0,
+  agent_count INTEGER DEFAULT 0,
+  total_farms INTEGER DEFAULT 0,
+  total_batches INTEGER DEFAULT 0,
+  flagged_batches INTEGER DEFAULT 0,
+  total_weight_kg NUMERIC(14,2) DEFAULT 0,
+  last_collection_date TIMESTAMPTZ,
+  growth_trend TEXT CHECK (growth_trend IN ('growing', 'stable', 'declining')),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (org_id)
+);
+
+ALTER TABLE tenant_health_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "System admins can view tenant health metrics" ON tenant_health_metrics
+  FOR SELECT USING (is_system_admin());
+
+CREATE POLICY "Service role can manage tenant health metrics" ON tenant_health_metrics
+  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "System admins can manage all tenant health metrics" ON tenant_health_metrics
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_tier ON tenant_health_metrics(subscription_tier);
+CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_trend ON tenant_health_metrics(growth_trend);
+
+-- ============================================
+-- FARMER PERFORMANCE LEDGER TABLE
+-- Stores per-farm per-season performance snapshots
+-- (Separate from the farmer_performance_ledger VIEW
+--  which provides real-time aggregation)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_performance_ledger_table (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  season TEXT NOT NULL,
+  total_collections INTEGER DEFAULT 0,
+  total_weight_kg NUMERIC(12,2) DEFAULT 0,
+  avg_grade TEXT,
+  yield_per_hectare NUMERIC(10,2),
+  compliance_score INTEGER DEFAULT 0,
+  payment_reliability INTEGER DEFAULT 100,
+  quality_consistency INTEGER DEFAULT 100,
+  credit_score INTEGER,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(org_id, farm_id, season)
+);
+
+ALTER TABLE farmer_performance_ledger_table ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view farmer performance in their org" ON farmer_performance_ledger_table
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "Admins can manage farmer performance in their org" ON farmer_performance_ledger_table
+  FOR ALL USING (
+    org_id = get_user_org_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
+  );
+
+CREATE POLICY "System admins can manage all farmer performance" ON farmer_performance_ledger_table
+  FOR ALL USING (is_system_admin());
+
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_org ON farmer_performance_ledger_table(org_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_farm ON farmer_performance_ledger_table(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farmer_perf_ledger_season ON farmer_performance_ledger_table(season);
+
+CREATE TRIGGER update_farmer_performance_ledger_updated_at BEFORE UPDATE ON farmer_performance_ledger_table
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- PEDIGREE VERIFICATION TABLE
+-- Stores verified pedigree records as immutable snapshots
+-- (Separate from the pedigree_verification VIEW
+--  which provides real-time joins)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS pedigree_verification_records (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  finished_good_id UUID NOT NULL REFERENCES finished_goods(id) ON DELETE CASCADE,
+  pedigree_code TEXT NOT NULL,
+  product_name TEXT NOT NULL,
+  product_type TEXT NOT NULL,
+  finished_weight_kg NUMERIC(12,2),
+  production_date DATE,
+  destination_country TEXT,
+  buyer_name TEXT,
+  buyer_company TEXT,
+  dds_submitted BOOLEAN DEFAULT false,
+  dds_submitted_at TIMESTAMPTZ,
+  dds_reference TEXT,
+  pedigree_verified BOOLEAN DEFAULT true,
+  verification_notes TEXT,
+  processing_run_code TEXT,
+  facility_name TEXT,
+  facility_location TEXT,
+  raw_input_kg NUMERIC(12,2),
+  processed_output_kg NUMERIC(12,2),
+  recovery_rate NUMERIC(5,2),
+  standard_recovery_rate NUMERIC(5,2),
+  mass_balance_valid BOOLEAN DEFAULT true,
+  mass_balance_variance NUMERIC(5,2),
+  processed_at TIMESTAMPTZ,
+  organization_name TEXT,
+  organization_logo TEXT,
+  source_farms JSONB,
+  total_smallholders INTEGER DEFAULT 0,
+  total_farm_area_hectares NUMERIC(12,2),
+  verified_by UUID REFERENCES auth.users(id),
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(finished_good_id)
+);
+
+ALTER TABLE pedigree_verification_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view pedigree records in their org" ON pedigree_verification_records
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
+    OR is_system_admin()
+  );
+
+CREATE POLICY "Admins can manage pedigree records" ON pedigree_verification_records
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
+    AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
+  );
+
+CREATE POLICY "System admins can manage all pedigree records" ON pedigree_verification_records
+  FOR ALL USING (is_system_admin());
+
+CREATE POLICY "Public can view verified pedigree records" ON pedigree_verification_records
+  FOR SELECT USING (pedigree_verified = true);
+
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_fg ON pedigree_verification_records(finished_good_id);
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_code ON pedigree_verification_records(pedigree_code);
+CREATE INDEX IF NOT EXISTS idx_pedigree_verification_verified ON pedigree_verification_records(pedigree_verified);
+
+CREATE TRIGGER update_pedigree_verification_updated_at BEFORE UPDATE ON pedigree_verification_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

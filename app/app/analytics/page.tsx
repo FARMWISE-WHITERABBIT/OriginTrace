@@ -17,10 +17,19 @@ import {
   RadarSpiderChart,
   TrendLineChart,
 } from '@/components/charts';
+import { TierGate } from '@/components/tier-gate';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
 export default function AnalyticsPage() {
+  return (
+    <TierGate feature="analytics" requiredTier="basic" featureLabel="Analytics & Reporting">
+      <AnalyticsContent />
+    </TierGate>
+  );
+}
+
+function AnalyticsContent() {
   const { organization, profile } = useOrg();
   const [period, setPeriod] = useState<Period>('30d');
   const [data, setData] = useState<any>(null);
@@ -125,7 +134,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <TrendLineChart
                   data={(data.volumeTrends || []).map((v: any) => ({ date: v.date, value: v.weight }))}
-                  series={[{ key: 'value', name: 'Weight (kg)', color: '#2E7D6B' }]}
+                  xKey="date"
+                  series={[{ dataKey: 'value', label: 'Weight (kg)', color: '#2E7D6B' }]}
                   height={280}
                 />
               </CardContent>
@@ -139,6 +149,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <VerticalBarChart
                   data={(data.regionalBreakdown || []).slice(0, 10).map((r: any) => ({ name: r.region, value: r.weight }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                   valueFormatter={(v) => `${v.toLocaleString()} kg`}
                 />
@@ -155,6 +167,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <HorizontalBarChart
                   data={(data.agentPerformance || []).slice(0, 8).map((a: any) => ({ name: a.name, value: a.weight }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                   valueFormatter={(v) => `${v.toLocaleString()} kg`}
                 />
@@ -179,6 +193,8 @@ export default function AnalyticsPage() {
                       { name: 'Verified', value: data.supplyChainNodes?.verifiedFarms || 0 },
                       { name: 'Unverified', value: data.supplyChainNodes?.unverifiedFarms || 0 },
                     ]}
+                    dataKey="value"
+                    categoryKey="name"
                     height={160}
                     colors={['#2E7D6B', '#E5E7EB']}
                   />
@@ -261,6 +277,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <HorizontalBarChart
                   data={(data.riskIntelligence || []).map((r: any) => ({ name: r.type, value: r.count }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                   colors={['#EF4444', '#F59E0B', '#F97316', '#DC2626']}
                 />
@@ -284,7 +302,8 @@ export default function AnalyticsPage() {
                       { dimension: 'Regulatory', ...Object.fromEntries(data.shipmentScores.slice(0, 3).map((s: any, i: number) => [`s${i}`, s.regulatory])) },
                       { dimension: 'Storage', ...Object.fromEntries(data.shipmentScores.slice(0, 3).map((s: any, i: number) => [`s${i}`, s.storage])) },
                     ]}
-                    series={data.shipmentScores.slice(0, 3).map((s: any, i: number) => ({ key: `s${i}`, name: s.name }))}
+                    angleKey="dimension"
+                    series={data.shipmentScores.slice(0, 3).map((s: any, i: number) => ({ dataKey: `s${i}`, label: s.name }))}
                     height={320}
                   />
                 </CardContent>
@@ -327,6 +346,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <VerticalBarChart
                   data={(data.paymentsByStatus || []).map((p: any) => ({ name: p.status, value: p.amount }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                   valueFormatter={(v) => `$${v.toLocaleString()}`}
                 />
@@ -415,6 +436,8 @@ export default function AnalyticsPage() {
               <CardContent>
                 <VerticalBarChart
                   data={(data.commodityBreakdown || []).filter((c: any) => c.totalFarms > 0).map((c: any) => ({ name: c.name, value: c.complianceRate }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                   valueFormatter={(v) => `${v}%`}
                 />
@@ -435,6 +458,8 @@ export default function AnalyticsPage() {
                     value: g.count,
                     color: g.grade === 'A' ? '#2E7D6B' : g.grade === 'B' ? '#6FB8A8' : '#F59E0B',
                   }))}
+                  dataKey="value"
+                  categoryKey="name"
                   height={280}
                 />
               </CardContent>

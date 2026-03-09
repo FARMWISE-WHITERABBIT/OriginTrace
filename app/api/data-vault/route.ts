@@ -1,21 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { z } from 'zod';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-interface ExportOptions {
-  format: 'csv' | 'geojson' | 'json';
-  tables: string[];
-}
+const dataVaultExportSchema = z.object({
+  format: z.enum(['csv', 'geojson', 'json'], { required_error: 'Invalid format' }),
+  tables: z.array(z.string()).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -32,6 +28,10 @@ export async function GET(request: NextRequest) {
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const tierBlock = await enforceTier(profile.org_id, 'data_vault');
@@ -100,9 +100,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -121,15 +119,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
     const tierBlock = await enforceTier(profile.org_id, 'data_vault');
     if (tierBlock) return tierBlock;
 
-    const body = await request.json() as ExportOptions;
-    const { format, tables } = body;
+    const body = await request.json();
 
-    if (!format || !['csv', 'geojson', 'json'].includes(format)) {
-      return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
+    const parsed = dataVaultExportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { format, tables } = parsed.data;
 
     const validTables = ['farms', 'collection_batches', 'bags', 'profiles'];
     const selectedTables = tables?.filter(t => validTables.includes(t)) || validTables;

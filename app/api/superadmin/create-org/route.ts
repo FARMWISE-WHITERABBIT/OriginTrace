@@ -1,11 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildWelcomeEmail } from '@/lib/email/templates';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -30,9 +28,7 @@ async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -170,8 +166,8 @@ export async function POST(request: NextRequest) {
           created_by: user.id,
         }
       });
-    } catch {
-      console.log('Audit log skipped');
+    } catch (auditErr) {
+      console.error('Audit log insert failed:', auditErr);
     }
 
     return NextResponse.json({

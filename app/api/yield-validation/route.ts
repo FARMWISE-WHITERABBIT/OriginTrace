@@ -1,12 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildYieldFlagEmail } from '@/lib/email/templates';
+import { predictYield, checkPredictionExceedance } from '@/lib/services/yield-prediction';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 interface YieldValidationResult {
   isValid: boolean;
@@ -19,9 +18,7 @@ interface YieldValidationResult {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -38,6 +35,10 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -73,18 +74,34 @@ export async function POST(request: NextRequest) {
     const isFlagged = batch_weight > expectedMax;
     const percentageOver = isFlagged ? ((batch_weight - expectedMax) / expectedMax) * 100 : 0;
 
+    let predictionFlag = false;
+    let predictionExceedance = 0;
+    try {
+      const prediction = await predictYield(farm_id, farmCommodity, profile.org_id);
+      if (prediction.predictedYieldKg > 0) {
+        const check = checkPredictionExceedance(batch_weight, prediction.predictedYieldKg);
+        predictionFlag = check.exceeded;
+        predictionExceedance = check.percentageOver;
+      }
+    } catch {
+    }
+
+    const finalFlagged = isFlagged || predictionFlag;
+
     const result: YieldValidationResult = {
-      isValid: !isFlagged,
-      isFlagged,
+      isValid: !finalFlagged,
+      isFlagged: finalFlagged,
       expectedMax: Math.round(expectedMax * 100) / 100,
       actualWeight: batch_weight,
       percentageOver: Math.round(percentageOver * 100) / 100,
-      reason: isFlagged 
-        ? `Batch weight ${batch_weight}kg exceeds expected maximum ${Math.round(expectedMax)}kg (${Math.round(percentageOver)}% over threshold)`
+      reason: finalFlagged
+        ? isFlagged
+          ? `Batch weight ${batch_weight}kg exceeds expected maximum ${Math.round(expectedMax)}kg (${Math.round(percentageOver)}% over threshold)`
+          : `Batch weight ${batch_weight}kg exceeds predicted yield by ${predictionExceedance}% (>200% threshold)`
         : undefined
     };
 
-    if (isFlagged) {
+    if (finalFlagged) {
       try {
         const { data: org } = await supabaseAdmin
           .from('organizations')
@@ -162,9 +179,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -224,9 +239,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
     
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();

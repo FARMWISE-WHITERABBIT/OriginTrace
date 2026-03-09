@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { hasAccess, type AppRole } from '@/lib/rbac';
+import { checkRouteAccess } from '@/lib/config/tier-gating';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -101,15 +102,25 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // ── RBAC enforcement for /app/* routes ──────────────────────────────────
-    // Skip /app itself (root dashboard) and /app/buyer (handled by its own role check)
-    if (pathname.startsWith('/app/') && !isSuperadmin) {
+    if (pathname.startsWith('/app') && !isSuperadmin) {
       const role = await getUserRole(supabase, user.id);
-      if (role && !hasAccess(role, pathname)) {
-        // Redirect to the dashboard root — user is authenticated but not authorised
+      if (role === 'farmer' && !pathname.startsWith('/app/farmer')) {
         const url = request.nextUrl.clone();
-        url.pathname = role === 'buyer' ? '/app/buyer' : '/app';
-        url.searchParams.set('unauthorised', '1');
+        url.pathname = '/app/farmer';
+        return NextResponse.redirect(url);
+      }
+      if (role && !hasAccess(role, pathname)) {
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'buyer' ? '/app/buyer' : role === 'farmer' ? '/app/farmer' : '/app';
+        return NextResponse.redirect(url);
+      }
+
+      const orgTier = await getOrgTier(supabase, user.id);
+      const tierAccess = checkRouteAccess(orgTier, pathname);
+      if (!tierAccess.allowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/app';
+        url.searchParams.set('tier_required', tierAccess.requiredTier || '');
         return NextResponse.redirect(url);
       }
     }
@@ -128,10 +139,34 @@ async function checkIsSuperadmin(supabase: any, userId: string): Promise<boolean
 }
 
 async function getUserRole(supabase: any, userId: string): Promise<AppRole | null> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', userId)
-    .single();
-  return (data?.role as AppRole) || null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', userId)
+      .single();
+    return (data?.role as AppRole) || null;
+  } catch {
+    return null;
+  }
+}
+
+async function getOrgTier(supabase: any, userId: string): Promise<string | undefined> {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('user_id', userId)
+      .single();
+    if (!profile?.org_id) return undefined;
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('settings')
+      .eq('id', profile.org_id)
+      .single();
+    const settings = (org?.settings as Record<string, any>) || {};
+    return settings.subscription_tier || undefined;
+  } catch {
+    return undefined;
+  }
 }

@@ -36,6 +36,8 @@ import {
   CreditCard,
   Fingerprint,
   Key,
+  Store,
+  Gavel,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -48,7 +50,7 @@ export interface MenuItem {
   icon: LucideIcon;
   badge?: 'sync' | 'alert';
   tourId?: string;
-  allowedRoles: AppRole[];
+  allowedRoles: UserRole[];
   requiredTier?: SubscriptionTier;
   tierFeature?: TierFeature;
 }
@@ -56,7 +58,7 @@ export interface MenuItem {
 export interface MenuGroup {
   label: string;
   items: MenuItem[];
-  allowedRoles: AppRole[];
+  allowedRoles: UserRole[];
 }
 
 export interface NavigationConfig {
@@ -67,30 +69,30 @@ const superadminNavigation: NavigationConfig = {
   groups: [
     {
       label: 'PLATFORM',
-      allowedRoles: ['admin', 'aggregator', 'agent'],
+      allowedRoles: ['superadmin'],
       items: [
-        { title: 'Overview', url: '/superadmin', icon: LayoutDashboard, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Organizations', url: '/superadmin/organizations', icon: Building2, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'User Management', url: '/superadmin/users', icon: Users, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Tenant Health', url: '/superadmin/tenant-health', icon: Gauge, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Buyer Organizations', url: '/superadmin/buyer-orgs', icon: Handshake, allowedRoles: ['admin', 'aggregator', 'agent'] },
+        { title: 'Overview', url: '/superadmin', icon: LayoutDashboard, allowedRoles: ['superadmin'] },
+        { title: 'Organizations', url: '/superadmin/organizations', icon: Building2, allowedRoles: ['superadmin'] },
+        { title: 'User Management', url: '/superadmin/users', icon: Users, allowedRoles: ['superadmin'] },
+        { title: 'Tenant Health', url: '/superadmin/tenant-health', icon: Gauge, allowedRoles: ['superadmin'] },
+        { title: 'Buyer Organizations', url: '/superadmin/buyer-orgs', icon: Handshake, allowedRoles: ['superadmin'] },
       ],
     },
     {
       label: 'MONITORING',
-      allowedRoles: ['admin', 'aggregator', 'agent'],
+      allowedRoles: ['superadmin'],
       items: [
-        { title: 'War Room', url: '/superadmin/health', icon: HeartPulse, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Sync Status', url: '/superadmin/sync', icon: RefreshCw, allowedRoles: ['admin', 'aggregator', 'agent'] },
+        { title: 'War Room', url: '/superadmin/health', icon: HeartPulse, allowedRoles: ['superadmin'] },
+        { title: 'Sync Status', url: '/superadmin/sync', icon: RefreshCw, allowedRoles: ['superadmin'] },
       ],
     },
     {
       label: 'CONFIGURATION',
-      allowedRoles: ['admin', 'aggregator', 'agent'],
+      allowedRoles: ['superadmin'],
       items: [
-        { title: 'Feature Toggles', url: '/superadmin/feature-toggles', icon: Settings, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Commodity Master', url: '/superadmin/commodities', icon: Wheat, allowedRoles: ['admin', 'aggregator', 'agent'] },
-        { title: 'Location Data', url: '/superadmin/locations', icon: Globe, allowedRoles: ['admin', 'aggregator', 'agent'] },
+        { title: 'Feature Toggles', url: '/superadmin/feature-toggles', icon: Settings, allowedRoles: ['superadmin'] },
+        { title: 'Commodity Master', url: '/superadmin/commodities', icon: Wheat, allowedRoles: ['superadmin'] },
+        { title: 'Location Data', url: '/superadmin/locations', icon: Globe, allowedRoles: ['superadmin'] },
       ],
     },
   ],
@@ -158,10 +160,11 @@ const appNavigation: NavigationConfig = {
     },
     {
       label: 'TRADE',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
       items: [
         { title: 'Buyers', url: '/app/buyers', icon: Handshake, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'buyer_portal' },
         { title: 'Contracts', url: '/app/contracts', icon: FileCheck, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'contracts' },
+        { title: 'Marketplace', url: '/app/tenders', icon: Store, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'contracts' },
       ],
     },
     {
@@ -174,7 +177,7 @@ const appNavigation: NavigationConfig = {
     },
     {
       label: 'GOVERNANCE',
-      allowedRoles: ['admin'],
+      allowedRoles: ['admin', 'compliance_officer'],
       items: [
         { title: 'Delegations', url: '/app/delegations', icon: Shield, tourId: 'nav-delegations', allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'delegations' },
       ],
@@ -216,6 +219,13 @@ const buyerNavigation: NavigationConfig = {
         { title: 'Suppliers', url: '/app/buyer/suppliers', icon: Handshake, allowedRoles: ['buyer'] },
         { title: 'Contracts', url: '/app/buyer/contracts', icon: FileCheck, allowedRoles: ['buyer'] },
         { title: 'Shipments', url: '/app/buyer/shipments', icon: Ship, allowedRoles: ['buyer'] },
+      ],
+    },
+    {
+      label: 'SOURCING',
+      allowedRoles: ['buyer'],
+      items: [
+        { title: 'Tenders', url: '/app/buyer/tenders', icon: Gavel, allowedRoles: ['buyer'] },
       ],
     },
     {

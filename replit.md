@@ -1,7 +1,7 @@
 # OriginTrace
 
 ## Overview
-OriginTrace is Trust Infrastructure for Origin-Sensitive Supply Chains, an enterprise-grade, multi-tenant SaaS platform for mid-to-large exporters and global buyers. Its primary purpose is to prevent shipment rejection through dynamic pre-shipment compliance scoring across five dimensions, initially focusing on agriculture with architecture supporting other sectors like timber, minerals, seafood, and textiles. The platform offers role-based workflows for 8 organizational roles, including features like farm boundary mapping, hybrid bag-batch traceability, an offline-first PWA, a sync dashboard, a document vault, payment tracking, a buyer portal, compliance profiles, Digital Product Passports, and an enterprise API.
+OriginTrace is an enterprise-grade, multi-tenant SaaS platform providing trust infrastructure for origin-sensitive supply chains. It aims to prevent shipment rejection by offering dynamic pre-shipment compliance scoring across five dimensions, initially focusing on agriculture but architected to support other sectors. The platform offers role-based workflows for 8 organizational roles, enabling features like farm boundary mapping, hybrid bag-batch traceability, an offline-first PWA, a sync dashboard, a document vault, payment tracking, a buyer portal, compliance profiles, Digital Product Passports, and an enterprise API. The business vision is to become the leading compliance and traceability platform, expanding into new markets and commodities while enhancing data analytics capabilities for sustainable sourcing.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,70 +9,89 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Route Architecture
-The application utilizes three distinct layouts: `/superadmin/*` for platform governance with a dark theme, `/app/*` for all organizational users with dynamic role-based navigation, and `/app/buyer/*` for buyer portal users with separate navigation. Access control is managed through centralized RBAC (`lib/rbac.ts`) and navigation configuration (`lib/config/navigation.ts`). Tier-based feature gating (`lib/config/tier-gating.ts`) controls feature access based on subscription tiers.
+The application uses three layouts: `/superadmin/*` for platform governance (dark theme), `/app/*` for organizational users (dynamic role-based navigation), and `/app/buyer/*` for buyer portal users (separate navigation). Access is controlled by centralized RBAC (`lib/rbac.ts`) and tier-based feature gating (`lib/config/tier-gating.ts`).
 
 ### Roles
-The platform supports 8 organizational roles: admin, aggregator, agent, quality_manager, logistics_coordinator, compliance_officer, warehouse_supervisor, and buyer, each with specific access and functionalities.
+The platform supports 9 organizational roles: admin, aggregator, agent, quality_manager, logistics_coordinator, compliance_officer, warehouse_supervisor, buyer, and farmer. The farmer role uses a mobile-first portal (`/app/farmer/*`).
 
 ### Color System
-The UI follows a light-first enterprise design with a primary brand color of Origin Green (#2E7D6B), Deep Forest (#1F5F52) for headers and active states, Muted Sage (#6FB8A8) for secondary accents, Main Background (#F8FAF9), Card/Panel (#FFFFFF), and Dividers (#E5E7EB).
+The UI follows a light-first enterprise design using Origin Green (#2E7D6B) as the primary brand color, Deep Forest (#1F5F52) for headers, Muted Sage (#6FB8A8) for accents, and a clean background/card palette. Organizations can customize brand colors via `TenantThemeProvider`.
 
 ### Frontend
-Developed with Next.js 16 (App Router), `shadcn/ui` (Radix UI, Tailwind CSS) for components, Geist Mono typography, and `recharts` for data visualization. Key features include GPS-based farm mapping, light/dark mode, interactive onboarding, a public QR verification page, and analytics dashboards. The PWA provides offline-first capabilities using IndexedDB.
+Developed with Next.js 16 (App Router), `shadcn/ui` (Radix UI, Tailwind CSS) for components, Geist Mono typography, and `recharts` for data visualization. It includes GPS-based farm mapping, light/dark mode, interactive onboarding, a public QR verification page, and analytics dashboards. The PWA provides offline-first capabilities using IndexedDB.
 
 ### Backend
-Implemented using Next.js serverless functions (App Router API routes) with TypeScript. Authentication is handled by Supabase Auth. APIs are RESTful, with an enterprise API layer (`/api/v1/`) supporting API key authentication (`lib/api-auth.ts`) with scope enforcement, DB-backed rate limiting (`api_rate_limits` table), and tier gating (`lib/api/tier-guard.ts`). The V1 API supports both read (GET) and write (POST/PATCH) operations with `write` scope enforcement for mutations.
+Implemented using Next.js serverless functions (App Router API routes) with TypeScript. Authentication is handled by Supabase Auth (`createServerClient()`). Admin operations use `createAdminClient()`. Shared auth utilities in `lib/api-auth.ts` provide `createServiceClient()`, `getAuthenticatedUser()`, and `getAuthenticatedProfile()` across API routes. APIs are RESTful, with an enterprise API layer (`/api/v1/`) supporting API key authentication, scope enforcement, DB-backed rate limiting, tier gating, and generic error responses (no DB details leaked). RBAC is enforced in middleware. Tier gating is enforced both in middleware (route-level via `checkRouteAccess`) and in API routes (via `enforceTier`). Payment callbacks verify provider signatures via HMAC. Farmer PIN login is rate-limited (5 attempts per 15 minutes per phone). All API routes enforce org_id null guards (returning 403 if profile has no org). Write endpoints enforce role-based access (documents: admin/compliance_officer/quality_manager; payments: admin/aggregator; DDS: admin/compliance_officer; OCR: admin/compliance_officer/quality_manager; deforestation-check: admin/aggregator/quality_manager). Public routes (pedigree, DPP) strip buyer identity, trade routes, and DDS references. Superadmin auto-bootstrap removed — system_admins must be seeded manually. No 'use server' directives in API routes. Compliance file writes go through `/api/compliance-files` route (not direct client DB writes).
 
 ### Satellite & Deforestation Monitoring
-Farm map (`app/app/farms/map/satellite-map.tsx`) uses ESRI World Imagery tiles for satellite view (gated by `satellite_overlays` feature flag) with OpenStreetMap as fallback/toggle. Deforestation check API (`app/api/deforestation-check/route.ts`) integrates with Global Forest Watch (GFW) API for polygon-based forest loss analysis, with country-level EUDR risk benchmarking as fallback. Results stored in `deforestation_check` JSONB column on farms table. Medium/high risk triggers email alerts to org admins/compliance officers via Resend.
+Farm map uses ESRI World Imagery tiles (gated by feature flag) with OpenStreetMap fallback. A deforestation check API integrates with Global Forest Watch for polygon-based forest loss analysis, with results stored and triggering email alerts for high-risk findings.
 
 ### Email Notifications
-Email notifications use Resend integration (`lib/email/resend-client.ts`) with templates in `lib/email/templates.ts`. Triggers include: document expiry alerts (cron at `app/api/cron/document-expiry/route.ts`), buyer invitation emails, compliance alerts (yield flags, farm conflicts, deforestation risk). Templates follow OriginTrace branding with Deep Forest header.
+Email notifications use Resend integration for various triggers, including document expiry, buyer invitations, and compliance alerts.
 
-### Tenant Customization
-Organizations can set custom brand colors (`brand_colors` JSONB on organizations table) via settings page. `TenantThemeProvider` component (`components/tenant-theme-provider.tsx`) injects CSS custom properties (--tenant-primary, --tenant-secondary, --tenant-accent). Guided tours auto-start on first login per role via `OnboardingProvider` (`lib/hooks/use-onboarding.tsx`).
+### Audit Event Log
+An immutable, append-only audit log (`audit_events` table) records all mutations, accessible via a searchable viewer and API.
+
+### Webhook Event Streaming
+A system dispatches signed webhook POSTs for 14 event types (including `tender.created` and `tender.awarded`), supporting HMAC-SHA256 signatures, an admin UI, and retries. All event types are fully wired into their respective API routes.
+
+### Farmer Digital Identity Portal
+Agent-assisted onboarding creates farmer accounts. A mobile-first activation page allows phone confirmation and PIN setup. The portal provides pages for farm data, deliveries, payments, training, inputs, and digital identity.
+
+### Mobile Money Payments
+A payment provider abstraction supports MTN MoMo, OPay, and PalmPay for disbursements, with an API for disbursement and callbacks for status updates.
+
+### i18n Infrastructure
+Internationalization is handled with `next-intl` (English, French, Arabic with RTL support). Locale preference persists per user.
+
+### Supply Chain Network Graph
+An interactive force-directed SVG graph using D3-force simulates the supply chain network (farms → batches → processing → finished goods → shipments) with clickable nodes for detail.
+
+### Buyer ESG Portfolio Dashboard
+Aggregates ESG analytics across supplier links, displaying KPIs and charts for compliance, risk, volume, and document coverage.
+
+### Satellite Boundary Comparison
+`lib/services/boundary-analysis.ts` provides `analyzeBoundaryAuthenticity()` to detect fake polygon drawing. Checks 5 dimensions: shape regularity, vertex spacing uniformity, area plausibility, location plausibility, and edge straightness. Returns a 0-100 confidence score. API at `/api/farms/boundary-check`. Results stored in `boundary_analysis` JSONB column on farms. Feeds into EUDR readiness scoring. Visible on farm map page and farm review.
+
+### Yield Prediction Models
+`lib/services/yield-prediction.ts` provides `predictYield()` using weighted historical data, input intensity, regional benchmarks, certifications, and seasonal factors. Returns predicted yield, confidence range, trend (improving/stable/declining), and actionable recommendations. API at `/api/farmer/predictions` (farmer view) and `/api/yield-predictions` (org-wide admin view). Predictions tab on yield-alerts page. Integrated with yield validation — actual collection exceeding prediction by >200% triggers auto-flagging.
+
+### Spot Market / Tender System
+Buyer-side tender management with exporter marketplace. Schema: `tenders` (open/closed/awarded/cancelled, public/invited visibility) and `tender_bids` (submitted/shortlisted/awarded/rejected/withdrawn). APIs at `/api/tenders` and `/api/tenders/[id]/bids`. Buyer page at `/app/buyer/tenders` for creating tenders and comparing bids. Exporter marketplace at `/app/tenders` for browsing and bidding. Auto-calculates compliance score from exporter shipment history. Awarding a bid auto-creates a contract. Webhook events: `tender.created`, `tender.awarded`.
 
 ### Data Storage
-Supabase PostgreSQL is used with Row Level Security (RLS) for multi-tenant isolation. The schema encompasses core organizational data, processing information, a document vault, payment records (multi-currency), buyer portal data, compliance profiles, Digital Product Passports, and system configurations.
+Supabase PostgreSQL is used exclusively (no Replit PostgreSQL) with Row Level Security (RLS) for multi-tenant isolation, storing core organizational data, processing information, document vault, payment records, buyer portal data, compliance profiles, and DPPs. All database tables are defined in `supabase/schema.sql` with a migration script at `supabase/migration-missing-tables.sql`. The `commodity_master` table stores platform commodities. No Drizzle ORM or Replit database is used.
 
 ### Tier System
-The platform offers four subscription tiers: Starter, Basic, Pro, and Enterprise, with increasingly comprehensive features. Core traceability features are available across all tiers.
+Four subscription tiers (Starter, Basic, Pro, Enterprise) offer increasing features, with tier enforcement centralized in `lib/api/tier-guard.ts` and `lib/config/tier-gating.ts`.
 
 ### Key Design Patterns
-The system employs patterns such as Server-Side Registration, RLS Policies for multi-tenancy, Role-Based UI, an Offline-First PWA with IndexedDB, a Hybrid Bag-Batch Model for traceability, Impersonation for superadmins, an Anti-Fraud Layer (yield-to-area validation, GPS spoof protection), a Spatial Conflict Engine for farm boundaries, Finished Goods Pedigree, Tier-Based Feature Gating, Shipment Readiness Intelligence, Buyer-Invites-Exporter Flow, Document Vault with expiry tracking, API Key Authentication, and Digital Product Passports in JSON-LD format.
+The system employs Server-Side Registration, RLS Policies, Role-Based UI, Offline-First PWA, Hybrid Bag-Batch Model, Impersonation, Anti-Fraud Layer, Spatial Conflict Engine, Finished Goods Pedigree, Tier-Based Feature Gating, Shipment Readiness Intelligence, Buyer-Invites-Exporter Flow, Document Vault, API Key Authentication, and Digital Product Passports in JSON-LD.
 
 ### Analytics Architecture
-The platform separates operational dashboards from strategic analytics:
-- **Operational Dashboards** (`components/dashboards/`): Role-specific dashboards (admin, aggregator, quality_manager) with 6+ chart types each, focused on "what needs action now" — volume trends, active flags, agent performance, compliance status, document health.
-- **Strategic Analytics** (`app/app/analytics/page.tsx`): Dedicated analytics section with 4 tabs (Operations, Compliance, Financial, Traceability) for pattern analysis and trend discovery across all supply chain dimensions.
-- **Report Builder** (`app/app/analytics/reports/page.tsx`): 5 structured report types (Period Performance, Shipment DDS, Supplier Audit, Regulatory Readiness, Buyer Intelligence) with tier gating (Basic/Pro/Enterprise), print-friendly CSS layout for PDF export.
-- **Reusable Chart Components** (`components/charts/`): PieDonutChart, VerticalBarChart, HorizontalBarChart, StackedBarChart, RadarSpiderChart, TrendLineChart — all using OriginTrace green palette with consistent tooltips and responsive containers.
-- **Analytics API** (`app/api/analytics/route.ts`): Returns comprehensive data via `section` parameter (operational/strategic/shipments/documents/financial/all) including commodity breakdown, compliance rates, agent performance, shipment scores, document health, payment summaries, and risk intelligence.
+Separates operational dashboards (role-specific, action-oriented) from strategic analytics (pattern analysis, 4 tabs). Includes a Report Builder with 5 structured report types and reusable chart components. A comprehensive Analytics API provides data across all dimensions.
 
-### 5-Framework Compliance Engine
-The shipment scoring engine (`lib/services/shipment-scoring.ts`) evaluates shipments against 5 regulatory frameworks with distinct rules:
-- **EUDR**: GPS polygon verification, deforestation-free status (post-Dec 2020), DDS submission, satellite imagery cross-check.
-- **FSMA 204**: KDE completeness, CTE verification, lot-level traceability, supplier KYC, food safety certifications.
-- **UK Environment Act**: Due diligence assessment, risk scoring, polygon geo-verification, legality verification, country risk classification.
-- **Lacey Act / UFLPA**: Supply chain transparency, country-of-origin docs, forced labor risk assessment, import declaration compliance.
-- **Buyer Standards**: Profile-driven custom rules — required docs, geo level, traceability depth, certifications, ESG metrics.
+### 7-Framework Compliance Engine
+A shipment scoring engine evaluates against 7 regulatory frameworks (EUDR, FSMA 204, UK Environment Act, Lacey Act / UFLPA, China Green Trade, UAE / Halal, Buyer Standards) using distinct rules and data points.
 
 ### Core Features
-Key features include comprehensive Traceability (hybrid bag-batch, search, timeline, pedigree), Compliance management (farm review, DDS GeoJSON export, yield validation, compliance profiles for EUDR/FSMA/UK/Lacey Act/UFLPA/Buyer Standards), Analytics & Reports (strategic analytics with 4 tabs, report builder with 5 report types, operational dashboards with 6+ chart types), Agent Tools (GPS mapping, offline collection, anti-fraud, AI OCR), Admin Tools (inventory, batch generation, user management, white-label branding), Document Vault (upload, expiry tracking, alerts), Payment Tracking (multi-currency, ledger, export), a Buyer Portal (registration, invitations, contract management, shipment visibility), Compliance Profiles (pre-built templates for all 5 frameworks, geo verification), Digital Product Passports (JSON-LD, public endpoint, QR verification), an Enterprise API (versioned endpoints, key management, rate limiting), Shipment Planning (wizard, batch selection, scoring, document checklist), and a Superadmin Command Tower (KPI dashboard, tenant health, tier management, feature toggles).
+Key features include comprehensive Traceability (hybrid bag-batch, network graph), Compliance management (farm review, DDS export, yield validation, profiles for 7 frameworks, certifications), Analytics & Reports (strategic, operational, buyer ESG, report builder), Agent Tools (GPS mapping, offline collection, anti-fraud), Admin Tools (inventory, batch generation, user management, white-label branding), Document Vault (upload, expiry, alerts), Payment Tracking (multi-currency, mobile money disbursement), Farmer Digital Identity Portal (onboarding, yield, training, inputs, QR), Buyer Portal (registration, invitations, contract management, ESG analytics, spot market/tenders), Compliance Profiles (pre-built templates, geo verification), Digital Product Passports (JSON-LD, public endpoint), Enterprise API (versioned, key management, rate limiting), Shipment Planning (wizard, scoring), Webhook Event Streaming (14 types, signed), Immutable Audit Log, i18n, Satellite Boundary Comparison (anti-fraud polygon analysis), Yield Prediction Models (historical + input-based forecasting), Spot Market / Tender System (buyer tenders, exporter marketplace, bid comparison), and a Superadmin Command Tower.
 
 ### Marketing Website Design
-The marketing website is positioned as "Trust Infrastructure for Origin-Sensitive Supply Chains" and features a modern design with animated components, a focus on compliance (EUDR, FSMA 204, UK Environment Act), and dedicated landing pages for various industries (Agriculture, Timber, Textiles, Minerals) and compliance regulations. It includes SEO-optimized metadata, navigation with hover dropdowns, structured data (Organization, WebSite, FAQPage JSON-LD schemas), Twitter Cards, comprehensive sitemap (16 pages), and optimized robots.txt. The FAQ schema component is at `components/marketing/faq-schema.tsx`.
+The marketing website is positioned as "Trust Infrastructure for Origin-Sensitive Supply Chains," featuring a modern design, animated components, and a focus on compliance (EUDR, FSMA 204, UK Environment Act). It includes SEO-optimized metadata, structured data, and dedicated landing pages.
 
 ## External Dependencies
-- **Supabase**: PostgreSQL database, authentication, Row Level Security (RLS)
+- **Supabase**: PostgreSQL database, authentication, RLS
 - **Next.js 16**: Frontend and backend API routes
 - **React**: Frontend library
 - **Tailwind CSS**: Styling utility framework
 - **shadcn/ui & Radix UI**: UI component libraries
-- **recharts**: Charting library for analytics dashboards
-- **IndexedDB (via `idb`)**: Offline data storage and synchronization queueing
+- **recharts**: Charting library
+- **IndexedDB (via `idb`)**: Offline data storage
 - **next-pwa**: Progressive Web Application configuration
-- **OpenAI (via Replit AI Integrations)**: Document OCR for farmer ID scanning
+- **OpenAI (via Replit AI Integrations)**: Document OCR
 - **Driver.js**: Interactive guided tours
-- **Signature Pad**: Signature capture functionality
-- **jsQR**: QR/barcode scanning capabilities
+- **Signature Pad**: Signature capture
+- **jsQR**: QR/barcode scanning
+- **next-intl**: Internationalization
+- **D3-force**: Force-directed graph simulation

@@ -1,6 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent } from '@/lib/audit';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { enforceTier } from '@/lib/api/tier-guard';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,9 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -40,6 +41,16 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    if (!profile.org_id) {
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'documents');
+    if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get('type');
@@ -129,9 +140,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabaseAdmin = createAdminClient();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -147,13 +156,22 @@ export async function POST(request: NextRequest) {
     }
 
     if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organisation associated with this account' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'No organization assigned' },
+        { status: 403 }
+      );
     }
 
-    const allowedDocRoles = ['admin', 'quality_manager', 'compliance_officer', 'logistics_coordinator'];
-    if (!allowedDocRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions to manage documents' }, { status: 403 });
+    const allowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
+    if (!allowedRoles.includes(profile.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      );
     }
+
+    const tierBlock = await enforceTier(profile.org_id, 'documents');
+    if (tierBlock) return tierBlock;
 
     if (!body.title || !body.document_type) {
       return NextResponse.json(
@@ -216,6 +234,20 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'document.uploaded',
+      resourceType: 'document',
+      resourceId: document.id?.toString(),
+      metadata: { title: body.title, document_type: body.document_type },
+    });
+
+    dispatchWebhookEvent(profile.org_id, 'document.uploaded', {
+      document_id: document.id, title: body.title, document_type: body.document_type,
+    });
 
     return NextResponse.json({ document });
 
