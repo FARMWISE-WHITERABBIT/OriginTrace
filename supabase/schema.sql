@@ -2637,15 +2637,13 @@ END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
 
--- ── RLS: spatial_ref_sys (PostGIS coordinate reference system table) ──────────
--- PostGIS cannot be moved to the 'extensions' schema while geography columns exist
--- (farms.boundary_geo depends on the geography type — DROP CASCADE would destroy data).
--- The correct mitigation is to enable RLS on spatial_ref_sys directly.
--- This is a read-only lookup table of coordinate reference systems (EPSG codes).
--- No application code inserts into it — it's seeded by PostGIS on installation.
-
-ALTER TABLE spatial_ref_sys ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "spatial_ref_sys_public_read" ON spatial_ref_sys
-  FOR SELECT USING (true);
+-- ── NOTE: spatial_ref_sys (PostGIS) ─────────────────────────────────────────
+-- spatial_ref_sys is owned by the PostGIS extension, not the postgres role.
+-- ALTER TABLE spatial_ref_sys ENABLE ROW LEVEL SECURITY fails with:
+--   ERROR 42501: must be owner of table spatial_ref_sys
+-- This linter warning (rls_disabled_in_public for spatial_ref_sys) cannot be
+-- resolved via SQL — it is a known Supabase/PostGIS limitation.
+-- Accepted as a permanent low-risk informational warning:
+--   spatial_ref_sys contains only public EPSG coordinate reference data (no PII,
+--   no org data). Unrestricted SELECT access is intentional and harmless.
 
