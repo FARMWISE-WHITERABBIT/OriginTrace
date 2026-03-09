@@ -2525,13 +2525,9 @@ CREATE POLICY "yield_benchmarks_admin_write" ON yield_benchmarks
 
 
 -- ── RLS: spatial_ref_sys (PostGIS system table) ───────────────────────────────
--- spatial_ref_sys is owned by PostGIS and cannot have RLS added via migrations.
--- The correct fix is to move PostGIS to the 'extensions' schema (not 'public').
--- Until the extension is moved in the Supabase dashboard, suppress the linter
--- finding by noting it here. No schema.sql change can resolve this — it requires
--- a manual step:
---   Dashboard → Database → Extensions → postgis → move to 'extensions' schema
--- OR: recreate via: DROP EXTENSION postgis CASCADE; CREATE EXTENSION postgis SCHEMA extensions;
+-- PostGIS cannot be moved to the 'extensions' schema while geography columns exist.
+-- (farms.boundary_geo depends on the geography type — DROP CASCADE would destroy live data.)
+-- The correct mitigation is to enable RLS on spatial_ref_sys directly — see T011 block below.
 
 
 -- ── Function search_path: update_updated_at_column ───────────────────────────
@@ -2639,4 +2635,17 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
+
+
+-- ── RLS: spatial_ref_sys (PostGIS coordinate reference system table) ──────────
+-- PostGIS cannot be moved to the 'extensions' schema while geography columns exist
+-- (farms.boundary_geo depends on the geography type — DROP CASCADE would destroy data).
+-- The correct mitigation is to enable RLS on spatial_ref_sys directly.
+-- This is a read-only lookup table of coordinate reference systems (EPSG codes).
+-- No application code inserts into it — it's seeded by PostGIS on installation.
+
+ALTER TABLE spatial_ref_sys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "spatial_ref_sys_public_read" ON spatial_ref_sys
+  FOR SELECT USING (true);
 
