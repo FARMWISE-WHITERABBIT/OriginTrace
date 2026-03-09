@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 import { hasAccess, type AppRole } from '@/lib/rbac';
 import { checkRouteAccess } from '@/lib/config/tier-gating';
@@ -129,8 +130,10 @@ export async function updateSession(request: NextRequest) {
   return supabaseResponse;
 }
 
-async function checkIsSuperadmin(supabase: any, userId: string): Promise<boolean> {
-  const { data } = await supabase
+async function checkIsSuperadmin(_supabase: any, userId: string): Promise<boolean> {
+  const admin = getServiceClient();
+  if (!admin) return false;
+  const { data } = await admin
     .from('system_admins')
     .select('id')
     .eq('user_id', userId)
@@ -138,9 +141,11 @@ async function checkIsSuperadmin(supabase: any, userId: string): Promise<boolean
   return !!data;
 }
 
-async function getUserRole(supabase: any, userId: string): Promise<AppRole | null> {
+async function getUserRole(_supabase: any, userId: string): Promise<AppRole | null> {
   try {
-    const { data } = await supabase
+    const admin = getServiceClient();
+    if (!admin) return null;
+    const { data } = await admin
       .from('profiles')
       .select('role')
       .eq('user_id', userId)
@@ -151,27 +156,46 @@ async function getUserRole(supabase: any, userId: string): Promise<AppRole | nul
   }
 }
 
-async function getOrgTier(supabase: any, userId: string): Promise<string | undefined> {
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+async function getOrgTier(_supabase: any, userId: string): Promise<string | undefined> {
   try {
-    const { data: profile } = await supabase
+    const admin = getServiceClient();
+    if (!admin) return undefined;
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('org_id')
       .eq('user_id', userId)
       .single();
+    if (profileError) {
+      console.error('[middleware] getOrgTier profile error:', profileError.message);
+      return undefined;
+    }
     if (!profile?.org_id) return undefined;
-    const { data: org } = await supabase
+    const { data: org, error: orgError } = await admin
       .from('organizations')
       .select('subscription_tier, settings')
       .eq('id', profile.org_id)
       .single();
+    if (orgError) {
+      console.error('[middleware] getOrgTier org error:', orgError.message);
+      return undefined;
+    }
     if (!org) return undefined;
-    // Read from the dedicated column first, then fall back to legacy settings JSONB
     const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
     const columnTier = org.subscription_tier as string | undefined;
     const settingsTier = ((org.settings as Record<string, any>) || {}).subscription_tier as string | undefined;
     const resolved = VALID_TIERS.includes(columnTier ?? '') ? columnTier : VALID_TIERS.includes(settingsTier ?? '') ? settingsTier : 'starter';
     return resolved;
-  } catch {
+  } catch (err: any) {
+    console.error('[middleware] getOrgTier exception:', err?.message);
     return undefined;
   }
 }

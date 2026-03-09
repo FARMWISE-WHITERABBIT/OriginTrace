@@ -19,7 +19,7 @@ export async function GET() {
       .eq('user_id', user.id)
       .single();
 
-    // 2. Get org directly (what middleware uses)
+    // 2. Get org directly via admin (bypasses RLS)
     const orgId = profile?.org_id;
     const { data: orgDirect } = orgId ? await admin
       .from('organizations')
@@ -27,22 +27,45 @@ export async function GET() {
       .eq('id', orgId)
       .single() : { data: null };
 
+    // 3. Test with the anon client (same as middleware uses) to check RLS
+    const { data: anonProfile, error: anonProfileErr } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single();
+    
+    let anonOrg = null;
+    let anonOrgErr = null;
+    if (anonProfile?.org_id) {
+      const result = await supabase
+        .from('organizations')
+        .select('subscription_tier, settings')
+        .eq('id', anonProfile.org_id)
+        .single();
+      anonOrg = result.data;
+      anonOrgErr = result.error;
+    }
+
     return NextResponse.json({
       user_id: user.id,
       profile_role: profile?.role,
       org_id: orgId,
-      // What the profile join returns (used by org-context)
       via_join: {
         subscription_tier: (profile?.organizations as any)?.subscription_tier,
         subscription_status: (profile?.organizations as any)?.subscription_status,
       },
-      // What the direct query returns (used by middleware)
       via_direct: {
         subscription_tier: orgDirect?.subscription_tier,
         subscription_status: orgDirect?.subscription_status,
       },
-      // Settings JSONB fallback
       settings_tier: ((profile?.organizations as any)?.settings || {})?.subscription_tier,
+      via_anon_client: {
+        profile_org_id: anonProfile?.org_id,
+        profile_error: anonProfileErr?.message || null,
+        org_tier: anonOrg?.subscription_tier,
+        org_settings_tier: (anonOrg?.settings as any)?.subscription_tier,
+        org_error: anonOrgErr?.message || null,
+      },
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

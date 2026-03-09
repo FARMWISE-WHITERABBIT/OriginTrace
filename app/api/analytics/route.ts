@@ -141,10 +141,10 @@ export async function GET(request: NextRequest) {
     let bags: any[] = [];
 
     try {
-      const [batchesRes, prevBatchesRes, farmsRes, bagsRes] = await Promise.all([
+      const [batchesRes, prevBatchesRes] = await Promise.all([
         supabase
           .from('collection_batches')
-          .select('id, created_at, total_weight, bag_count, status, agent_id, yield_flag_reason, commodity, state, farm_id')
+          .select('id, created_at, total_weight, bag_count, status, agent_id, farm_id')
           .eq('org_id', orgId)
           .gte('created_at', periodStart)
           .order('created_at', { ascending: true }),
@@ -154,19 +154,33 @@ export async function GET(request: NextRequest) {
           .eq('org_id', orgId)
           .gte('created_at', prevStart)
           .lt('created_at', periodStart),
-        supabase
-          .from('farms')
-          .select('id, compliance_status, commodity, area_hectares, state, deforestation_check, boundary_geo')
-          .eq('org_id', orgId),
-        supabase
-          .from('bags')
-          .select('id, grade, status, weight_kg, commodity, is_compliant')
-          .eq('org_id', orgId),
       ]);
       if (batchesRes.error) console.error('[analytics] batches query error:', batchesRes.error);
       if (prevBatchesRes.error) console.error('[analytics] prevBatches query error:', prevBatchesRes.error);
-      if (farmsRes.error) console.error('[analytics] farms query error:', farmsRes.error);
-      if (bagsRes.error) console.error('[analytics] bags query error:', bagsRes.error);
+
+      let farmsRes = await supabase
+        .from('farms')
+        .select('id, compliance_status, commodity, area_hectares, state_id, deforestation_check, boundary_geo')
+        .eq('org_id', orgId);
+      if (farmsRes.error) {
+        console.error('[analytics] farms query error (retrying with minimal columns):', farmsRes.error);
+        farmsRes = await supabase
+          .from('farms')
+          .select('id, compliance_status')
+          .eq('org_id', orgId);
+      }
+
+      let bagsRes = await supabase
+        .from('bags')
+        .select('id, status, weight_kg, grade, is_compliant')
+        .eq('org_id', orgId);
+      if (bagsRes.error) {
+        console.error('[analytics] bags query error (retrying with minimal columns):', bagsRes.error);
+        bagsRes = await supabase
+          .from('bags')
+          .select('id')
+          .eq('org_id', orgId);
+      }
       batches = batchesRes.data || [];
       prevBatches = prevBatchesRes.data || [];
       farms = farmsRes.data || [];
@@ -216,7 +230,7 @@ export async function GET(request: NextRequest) {
           .map(([id, data]) => ({ id, name: data.name, weight: Math.round(data.weight * 100) / 100, bags: data.bags, batches: data.batches }))
           .sort((a, b) => b.weight - a.weight);
 
-        const flaggedCount = batches.filter(b => b.yield_flag_reason).length;
+        const flaggedCount = batches.filter((b: any) => b.yield_flag_reason).length;
         const totalFarmsCount = farms.length;
         const approvedFarmsCount = farms.filter(f => f.compliance_status === 'approved').length;
         const pendingFarmsCount = farms.filter(f => f.compliance_status === 'pending').length;
@@ -250,9 +264,13 @@ export async function GET(request: NextRequest) {
 
     if (section === 'all' || section === 'strategic') {
       try {
+        const farmCommodityMap = new Map<string, string>();
+        for (const f of farms) {
+          farmCommodityMap.set(f.id, f.commodity || 'Unknown');
+        }
         const commodityMap = new Map<string, { weight: number; batches: number; compliantFarms: number; totalFarms: number }>();
         for (const b of batches) {
-          const c = b.commodity || 'Unknown';
+          const c = farmCommodityMap.get(b.farm_id) || 'Unknown';
           const existing = commodityMap.get(c) || { weight: 0, batches: 0, compliantFarms: 0, totalFarms: 0 };
           existing.weight += Number(b.total_weight || 0);
           existing.batches += 1;
@@ -301,9 +319,13 @@ export async function GET(request: NextRequest) {
         }
         result.deforestationRisk = Object.entries(deforestationRisk).map(([level, count]) => ({ level, count })).filter(item => item.count > 0);
 
+        const farmStateMap = new Map<string, string>();
+        for (const f of farms) {
+          farmStateMap.set(f.id, f.state_id || 'unknown');
+        }
         const regionMap = new Map<string, { weight: number; batches: number }>();
         for (const b of batches) {
-          const region = b.state || 'Unknown';
+          const region = farmStateMap.get(b.farm_id) || 'Unknown';
           const existing = regionMap.get(region) || { weight: 0, batches: 0 };
           existing.weight += Number(b.total_weight || 0);
           existing.batches += 1;
@@ -314,7 +336,7 @@ export async function GET(request: NextRequest) {
         })).sort((a, b) => b.weight - a.weight);
 
         const failureTypes = [
-          { type: 'Yield Anomalies', count: batches.filter(b => b.yield_flag_reason).length },
+          { type: 'Yield Anomalies', count: batches.filter((b: any) => b.yield_flag_reason).length },
           { type: 'Missing GPS', count: farms.filter(f => !f.boundary_geo).length },
           { type: 'Non-Compliant Farms', count: farms.filter(f => f.compliance_status === 'rejected').length },
           { type: 'Low Grade (C)', count: bags.filter(b => b.grade === 'C').length },
@@ -410,7 +432,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data: documents, error: docError } = await supabase
           .from('documents')
-          .select('id, type, status, expiry_date')
+          .select('id, document_type, status, expiry_date')
           .eq('org_id', orgId);
 
         if (docError) throw docError;
@@ -430,7 +452,7 @@ export async function GET(request: NextRequest) {
 
         const docTypeMap = new Map<string, number>();
         for (const doc of docs) {
-          const type = doc.type || 'Other';
+          const type = doc.document_type || 'Other';
           docTypeMap.set(type, (docTypeMap.get(type) || 0) + 1);
         }
         result.documentsByType = Array.from(docTypeMap.entries()).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
