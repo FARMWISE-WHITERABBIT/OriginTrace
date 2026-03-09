@@ -14,8 +14,8 @@ import { sendEmail } from '@/lib/email/resend-client';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
 
 export async function GET(request: NextRequest) {
-  const cronSecret = request.headers.get('x-cron-secret') || new URL(request.url).searchParams.get('secret');
-  if (cronSecret !== process.env.CRON_SECRET) {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
