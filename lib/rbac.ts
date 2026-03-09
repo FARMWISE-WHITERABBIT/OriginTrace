@@ -53,7 +53,7 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/processing': ['admin', 'compliance_officer'],
   '/app/inventory': ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'],
   '/app/verify': ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'],
-  '/app/resolve': ['admin', 'aggregator'],
+  '/app/resolve': ['admin', 'aggregator', 'compliance_officer'],
   '/app/dispatch': ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'],
   '/app/agents': ['admin', 'aggregator'],
   '/app/shipments': ['admin', 'logistics_coordinator', 'compliance_officer'],
@@ -84,8 +84,6 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/settings/subscription': ['admin'],
   '/app/settings/webhooks': ['admin'],
   '/app/shipments/new': ['admin', 'logistics_coordinator', 'compliance_officer'],
-  '/app/farmers/new': ['admin', 'aggregator', 'agent'],
-  '/app/resolve': ['admin', 'aggregator', 'compliance_officer'],
 };
 
 export function hasAccess(role: AppRole, pathname: string): boolean {

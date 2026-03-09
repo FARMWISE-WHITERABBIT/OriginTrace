@@ -181,13 +181,14 @@ const VALID_REJECTION_CATEGORIES = [
 ] as const;
 
 export const shipmentOutcomeSchema = z.object({
-  outcome:              z.enum(['accepted', 'rejected', 'conditional', 'pending']),
+  outcome:              z.enum(['accepted', 'rejected', 'conditional', 'pending', 'approved', 'delayed', 'conditional_release']),
   outcome_date:         dateSchema.optional(),
   rejection_category:   z.enum(VALID_REJECTION_CATEGORIES).optional(),
   rejection_reason:     z.string().max(1000).optional(),
   port_of_entry:        z.string().max(200).optional(),
   customs_reference:    z.string().max(200).optional(),
   inspector_notes:      z.string().max(2000).optional(),
+  financial_impact_usd: z.number().optional(),
 });
 
 // ---------------------------------------------------------------------------

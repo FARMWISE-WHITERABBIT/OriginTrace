@@ -58,7 +58,8 @@ export type TierFeature =
   | 'buyer_portal'
   | 'contracts'
   | 'digital_product_passport'
-  | 'enterprise_api';
+  | 'enterprise_api'
+  | 'api_access';
 
 export const FEATURE_LABELS: Record<TierFeature, string> = {
   smart_collect: 'Smart Collection',
@@ -91,6 +92,7 @@ export const FEATURE_LABELS: Record<TierFeature, string> = {
   contracts: 'Contract Management',
   digital_product_passport: 'Digital Product Passport',
   enterprise_api: 'Enterprise API Access',
+  api_access: 'API Access',
 };
 
 const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
@@ -132,6 +134,7 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   data_vault: 'enterprise',
   digital_product_passport: 'enterprise',
   enterprise_api: 'enterprise',
+  api_access: 'enterprise',
 };
 
 export function getTierFeatures(tier: SubscriptionTier): TierFeature[] {

@@ -41,3 +41,12 @@ waitForPort = 5000
 
 [agent]
 integrations = ["resend:1.0.0", "javascript_openai_ai_integrations:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+EMAIL_FROM = "OriginTrace <no-reply@origintrace.trade>"
+SUPPORT_EMAIL = "support@origintrace.trade"
+SENTRY_ORG = "whiterabbit-agro-limited"
+SENTRY_PROJECT = "javascript-nextjs"
+NEXT_PUBLIC_APP_URL = "https://origintrace.trade"
