@@ -138,9 +138,15 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         const hydrateOrgTier = (org: any): Organization | null => {
           if (!org) return null;
           const s = org.settings || {};
+          // Resolve tier: explicit column first, then settings JSONB fallback, then default
+          // VALID tiers only — reject legacy values like 'trial', 'free', 'growth'
+          const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
+          const rawTier = org.subscription_tier || s.subscription_tier;
+          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : 'starter';
           return {
             ...org,
-            subscription_tier: org.subscription_tier || s.subscription_tier || 'starter',
+            subscription_tier: resolvedTier,
+            subscription_status: org.subscription_status || 'active',
             feature_flags: org.feature_flags || s.feature_flags || {},
             agent_seat_limit: org.agent_seat_limit ?? s.agent_seat_limit ?? 5,
             monthly_collection_limit: org.monthly_collection_limit ?? s.monthly_collection_limit ?? 1000,
