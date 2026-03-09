@@ -2,6 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
+const DEFAULT_COMMODITIES = [
+  { name: 'Cocoa', code: 'COCOA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+  { name: 'Cashew', code: 'CASHEW', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 5, moisture_max: 8, collection_metrics: {} },
+  { name: 'Palm Oil', code: 'PALM', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+  { name: 'Ginger', code: 'GINGER', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 10, moisture_max: 12, collection_metrics: {} },
+  { name: 'Sesame', code: 'SESAME', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+  { name: 'Shea', code: 'SHEA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
+  { name: 'Timber', code: 'TIMBER', category: 'forestry', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+  { name: 'Minerals', code: 'MINERALS', category: 'minerals', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+  { name: 'Seafood', code: 'SEAFOOD', category: 'seafood', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
+];
+
+async function ensureCommodityData(supabase: any): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('commodity_master')
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    console.log('commodity_master table check failed:', error.message);
+    return false;
+  }
+
+  if (data && data.length === 0) {
+    const { error: seedError } = await supabase
+      .from('commodity_master')
+      .insert(DEFAULT_COMMODITIES);
+    if (seedError) {
+      console.log('Seed error:', seedError.message);
+      return false;
+    }
+    return true;
+  }
+
+  return true;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
@@ -27,6 +64,8 @@ export async function GET(request: NextRequest) {
     if (!userOrgId) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
+
+    await ensureCommodityData(supabase);
     
     let query = supabase
       .from('commodity_master')
@@ -47,19 +86,8 @@ export async function GET(request: NextRequest) {
     const { data: commodities, error } = await query;
     
     if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        const defaultCommodities = [
-          { id: 1, name: 'Cocoa', code: 'COCOA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 2, name: 'Cashew', code: 'CASHEW', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 5, moisture_max: 8, collection_metrics: {} },
-          { id: 3, name: 'Palm Oil', code: 'PALM', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 4, name: 'Ginger', code: 'GINGER', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 10, moisture_max: 12, collection_metrics: {} },
-          { id: 5, name: 'Sesame', code: 'SESAME', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 6, name: 'Shea', code: 'SHEA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 7, name: 'Timber', code: 'TIMBER', category: 'forestry', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 8, name: 'Minerals', code: 'MINERALS', category: 'minerals', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 9, name: 'Seafood', code: 'SEAFOOD', category: 'seafood', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-        ];
-        return NextResponse.json({ commodities: defaultCommodities, source: 'defaults' });
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('relation')) {
+        return NextResponse.json({ commodities: DEFAULT_COMMODITIES.map((c, i) => ({ ...c, id: i + 1 })), source: 'defaults' });
       }
       console.error('Commodities fetch error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
