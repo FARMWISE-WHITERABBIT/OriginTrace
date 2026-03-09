@@ -111,3 +111,51 @@ export function isFarmerRole(role: AppRole): boolean {
 export function isBuyerRole(role: AppRole): boolean {
   return role === 'buyer';
 }
+
+// ---------------------------------------------------------------------------
+// API route role enforcement helper
+// Use instead of inline role string comparisons in API routes:
+//   const roleError = requireRole(profile, ROLES.ADMIN_AGGREGATOR);
+//   if (roleError) return roleError;
+// ---------------------------------------------------------------------------
+import { NextResponse } from 'next/server';
+
+export interface ProfileWithRole {
+  role: AppRole | SystemRole | string;
+  org_id?: string | null;
+}
+
+/**
+ * Returns a 403 NextResponse if profile.role is not in allowedRoles, otherwise null.
+ */
+export function requireRole(
+  profile: ProfileWithRole | null | undefined,
+  allowedRoles: (AppRole | SystemRole)[]
+): NextResponse | null {
+  if (!profile) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!allowedRoles.includes(profile.role as AppRole | SystemRole)) {
+    return NextResponse.json(
+      { error: 'Forbidden', required: allowedRoles },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
+/**
+ * Convenience role sets for common groupings used across API routes.
+ */
+export const ROLES = {
+  ADMIN_ONLY:       ['admin'] as const,
+  ADMIN_AGGREGATOR: ['admin', 'aggregator'] as const,
+  ADMIN_COMPLIANCE: ['admin', 'compliance_officer'] as const,
+  ADMIN_QUALITY:    ['admin', 'quality_manager'] as const,
+  FIELD_ROLES:      ['admin', 'aggregator', 'agent'] as const,
+  COMPLIANCE_ROLES: ['admin', 'quality_manager', 'compliance_officer'] as const,
+  LOGISTICS_ROLES:  ['admin', 'logistics_coordinator', 'warehouse_supervisor'] as const,
+  DOC_ROLES:        ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer'] as const,
+  ALL_INTERNAL:     ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator',
+                     'compliance_officer', 'warehouse_supervisor'] as const,
+} as const;

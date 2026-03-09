@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
-import { getResendClient } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { buildFarmConflictEmail } from '@/lib/email/templates';
 import { z } from 'zod';
 
@@ -237,8 +237,8 @@ export async function POST(request: NextRequest) {
           });
 
           try {
-            const { client, fromEmail } = await getResendClient();
-            await client.emails.send({
+            const { client, fromEmail } = null /* removed */;
+            await await sendEmail({
               from: fromEmail,
               to: adminEmail,
               subject: `Farm Boundary Conflict: ${farmA.farmer_name || 'Farm A'} vs ${farmB.farmer_name || 'Farm B'} - ${org?.name || 'OriginTrace'}`,

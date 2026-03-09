@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 
 export async function GET(request: NextRequest) {
@@ -28,9 +29,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
     
-    if (!['admin', 'aggregator'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const _roleError = requireRole(profile, ['admin', 'aggregator']);
+    if (_roleError) return _roleError;
     
     const { data: agents, error: agentError } = await supabaseAdmin
       .from('profiles')

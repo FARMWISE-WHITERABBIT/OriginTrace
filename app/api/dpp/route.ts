@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
@@ -234,7 +235,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create DPP' }, { status: 500 });
     }
 
-    return NextResponse.json({ dpp: created }, { status: 201 });
+    // Generate QR code pointing to public verify page
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
+    const verifyUrl = `${appUrl}/verify/${dppCode}`;
+    let qrCodeDataUrl: string | null = null;
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(verifyUrl, {
+        width: 400,
+        margin: 2,
+        color: { dark: '#166534', light: '#FFFFFF' },
+        errorCorrectionLevel: 'M',
+      });
+      // Store QR URL back on the record
+      await supabaseAdmin
+        .from('digital_product_passports')
+        .update({ qr_code_url: qrCodeDataUrl, verify_url: verifyUrl })
+        .eq('id', created.id);
+    } catch (qrErr) {
+      console.error('[DPP] QR generation failed:', qrErr);
+    }
+
+    return NextResponse.json({
+      dpp: { ...created, qr_code_url: qrCodeDataUrl, verify_url: verifyUrl }
+    }, { status: 201 });
   } catch (error) {
     console.error('DPP API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
