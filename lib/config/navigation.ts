@@ -38,6 +38,8 @@ import {
   Key,
   Store,
   Gavel,
+  Upload,
+  CreditCard as CreditCardIcon,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -76,6 +78,7 @@ const superadminNavigation: NavigationConfig = {
         { title: 'User Management', url: '/superadmin/users', icon: Users, allowedRoles: ['superadmin'] },
         { title: 'Tenant Health', url: '/superadmin/tenant-health', icon: Gauge, allowedRoles: ['superadmin'] },
         { title: 'Buyer Organizations', url: '/superadmin/buyer-orgs', icon: Handshake, allowedRoles: ['superadmin'] },
+        { title: 'Billing', url: '/superadmin/billing', icon: CreditCardIcon, allowedRoles: ['superadmin'] },
       ],
     },
     {
@@ -115,6 +118,7 @@ const appNavigation: NavigationConfig = {
         { title: 'Register Farmer', url: '/app/farmers/new', icon: UserPlus, tourId: 'nav-register', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'farmer_registration' },
         { title: 'Map Farm', url: '/app/farms/map', icon: Map, tourId: 'nav-farms', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'farm_mapping' },
         { title: 'Sync Dashboard', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'basic', tierFeature: 'sync_dashboard' },
+        { title: 'Import Data', url: '/app/import', icon: Upload, allowedRoles: ['admin', 'aggregator'], requiredTier: 'starter' },
       ],
     },
     {
