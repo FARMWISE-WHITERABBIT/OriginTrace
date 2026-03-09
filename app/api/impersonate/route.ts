@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { logSuperadminAction } from '@/lib/superadmin-audit';
 
 
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
@@ -112,6 +113,16 @@ export async function POST(request: NextRequest) {
         console.error('[impersonate] Failed to write audit log for impersonation_start:', auditErr);
       }
       
+      await logSuperadminAction({
+        superadminId: user.id,
+        action: 'impersonation_start',
+        targetType: 'impersonation',
+        targetId: org.id?.toString(),
+        targetLabel: org.name,
+        afterState: { org_id: org.id, expires_at: expiresAt },
+        request,
+      });
+
       const response = NextResponse.json({
         success: true,
         impersonation: impersonationData,
@@ -154,6 +165,13 @@ export async function POST(request: NextRequest) {
         } catch (e) {}
       }
       
+      await logSuperadminAction({
+        superadminId: user.id,
+        action: 'impersonation_stop',
+        targetType: 'impersonation',
+        request,
+      });
+
       const response = NextResponse.json({
         success: true,
         message: 'Impersonation ended'

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/document-expiry",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/subscription-expiry",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

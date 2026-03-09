@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { featureToggleSchema, parseBody } from '@/lib/api/validation';
+import { logSuperadminAction } from '@/lib/superadmin-audit';
 
 
 async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {

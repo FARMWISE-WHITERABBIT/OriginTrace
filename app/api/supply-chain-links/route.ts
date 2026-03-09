@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { getResendClient } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { buildBuyerInvitationEmail } from '@/lib/email/templates';
 import { supplyChainLinkSchema, parseBody } from '@/lib/api/validation';
 
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
             acceptUrl,
           });
 
-          const { client: resend, fromEmail } = await getResendClient();
+          const { client: resend, fromEmail } = null /* removed */;
           await resend.emails.send({
             from: fromEmail,
             to: adminEmails,
