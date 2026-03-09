@@ -1,5 +1,6 @@
 'use client';
 
+import { ErrorBoundary } from '@/components/error-boundary';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -56,7 +57,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
       )}
 
       <main className="flex-1 p-4 pb-24">
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 z-30">

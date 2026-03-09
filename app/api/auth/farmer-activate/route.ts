@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { logAuditEvent } from '@/lib/audit';
+import { farmerActivateSchema, parseBody } from '@/lib/api/validation';
 
 function hashPin(pin: string, salt: string): string {
   return crypto.createHash('sha256').update(`${salt}:${pin}`).digest('hex');
@@ -40,7 +41,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(farmerActivateSchema, rawBody);
+    if (validationError) return validationError;
     const { token, pin } = body;
 
     if (!token || !pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,9 +27,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
-    if (!['admin', 'compliance_officer'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const _roleError = requireRole(profile, ['admin', 'compliance_officer']);
+    if (_roleError) return _roleError;
 
     const url = request.nextUrl;
     const action = url.searchParams.get('action');

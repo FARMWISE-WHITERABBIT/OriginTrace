@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, checkRateLimit } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
@@ -47,11 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabase = createAdminClient();
 
     const shipmentId = parseInt(id);
     if (isNaN(shipmentId)) {

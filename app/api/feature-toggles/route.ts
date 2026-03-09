@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { featureToggleSchema, parseBody } from '@/lib/api/validation';
 
 
 async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
@@ -103,7 +104,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Superadmin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(featureToggleSchema, rawBody);
+    if (validationError) return validationError;
     const { org_id, subscription_tier, feature_flags, agent_seat_limit, monthly_collection_limit } = body;
 
     if (!org_id) {
