@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
       if (batchesRes.error) console.error('[analytics] batches query error:', batchesRes.error);
       if (prevBatchesRes.error) console.error('[analytics] prevBatches query error:', prevBatchesRes.error);
 
-      let farmsRes = await supabase
+      let farmsRes: { data: any[] | null; error: any } = await supabase
         .from('farms')
         .select('id, compliance_status, commodity, area_hectares, state_id, deforestation_check, boundary_geo')
         .eq('org_id', orgId);
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
           .eq('org_id', orgId);
       }
 
-      let bagsRes = await supabase
+      let bagsRes: { data: any[] | null; error: any } = await supabase
         .from('bags')
         .select('id, status, weight_kg, grade, is_compliant')
         .eq('org_id', orgId);
