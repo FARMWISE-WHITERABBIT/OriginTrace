@@ -15,6 +15,7 @@ export async function GET(
 
     const { data: dpp, error } = await supabaseAdmin
       .from('digital_product_passports')
+      // Public DPP — strip commercially sensitive fields (destination_country, buyer_company)
       .select(`
         *,
         finished_goods (
@@ -207,7 +208,7 @@ function renderDpp(rawDpp: any, format: string | null) {
         </div>
         <div class="field">
           <div class="field-label">DDS Submitted</div>
-          <div class="field-value">${compliance.dds_submitted ? 'Yes' : 'No'}</div>
+          <div class="field-value">See exporter's compliance dashboard</div>
         </div>
         <div class="field">
           <div class="field-label">Total Smallholders</div>

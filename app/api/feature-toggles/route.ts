@@ -172,7 +172,12 @@ export async function PATCH(request: NextRequest) {
       settingsUpdate.monthly_collection_limit = monthly_collection_limit;
     }
 
+    // C-02 fix: tier-guard reads top-level subscription_tier column, not settings JSONB.
+    // Must write both to keep them in sync.
     const updatePayload: Record<string, unknown> = { settings: settingsUpdate, updated_at: new Date().toISOString() };
+    if (subscription_tier) {
+      updatePayload.subscription_tier = subscription_tier;
+    }
 
     const { data: organization, error: updateError } = await supabaseAdmin
       .from('organizations')
