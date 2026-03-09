@@ -47,20 +47,6 @@ export async function GET(request: NextRequest) {
     const { data: commodities, error } = await query;
     
     if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        const defaultCommodities = [
-          { id: 1, name: 'Cocoa', code: 'COCOA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 2, name: 'Cashew', code: 'CASHEW', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 5, moisture_max: 8, collection_metrics: {} },
-          { id: 3, name: 'Palm Oil', code: 'PALM', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 4, name: 'Ginger', code: 'GINGER', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 10, moisture_max: 12, collection_metrics: {} },
-          { id: 5, name: 'Sesame', code: 'SESAME', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 6, name: 'Shea', code: 'SHEA', category: 'crop', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: 6, moisture_max: 8, collection_metrics: {} },
-          { id: 7, name: 'Timber', code: 'TIMBER', category: 'forestry', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 8, name: 'Minerals', code: 'MINERALS', category: 'minerals', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-          { id: 9, name: 'Seafood', code: 'SEAFOOD', category: 'seafood', unit: 'kg', is_active: true, is_global: true, created_by_org_id: null, grades: ['A', 'B', 'C'], moisture_min: null, moisture_max: null, collection_metrics: {} },
-        ];
-        return NextResponse.json({ commodities: defaultCommodities, source: 'defaults' });
-      }
       console.error('Commodities fetch error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
