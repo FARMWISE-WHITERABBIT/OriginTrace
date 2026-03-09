@@ -81,6 +81,11 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/farmer/training': ['farmer'],
   '/app/farmer/inputs': ['farmer'],
   '/app/farmer/profile': ['farmer'],
+  '/app/settings/subscription': ['admin'],
+  '/app/settings/webhooks': ['admin'],
+  '/app/shipments/new': ['admin', 'logistics_coordinator', 'compliance_officer'],
+  '/app/farmers/new': ['admin', 'aggregator', 'agent'],
+  '/app/resolve': ['admin', 'aggregator', 'compliance_officer'],
 };
 
 export function hasAccess(role: AppRole, pathname: string): boolean {
@@ -88,7 +93,9 @@ export function hasAccess(role: AppRole, pathname: string): boolean {
     .sort((a, b) => b.length - a.length)
     .find(route => pathname === route || pathname.startsWith(route + '/'));
 
-  if (!match) return false;
+  // No explicit rule = allow through; tier gating handles feature restrictions
+  // This prevents unlisted sub-routes (e.g. /app/shipments/new) from being blocked
+  if (!match) return true;
   return routePermissions[match].includes(role);
 }
 
