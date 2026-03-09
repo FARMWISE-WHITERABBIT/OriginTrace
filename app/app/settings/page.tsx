@@ -1705,21 +1705,21 @@ export default function SettingsPage() {
           <TabsContent value="import" className="space-y-6">
             <CSVImporter 
               onImport={async (data) => {
-                const supabase = createClient();
-                if (!supabase || !organization) {
+                if (!organization) {
                   return { success: 0, failed: data.length, errors: ['Not authenticated'] };
                 }
 
+                // Route through API layer for audit logging and role enforcement
                 let success = 0;
                 let failed = 0;
                 const errors: string[] = [];
 
                 for (const row of data) {
                   try {
-                    const { error } = await supabase
-                      .from('farms')
-                      .insert({
-                        org_id: organization.id,
+                    const res = await fetch('/api/farms', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
                         farmer_name: row.farmer_name,
                         phone_number: row.phone_number || null,
                         community: row.community,
@@ -1729,10 +1729,12 @@ export default function SettingsPage() {
                         primary_commodity: row.commodity || null,
                         national_id: row.national_id || null,
                         compliance_status: 'pending',
-                        created_by: profile?.id,
-                      });
-
-                    if (error) throw error;
+                      }),
+                    });
+                    if (!res.ok) {
+                      const e = await res.json().catch(() => ({}));
+                      throw new Error(e.error || `HTTP ${res.status}`);
+                    }
                     success++;
                   } catch (err: any) {
                     failed++;

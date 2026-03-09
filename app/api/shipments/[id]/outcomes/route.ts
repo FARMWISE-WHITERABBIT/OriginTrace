@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
+import { shipmentOutcomeSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(
   request: NextRequest,
@@ -115,7 +116,9 @@ export async function POST(
       return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(shipmentOutcomeSchema, rawBody);
+    if (validationError) return validationError;
     const { outcome, outcome_date } = body;
 
     if (!outcome) {

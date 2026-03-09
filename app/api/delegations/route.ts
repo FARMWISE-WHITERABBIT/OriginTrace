@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient } from '@/lib/api-auth';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { delegationCreateSchema, delegationActionSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -100,7 +101,9 @@ export async function POST(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'delegations');
     if (tierBlock) return tierBlock;
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(delegationCreateSchema, rawBody);
+    if (validationError) return validationError;
     const { delegated_to, permission, region_scope, expires_at } = body;
 
     if (!delegated_to || !permission || !expires_at) {
@@ -188,7 +191,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(delegationActionSchema, rawBody);
+    if (validationError) return validationError;
     const { delegation_id, action } = body;
 
     if (!delegation_id || action !== 'revoke') {

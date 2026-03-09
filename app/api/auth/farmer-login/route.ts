@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { farmerLoginSchema, parseBody } from '@/lib/api/validation';
 
 const FARMER_LOGIN_RATE_LIMIT = {
   windowMs: 15 * 60 * 1000,
@@ -14,7 +15,9 @@ function hashPin(pin: string, salt: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(farmerLoginSchema, rawBody);
+    if (validationError) return validationError;
     const { phone, pin } = body;
 
     if (!phone || !pin || pin.length !== 4) {

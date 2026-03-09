@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile, createServiceClient } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
-    const allowedRoles = ['admin', 'aggregator', 'agent', 'compliance_officer', 'quality_manager'];
-    if (!allowedRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const _roleError = requireRole(profile, ['admin', 'aggregator', 'agent', 'compliance_officer', 'quality_manager']);
+    if (_roleError) return _roleError;
 
     const body = await request.json();
     const { farm_id, file_type, file_url, verification_status } = body;

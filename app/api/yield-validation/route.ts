@@ -5,6 +5,7 @@ import { enforceTier } from '@/lib/api/tier-guard';
 import { getResendClient } from '@/lib/email/resend-client';
 import { buildYieldFlagEmail } from '@/lib/email/templates';
 import { predictYield, checkPredictionExceedance } from '@/lib/services/yield-prediction';
+import { yieldValidationSchema, yieldReviewSchema, parseBody } from '@/lib/api/validation';
 
 
 interface YieldValidationResult {

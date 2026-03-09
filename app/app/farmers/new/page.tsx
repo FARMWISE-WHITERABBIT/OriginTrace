@@ -158,27 +158,32 @@ export default function FarmerRegistrationPage() {
     setIsSaving(true);
 
     try {
-      if (isOnline && supabase && organization && profile) {
-        const { data, error } = await supabase
-          .from('farms')
-          .insert({
-            org_id: organization.id,
+      if (isOnline && organization && profile) {
+        // Route through API layer for audit logging, webhook dispatch, and role enforcement
+        const farmRes = await fetch('/api/farms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             farmer_name: fullName.trim(),
-            phone: phone || null,
+            phone_number: phone || null,
             community: community || selectedLGA || selectedState,
             state: selectedState,
             lga: selectedLGA || null,
             compliance_status: 'pending',
-            registered_by: profile.user_id,
             kyc_status: computeKycStatus(),
             consent_data: consentData ? {
               has_consent: consentData.hasConsent,
               signature: consentData.signature,
               timestamp: consentData.timestamp,
             } : null,
-          })
-          .select('id')
-          .single();
+          }),
+        });
+        if (!farmRes.ok) {
+          const err = await farmRes.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to create farm');
+        }
+        const data: { id: string } | null = await farmRes.json().then(r => r.farm ?? r.data ?? null);
+        const error = null;
 
         if (error) throw error;
 

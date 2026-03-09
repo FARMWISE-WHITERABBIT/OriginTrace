@@ -3,6 +3,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient } from '@/lib/api-auth';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 function getPeriodStart(period: string): string {
   const now = new Date();
@@ -115,10 +116,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     }
 
-    const allowedRoles = ['admin', 'aggregator', 'quality_manager', 'compliance_officer'];
-    if (!allowedRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const _roleError = requireRole(profile, ['admin', 'aggregator', 'quality_manager', 'compliance_officer']);
+    if (_roleError) return _roleError;
 
     const tierBlock = await enforceTier(profile.org_id, 'analytics');
     if (tierBlock) return tierBlock;
