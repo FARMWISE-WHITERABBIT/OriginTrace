@@ -30,7 +30,61 @@ export const farmerActivateSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Bags
+// Farms
+// ---------------------------------------------------------------------------
+export const farmCreateSchema = z.object({
+  farmer_name:     z.string().min(1, 'Farmer name is required'),
+  farmer_id:       z.string().optional(),
+  phone:           z.string().optional(),
+  community:       z.string().min(1, 'Community is required'),
+  boundary: z.object({
+    type:        z.string().optional(),
+    coordinates: z.array(z.unknown()).optional(),
+  }).nullable().optional(),
+  area_hectares:    z.number().positive().nullable().optional(),
+  legality_doc_url: z.string().url().nullable().optional(),
+});
+
+export const farmPatchSchema = z.object({
+  id:                z.union([z.string(), z.number()]).transform(v => Number(v)),
+  compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  compliance_notes:  z.string().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Batches (collection)
+// ---------------------------------------------------------------------------
+export const batchCreateSchema = z.object({
+  farm_id:      z.union([z.string(), z.number()]).transform(v => String(v)),
+  bags: z.array(z.object({
+    serial:       z.string().optional(),
+    weight:       z.number().optional(),
+    grade:        z.string().optional(),
+    is_compliant: z.boolean().optional(),
+  })).optional(),
+  notes:        z.string().optional(),
+  local_id:     z.string().optional(),
+  collected_at: z.string().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Shipments
+// ---------------------------------------------------------------------------
+export const shipmentCreateSchema = z.object({
+  destination_country:    z.string().min(1, 'Destination country is required'),
+  commodity:              z.string().min(1, 'Commodity is required'),
+  buyer_company:          z.string().optional(),
+  buyer_contact:          z.string().optional(),
+  target_regulations:     z.array(z.string()).optional(),
+  destination_port:       z.string().optional(),
+  notes:                  z.string().optional(),
+  estimated_ship_date:    z.string().optional(),
+  compliance_profile_id:  z.number().optional(),
+  contract_id:            z.number().optional(),
+  document_ids:           z.array(z.number()).optional(),
+});
+
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 export const bagCreateSchema = z.object({
   count: z.number().int().min(1).max(10_000),
@@ -210,6 +264,7 @@ export const yieldReviewSchema = z.object({
 // Helper: parse + return typed error
 // ---------------------------------------------------------------------------
 import { NextResponse } from 'next/server';
+import { ApiError } from '@/lib/api/errors';
 
 export function parseBody<T>(
   schema: z.ZodSchema<T>,
@@ -217,13 +272,7 @@ export function parseBody<T>(
 ): { data: T; error: null } | { data: null; error: NextResponse } {
   const result = schema.safeParse(body);
   if (!result.success) {
-    return {
-      data: null,
-      error: NextResponse.json(
-        { error: 'Validation failed', details: result.error.flatten().fieldErrors },
-        { status: 400 }
-      ),
-    };
+    return { data: null, error: ApiError.validation(result.error) };
   }
   return { data: result.data, error: null };
 }

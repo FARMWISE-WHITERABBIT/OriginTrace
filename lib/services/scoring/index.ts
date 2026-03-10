@@ -7,6 +7,14 @@ import type {
   ShipmentReadinessResult,
   FrameworkScorerContext,
 } from './types';
+import {
+  DIMENSION_WEIGHTS,
+  TRACEABILITY,
+  CHEMICAL_RISK,
+  STORAGE,
+  REGULATORY,
+  DECISION,
+} from './constants';
 import { scoreEUDR } from './eudr';
 import { scoreFSMA204 } from './fsma204';
 import { scoreUKEnvironmentAct } from './uk-environment';
@@ -124,12 +132,15 @@ function scoreTraceabilityIntegrity(
   }
 
   const score = clamp(
-    traceabilityScore * 0.4 + gpsScore * 0.3 + bagLinkScore * 0.2 + farmCountScore * 0.1,
+    traceabilityScore * TRACEABILITY.SCORE_WEIGHT_TRACEABILITY +
+    gpsScore          * TRACEABILITY.SCORE_WEIGHT_GPS +
+    bagLinkScore      * TRACEABILITY.SCORE_WEIGHT_BAG_LINK +
+    farmCountScore    * TRACEABILITY.SCORE_WEIGHT_FARM_COUNT,
     0,
     100
   );
 
-  if (traceabilityPct < 0.5) {
+  if (traceabilityPct < TRACEABILITY.HARD_FAIL_THRESHOLD) {
     riskFlags.push({
       severity: 'critical',
       category: 'Traceability',
@@ -156,7 +167,7 @@ function scoreChemicalRisk(
   const hasAflatoxin = doc_status['aflatoxin_test'] === true;
 
   if (hasLabTest) {
-    score += 40;
+    score += CHEMICAL_RISK.LAB_TEST_POINTS;
     details.push('Lab test certificate present');
   } else {
     details.push('Lab test certificate missing');
@@ -169,7 +180,7 @@ function scoreChemicalRisk(
   }
 
   if (hasPesticide) {
-    score += 30;
+    score += CHEMICAL_RISK.PESTICIDE_POINTS;
     details.push('Pesticide declaration present');
   } else {
     details.push('Pesticide declaration missing');
@@ -182,7 +193,7 @@ function scoreChemicalRisk(
   }
 
   if (hasAflatoxin) {
-    score += 30;
+    score += CHEMICAL_RISK.AFLATOXIN_POINTS;
     details.push('Aflatoxin test present');
   } else {
     details.push('Aflatoxin test missing');
@@ -195,7 +206,7 @@ function scoreChemicalRisk(
   }
 
   if (!hasLabTest && !hasPesticide && !hasAflatoxin) {
-    score = Math.max(score - 20, 0);
+    score = Math.max(score - CHEMICAL_RISK.NO_DOCS_PENALTY, 0);
     riskFlags.push({
       severity: 'critical',
       category: 'Chemical Safety',
@@ -329,8 +340,8 @@ function scoreStorageHandling(
 
   if (input.cold_chain_total_entries !== undefined && input.cold_chain_total_entries > 0) {
     const alertRate = (input.cold_chain_alert_count || 0) / input.cold_chain_total_entries;
-    if (alertRate > 0.2) {
-      const penalty = Math.min(alertRate * 30, 20);
+    if (alertRate > STORAGE.COLD_CHAIN_ALERT_THRESHOLD) {
+      const penalty = Math.min(alertRate * STORAGE.COLD_CHAIN_PENALTY_MULTIPLIER, STORAGE.COLD_CHAIN_MAX_PENALTY);
       score = Math.max(score - penalty, 0);
       riskFlags.push({
         severity: 'critical',
@@ -354,7 +365,7 @@ function scoreStorageHandling(
         is_hard_fail: false,
       });
     } else {
-      score = Math.min(score + 5, 100);
+      score = Math.min(score + STORAGE.COLD_CHAIN_CLEAN_BONUS, 100);
       details.push(`Cold chain: All ${input.cold_chain_total_entries} readings within safe thresholds (+5 bonus)`);
     }
   } else if (storage_controls['temperature_logged']) {
@@ -458,7 +469,7 @@ function scoreRegulatoryAlignment(
 
   let score = regulationScores.reduce((sum, s) => sum + s, 0) / regulationScores.length;
 
-  if (score < 50) {
+  if (score < REGULATORY.LOW_SCORE_THRESHOLD) {
     riskFlags.push({
       severity: 'critical',
       category: 'Regulatory',
@@ -469,10 +480,10 @@ function scoreRegulatoryAlignment(
 
   const rejectionRate = input.historical_rejection_rate;
   if (rejectionRate !== undefined && rejectionRate > 0) {
-    const penalty = Math.min(rejectionRate * 50, 25);
+    const penalty = Math.min(rejectionRate * REGULATORY.REJECTION_PENALTY_MULTIPLIER, REGULATORY.MAX_REJECTION_PENALTY);
     score = Math.max(score - penalty, 0);
     details.push(`Historical rejection rate: ${Math.round(rejectionRate * 100)}% (score penalty: -${Math.round(penalty)})`);
-    if (rejectionRate >= 0.3) {
+    if (rejectionRate >= REGULATORY.REJECTION_CRITICAL_THRESHOLD) {
       riskFlags.push({
         severity: 'critical',
         category: 'Historical Compliance',
@@ -549,7 +560,7 @@ function checkHardFails(input: ShipmentScoreInput, traceabilityScore: number): R
   if (items.length > 0) {
     const traceableCount = items.filter((i) => i.traceability_complete).length;
     const traceabilityPct = traceableCount / items.length;
-    if (traceabilityPct < 0.5) {
+    if (traceabilityPct < TRACEABILITY.HARD_FAIL_THRESHOLD) {
       const alreadyFlagged = flags.some(
         (f) => f.category === 'Traceability' && f.is_hard_fail
       );
@@ -575,10 +586,10 @@ function determineDecision(
   if (itemCount === 0) {
     return { decision: 'pending', label: 'Not Ready' };
   }
-  if (hasHardFails || score < 50) {
+  if (hasHardFails || score < DECISION.CONDITIONAL_FLOOR) {
     return { decision: 'no_go', label: 'Do Not Ship' };
   }
-  if (score >= 75) {
+  if (score >= DECISION.GO_THRESHOLD) {
     return { decision: 'go', label: 'Ready to Ship' };
   }
   return { decision: 'conditional', label: 'Ship with Conditions' };
@@ -629,11 +640,11 @@ export function computeShipmentReadiness(input: ShipmentScoreInput): ShipmentRea
   const regulatory = scoreRegulatoryAlignment(input);
 
   const dimensionResults = [
-    { name: 'Traceability Integrity', weight: 0.25, result: traceability },
-    { name: 'Chemical & Contamination Risk', weight: 0.25, result: chemical },
-    { name: 'Documentation Completeness', weight: 0.20, result: documentation },
-    { name: 'Storage & Handling Controls', weight: 0.15, result: storage },
-    { name: 'Regulatory Alignment', weight: 0.15, result: regulatory },
+    { name: 'Traceability Integrity',        weight: DIMENSION_WEIGHTS.TRACEABILITY_INTEGRITY,      result: traceability },
+    { name: 'Chemical & Contamination Risk', weight: DIMENSION_WEIGHTS.CHEMICAL_CONTAMINATION,      result: chemical },
+    { name: 'Documentation Completeness',    weight: DIMENSION_WEIGHTS.DOCUMENTATION_COMPLETENESS,  result: documentation },
+    { name: 'Storage & Handling Controls',   weight: DIMENSION_WEIGHTS.STORAGE_HANDLING,             result: storage },
+    { name: 'Regulatory Alignment',          weight: DIMENSION_WEIGHTS.REGULATORY_ALIGNMENT,        result: regulatory },
   ];
 
   const dimensions: ScoreDimension[] = dimensionResults.map((d) => ({
