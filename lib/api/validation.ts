@@ -227,3 +227,44 @@ export function parseBody<T>(
   }
   return { data: result.data, error: null };
 }
+
+// ---------------------------------------------------------------------------
+// Helper: parse URL search params with a Zod schema.
+//
+// Converts NextRequest.nextUrl.searchParams (or a plain URLSearchParams)
+// into a plain object and validates it, returning either typed data or a
+// ready-to-return 400 NextResponse.
+//
+// Usage:
+//   const { data, error } = parseQuery(request.nextUrl.searchParams, z.object({
+//     status: z.enum(['pending','approved']).optional(),
+//     page:   z.coerce.number().int().min(1).default(1),
+//   }));
+//   if (error) return error;
+//   // data is fully typed
+// ---------------------------------------------------------------------------
+export function parseQuery<T>(
+  searchParams: URLSearchParams,
+  schema: z.ZodSchema<T>
+): { data: T; error: null } | { data: null; error: NextResponse } {
+  // Convert URLSearchParams to a plain object.
+  // For repeated keys (e.g. ?id=1&id=2) we keep the last value to match
+  // the most common single-value pattern; callers needing arrays should
+  // use z.array() with a transform on a comma-separated value instead.
+  const raw: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    raw[key] = value;
+  });
+
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    return {
+      data: null,
+      error: NextResponse.json(
+        { error: 'Invalid query parameters', details: result.error.flatten().fieldErrors },
+        { status: 400 }
+      ),
+    };
+  }
+  return { data: result.data, error: null };
+}

@@ -46,7 +46,7 @@ export async function checkTierAccess(supabase: ReturnType<typeof createServiceC
     .eq('id', orgId)
     .single();
   if (!org) return false;
-  const settings = (org.settings as Record<string, any>) || {};
+  const settings = (org.settings as import('@/lib/types/organization').OrganizationSettings) || {};
   const tier = settings.subscription_tier || 'starter';
   const featureFlags = settings.feature_flags || {};
   const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };

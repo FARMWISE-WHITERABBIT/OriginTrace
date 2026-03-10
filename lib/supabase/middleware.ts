@@ -191,7 +191,7 @@ async function getOrgTier(_supabase: any, userId: string): Promise<string | unde
     if (!org) return undefined;
     const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
     const columnTier = org.subscription_tier as string | undefined;
-    const settingsTier = ((org.settings as Record<string, any>) || {}).subscription_tier as string | undefined;
+    const settingsTier = ((org.settings as import('@/lib/types/organization').OrganizationSettings) || {}).subscription_tier as string | undefined;
     const resolved = VALID_TIERS.includes(columnTier ?? '') ? columnTier : VALID_TIERS.includes(settingsTier ?? '') ? settingsTier : 'starter';
     return resolved;
   } catch (err: any) {
