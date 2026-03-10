@@ -3,8 +3,23 @@ import { MTNMoMoProvider } from './mtn-momo';
 import { OpayProvider } from './opay';
 import { PalmPayProvider } from './palmpay';
 
+// Paystack is exported separately — it handles subscription billing (payment links)
+// rather than farmer disbursements, so it does not implement the PaymentProvider
+// disbursement interface. Import directly from './paystack' where needed.
+export {
+  initializePayment as initializePaystackPayment,
+  verifyTransaction as verifyPaystackTransaction,
+  verifyWebhookSignature as verifyPaystackWebhook,
+  generateReference as generatePaystackReference,
+} from './paystack';
+export type {
+  PaystackPaymentLinkParams,
+  PaystackInitResponse,
+} from './paystack';
+
 export type { PaymentProvider, DisbursementRequest, DisbursementResponse } from './types';
 
+// Disbursement providers (farmer payments)
 const providers: Record<string, () => PaymentProvider> = {
   mtn_momo: () => new MTNMoMoProvider(),
   opay: () => new OpayProvider(),

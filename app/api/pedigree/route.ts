@@ -1,12 +1,27 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 
 export async function GET(request: NextRequest) {
   try {
+    // Auth guard — must come before any DB access.
+    // Previously this route called createAdminClient() with no auth check,
+    // exposing pedigree, farm boundary, and mass balance data to unauthenticated callers.
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user || !profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!profile.org_id) {
+      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    }
+
+    const tierBlock = await enforceTier(profile.org_id, 'pedigree');
+    if (tierBlock) return tierBlock;
+
     const supabaseAdmin = createAdminClient();
-    
+
     const { searchParams } = new URL(request.url);
     const pedigreeCode = searchParams.get('code');
     const finishedGoodId = searchParams.get('id');
