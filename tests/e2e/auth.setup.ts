@@ -7,11 +7,15 @@
  */
 
 import { test as setup, expect } from '@playwright/test';
-import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = dirname(__filename);
 
 const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    || 'obemog@gmail.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'IloveCloudsC69@';
-const AUTH_FILE      = path.join(__dirname, '.auth/admin.json');
+const AUTH_FILE      = join(__dirname, '.auth/admin.json');
 
 setup('authenticate as admin', async ({ page }) => {
   await page.goto('/auth/login');
