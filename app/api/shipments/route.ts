@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
-import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
+import { parsePagination } from '@/lib/api/validation';
 
 const shipmentCreateSchema = z.object({
   destination_country: z.string().min(1, 'Destination country is required'),
@@ -22,24 +23,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
     if (!shipmentRoles.includes(profile.role)) {
@@ -53,18 +40,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const { from, to, page, limit } = parsePagination(searchParams);
 
     let query = supabase
       .from('shipments')
-      .select('*, shipment_items(id)')
+      .select('*, shipment_items(id)', { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (status) {
       query = query.eq('status', status);
     }
 
-    const { data: shipments, error } = await query;
+    const { data: shipments, error, count } = await query;
 
     if (error) {
       console.error('Error fetching shipments:', error);
@@ -77,7 +66,7 @@ export async function GET(request: NextRequest) {
       shipment_items: undefined,
     }));
 
-    return NextResponse.json({ shipments: shipmentsWithCount });
+    return NextResponse.json({ shipments: shipmentsWithCount, pagination: { page, limit, total: count ?? 0 } });
 
   } catch (error) {
     console.error('Shipments API error:', error);
@@ -89,24 +78,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
     if (!shipmentWriteRoles.includes(profile.role)) {

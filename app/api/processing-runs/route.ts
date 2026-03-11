@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { nanoid } from 'nanoid';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { parsePagination } from '@/lib/api/validation';
 import { z } from 'zod';
 
 const processingRunCreateSchema = z.object({
@@ -40,16 +41,17 @@ export async function GET(request: NextRequest) {
           weight_contribution_kg,
           collection_batch_id
         )
-      `)
+      `, { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('processed_at', { ascending: false });
+      .order('processed_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Processing runs query error:', error);
       return NextResponse.json({ error: 'Failed to fetch processing runs' }, { status: 500 });
     }
 
-    return NextResponse.json({ processingRuns: processingRuns || [] });
+    return NextResponse.json({ processingRuns: processingRuns || [], pagination: { page, limit, total: count ?? 0 } });
     
   } catch (error) {
     console.error('Processing runs API error:', error);
@@ -124,7 +126,7 @@ export async function POST(request: NextRequest) {
     if (resolvedBatchIds && Array.isArray(resolvedBatchIds) && resolvedBatchIds.length > 0) {
       const { data: batches } = await supabaseAdmin
         .from('collection_batches')
-        .select('id, total_weight')
+        .select('id, total_weight'), { count: 'exact' }
         .in('id', resolvedBatchIds)
         .eq('org_id', profile.org_id);
 

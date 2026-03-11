@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
@@ -39,16 +40,17 @@ export async function GET(request: NextRequest) {
           recovery_rate,
           mass_balance_valid
         )
-      `)
+      `), { count: \'exact\' }
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Finished goods query error:', error);
       return NextResponse.json({ error: 'Failed to fetch finished goods' }, { status: 500 });
     }
 
-    return NextResponse.json({ finishedGoods: finishedGoods || [] });
+    return NextResponse.json({ finishedGoods: finishedGoods || [], pagination: { page, limit, total: count ?? 0 } });
     
   } catch (error) {
     console.error('Finished goods API error:', error);
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const { data: processingRun } = await supabaseAdmin
       .from('processing_runs')
-      .select('mass_balance_valid, org_id')
+      .select('mass_balance_valid, org_id'), { count: 'exact' }
       .eq('id', processing_run_id)
       .eq('org_id', profile.org_id)
       .single();

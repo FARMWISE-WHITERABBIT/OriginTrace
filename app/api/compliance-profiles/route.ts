@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 
@@ -119,16 +120,17 @@ export async function GET(request: NextRequest) {
 
     const { data: profiles, error } = await supabaseAdmin
       .from('compliance_profiles')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Compliance profiles fetch error:', error);
       return NextResponse.json({ error: 'Failed to fetch compliance profiles' }, { status: 500 });
     }
 
-    return NextResponse.json({ profiles: profiles || [], templates: TEMPLATES });
+    return NextResponse.json({ profiles: profiles || [], templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('Compliance profiles API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

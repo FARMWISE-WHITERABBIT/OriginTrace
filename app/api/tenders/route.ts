@@ -1,6 +1,7 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     const { data: buyerProfile } = await supabaseAdmin
       .from('buyer_profiles')
-      .select('buyer_org_id, role')
+      .select('buyer_org_id, role'), { count: 'exact' }
       .eq('user_id', user.id)
       .single();
 
@@ -62,7 +63,8 @@ export async function GET(request: NextRequest) {
         .from('tenders')
         .select('*')
         .eq('buyer_org_id', buyerProfile.buyer_org_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+      .range(from, to);
       tenders = data || [];
 
       for (const tender of tenders) {
@@ -107,7 +109,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ tenders });
+    return NextResponse.json({ tenders, pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('Tenders GET error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

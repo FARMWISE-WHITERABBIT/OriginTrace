@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient, getAuthenticatedUser, checkTierAccess } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
 import { coldChainLogSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(
@@ -9,24 +9,10 @@ export async function GET(
   try {
     const supabase = createServiceClient();
 
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
     if (!shipmentRoles.includes(profile.role)) {
@@ -77,24 +63,10 @@ export async function POST(
   try {
     const supabase = createServiceClient();
 
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
     if (!shipmentRoles.includes(profile.role)) {

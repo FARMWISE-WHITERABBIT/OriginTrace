@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
-import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { parsePagination } from '@/lib/api/validation';
 
 const batchCreateSchema = z.object({
   farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
@@ -22,24 +23,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
     if (tierBlock) return tierBlock;
@@ -48,6 +35,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const farmId = searchParams.get('farm_id');
     const agentId = searchParams.get('agent_id');
+    const { from, to, page, limit } = parsePagination(searchParams);
     
     let query = supabase
       .from('collection_batches')
@@ -55,9 +43,10 @@ export async function GET(request: NextRequest) {
         *,
         farm:farms(id, farmer_name, community),
         agent:profiles(id, full_name)
-      `)
+      `, { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
     
     if (status) {
       query = query.eq('status', status);
@@ -75,14 +64,14 @@ export async function GET(request: NextRequest) {
       query = query.eq('agent_id', profile.id);
     }
     
-    const { data: batches, error } = await query;
+    const { data: batches, error, count } = await query;
     
     if (error) {
       console.error('Error fetching batches:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
-    return NextResponse.json({ batches: batches || [] });
+    return NextResponse.json({ batches: batches || [], pagination: { page, limit, total: count ?? 0 } });
     
   } catch (error) {
     console.error('Batches API error:', error);
@@ -94,24 +83,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
     if (tierBlock) return tierBlock;
@@ -208,24 +183,10 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const tierBlock = await enforceTier(profile.org_id, 'smart_collect');
     if (tierBlock) return tierBlock;

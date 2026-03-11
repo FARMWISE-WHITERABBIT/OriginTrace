@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient, getAuthenticatedUser, getAuthenticatedProfile } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedProfile, getAuthenticatedProfile } from '@/lib/api-auth';
 
 async function getAggregatorData(supabase: any, orgId: string) {
   const now = new Date();

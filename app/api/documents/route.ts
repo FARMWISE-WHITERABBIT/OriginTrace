@@ -4,6 +4,7 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { parsePagination } from '@/lib/api/validation';
 import { documentCreateSchema, parseBody } from '@/lib/api/validation';
 import { requireRole } from '@/lib/rbac';
 
@@ -30,15 +31,17 @@ export async function GET(request: NextRequest) {
     if (tierBlock) return tierBlock;
 
     const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
     const typeFilter = searchParams.get('type');
     const statusFilter = searchParams.get('status');
     const linkedEntityType = searchParams.get('linked_entity_type');
 
     let query = supabaseAdmin
       .from('documents')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (typeFilter) {
       query = query.eq('document_type', typeFilter);
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('linked_entity_type', linkedEntityType);
     }
 
-    const { data: documents, error: docsError } = await query;
+    const { data: documents, error: docsError, count } = await query;
 
     if (docsError) {
       console.error('Documents fetch error:', docsError);
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
         .eq('id', doc.id);
     }
 
-    return NextResponse.json({ documents: updatedDocs });
+    return NextResponse.json({ documents: updatedDocs, pagination: { page, limit, total: count ?? 0 }, pagination: { page, limit, total: count ?? 0 } });
 
   } catch (error) {
     console.error('Documents API error:', error);

@@ -4,6 +4,7 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { parsePagination } from '@/lib/api/validation';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
@@ -49,12 +50,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const forExport = searchParams.get('forExport') === 'true';
+    const { from, to, page, limit } = parsePagination(searchParams);
 
     let query = supabaseAdmin
       .from('farms')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (status) {
       query = query.eq('compliance_status', status);
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('compliance_status', 'approved').not('boundary', 'is', null);
     }
 
-    const { data: farms, error: farmsError } = await query;
+    const { data: farms, error: farmsError, count } = await query;
 
     if (farmsError) {
       console.error('Farms fetch error:', farmsError);
@@ -74,7 +77,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ farms: farms || [] });
+    return NextResponse.json({ farms: farms || [], pagination: { page, limit, total: count ?? 0 } });
 
   } catch (error) {
     console.error('Farms API error:', error);

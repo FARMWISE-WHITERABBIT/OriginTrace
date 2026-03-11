@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import crypto from 'crypto';
 
@@ -78,16 +79,17 @@ export async function GET(request: NextRequest) {
           destination_country,
           buyer_company
         )
-      `)
+      `), { count: \'exact\' }
       .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('DPP fetch error:', error);
       return NextResponse.json({ error: 'Failed to fetch DPPs' }, { status: 500 });
     }
 
-    return NextResponse.json({ dpps: dpps || [] });
+    return NextResponse.json({ dpps: dpps || [], pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('DPP API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     const { data: fg } = await supabaseAdmin
       .from('finished_goods')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('id', finished_good_id)
       .eq('org_id', profile.org_id)
       .single();

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { parsePagination } from '@/lib/api/validation';
 import { z } from 'zod';
 
 const contractCreateSchema = z.object({
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     const { data: buyerProfile } = await supabaseAdmin
       .from('buyer_profiles')
-      .select('buyer_org_id')
+      .select('buyer_org_id'), { count: 'exact' }
       .eq('user_id', user.id)
       .single();
 
@@ -65,7 +66,8 @@ export async function GET(request: NextRequest) {
         .from('contracts')
         .select('*, exporter_org:organizations!contracts_exporter_org_id_fkey(id, name, slug)')
         .eq('buyer_org_id', buyerProfile.buyer_org_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+      .range(from, to);
       contracts = data || [];
     } else if (exporterProfile) {
       const { data } = await supabaseAdmin
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
       contracts = data || [];
     }
 
-    return NextResponse.json({ contracts });
+    return NextResponse.json({ contracts, pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('Contracts GET error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

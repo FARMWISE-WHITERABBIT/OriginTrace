@@ -16,6 +16,32 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+/**
+ * Parse page/limit from URLSearchParams and return Supabase `.range()` args.
+ *
+ * Usage in a GET handler:
+ *   const { from, to, page, limit } = parsePagination(request.nextUrl.searchParams);
+ *   const { data, count } = await supabase
+ *     .from('table')
+ *     .select('*', { count: 'exact' })
+ *     .range(from, to);
+ *   return NextResponse.json({ items: data, pagination: { page, limit, total: count ?? 0 } });
+ */
+export function parsePagination(searchParams: URLSearchParams): {
+  from: number;
+  to: number;
+  page: number;
+  limit: number;
+} {
+  const rawPage  = parseInt(searchParams.get('page')  ?? '', 10);
+  const rawLimit = parseInt(searchParams.get('limit') ?? '', 10);
+  const page  = Math.max(1, isNaN(rawPage)  ? 1  : rawPage);
+  const limit = Math.min(200, Math.max(1, isNaN(rawLimit) ? 50 : rawLimit));
+  const from  = (page - 1) * limit;
+  const to    = from + limit - 1;
+  return { from, to, page, limit };
+}
+
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
