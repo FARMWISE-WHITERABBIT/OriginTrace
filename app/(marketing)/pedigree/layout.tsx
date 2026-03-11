@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Complete product provenance with Digital Product Passports. JSON-LD structured data, public verification, sustainability claims, and QR-based chain of custody tracking.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/pedigree',
+  },
 };
 
 export default function PedigreeLayout({ children }: { children: React.ReactNode }) {

@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Supply chain transparency and compliance verification for textiles and apparel.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/industries/textiles',
+  },
 };
 
 export default function TextilesLayout({ children }: { children: React.ReactNode }) {

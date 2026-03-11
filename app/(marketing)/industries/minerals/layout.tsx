@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Origin verification and responsible sourcing for mineral supply chains.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/industries/minerals',
+  },
 };
 
 export default function MineralsLayout({ children }: { children: React.ReactNode }) {

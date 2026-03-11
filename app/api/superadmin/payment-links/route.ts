@@ -1,10 +1,11 @@
+import { createClient as createServerClient } from '@/lib/supabase/server';
 /**
  * POST /api/superadmin/payment-links — Generate Paystack payment link for org upgrade
  * GET  /api/superadmin/payment-links?org_id=xxx — List payment links
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { z } from 'zod';
 import { initializePayment, generateReference } from '@/lib/payments/paystack';
 import { logSuperadminAction } from '@/lib/superadmin-audit';

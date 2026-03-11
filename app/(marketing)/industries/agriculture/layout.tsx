@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'End-to-end traceability and compliance verification for agricultural supply chains.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/industries/agriculture',
+  },
 };
 
 export default function AgricultureLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildYieldFlagEmail } from '@/lib/email/templates';
@@ -21,26 +22,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabaseAdmin = createAdminClient();
     
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const body = await request.json();
     const { farm_id, batch_weight, commodity } = body;
@@ -180,45 +165,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = createAdminClient();
     
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile || !['admin', 'aggregator'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Admin or aggregator access required' }, { status: 403 });
-    }
-
-    const tierBlock = await enforceTier(profile.org_id, 'yield_alerts');
-    if (tierBlock) return tierBlock;
-
-    const { data: flaggedBatches, error } = await supabaseAdmin
-      .from('collection_batches')
-      .select(`
-        id,
-        farm_id,
-        total_weight,
-        status,
-        yield_flag_reason,
-        created_at,
-        farms (id, farmer_name, area_hectares, commodity)
-      `)
-      .eq('org_id', profile.org_id)
-      .eq('status', 'flagged_for_review')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Flagged batches query error:', error);
-      return NextResponse.json({ error: 'Failed to fetch flagged batches' }, { status: 500 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const { data: cropStandards } = await supabaseAdmin
       .from('crop_standards')

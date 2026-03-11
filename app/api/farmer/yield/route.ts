@@ -1,6 +1,7 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 export async function GET() {
   try {

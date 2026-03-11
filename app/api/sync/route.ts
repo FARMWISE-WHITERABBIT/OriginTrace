@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createServiceClient } from '@/lib/api-auth';
-import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
 const syncBatchSchema = z.object({
   local_id: z.string().min(1, 'local_id is required'),
@@ -34,29 +33,12 @@ const syncPutSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const serviceClient = createServiceClient();
 
-    const { data: profile, error: profileError } = await serviceClient
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
-    
     if (profile.role === 'admin' || profile.role === 'aggregator') {
       const { data: syncStatus, error } = await serviceClient
         .from('agent_sync_status')
@@ -97,29 +79,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const serviceClient = createServiceClient();
 
-    const { data: profile, error: profileError } = await serviceClient
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
-    
     const body = await request.json();
     const { device_id, pending_batches, pending_bags, app_version, is_online } = body;
     
@@ -155,29 +120,12 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const serviceClient = createServiceClient();
 
-    const { data: profile, error: profileError } = await serviceClient
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
-    
     const body = await request.json();
 
     const parsed = syncPutSchema.safeParse(body);

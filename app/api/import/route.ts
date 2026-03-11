@@ -1,3 +1,4 @@
+import { createClient as createServerClient } from '@/lib/supabase/server';
 /**
  * POST /api/import
  * Bulk import farmers/farms from CSV or Excel (KoBoToolbox migration support).
@@ -10,8 +11,8 @@
  * Returns: { imported, skipped, errors, preview (dry_run only) }
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { requireRole } from '@/lib/rbac';
 import * as XLSX from 'xlsx';
 

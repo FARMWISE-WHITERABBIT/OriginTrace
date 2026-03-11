@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -159,37 +159,11 @@ export async function POST(request: NextRequest) {
   if (rateCheck.limited) return rateCheck.response!;
 
   try {
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json(
-        { error: 'No organization assigned' },
-        { status: 403 }
-      );
-    }
 
     const deforestAllowedRoles = ['admin', 'aggregator', 'quality_manager'];
     if (!deforestAllowedRoles.includes(profile.role as string)) {
@@ -356,60 +330,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const farmId = searchParams.get('farm_id');
-
-    if (!farmId) {
-      return NextResponse.json(
-        { error: 'farm_id query parameter is required' },
-        { status: 400 }
-      );
-    }
-
-    const { data: farm, error: farmError } = await supabaseAdmin
-      .from('farms')
-      .select('id, deforestation_check, org_id')
-      .eq('id', farmId)
-      .single();
-
-    if (farmError || !farm) {
-      return NextResponse.json(
-        { error: 'Farm not found' },
-        { status: 404 }
-      );
-    }
-
-    if (farm.org_id !== profile.org_id) {
-      return NextResponse.json(
-        { error: 'Farm not found in your organization' },
-        { status: 403 }
-      );
-    }
 
     return NextResponse.json({
       farm_id: farm.id,

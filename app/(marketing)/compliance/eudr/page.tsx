@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +6,7 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import { FAQSchema } from '@/components/marketing/faq-schema';
+import { MarketingFAQAccordion } from '@/components/marketing/faq-accordion';
 import {
   MapPin,
   FileText,
@@ -31,8 +30,7 @@ import {
   Droplets,
   Beef,
 } from 'lucide-react';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 const commodities = [
   { name: 'Cocoa', icon: Bean },
@@ -138,37 +136,7 @@ const faqs = [
   },
 ];
 
-function FAQItem({ question, answer, index }: { question: string; answer: string; index: number }) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="border-b last:border-b-0" data-testid={`faq-item-${index}`}>
-      <button
-        className="w-full flex items-center justify-between gap-4 py-5 text-left hover-elevate rounded-md px-2"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        data-testid={`button-faq-toggle-${index}`}
-      >
-        <span className="font-medium text-sm md:text-base">{question}</span>
-        <ChevronDown className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <p className="px-2 pb-5 text-sm text-muted-foreground leading-relaxed" data-testid={`text-faq-answer-${index}`}>
-              {answer}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+
 
 export default function EUDRCompliancePage() {
   return (
@@ -508,13 +476,7 @@ export default function EUDRCompliancePage() {
             </FadeIn>
 
             <div className="max-w-3xl mx-auto">
-              <Card>
-                <CardContent className="p-4 md:p-6">
-                  {faqs.map((faq, i) => (
-                    <FAQItem key={i} question={faq.question} answer={faq.answer} index={i} />
-                  ))}
-                </CardContent>
-              </Card>
+              <MarketingFAQAccordion faqs={faqs} />
             </div>
           </div>
         </section>

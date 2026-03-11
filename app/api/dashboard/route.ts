@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
-import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createServiceClient, getAuthenticatedUser, getAuthenticatedProfile } from '@/lib/api-auth';
 
 async function getAggregatorData(supabase: any, orgId: string) {
   const now = new Date();
@@ -159,26 +158,10 @@ async function getWarehouseData(supabase: any, orgId: string) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');

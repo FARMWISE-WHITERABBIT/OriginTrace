@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Achieve FSMA 204 compliance with OriginTrace. Manage KDEs, CTEs, and FTL requirements for FDA food traceability.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance/usa',
+  },
 };
 
 export default function UsaLayout({ children }: { children: React.ReactNode }) {

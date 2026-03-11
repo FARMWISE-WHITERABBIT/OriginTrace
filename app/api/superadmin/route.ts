@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/api-auth';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
 
 async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {

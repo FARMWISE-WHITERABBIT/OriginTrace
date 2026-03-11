@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Prepare for the UK Environment Act forest risk commodity requirements with OriginTrace.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance/uk',
+  },
 };
 
 export default function UkLayout({ children }: { children: React.ReactNode }) {

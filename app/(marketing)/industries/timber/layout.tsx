@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Chain-of-custody traceability and deforestation-free verification for timber and forestry supply chains.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/industries/timber',
+  },
 };
 
 export default function TimberLayout({ children }: { children: React.ReactNode }) {

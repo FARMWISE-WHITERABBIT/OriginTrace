@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { bagCreateSchema, parseBody } from '@/lib/api/validation';
 
@@ -16,37 +16,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json(
-        { error: 'No organization assigned' },
-        { status: 403 }
-      );
-    }
 
     const tierBlock = await enforceTier(profile.org_id, 'bags');
     if (tierBlock) return tierBlock;
@@ -94,62 +68,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
-
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can generate bags' },
-        { status: 403 }
-      );
-    }
-
-    const tierBlock = await enforceTier(profile.org_id, 'bags');
-    if (tierBlock) return tierBlock;
-
-    const { data: org } = await supabaseAdmin
-      .from('organizations')
-      .select('slug')
-      .eq('id', profile.org_id)
-      .single();
-
-    const batchId = `B${Date.now().toString(36).toUpperCase()}`;
-    const prefix = org?.slug?.substring(0, 3).toUpperCase() || 'FW';
-
-    const newBags = Array.from({ length: count }, (_, i) => ({
-      org_id: profile.org_id,
-      serial: `${prefix}-${batchId}-${String(i + 1).padStart(4, '0')}`,
-      status: 'unused',
-      batch_id: batchId,
-    }));
-
-    const { data: createdBags, error: insertError } = await supabaseAdmin
-      .from('bags')
-      .insert(newBags)
-      .select();
-
-    if (insertError) {
-      console.error('Bags insert error:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to create bags', details: insertError.message },
-        { status: 500 }
-      );
-    }
 
     return NextResponse.json({ 
       bags: createdBags,

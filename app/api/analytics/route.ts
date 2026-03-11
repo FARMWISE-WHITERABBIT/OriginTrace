@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
-import { createServiceClient } from '@/lib/api-auth';
-import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { requireRole, ROLES } from '@/lib/rbac';
 
 function getPeriodStart(period: string): string {
@@ -95,26 +94,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const authClient = await createServerClient();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, org_id, role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    if (!profile.org_id) {
-      return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    }
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const _roleError = requireRole(profile, ['admin', 'aggregator', 'quality_manager', 'compliance_officer']);
     if (_roleError) return _roleError;

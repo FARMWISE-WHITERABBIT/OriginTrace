@@ -1,11 +1,12 @@
+import { createClient as createServerClient } from '@/lib/supabase/server';
 /**
  * POST /api/subscription/request
  * Org admin requests a plan upgrade. Sends email notification to the superadmin
  * team so they can follow up with a custom payment link.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { z } from 'zod';
 import { sendEmail } from '@/lib/email/resend-client';
 

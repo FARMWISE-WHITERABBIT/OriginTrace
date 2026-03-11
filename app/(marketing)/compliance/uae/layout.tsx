@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Navigate UAE food import regulations with confidence. Meet ESMA standards, halal certification, and municipality permit requirements.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance/uae',
+  },
 };
 
 export default function UaeLayout({ children }: { children: React.ReactNode }) {

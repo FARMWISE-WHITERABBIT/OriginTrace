@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +26,7 @@ import {
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { CardFAQList } from '@/components/marketing/faq-accordion';
 
 const coveredCommodities = [
   { name: 'Cocoa', desc: 'Beans and derived products including butter, powder, and chocolate' },
@@ -155,7 +153,6 @@ const faqItems = [
 ];
 
 export default function UKCompliancePage() {
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   return (
     <>
@@ -492,36 +489,7 @@ export default function UKCompliancePage() {
               </div>
             </FadeIn>
 
-            <div className="space-y-3">
-              {faqItems.map((faq, index) => (
-                <FadeIn key={index} delay={index * 0.05}>
-                  <Card>
-                    <CardContent className="p-0">
-                      <button
-                        onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                        className="w-full flex items-start justify-between gap-4 p-5 text-left"
-                        aria-expanded={openFaqIndex === index}
-                        data-testid={`button-faq-${index}`}
-                      >
-                        <span className="text-sm font-medium text-slate-900 dark:text-white leading-relaxed">
-                          {faq.question}
-                        </span>
-                        <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 mt-0.5 transition-transform duration-200 ${
-                          openFaqIndex === index ? 'rotate-180' : ''
-                        }`} />
-                      </button>
-                      {openFaqIndex === index && (
-                        <div className="px-5 pb-5 -mt-1">
-                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed" data-testid={`text-faq-answer-${index}`}>
-                            {faq.answer}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </FadeIn>
-              ))}
-            </div>
+            <CardFAQList items={faqItems} />
           </div>
         </section>
 

@@ -1,13 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 type AuthResult =
   | { error: NextResponse }
   | { user: { id: string }; profile: { org_id: string; role: string }; supabaseAdmin: SupabaseClient };
 
-async function getAuthAndProfile(): Promise<AuthResult> {
+async function getAuthAndProfile(request: NextRequest): Promise<AuthResult> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -15,29 +15,12 @@ async function getAuthAndProfile(): Promise<AuthResult> {
     return { error: NextResponse.json({ error: 'Supabase is not properly configured' }, { status: 500 }) };
   }
 
-  const supabase = await createServerClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return { error: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
-  }
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  if (!profile) return { error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
+  if (!profile.org_id) return { error: NextResponse.json({ error: 'No organization assigned' }, { status: 403 }) };
 
   const supabaseAdmin = createAdminClient();
-
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('org_id, role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return { error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
-  }
-
-  if (!profile.org_id) {
-    return { error: NextResponse.json({ error: 'No organization assigned' }, { status: 403 }) };
-  }
-
   return { user, profile: profile as { org_id: string; role: string }, supabaseAdmin };
 }
 
@@ -47,7 +30,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const auth = await getAuthAndProfile();
+    const auth = await getAuthAndProfile(request);
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
 
@@ -77,7 +60,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const auth = await getAuthAndProfile();
+    const auth = await getAuthAndProfile(request);
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
 
@@ -141,7 +124,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const auth = await getAuthAndProfile();
+    const auth = await getAuthAndProfile(request);
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
 

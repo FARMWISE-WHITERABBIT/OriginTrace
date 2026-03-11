@@ -1,6 +1,7 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 async function getBuyerProfile(supabaseAdmin: any, userId: string) {
   const { data } = await supabaseAdmin

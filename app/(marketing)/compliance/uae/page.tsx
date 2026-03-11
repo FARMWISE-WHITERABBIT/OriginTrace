@@ -1,6 +1,4 @@
-'use client';
-
-import { useState } from 'react';
+import { CardFAQList } from '@/components/marketing/faq-accordion';
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
@@ -174,7 +172,6 @@ const faqs = [
 ];
 
 export default function UAECompliancePage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <>
@@ -491,33 +488,8 @@ export default function UAECompliancePage() {
                 </p>
               </div>
             </FadeIn>
-            <div className="max-w-3xl mx-auto space-y-3">
-              {faqs.map((faq, index) => (
-                <FadeIn key={index} delay={index * 0.05}>
-                  <Card data-testid={`faq-item-${index}`}>
-                    <CardContent className="p-0">
-                      <button
-                        onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                        className="w-full flex items-center justify-between gap-4 p-5 text-left"
-                        aria-expanded={openFaq === index}
-                        data-testid={`button-faq-${index}`}
-                      >
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{faq.question}</span>
-                        <ChevronDown
-                          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${
-                            openFaq === index ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </button>
-                      {openFaq === index && (
-                        <div className="px-5 pb-5">
-                          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.answer}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </FadeIn>
-              ))}
+            <div className="max-w-3xl mx-auto">
+              <CardFAQList items={faqs} />
             </div>
           </div>
         </section>

@@ -18,7 +18,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'OriginTrace — Supply Chain Compliance & Traceability Platform',
     description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
+  },  alternates: {
+    canonical: 'https://origintrace.trade',
   },
+
 };
 
 export default function MarketingLayout({

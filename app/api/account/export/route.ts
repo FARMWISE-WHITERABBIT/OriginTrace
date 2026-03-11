@@ -1,10 +1,11 @@
+import { createClient as createServerClient } from '@/lib/supabase/server';
 /**
  * GET /api/account/export — GDPR Article 20: Right to data portability
  * Returns all personal data held for the authenticated user as JSON.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {

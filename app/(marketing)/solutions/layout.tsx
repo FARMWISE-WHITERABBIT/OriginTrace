@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Role-specific traceability and compliance solutions for exporters, processors, compliance teams, and trade associations.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/solutions',
+  },
 };
 
 export default function SolutionsLayout({ children }: { children: React.ReactNode }) {

@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Maintain batch integrity, manage recovery standards, and generate verifiable pedigrees for finished goods.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/processors',
+  },
 };
 
 export default function ProcessorsLayout({ children }: { children: React.ReactNode }) {

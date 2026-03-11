@@ -1,11 +1,12 @@
+import { createClient as createServerClient } from '@/lib/supabase/server';
 /**
  * DELETE /api/account — GDPR Article 17: Right to erasure
  * Deletes the authenticated user's profile and Supabase auth account.
  * Org admins cannot self-delete — they must transfer ownership first.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { z } from 'zod';
 
 const deleteSchema = z.object({

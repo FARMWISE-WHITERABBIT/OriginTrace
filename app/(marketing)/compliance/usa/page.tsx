@@ -1,6 +1,4 @@
-'use client';
-
-import { useState } from 'react';
+import { SimpleFAQList } from '@/components/marketing/faq-accordion';
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
@@ -149,7 +147,6 @@ const faqItems = [
 ];
 
 export default function USACompliancePage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <>
@@ -487,31 +484,7 @@ export default function USACompliancePage() {
                 FSMA 204 FAQ
               </h2>
             </FadeIn>
-            <div className="space-y-3">
-              {faqItems.map((faq, i) => (
-                <FadeIn key={i} delay={i * 0.05}>
-                  <div
-                    className="border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800/50 overflow-hidden"
-                    data-testid={`faq-item-${i}`}
-                  >
-                    <button
-                      className="w-full flex items-center justify-between gap-4 p-5 text-left"
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      aria-expanded={openFaq === i}
-                      data-testid={`button-faq-${i}`}
-                    >
-                      <span className="font-semibold text-slate-900 dark:text-white text-sm md:text-base">{faq.question}</span>
-                      <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`} />
-                    </button>
-                    {openFaq === i && (
-                      <div className="px-5 pb-5">
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
+            <SimpleFAQList items={faqItems} testIdPrefix="faq" />
           </div>
         </section>
 

@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Meet EU Deforestation Regulation requirements with GPS polygon mapping, DDS generation, and full farm-to-export traceability.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance/eudr',
+  },
 };
 
 export default function EudrLayout({ children }: { children: React.ReactNode }) {

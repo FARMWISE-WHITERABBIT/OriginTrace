@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: "Navigate China's food import regulations with OriginTrace. Meet GACC facility registration and labeling standards.",
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance/china',
+  },
 };
 
 export default function ChinaLayout({ children }: { children: React.ReactNode }) {

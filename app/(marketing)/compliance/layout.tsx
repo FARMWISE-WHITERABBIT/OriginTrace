@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'One platform for multi-market supply chain compliance. Cover EUDR, FSMA 204, UK Environment Act, China, and UAE regulations.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/compliance',
+  },
 };
 
 export default function ComplianceLayout({ children }: { children: React.ReactNode }) {

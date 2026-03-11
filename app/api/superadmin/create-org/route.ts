@@ -1,6 +1,7 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildWelcomeEmail } from '@/lib/email/templates';
 import { logSuperadminAction } from '@/lib/superadmin-audit';

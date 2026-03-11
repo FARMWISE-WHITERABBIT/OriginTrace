@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     description: 'Schedule a personalized OriginTrace demo. See polygon mapping, bag-level traceability, and compliance scoring in action.',
     type: 'website',
   },
+  alternates: {
+    canonical: 'https://origintrace.trade/demo',
+  },
 };
 
 export default function DemoLayout({
