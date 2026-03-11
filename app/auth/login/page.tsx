@@ -156,16 +156,13 @@ export default function LoginPage() {
             </Button>
             <div className="text-sm text-muted-foreground text-center space-y-1">
               <p>
-                Don't have an account?{' '}
-                <Link href="/auth/register" className="text-primary hover:underline" data-testid="link-register">
-                  Sign up
-                </Link>
-              </p>
-              <p>
                 Have an invite code?{' '}
                 <Link href="/auth/join" className="text-primary hover:underline" data-testid="link-join">
                   Join an organization
                 </Link>
+              </p>
+              <p className="text-xs text-muted-foreground/70" data-testid="text-contact-prompt">
+                New to OriginTrace? Contact us to get access.
               </p>
             </div>
           </CardFooter>

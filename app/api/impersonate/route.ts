@@ -1,4 +1,5 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { signCookiePayload, verifyCookiePayload } from '@/lib/security/signed-cookie';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
@@ -31,20 +32,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ impersonating: false });
     }
     
-    const impersonationData = JSON.parse(impersonationCookie.value);
+    const impersonationData = await verifyCookiePayload(impersonationCookie.value);
     
-    if (new Date(impersonationData.expires_at) < new Date()) {
+    if (!impersonationData) {
+      // Invalid or tampered cookie — clear it
+      const response = NextResponse.json({ impersonating: false, invalid: true });
+      response.cookies.delete(IMPERSONATION_COOKIE);
+      return response;
+    }
+
+    if (new Date((impersonationData as any).expires_at) < new Date()) {
       const response = NextResponse.json({ impersonating: false, expired: true });
       response.cookies.delete(IMPERSONATION_COOKIE);
       return response;
     }
     
+    const imp = impersonationData as any;
     return NextResponse.json({
       impersonating: true,
-      org_id: impersonationData.org_id,
-      org_name: impersonationData.org_name,
-      original_admin_id: impersonationData.original_admin_id,
-      expires_at: impersonationData.expires_at
+      org_id: imp.org_id,
+      org_name: imp.org_name,
+      original_admin_id: imp.original_admin_id,
+      expires_at: imp.expires_at
     });
     
   } catch (error) {
@@ -130,7 +139,8 @@ export async function POST(request: NextRequest) {
         message: `Now viewing as ${org.name}`
       });
       
-      response.cookies.set(IMPERSONATION_COOKIE, JSON.stringify(impersonationData), {
+      const signedValue = await signCookiePayload(impersonationData);
+      response.cookies.set(IMPERSONATION_COOKIE, signedValue, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -147,7 +157,7 @@ export async function POST(request: NextRequest) {
       
       if (impersonationCookie) {
         try {
-          const impData = JSON.parse(impersonationCookie.value);
+          const impData = await verifyCookiePayload(impersonationCookie.value) as any;
           try {
             await supabaseAdmin.from('audit_logs').insert({
               user_id: user.id,

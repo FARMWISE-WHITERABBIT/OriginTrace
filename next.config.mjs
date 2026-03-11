@@ -76,6 +76,21 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/auth/register',
+        destination: '/auth/login',
+        permanent: true,
+      },
+      {
+        source: '/auth/buyer-register',
+        destination: '/auth/login',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },

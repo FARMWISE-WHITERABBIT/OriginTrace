@@ -32,6 +32,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { hasAccess, type AppRole } from '@/lib/rbac';
 import { checkRouteAccess } from '@/lib/config/tier-gating';
 import { createClient } from '@supabase/supabase-js';
+import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 // ---------------------------------------------------------------------------
 // JWT claim helpers
@@ -216,8 +217,8 @@ export async function updateSession(request: NextRequest) {
     let isImpersonating = false;
     if (impersonationCookie) {
       try {
-        const impData = JSON.parse(impersonationCookie.value);
-        if (new Date(impData.expires_at) > new Date()) {
+        const impData = await verifyCookiePayload(impersonationCookie.value) as any;
+        if (impData && new Date(impData.expires_at) > new Date()) {
           isImpersonating = true;
         }
       } catch {}
