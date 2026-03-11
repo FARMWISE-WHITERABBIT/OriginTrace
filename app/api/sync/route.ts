@@ -137,100 +137,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const { batches } = parsed.data;
-    
-    const results = [];
-    
-    for (const batch of batches) {
-      const { local_id, batch_id, farm_id, commodity, state, lga, community, gps_lat, gps_lng, contributors, bags, notes, collected_at } = batch;
-      
-      const { data: existingBatch } = await serviceClient
-        .from('collection_batches')
-        .select('id')
-        .eq('local_id', local_id)
-        .eq('org_id', profile.org_id)
-        .single();
-      
-      if (existingBatch) {
-        results.push({ local_id, status: 'already_synced', id: existingBatch.id });
-        continue;
-      }
-      
-      const totalWeight = contributors?.reduce((sum: number, c: any) => sum + (c.weight_kg || 0), 0) 
-        || bags?.reduce((sum: number, bag: any) => sum + (bag.weight || 0), 0) || 0;
-      const bagCount = contributors?.reduce((sum: number, c: any) => sum + (c.bag_count || 0), 0) 
-        || bags?.length || 0;
-      
-      const parsedFarmId = farm_id && String(farm_id) !== 'unknown' ? (parseInt(String(farm_id)) || null) : null;
-      
-      const { data: newBatch, error: batchError } = await serviceClient
-        .from('collection_batches')
-        .insert({
-          org_id: profile.org_id,
-          farm_id: parsedFarmId || 0,
-          agent_id: user.id,
-          batch_id: batch_id || null,
-          status: 'collecting',
-          commodity: commodity || null,
-          gps_lat: gps_lat || null,
-          gps_lng: gps_lng || null,
-          estimated_bags: bagCount,
-          estimated_weight: totalWeight || null,
-          total_weight: totalWeight,
-          bag_count: bagCount,
-          notes,
-          local_id,
-          synced_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
-      if (batchError) {
-        console.error('Batch sync error:', batchError);
-        results.push({ local_id, status: 'error', error: 'Failed to sync batch' });
-        continue;
-      }
-      
-      if (contributors && contributors.length > 0) {
-        for (const contrib of contributors) {
-          if ((contrib.bag_count || 0) > 0) {
-            try {
-              await serviceClient
-                .from('batch_contributions')
-                .insert({
-                  batch_id: newBatch.id,
-                  farm_id: contrib.farm_id ? parseInt(String(contrib.farm_id)) || null : null,
-                  farmer_name: contrib.farmer_name,
-                  weight_kg: contrib.weight_kg,
-                  bag_count: contrib.bag_count,
-                  org_id: profile.org_id,
-                });
-            } catch (contribErr) {
-              console.error('Failed to insert batch contribution:', contribErr);
-            }
-          }
-        }
-      }
-      
-      if (bags && bags.length > 0) {
-        for (const bag of bags) {
-          if (bag.serial) {
-            await serviceClient
-              .from('bags')
-              .update({
-                collection_batch_id: newBatch.id,
-                weight_kg: bag.weight,
-                grade: bag.grade,
-                status: 'collected'
-              })
-              .eq('id', bag.serial)
-              .eq('org_id', profile.org_id);
-          }
-        }
-      }
-      
-      results.push({ local_id, status: 'synced', id: newBatch.id });
+
+    // Atomic RPC: replaces the N×M loop (per-batch select + insert + N contrib inserts + M bag updates).
+    // All batches processed in a single DB round-trip. Idempotent on local_id.
+    const { data: rpcResults, error: syncError } = await serviceClient.rpc('sync_batches_atomic', {
+      p_org_id:  profile.org_id,
+      p_user_id: user.id,
+      p_batches: batches,
+    });
+
+    if (syncError) {
+      console.error('Sync RPC error:', syncError);
+      return NextResponse.json({ error: 'Sync failed', detail: syncError.message }, { status: 500 });
     }
-    
+
+    const results: any[] = Array.isArray(rpcResults) ? rpcResults : [];
+
     const warnings: Array<{ type: string; message: string; details?: any }> = [];
     
     const syncedFarmIds = batches

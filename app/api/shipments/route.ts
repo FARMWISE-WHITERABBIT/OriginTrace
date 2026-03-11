@@ -107,49 +107,34 @@ export async function POST(request: NextRequest) {
 
     const shipmentCode = `SHP-${profile.org_id}-${Date.now().toString(36).toUpperCase()}`;
 
-    const insertData: Record<string, any> = {
-      org_id: profile.org_id,
-      created_by: profile.id,
-      shipment_code: shipmentCode,
-      status: 'draft',
-      destination_country,
-      commodity,
-    };
-
-    if (buyer_company !== undefined) insertData.buyer_company = buyer_company;
-    if (buyer_contact !== undefined) insertData.buyer_contact = buyer_contact;
-    if (target_regulations !== undefined) insertData.target_regulations = target_regulations;
-    if (destination_port !== undefined) insertData.destination_port = destination_port;
-    if (notes !== undefined) insertData.notes = notes;
-    if (estimated_ship_date !== undefined) insertData.estimated_ship_date = estimated_ship_date;
-    if (compliance_profile_id !== undefined) insertData.compliance_profile_id = compliance_profile_id;
-
-    const { data: shipment, error: shipmentError } = await supabase
-      .from('shipments')
-      .insert(insertData)
-      .select()
-      .single();
+    // Atomic RPC: shipment INSERT + contract link + document links in one transaction.
+    // Partial failures (e.g. contract link error) no longer leave orphan shipments.
+    const { data: shipmentData, error: shipmentError } = await supabase.rpc(
+      'create_shipment_atomic',
+      {
+        p_org_id:               profile.org_id,
+        p_created_by:           profile.id,
+        p_shipment_code:        shipmentCode,
+        p_destination_country:  destination_country,
+        p_commodity:            commodity,
+        p_buyer_company:        buyer_company        ?? null,
+        p_buyer_contact:        buyer_contact        ?? null,
+        p_target_regulations:   target_regulations   ?? null,
+        p_destination_port:     destination_port     ?? null,
+        p_notes:                notes                ?? null,
+        p_estimated_ship_date:  estimated_ship_date  ?? null,
+        p_compliance_profile_id: compliance_profile_id ?? null,
+        p_contract_id:          contract_id          ?? null,
+        p_document_ids:         document_ids         ?? null,
+      }
+    );
 
     if (shipmentError) {
       console.error('Error creating shipment:', shipmentError);
       return NextResponse.json({ error: shipmentError.message }, { status: 500 });
     }
 
-    if (contract_id && shipment) {
-      await supabase
-        .from('contract_shipments')
-        .insert({ contract_id, shipment_id: shipment.id });
-    }
-
-    if (document_ids && document_ids.length > 0 && shipment) {
-      for (const docId of document_ids) {
-        await supabase
-          .from('documents')
-          .update({ linked_entity_type: 'shipment', linked_entity_id: shipment.id })
-          .eq('id', docId)
-          .eq('org_id', profile.org_id);
-      }
-    }
+    const shipment = shipmentData as any;
 
     await logAuditEvent({
       orgId: profile.org_id,
