@@ -69,3 +69,8 @@ vite.config.ts.*
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Playwright auth state (contains session cookies)
+tests/e2e/.auth/
+playwright-report/
+test-results/
