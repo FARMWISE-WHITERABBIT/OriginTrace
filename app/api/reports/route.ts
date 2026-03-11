@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 
 function getDateRange(period: string): { start: string; end: string } {
   const now = new Date();
@@ -17,8 +17,8 @@ function getDateRange(period: string): { start: string; end: string } {
 }
 
 export async function GET(request: NextRequest) {
-  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 15 });
-  if (rateCheck.limited) return rateCheck.response!;
+  const rateCheck = await checkRateLimit(request, null, RATE_LIMIT_PRESETS.reports);
+  if (rateCheck) return rateCheck;
 
   try {
     const supabase = createAdminClient();

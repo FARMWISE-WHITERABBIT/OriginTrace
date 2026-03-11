@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 
 const coordinatePairSchema = z.tuple([
@@ -155,8 +155,8 @@ function getFallbackResult(areaHectares: number, countryCode: string = 'NG'): De
 }
 
 export async function POST(request: NextRequest) {
-  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 10 });
-  if (rateCheck.limited) return rateCheck.response!;
+  const rateCheck = await checkRateLimit(request, null, RATE_LIMIT_PRESETS.deforestationCheck);
+  if (rateCheck) return rateCheck;
 
   try {
     const { user, profile } = await getAuthenticatedProfile(request);

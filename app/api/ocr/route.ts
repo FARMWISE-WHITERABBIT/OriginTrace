@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import OpenAI from 'openai';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 
 const ocrSchema = z.object({
@@ -15,8 +15,8 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
-  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 20 });
-  if (rateCheck.limited) return rateCheck.response!;
+  const rateCheck = await checkRateLimit(request, null, RATE_LIMIT_PRESETS.ocr);
+  if (rateCheck) return rateCheck;
 
   try {
     const supabase = await createClient();

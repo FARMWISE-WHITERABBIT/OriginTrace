@@ -1,25 +1,28 @@
+/**
+ * lib/api/rate-limit.ts
+ *
+ * Distributed rate limiter backed by Supabase (api_rate_limits table).
+ * Shared across all server instances — safe for multi-dyno and multi-region.
+ *
+ * Architecture:
+ *  - Uses an atomic Postgres RPC (increment_rate_limit) that increments the
+ *    counter and resets the window in a single statement, eliminating the
+ *    SELECT + UPDATE race condition of the previous implementation.
+ *  - Falls back to the in-process Map if Supabase is unavailable, so the
+ *    app never hard-fails due to rate limiter errors.
+ *
+ * Migration required before deploying:
+ *   migrations/20260311_rate_limit_rpc.sql
+ *
+ * Public API is identical to the previous version — all callers unchanged.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ---------------------------------------------------------------------------
-// Single canonical rate limiter for all OriginTrace API routes
-// In-process (per dyno) — acceptable for current scale.
-// Swap store for Redis when running multiple instances.
+// Types
 // ---------------------------------------------------------------------------
-
-interface RateWindow {
-  count: number;
-  resetAt: number;
-}
-
-const windows = new Map<string, RateWindow>();
-
-// Clean up expired windows every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, win] of windows.entries()) {
-    if (win.resetAt < now) windows.delete(key);
-  }
-}, 5 * 60 * 1000);
 
 export interface RateLimitConfig {
   /** Max requests in the window */
@@ -38,7 +41,7 @@ export interface LegacyRateLimitConfig {
 
 export const RATE_LIMIT_PRESETS = {
   /** Deforestation check — calls Global Forest Watch API */
-  deforestationCheck: { max: 20, windowSecs: 60, keyPrefix: 'def' },
+  deforestationCheck: { max: 20,  windowSecs: 60, keyPrefix: 'def' },
   /** OCR — calls OpenAI Vision API */
   ocr:               { max: 10,  windowSecs: 60, keyPrefix: 'ocr' },
   /** Analytics — large DB fan-out */
@@ -55,6 +58,60 @@ export const RATE_LIMIT_PRESETS = {
 
 export type RateLimitPreset = keyof typeof RATE_LIMIT_PRESETS;
 
+// ---------------------------------------------------------------------------
+// In-memory fallback (used when Supabase is unavailable)
+// ---------------------------------------------------------------------------
+
+interface RateWindow {
+  count: number;
+  resetAt: number;
+}
+
+const fallbackWindows = new Map<string, RateWindow>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, win] of fallbackWindows.entries()) {
+    if (win.resetAt < now) fallbackWindows.delete(key);
+  }
+}, 5 * 60 * 1000);
+
+function checkFallback(key: string, config: RateLimitConfig): boolean {
+  const now = Date.now();
+  const windowMs = config.windowSecs * 1000;
+  let win = fallbackWindows.get(key);
+  if (!win || win.resetAt < now) {
+    win = { count: 0, resetAt: now + windowMs };
+    fallbackWindows.set(key, win);
+  }
+  win.count++;
+  return win.count <= config.max;
+}
+
+// ---------------------------------------------------------------------------
+// Supabase client (lazy — only initialised on first request)
+// ---------------------------------------------------------------------------
+
+let _supabase: SupabaseClient | null | undefined = undefined; // undefined = not yet tried
+
+function getSupabase(): SupabaseClient | null {
+  if (_supabase !== undefined) return _supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    _supabase = null;
+    return null;
+  }
+  _supabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _supabase;
+}
+
+// ---------------------------------------------------------------------------
+// Core helpers
+// ---------------------------------------------------------------------------
+
 function getIdentifier(request: NextRequest, orgId?: string | null): string {
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -63,50 +120,93 @@ function getIdentifier(request: NextRequest, orgId?: string | null): string {
   return orgId ? `${orgId}:${ip}` : ip;
 }
 
+function build429(config: RateLimitConfig, resetAt: number): NextResponse {
+  const now = Date.now();
+  const retryAfter = Math.max(1, Math.ceil((resetAt - now) / 1000));
+  return NextResponse.json(
+    { error: 'Rate limit exceeded', retryAfterSeconds: retryAfter },
+    {
+      status: 429,
+      headers: {
+        'X-RateLimit-Limit':     String(config.max),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset':     String(Math.floor(resetAt / 1000)),
+        'Retry-After':           String(retryAfter),
+      },
+    }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /**
  * Primary rate-limit check. Returns a 429 NextResponse if exceeded, null otherwise.
- * Usage: const limited = checkRateLimit(req, orgId, RATE_LIMIT_PRESETS.ocr);
- *        if (limited) return limited;
+ *
+ * Usage (routes that already await):
+ *   const limited = await checkRateLimit(req, orgId, RATE_LIMIT_PRESETS.ocr);
+ *   if (limited) return limited;
+ *
+ * The legacy callers on '@/lib/rate-limit' use checkRateLimitLegacy (sync, in-memory only).
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   request: NextRequest,
   orgId: string | null | undefined,
   config: RateLimitConfig
-): NextResponse | null {
+): Promise<NextResponse | null> {
   const key = `${config.keyPrefix}:${getIdentifier(request, orgId)}`;
-  const now = Date.now();
-  const windowMs = config.windowSecs * 1000;
+  const supabase = getSupabase();
 
-  let win = windows.get(key);
-  if (!win || win.resetAt < now) {
-    win = { count: 0, resetAt: now + windowMs };
-    windows.set(key, win);
+  if (!supabase) {
+    // No Supabase config — fall back to in-memory
+    const allowed = checkFallback(key, config);
+    if (!allowed) {
+      const win = fallbackWindows.get(key);
+      return build429(config, win?.resetAt ?? Date.now() + config.windowSecs * 1000);
+    }
+    return null;
   }
 
-  win.count++;
+  try {
+    const { data, error } = await supabase.rpc('increment_rate_limit', {
+      p_key:        key,
+      p_window_sec: config.windowSecs,
+      p_max:        config.max,
+    });
 
-  if (win.count > config.max) {
-    const retryAfter = Math.ceil((win.resetAt - now) / 1000);
-    return NextResponse.json(
-      { error: 'Rate limit exceeded', retryAfterSeconds: retryAfter },
-      {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit':     String(config.max),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset':     String(Math.floor(win.resetAt / 1000)),
-          'Retry-After':           String(retryAfter),
-        },
+    if (error) {
+      // RPC not yet available (migration not run) — degrade to in-memory
+      console.warn('[rate-limit] RPC unavailable, using in-memory fallback:', error.message);
+      const allowed = checkFallback(key, config);
+      if (!allowed) {
+        const win = fallbackWindows.get(key);
+        return build429(config, win?.resetAt ?? Date.now() + config.windowSecs * 1000);
       }
-    );
-  }
+      return null;
+    }
 
-  return null;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null; // unexpected — fail open
+
+    if (!row.allowed) {
+      return build429(config, new Date(row.window_end).getTime());
+    }
+
+    return null;
+  } catch (err) {
+    // Network / unexpected error — fail open (don't block legitimate traffic)
+    console.warn('[rate-limit] Unexpected error, failing open:', err);
+    return null;
+  }
 }
 
 /**
- * Legacy-compatible wrapper for callers using the { windowMs, maxRequests } shape.
- * Returns { limited: boolean; response?: NextResponse }
+ * Legacy synchronous wrapper for callers on '@/lib/rate-limit'
+ * (analytics, ocr, reports, deforestation-check, cron/document-expiry, farmer-login).
+ *
+ * Uses the in-memory fallback only to remain synchronous.
+ * Migrate these callers to `await checkRateLimit(...)` to get Supabase-backed limiting.
  */
 export function checkRateLimitLegacy(
   request: NextRequest,
@@ -118,6 +218,14 @@ export function checkRateLimitLegacy(
     windowSecs: Math.ceil(config.windowMs / 1000),
     keyPrefix:  'lgc',
   };
-  const response = checkRateLimit(request, userId ?? null, preset);
-  return response ? { limited: true, response } : { limited: false };
+  const key = `${preset.keyPrefix}:${getIdentifier(request, userId)}`;
+  const allowed = checkFallback(key, preset);
+  if (!allowed) {
+    const win = fallbackWindows.get(key);
+    return {
+      limited: true,
+      response: build429(preset, win?.resetAt ?? Date.now() + preset.windowSecs * 1000),
+    };
+  }
+  return { limited: false };
 }

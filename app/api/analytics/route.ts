@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { requireRole, ROLES } from '@/lib/rbac';
@@ -89,8 +89,8 @@ function groupByInterval(
 }
 
 export async function GET(request: NextRequest) {
-  const rateCheck = checkRateLimit(request, { windowMs: 60_000, maxRequests: 30 });
-  if (rateCheck.limited) return rateCheck.response!;
+  const rateCheck = await checkRateLimit(request, profile?.org_id ?? null, RATE_LIMIT_PRESETS.analytics);
+  if (rateCheck) return rateCheck;
 
   try {
     const supabase = createServiceClient();
