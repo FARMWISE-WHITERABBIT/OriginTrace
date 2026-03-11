@@ -1,22 +1,14 @@
-import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 export default defineConfig({
   test: {
-    environment: 'node',
-    globals: true,
-    setupFiles: ['./tests/setup.ts'],
-    exclude: ['node_modules', 'dist', 'tests/e2e/**'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov'],
-      include: ['lib/**/*.ts', 'app/api/**/*.ts'],
-      exclude: ['lib/email/templates.ts', '**/*.d.ts'],
-    },
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    exclude: ['node_modules', 'dist', 'tests/e2e/**', '.cache/**'],
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, '.'),
     },
   },
-});
+})
