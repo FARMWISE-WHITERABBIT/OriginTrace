@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     if (resolvedBatchIds && Array.isArray(resolvedBatchIds) && resolvedBatchIds.length > 0) {
       const { data: batches } = await supabaseAdmin
         .from('collection_batches')
-        .select('id, total_weight'), { count: 'exact' }
+        .select('id, total_weight')
         .in('id', resolvedBatchIds)
         .eq('org_id', profile.org_id);
 

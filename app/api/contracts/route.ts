@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     const { data: buyerProfile } = await supabaseAdmin
       .from('buyer_profiles')
-      .select('buyer_org_id'), { count: 'exact' }
+      .select('buyer_org_id')
       .eq('user_id', user.id)
       .single();
 

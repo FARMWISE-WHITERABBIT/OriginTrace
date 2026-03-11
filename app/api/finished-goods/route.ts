@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
           recovery_rate,
           mass_balance_valid
         )
-      `), { count: \'exact\' }
+      `)
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const { data: processingRun } = await supabaseAdmin
       .from('processing_runs')
-      .select('mass_balance_valid, org_id'), { count: 'exact' }
+      .select('mass_balance_valid, org_id')
       .eq('id', processing_run_id)
       .eq('org_id', profile.org_id)
       .single();

@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           destination_country,
           buyer_company
         )
-      `), { count: \'exact\' }
+      `)
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: false })
       .range(from, to);
