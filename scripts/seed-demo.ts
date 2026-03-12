@@ -106,6 +106,33 @@ async function wipeDemoData() {
 // ─── Seed ──────────────────────────────────────────────────────────────────
 async function seed() {
 
+  // ── 0. Pre-flight: check extended columns exist ───────────────────────────
+  section('Pre-flight schema check');
+  const schemaChecks: Array<[string, string]> = [
+    ['collection_batches', 'batch_code'],
+    ['collection_batches', 'yield_validated'],
+    ['processing_runs',    'run_code'],
+    ['processing_runs',    'mass_balance_valid'],
+    ['finished_goods',     'pedigree_code'],
+    ['digital_product_passports', 'dpp_code'],
+    ['farm_conflicts',     'overlap_ratio'],
+  ];
+  let missingCols = false;
+  for (const [table, col] of schemaChecks) {
+    const { error } = await db.from(table).select(col).limit(0);
+    if (error?.message?.includes(`Could not find the '${col}'`)) {
+      warn(`MISSING: ${table}.${col} — run migrations/20260312_seed_schema_extensions.sql first`);
+      missingCols = true;
+    } else {
+      ok(`${table}.${col} ✓`);
+    }
+  }
+  if (missingCols) {
+    console.error('\n❌  Schema extensions missing. Run this in Supabase SQL Editor:\n');
+    console.error('    Copy and paste: migrations/20260312_seed_schema_extensions.sql\n');
+    process.exit(1);
+  }
+
   // ── 1. Organizations ──────────────────────────────────────────────────────
   section('Organizations');
   // Columns: name, slug, subscription_status, subscription_tier
@@ -245,10 +272,13 @@ async function seed() {
 
   const batches = await ins('collection_batches', batchDefs.map(b => ({
     org_id: eId, farm_id: b.farm.id, agent_id: agentId,
-    batch_code: b.code, commodity: 'cocoa', grade: b.grade,
+    // base columns (always exist)
     total_weight: b.weight, bag_count: b.bags, status: b.status,
-    yield_validated: b.validated, yield_flag_reason: (b as any).flag || null,
     local_id: randomUUID(), collected_at: daysAgo(b.daysBack), synced_at: daysAgo(b.daysBack),
+    // extended columns (added by migration 20260312_seed_schema_extensions.sql)
+    batch_code: b.code, commodity: 'cocoa', grade: b.grade,
+    yield_validated: b.validated, yield_flag_reason: (b as any).flag || null,
+    notes: `${b.code} — ${b.grade || 'ungraded'} cocoa, ${b.weight}kg${(b as any).flag ? ' [FLAGGED]' : ''}`,
   })), '12 batches');
 
   // ── 6. Bags ───────────────────────────────────────────────────────────────
