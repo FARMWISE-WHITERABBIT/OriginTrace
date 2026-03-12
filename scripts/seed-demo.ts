@@ -128,7 +128,8 @@ async function seed() {
   // NOTE: 'org_admin' and 'buyer_admin' are INVALID - use 'admin' and 'buyer'
   // buyer_profiles.role CHECK: buyer_admin/buyer_viewer
   const PASS = 'Demo1234!';
-  const getOrCreateUser = async (email: string, profileRole: string, orgId: string | null, buyerOrgId?: string): Promise<string> => {
+  // Returns { userId, profileId } — profileId is profiles.id (used as FK in collection_batches etc.)
+  const getOrCreateUser = async (email: string, profileRole: string, orgId: string | null, buyerOrgId?: string): Promise<{ userId: string; profileId: string | null }> => {
     const { data: listRes } = await db.auth.admin.listUsers() as any;
     const existing = (listRes?.users || []).find((u: any) => u.email === email);
     let userId: string;
@@ -141,14 +142,19 @@ async function seed() {
     }
     if (buyerOrgId) {
       await db.from('buyer_profiles').upsert({ user_id: userId, buyer_org_id: buyerOrgId, full_name: email.split('@')[0], role: 'buyer_admin' }, { onConflict: 'user_id' });
+      return { userId, profileId: null };
     } else {
-      await db.from('profiles').upsert({ user_id: userId, org_id: orgId, role: profileRole, full_name: email.split('@')[0] }, { onConflict: 'user_id' });
+      const upsertRes = await db.from('profiles').upsert({ user_id: userId, org_id: orgId, role: profileRole, full_name: email.split('@')[0] }, { onConflict: 'user_id' }).select('id').single();
+      const profileId = (upsertRes.data as any)?.id ?? null;
+      return { userId, profileId };
     }
-    return userId;
   };
-  const adminId = await getOrCreateUser('demo.admin@origintrace-demo.com', 'admin', eId);
-  const agentId = await getOrCreateUser('demo.agent@origintrace-demo.com', 'agent', eId);
+  const { userId: adminUserId, profileId: adminProfileId } = await getOrCreateUser('demo.admin@origintrace-demo.com', 'admin', eId);
+  const { userId: agentUserId, profileId: agentProfileId } = await getOrCreateUser('demo.agent@origintrace-demo.com', 'agent', eId);
   await getOrCreateUser('demo.buyer@nibseurope-demo.com', 'buyer', null, bId);
+  // adminId / agentId = profiles.id (FK used by collection_batches, processing_runs, etc.)
+  const adminId  = adminProfileId ?? adminUserId;
+  const agentId  = agentProfileId ?? agentUserId;
 
   // 3. Compliance Profiles
   section('Compliance Profiles');
@@ -172,7 +178,7 @@ async function seed() {
   ];
   const farms = await ins('farms', farmDefs.map(f => ({
     org_id: eId, farmer_name: f.name, phone: f.phone, community: f.community,
-    area_hectares: f.area, compliance_status: f.status, compliance_notes: (f as any).notes || null, created_by: adminId,
+    area_hectares: f.area, compliance_status: f.status, compliance_notes: (f as any).notes || null, created_by: adminUserId,
     boundary: { type: 'Polygon', coordinates: [[[f.lng-0.002,f.lat-0.002],[f.lng+0.002,f.lat-0.002],[f.lng+0.002,f.lat+0.002],[f.lng-0.002,f.lat+0.002],[f.lng-0.002,f.lat-0.002]]] },
     created_at: daysAgo(rnd(60,120)),
   })), '8 farms');
@@ -180,32 +186,12 @@ async function seed() {
 
   // 5. Collection Batches
   section('Collection Batches');
-  // Probe the live DB to find which status values are actually accepted
-  // (live constraint may differ from schema.sql)
-  const allCandidates = ['collecting','completed','aggregated','shipped','dispatched','pending','processed','active'];
-  const validStatuses: string[] = [];
-  for (const s of allCandidates) {
-    const { error } = await db.from('collection_batches').insert({
-      org_id: eId, farm_id: (fA as any).id, agent_id: agentId,
-      total_weight: 0, bag_count: 0, status: s, local_id: randomUUID(),
-    }).select('id').single();
-    if (error?.message?.includes('status_check') || error?.message?.includes('check constraint')) {
-      warn(`status '${s}' INVALID on live DB (constraint mismatch)`);
-    } else {
-      validStatuses.push(s);
-      // Delete the probe row
-      if (!error) {
-        const { data: probeRow } = await db.from('collection_batches').select('id').eq('org_id', eId).eq('total_weight', 0).eq('bag_count', 0).eq('status', s).single();
-        if (probeRow) await db.from('collection_batches').delete().eq('id', (probeRow as any).id);
-      }
-    }
-  }
-  ok(`Valid batch statuses on live DB: ${validStatuses.join(', ')}`);
-
-  // Pick statuses guaranteed to exist (fallback to 'completed' if nothing else works)
-  const doneStatus   = validStatuses.find(s => ['shipped','aggregated','completed'].includes(s)) ?? 'completed';
-  const activeStatus = validStatuses.includes('collecting') ? 'collecting' : doneStatus;
-  const partialStatus = validStatuses.find(s => ['completed','aggregated'].includes(s)) ?? doneStatus;
+  // Live DB constraint is ('collecting', 'completed') only
+  // schema.sql also lists 'aggregated' and 'shipped' but the live DB was deployed
+  // before those were added. Use only the guaranteed-valid values.
+  const doneStatus   = 'completed';
+  const activeStatus = 'collecting';
+  const partialStatus = 'completed';
 
   const batchDefs = [
     { farm: fA, code: 'WR-BCH-001', weight: 820,  bags: 41, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 50 },
@@ -252,9 +238,9 @@ async function seed() {
 
   // 7. Processing Runs
   section('Processing Runs');
-  const [run1] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-001', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 2630, output_weight_kg: 2265, recovery_rate: 86.1, mass_balance_valid: true, processed_at: daysAgo(35), created_by: adminId, notes: 'EU export batch. Grade 1/2 blend, sun-dried 7 days.' }, 'RUN-001 valid');
-  const [run2] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-002', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 2040, output_weight_kg: 1815, recovery_rate: 88.9, mass_balance_valid: true, processed_at: daysAgo(28), created_by: adminId, notes: 'US export batch. Premium Grade 1 only.' }, 'RUN-002 valid');
-  const [run3] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-003', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 720, output_weight_kg: 432, recovery_rate: 60.0, mass_balance_valid: false, processed_at: daysAgo(20), created_by: adminId, notes: 'UK batch — mass balance INVALID. 60% recovery below 75% threshold.' }, 'RUN-003 FAIL');
+  const [run1] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-001', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 2630, output_weight_kg: 2265, recovery_rate: 86.1, mass_balance_valid: true, processed_at: daysAgo(35), created_by: adminUserId, notes: 'EU export batch. Grade 1/2 blend, sun-dried 7 days.' }, 'RUN-001 valid');
+  const [run2] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-002', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 2040, output_weight_kg: 1815, recovery_rate: 88.9, mass_balance_valid: true, processed_at: daysAgo(28), created_by: adminUserId, notes: 'US export batch. Premium Grade 1 only.' }, 'RUN-002 valid');
+  const [run3] = await ins('processing_runs', { org_id: eId, run_code: 'WR-RUN-003', facility_name: 'WhiteRabbit Processing — Sagamu', facility_location: 'Sagamu, Ogun State, Nigeria', commodity: 'cocoa', input_weight_kg: 720, output_weight_kg: 432, recovery_rate: 60.0, mass_balance_valid: false, processed_at: daysAgo(20), created_by: adminUserId, notes: 'UK batch — mass balance INVALID. 60% recovery below 75% threshold.' }, 'RUN-003 FAIL');
 
   // processing_run_batches cols: processing_run_id, collection_batch_id, weight_contribution_kg
   // NOTE: no org_id column
@@ -269,7 +255,7 @@ async function seed() {
 
   // 8. Finished Goods
   section('Finished Goods');
-  const fgBase = { org_id: eId, created_by: adminId };
+  const fgBase = { org_id: eId, created_by: adminUserId };
   const [fg1] = await ins('finished_goods', { ...fgBase, processing_run_id: (run1 as any).id, pedigree_code: 'PED-WR-001', product_name: 'Certified Cocoa Beans — EU Grade', product_type: 'dried_beans', weight_kg: 2265, batch_number: 'FG-2026-001', lot_number: 'LOT-EU-001', production_date: dateStr(35), destination_country: 'Germany', buyer_company: 'NibsEurope GmbH', pedigree_verified: true }, 'FG1 EU');
   const [fg2] = await ins('finished_goods', { ...fgBase, processing_run_id: (run2 as any).id, pedigree_code: 'PED-WR-002', product_name: 'Premium Cocoa Beans — US Grade', product_type: 'dried_beans', weight_kg: 1815, batch_number: 'FG-2026-002', lot_number: 'LOT-US-001', production_date: dateStr(28), destination_country: 'United States', buyer_company: 'CacaoAmerica LLC', pedigree_verified: true }, 'FG2 US');
   const [fg3] = await ins('finished_goods', { ...fgBase, processing_run_id: (run3 as any).id, pedigree_code: 'PED-WR-003', product_name: 'Cocoa Beans — UK Batch (HOLD)', product_type: 'dried_beans', weight_kg: 432, batch_number: 'FG-2026-003', lot_number: 'LOT-UK-001', production_date: dateStr(20), destination_country: 'United Kingdom', buyer_company: 'BritishChoc Ltd', pedigree_verified: false, verification_notes: 'Mass balance invalid — under investigation.' }, 'FG3 UK HOLD');
@@ -279,10 +265,10 @@ async function seed() {
   section('Digital Product Passports');
   // status CHECK: draft/active/revoked  (NOT 'issued')
   await ins('digital_product_passports', [
-    { org_id: eId, finished_good_id: (fg1 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { deforestation_free: true, eudr_compliant: true }, certifications: ['Rainforest Alliance','EUDR-compliant'], processing_history: [{ run_code: 'WR-RUN-001', input_kg: 2630, output_kg: 2265, recovery_rate: 86.1 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(50) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(35) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: true }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Certified Cocoa Beans — EU Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(10), created_by: adminId },
-    { org_id: eId, finished_good_id: (fg2 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { fsma_traceable: true, cte_records: 4 }, certifications: ['UTZ Certified','FSMA-204-traceable'], processing_history: [{ run_code: 'WR-RUN-002', input_kg: 2040, output_kg: 1815, recovery_rate: 88.9 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(40) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(28) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Premium Cocoa Beans — US Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(8), created_by: adminId },
-    { org_id: eId, finished_good_id: (fg3 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { mass_balance_hold: true }, certifications: [], processing_history: [{ run_code: 'WR-RUN-003', input_kg: 720, output_kg: 432, recovery_rate: 60.0 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(35) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(20) }], regulatory_compliance: { pedigree_verified: false, mass_balance_valid: false, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Cocoa Beans — UK Batch (HOLD)', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'draft', issued_at: null, created_by: adminId },
-    { org_id: eId, finished_good_id: (fg4 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { halal_certified: true, esma_compliant: true }, certifications: ['Halal Certified','UAE ESMA'], processing_history: [{ run_code: 'WR-RUN-001', input_kg: 2630, output_kg: 2265, recovery_rate: 86.1 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(50) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(35) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Certified Cocoa Beans — UAE Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(7), created_by: adminId },
+    { org_id: eId, finished_good_id: (fg1 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { deforestation_free: true, eudr_compliant: true }, certifications: ['Rainforest Alliance','EUDR-compliant'], processing_history: [{ run_code: 'WR-RUN-001', input_kg: 2630, output_kg: 2265, recovery_rate: 86.1 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(50) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(35) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: true }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Certified Cocoa Beans — EU Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(10), created_by: adminUserId },
+    { org_id: eId, finished_good_id: (fg2 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { fsma_traceable: true, cte_records: 4 }, certifications: ['UTZ Certified','FSMA-204-traceable'], processing_history: [{ run_code: 'WR-RUN-002', input_kg: 2040, output_kg: 1815, recovery_rate: 88.9 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(40) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(28) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Premium Cocoa Beans — US Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(8), created_by: adminUserId },
+    { org_id: eId, finished_good_id: (fg3 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { mass_balance_hold: true }, certifications: [], processing_history: [{ run_code: 'WR-RUN-003', input_kg: 720, output_kg: 432, recovery_rate: 60.0 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(35) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(20) }], regulatory_compliance: { pedigree_verified: false, mass_balance_valid: false, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Cocoa Beans — UK Batch (HOLD)', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'draft', issued_at: null, created_by: adminUserId },
+    { org_id: eId, finished_good_id: (fg4 as any).id, dpp_code: 'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category: 'dried_beans', origin_country: 'NG', sustainability_claims: { halal_certified: true, esma_compliant: true }, certifications: ['Halal Certified','UAE ESMA'], processing_history: [{ run_code: 'WR-RUN-001', input_kg: 2630, output_kg: 2265, recovery_rate: 86.1 }], chain_of_custody: [{ stage: 'collection', actor: 'WhiteRabbit Demo Co.', date: daysAgo(50) },{ stage: 'processing', actor: 'WhiteRabbit Processing', date: daysAgo(35) }], regulatory_compliance: { pedigree_verified: true, mass_balance_valid: true, dds_submitted: false }, machine_readable_data: { '@context': 'https://schema.org', '@type': 'Product', name: 'Certified Cocoa Beans — UAE Grade', countryOfOrigin: 'Nigeria' }, passport_version: 1, status: 'active', issued_at: daysAgo(7), created_by: adminUserId },
   ], '4 DPPs');
 
   // 10. Shipments
@@ -292,10 +278,10 @@ async function seed() {
   // estimated_ship_date is DATE (not TIMESTAMPTZ)
   // NOTE: no doc_status, storage_controls, or remediation_items columns
   const [ship1,ship2,ship3,ship4] = await ins('shipments', [
-    { org_id: eId, shipment_code: 'WR-SHP-2026-001', status: 'ready', destination_country: 'Germany', destination_port: 'Hamburg', commodity: 'Cocoa Beans', buyer_company: 'NibsEurope GmbH', buyer_contact: 'demo.buyer@nibseurope-demo.com', target_regulations: ['EUDR','Rainforest Alliance'], estimated_ship_date: dateStr(-14), compliance_profile_id: (eudrProf as any).id, readiness_score: 91, readiness_decision: 'go', risk_flags: [], score_breakdown: [{name:'Traceability',score:95},{name:'Documentation',score:90},{name:'Deforestation',score:100},{name:'Regulatory',score:88},{name:'Operational',score:82}], notes: 'EU shipment fully cleared. Ready for booking.', created_by: adminId },
-    { org_id: eId, shipment_code: 'WR-SHP-2026-002', status: 'ready', destination_country: 'United States', destination_port: 'New York', commodity: 'Cocoa Beans', buyer_company: 'CacaoAmerica LLC', buyer_contact: 'imports@cacaoamerica-demo.com', target_regulations: ['FSMA 204','Lacey Act'], estimated_ship_date: dateStr(-21), compliance_profile_id: (fsmaProf as any).id, readiness_score: 68, readiness_decision: 'conditional_go', risk_flags: [{severity:'critical',category:'Documentation',message:'FDA Prior Notice not submitted. Required 8 hours before US port arrival.',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Bill of Lading not uploaded.',is_hard_fail:false}], score_breakdown: [{name:'Traceability',score:88},{name:'Documentation',score:40},{name:'Deforestation',score:95},{name:'Regulatory',score:55},{name:'Operational',score:70}], notes: 'Awaiting FDA Prior Notice submission.', created_by: adminId },
-    { org_id: eId, shipment_code: 'WR-SHP-2026-003', status: 'draft', destination_country: 'United Kingdom', destination_port: 'Tilbury', commodity: 'Cocoa Beans', buyer_company: 'BritishChoc Ltd', buyer_contact: 'ops@britishchoc-demo.com', target_regulations: ['UK Environment Act'], estimated_ship_date: dateStr(-7), compliance_profile_id: (ukProf as any).id, readiness_score: 28, readiness_decision: 'no_go', risk_flags: [{severity:'critical',category:'Deforestation',message:'Farm in supply chain has active deforestation risk.',is_hard_fail:true},{severity:'critical',category:'Mass Balance',message:'Processing Run WR-RUN-003 invalid mass balance (60% recovery, min 75% required).',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Due Diligence Statement missing.',is_hard_fail:false}], score_breakdown: [{name:'Traceability',score:40},{name:'Documentation',score:20},{name:'Deforestation',score:0},{name:'Regulatory',score:35},{name:'Operational',score:50}], notes: 'Blocked — resolve deforestation risk and mass balance error.', created_by: adminId },
-    { org_id: eId, shipment_code: 'WR-SHP-2026-004', status: 'draft', destination_country: 'United Arab Emirates', destination_port: 'Jebel Ali', commodity: 'Cocoa Beans', buyer_company: 'GulfChocolate FZCO', buyer_contact: 'trade@gulfchoc-demo.com', target_regulations: ['UAE Halal','ESMA'], estimated_ship_date: dateStr(-30), compliance_profile_id: null, readiness_score: null, readiness_decision: 'pending', risk_flags: [], score_breakdown: null, notes: 'Draft. Documents not yet uploaded.', created_by: adminId },
+    { org_id: eId, shipment_code: 'WR-SHP-2026-001', status: 'ready', destination_country: 'Germany', destination_port: 'Hamburg', commodity: 'Cocoa Beans', buyer_company: 'NibsEurope GmbH', buyer_contact: 'demo.buyer@nibseurope-demo.com', target_regulations: ['EUDR','Rainforest Alliance'], estimated_ship_date: dateStr(-14), compliance_profile_id: (eudrProf as any).id, readiness_score: 91, readiness_decision: 'go', risk_flags: [], score_breakdown: [{name:'Traceability',score:95},{name:'Documentation',score:90},{name:'Deforestation',score:100},{name:'Regulatory',score:88},{name:'Operational',score:82}], notes: 'EU shipment fully cleared. Ready for booking.', created_by: adminUserId },
+    { org_id: eId, shipment_code: 'WR-SHP-2026-002', status: 'ready', destination_country: 'United States', destination_port: 'New York', commodity: 'Cocoa Beans', buyer_company: 'CacaoAmerica LLC', buyer_contact: 'imports@cacaoamerica-demo.com', target_regulations: ['FSMA 204','Lacey Act'], estimated_ship_date: dateStr(-21), compliance_profile_id: (fsmaProf as any).id, readiness_score: 68, readiness_decision: 'conditional_go', risk_flags: [{severity:'critical',category:'Documentation',message:'FDA Prior Notice not submitted. Required 8 hours before US port arrival.',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Bill of Lading not uploaded.',is_hard_fail:false}], score_breakdown: [{name:'Traceability',score:88},{name:'Documentation',score:40},{name:'Deforestation',score:95},{name:'Regulatory',score:55},{name:'Operational',score:70}], notes: 'Awaiting FDA Prior Notice submission.', created_by: adminUserId },
+    { org_id: eId, shipment_code: 'WR-SHP-2026-003', status: 'draft', destination_country: 'United Kingdom', destination_port: 'Tilbury', commodity: 'Cocoa Beans', buyer_company: 'BritishChoc Ltd', buyer_contact: 'ops@britishchoc-demo.com', target_regulations: ['UK Environment Act'], estimated_ship_date: dateStr(-7), compliance_profile_id: (ukProf as any).id, readiness_score: 28, readiness_decision: 'no_go', risk_flags: [{severity:'critical',category:'Deforestation',message:'Farm in supply chain has active deforestation risk.',is_hard_fail:true},{severity:'critical',category:'Mass Balance',message:'Processing Run WR-RUN-003 invalid mass balance (60% recovery, min 75% required).',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Due Diligence Statement missing.',is_hard_fail:false}], score_breakdown: [{name:'Traceability',score:40},{name:'Documentation',score:20},{name:'Deforestation',score:0},{name:'Regulatory',score:35},{name:'Operational',score:50}], notes: 'Blocked — resolve deforestation risk and mass balance error.', created_by: adminUserId },
+    { org_id: eId, shipment_code: 'WR-SHP-2026-004', status: 'draft', destination_country: 'United Arab Emirates', destination_port: 'Jebel Ali', commodity: 'Cocoa Beans', buyer_company: 'GulfChocolate FZCO', buyer_contact: 'trade@gulfchoc-demo.com', target_regulations: ['UAE Halal','ESMA'], estimated_ship_date: dateStr(-30), compliance_profile_id: null, readiness_score: null, readiness_decision: 'pending', risk_flags: [], score_breakdown: null, notes: 'Draft. Documents not yet uploaded.', created_by: adminUserId },
   ], '4 shipments');
 
   // shipment_items cols: shipment_id, item_type, finished_good_id, weight_kg
@@ -316,14 +302,14 @@ async function seed() {
   // linked_entity_type CHECK: shipment/farm/farmer/organization/batch
   // NOTE: no shipment_id, type, or label columns
   await ins('documents', [
-    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-001.pdf', uploaded_by: adminId },
-    { org_id: eId, title: 'Due Diligence Statement',         document_type: 'due_diligence_statement',   status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-001.pdf',   uploaded_by: adminId },
-    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-001.pdf',   uploaded_by: adminId },
-    { org_id: eId, title: 'Quality Certificate',             document_type: 'quality_certificate',       status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/qual-001.pdf',  uploaded_by: adminId },
-    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-002.pdf', uploaded_by: adminId },
-    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-002.pdf',   uploaded_by: adminId },
-    { org_id: eId, title: 'Phytosanitary Certificate (REJ)', document_type: 'phytosanitary_certificate', status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-003.pdf', uploaded_by: adminId },
-    { org_id: eId, title: 'Due Diligence Statement (DRAFT)', document_type: 'due_diligence_statement',   status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-003-draft.pdf', uploaded_by: adminId },
+    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-001.pdf', uploaded_by: adminUserId },
+    { org_id: eId, title: 'Due Diligence Statement',         document_type: 'due_diligence_statement',   status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-001.pdf',   uploaded_by: adminUserId },
+    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-001.pdf',   uploaded_by: adminUserId },
+    { org_id: eId, title: 'Quality Certificate',             document_type: 'quality_certificate',       status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/qual-001.pdf',  uploaded_by: adminUserId },
+    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-002.pdf', uploaded_by: adminUserId },
+    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-002.pdf',   uploaded_by: adminUserId },
+    { org_id: eId, title: 'Phytosanitary Certificate (REJ)', document_type: 'phytosanitary_certificate', status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-003.pdf', uploaded_by: adminUserId },
+    { org_id: eId, title: 'Due Diligence Statement (DRAFT)', document_type: 'due_diligence_statement',   status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-003-draft.pdf', uploaded_by: adminUserId },
   ], '8 documents');
 
   // 12. Contracts
@@ -334,8 +320,8 @@ async function seed() {
   //       quality_requirements (JSONB), required_certifications (JSONB), delivery_deadline (DATE),
   //       destination_port, compliance_profile_id, status, price_per_unit, currency, notes, created_by
   // NOTE: no contract_code, title, price_per_mt_usd, incoterm, origin_port, quality_spec, start_date, end_date, signed_at
-  const [contract1] = await ins('contracts', { exporter_org_id: eId, buyer_org_id: bId, contract_reference: 'WR-CON-2026-001', status: 'active', commodity: 'Cocoa Beans', quantity_mt: 25, price_per_unit: 3800, currency: 'USD', quality_requirements: { min_grade: 'Grade 1', max_moisture: 7.5, min_fat: 55 }, required_certifications: ['Rainforest Alliance'], delivery_deadline: dateStr(-120), destination_port: 'Hamburg', compliance_profile_id: (eudrProf as any).id, notes: 'Annual supply. Delivery in 5MT tranches.', created_by: adminId }, 'contract 1 active');
-  await ins('contracts', { exporter_org_id: eId, buyer_org_id: bId, contract_reference: 'WR-CON-2026-002', status: 'draft', commodity: 'Cocoa Beans', quantity_mt: 5, price_per_unit: 3950, currency: 'USD', quality_requirements: { min_grade: 'Grade 1', max_moisture: 7.0 }, delivery_deadline: dateStr(-37), destination_port: 'Hamburg', notes: 'Spot purchase. Pending signature.', created_by: adminId }, 'contract 2 draft');
+  const [contract1] = await ins('contracts', { exporter_org_id: eId, buyer_org_id: bId, contract_reference: 'WR-CON-2026-001', status: 'active', commodity: 'Cocoa Beans', quantity_mt: 25, price_per_unit: 3800, currency: 'USD', quality_requirements: { min_grade: 'Grade 1', max_moisture: 7.5, min_fat: 55 }, required_certifications: ['Rainforest Alliance'], delivery_deadline: dateStr(-120), destination_port: 'Hamburg', compliance_profile_id: (eudrProf as any).id, notes: 'Annual supply. Delivery in 5MT tranches.', created_by: adminUserId }, 'contract 1 active');
+  await ins('contracts', { exporter_org_id: eId, buyer_org_id: bId, contract_reference: 'WR-CON-2026-002', status: 'draft', commodity: 'Cocoa Beans', quantity_mt: 5, price_per_unit: 3950, currency: 'USD', quality_requirements: { min_grade: 'Grade 1', max_moisture: 7.0 }, delivery_deadline: dateStr(-37), destination_port: 'Hamburg', notes: 'Spot purchase. Pending signature.', created_by: adminUserId }, 'contract 2 draft');
 
   // contract_shipments cols: contract_id, shipment_id
   // NOTE: no org_id or linked_at columns
@@ -352,15 +338,15 @@ async function seed() {
   //       quality_requirements (JSONB), certifications_required (TEXT[]),
   //       regulation_framework, status, visibility, invited_orgs (UUID[]), created_by, closes_at
   // NOTE: no target_price_usd, required_certifications, closing_date, or notes
-  const [tender1] = await ins('tenders', { buyer_org_id: bId, title: 'Request for Cocoa Beans — 20MT Grade 1, Q2 2026', status: 'open', visibility: 'public', commodity: 'Cocoa Beans', quantity_mt: 20, target_price_per_mt: 3700, currency: 'USD', destination_port: 'Hamburg', destination_country: 'Germany', certifications_required: ['Rainforest Alliance','EUDR-compliant'], regulation_framework: 'EUDR', closes_at: daysAgo(-21), created_by: adminId }, 'tender 1 public');
-  await ins('tenders', { buyer_org_id: bId, title: 'Invited Tender — 10MT Premium Cocoa for Artisan Range', status: 'open', visibility: 'invited', invited_orgs: [eId], commodity: 'Cocoa Beans', quantity_mt: 10, target_price_per_mt: 4200, currency: 'USD', destination_port: 'Hamburg', destination_country: 'Germany', certifications_required: ['Rainforest Alliance','UTZ'], closes_at: daysAgo(-14), created_by: adminId }, 'tender 2 invited');
+  const [tender1] = await ins('tenders', { buyer_org_id: bId, title: 'Request for Cocoa Beans — 20MT Grade 1, Q2 2026', status: 'open', visibility: 'public', commodity: 'Cocoa Beans', quantity_mt: 20, target_price_per_mt: 3700, currency: 'USD', destination_port: 'Hamburg', destination_country: 'Germany', certifications_required: ['Rainforest Alliance','EUDR-compliant'], regulation_framework: 'EUDR', closes_at: daysAgo(-21), created_by: adminUserId }, 'tender 1 public');
+  await ins('tenders', { buyer_org_id: bId, title: 'Invited Tender — 10MT Premium Cocoa for Artisan Range', status: 'open', visibility: 'invited', invited_orgs: [eId], commodity: 'Cocoa Beans', quantity_mt: 10, target_price_per_mt: 4200, currency: 'USD', destination_port: 'Hamburg', destination_country: 'Germany', certifications_required: ['Rainforest Alliance','UTZ'], closes_at: daysAgo(-14), created_by: adminUserId }, 'tender 2 invited');
 
   // tender_bids cols: tender_id, exporter_org_id, price_per_mt, quantity_available_mt,
   //                   delivery_date (DATE), notes, compliance_score, certifications (TEXT[]),
   //                   status, submitted_by
   // status CHECK: submitted/shortlisted/awarded/rejected/withdrawn
   // NOTE: no submitted_at column
-  await ins('tender_bids', { tender_id: (tender1 as any).id, exporter_org_id: eId, price_per_mt: 3780, quantity_available_mt: 20, status: 'submitted', notes: 'Full EUDR traceability. DPPs for all lots. Ready to ship from Lagos.', submitted_by: adminId }, 'bid on tender 1');
+  await ins('tender_bids', { tender_id: (tender1 as any).id, exporter_org_id: eId, price_per_mt: 3780, quantity_available_mt: 20, status: 'submitted', notes: 'Full EUDR traceability. DPPs for all lots. Ready to ship from Lagos.', submitted_by: adminUserId }, 'bid on tender 1');
 
   // 14. Farm Conflicts
   section('Farm Conflicts');
