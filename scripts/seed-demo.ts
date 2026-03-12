@@ -183,12 +183,12 @@ async function seed() {
   // status CHECK: collecting/completed/aggregated/shipped
   // Extended cols (migration): batch_code, commodity, grade, yield_validated, yield_flag_reason
   const batchDefs = [
-    { farm: fA, code: 'WR-BCH-001', weight: 820,  bags: 41, grade: 'Grade 1', validated: true,  status: 'aggregated', daysBack: 50 },
-    { farm: fB, code: 'WR-BCH-002', weight: 1250, bags: 63, grade: 'Grade 1', validated: true,  status: 'aggregated', daysBack: 48 },
-    { farm: fC, code: 'WR-BCH-003', weight: 560,  bags: 28, grade: 'Grade 2', validated: true,  status: 'aggregated', daysBack: 45 },
-    { farm: fD, code: 'WR-BCH-004', weight: 940,  bags: 47, grade: 'Grade 1', validated: true,  status: 'aggregated', daysBack: 40 },
-    { farm: fE, code: 'WR-BCH-005', weight: 1100, bags: 55, grade: 'Grade 1', validated: true,  status: 'aggregated', daysBack: 38 },
-    { farm: fF, code: 'WR-BCH-006', weight: 720,  bags: 36, grade: 'Grade 1', validated: true,  status: 'aggregated', daysBack: 35 },
+    { farm: fA, code: 'WR-BCH-001', weight: 820,  bags: 41, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 50 },
+    { farm: fB, code: 'WR-BCH-002', weight: 1250, bags: 63, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 48 },
+    { farm: fC, code: 'WR-BCH-003', weight: 560,  bags: 28, grade: 'Grade 2', validated: true,  status: 'shipped',    daysBack: 45 },
+    { farm: fD, code: 'WR-BCH-004', weight: 940,  bags: 47, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 40 },
+    { farm: fE, code: 'WR-BCH-005', weight: 1100, bags: 55, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 38 },
+    { farm: fF, code: 'WR-BCH-006', weight: 720,  bags: 36, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 35 },
     { farm: fA, code: 'WR-BCH-007', weight: 310,  bags: 16, grade: 'Grade 2', validated: false, status: 'collecting', daysBack: 20, flag: 'Weight per bag (19.4kg) exceeds Grade 2 benchmark (max 18kg). Manual verification required.' },
     { farm: fG, code: 'WR-BCH-008', weight: 1640, bags: 82, grade: 'Grade 2', validated: false, status: 'collecting', daysBack: 15, flag: 'Farm has active deforestation risk flag. Batch quarantined pending farm remediation.' },
     { farm: fH, code: 'WR-BCH-009', weight: 200,  bags: 10, grade: null,      validated: false, status: 'collecting', daysBack: 5 },
