@@ -1025,7 +1025,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue={tabParam === "compliance-profiles" ? "compliance-profiles" : tabParam === "compliance" ? "compliance" : "general"} className="space-y-6">
+      <Tabs defaultValue={tabParam === "compliance-profiles" || tabParam === "compliance" ? "compliance" : tabParam || "general"} className="space-y-6">
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" data-testid="tab-general">
             <Settings className="h-4 w-4 mr-2" />
@@ -1056,10 +1056,6 @@ export default function SettingsPage() {
               <TabsTrigger value="api-keys" data-testid="tab-api-keys">
                 <Key className="h-4 w-4 mr-2" />
                 API Keys
-              </TabsTrigger>
-              <TabsTrigger value="compliance-profiles" data-testid="tab-compliance-profiles">
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                Reg. Profiles
               </TabsTrigger>
             </>
           )}
@@ -1363,6 +1359,7 @@ export default function SettingsPage() {
         {/* COMPLIANCE TAB */}
         {isAdmin && (
           <TabsContent value="compliance" className="space-y-6">
+            <ComplianceProfilesSection />
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -2063,12 +2060,6 @@ export default function SettingsPage() {
           </TabsContent>
         )}
 
-        {/* COMPLIANCE PROFILES TAB */}
-        {isAdmin && (
-          <TabsContent value="compliance-profiles" className="space-y-6">
-            <ComplianceProfilesSection />
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

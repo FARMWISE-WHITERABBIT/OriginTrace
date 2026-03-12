@@ -67,11 +67,20 @@ export default function FarmMapOverview() {
 
   const getTile = useCallback((z: number, x: number, y: number): HTMLImageElement | null => {
     const key = `${z}/${x}/${y}`;
-    if (tileCache.current.has(key)) return tileCache.current.get(key)!;
+    if (tileCache.current.has(key)) {
+      const cached = tileCache.current.get(key)!;
+      // Only return if fully loaded and not broken
+      if (cached.complete && cached.naturalWidth > 0) return cached;
+      return null;
+    }
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
     img.onload = () => render();
+    img.onerror = () => {
+      // Remove broken tile from cache so it can be retried
+      tileCache.current.delete(key);
+    };
+    img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
     tileCache.current.set(key, img);
     return null;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
