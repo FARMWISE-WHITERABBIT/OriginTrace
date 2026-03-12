@@ -124,9 +124,9 @@ export default function DDSExportPage() {
     <TierGate feature="dds_export" requiredTier="pro" featureLabel="DDS Export">
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">DDS Export</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">DDS Export</h1>
         <p className="text-muted-foreground">
-          Generate Due Diligence Statement for EU TRACES compliance
+          Export farm boundary data for regulatory submissions — EU EUDR, UK due diligence, US Lacey Act, China GACC, UAE ESMA and more.
         </p>
       </div>
 
@@ -134,10 +134,10 @@ export default function DDSExportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            GeoJSON Export
+            GeoJSON Farm Export
           </CardTitle>
           <CardDescription>
-            Export approved farm boundaries as GeoJSON for EU TRACES submission
+            Export approved farm GPS boundaries as GeoJSON — accepted by EU TRACES, UK systems, and international buyers.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

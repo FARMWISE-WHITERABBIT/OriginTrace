@@ -15,6 +15,10 @@ import {
 } from '@/components/ui/sheet';
 import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { 
   Package, 
   Search, 
@@ -30,7 +34,8 @@ import {
   Lock,
   Send,
   Download,
-  FileText
+  FileText,
+  QrCode,
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateBatchManifestCSV, downloadCSV } from '@/lib/export/csv-export';
@@ -53,14 +58,70 @@ interface Batch {
   };
 }
 
+interface Bag {
+  id: string;
+  serial: string;
+  status: string;
+  batch_id: string | null;
+  created_at: string;
+}
+
 export default function InventoryPage() {
+  // ── Bags sub-tab state ──
+  const [bags, setBags] = useState<Bag[]>([]);
+  const [bagsLoading, setBagsLoading] = useState(false);
+  const [bagsFetched, setBagsFetched] = useState(false);
+  const [bagSearch, setBagSearch] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [batchCount, setBatchCount] = useState(10);
+  const [bagDialogOpen, setBagDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const fetchBags = async () => {
+    if (bagsFetched) return;
+    setBagsLoading(true);
+    try {
+      const res = await fetch('/api/bags');
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      const data = await res.json();
+      setBags(data.bags || []);
+      setBagsFetched(true);
+    } catch (e) { console.error(e); } finally { setBagsLoading(false); }
+  };
+
+  const generateBagBatch = async () => {
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/bags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: Math.min(batchCount, 100) }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      const data = await res.json();
+      toast({ title: 'Batch Generated', description: `Created ${data.count} bags — batch ${data.batchId}` });
+      setBagDialogOpen(false);
+      setBagsFetched(false);
+      setBagsLoading(true);
+      const res2 = await fetch('/api/bags');
+      const data2 = await res2.json();
+      setBags(data2.bags || []);
+      setBagsFetched(true);
+      setBagsLoading(false);
+    } catch {
+      toast({ title: 'Error', description: 'Failed to generate bag batch', variant: 'destructive' });
+    } finally { setIsGenerating(false); }
+  };
+  // ── end bags state ──
+  const filteredBags = bags.filter(b => b.serial.toLowerCase().includes(bagSearch.toLowerCase()) || (b.batch_id && b.batch_id.toLowerCase().includes(bagSearch.toLowerCase())));
+
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { organization } = useOrg();
+  const { organization, profile } = useOrg();
   const supabase = createClient();
 
   useEffect(() => {
@@ -161,9 +222,9 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Inventory</h1>
           <p className="text-muted-foreground">
-            View and manage all collection batches
+            Collection batches and bag management
           </p>
         </div>
         <Button
@@ -192,6 +253,12 @@ export default function InventoryPage() {
         </Button>
       </div>
 
+      <Tabs defaultValue="batches">
+        <TabsList>
+          <TabsTrigger value="batches">Batches</TabsTrigger>
+          <TabsTrigger value="bags" onClick={fetchBags}>Bags</TabsTrigger>
+        </TabsList>
+        <TabsContent value="batches" className="mt-4 space-y-4">
       <div className="flex flex-wrap gap-2">
         {(['all', 'collecting', 'resolved', 'dispatched'] as const).map((status) => (
           <Button
@@ -404,6 +471,107 @@ export default function InventoryPage() {
           )}
         </SheetContent>
       </Sheet>
+      </TabsContent>
+
+      {/* ── BAGS TAB ── */}
+      <TabsContent value="bags" className="mt-4 space-y-4" onFocus={fetchBags}>
+        <TierGate feature="bags" requiredTier="starter" featureLabel="Bags">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[12rem]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by serial or batch ID…" value={bagSearch} onChange={e => setBagSearch(e.target.value)} className="pl-9" />
+            </div>
+            {(profile?.role === 'admin') && (
+              <Dialog open={bagDialogOpen} onOpenChange={setBagDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" data-testid="button-generate-batch">
+                    <Plus className="h-4 w-4 mr-2" />Generate Batch
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Generate Bag Batch</DialogTitle>
+                    <DialogDescription>Create a new batch of traceable bag serials.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    <Label htmlFor="bag-count">Number of bags (max 100)</Label>
+                    <Input id="bag-count" type="number" min={1} max={100} value={batchCount} onChange={e => setBatchCount(Number(e.target.value))} />
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={generateBagBatch} disabled={isGenerating}>
+                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}Generate
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
+          {/* Stats strip */}
+          {bags.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'Total', value: bags.length, color: '' },
+                { label: 'Unused', value: bags.filter(b => b.status === 'unused').length, color: 'text-blue-600' },
+                { label: 'Collected', value: bags.filter(b => b.status === 'collected').length, color: 'text-green-600' },
+                { label: 'Processed', value: bags.filter(b => b.status === 'processed').length, color: 'text-purple-600' },
+              ].map(s => (
+                <Card key={s.label} className="text-center p-3">
+                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <Card>
+            <CardContent className="p-0">
+              {bagsLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+                </div>
+              ) : !bagsFetched ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <QrCode className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">Click this tab to load bag inventory</p>
+                </div>
+              ) : filteredBags.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Package className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">{bagSearch ? 'No bags match your search' : 'No bags generated yet'}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Serial</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Batch ID</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredBags.slice(0, 200).map(bag => (
+                        <TableRow key={bag.id} data-testid={`bag-row-${bag.id}`}>
+                          <TableCell className="font-mono text-sm">{bag.serial}</TableCell>
+                          <TableCell><StatusBadge domain="bag" status={bag.status} /></TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{bag.batch_id || '—'}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{new Date(bag.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {filteredBags.length > 200 && (
+                    <p className="text-xs text-center text-muted-foreground py-3">Showing first 200 of {filteredBags.length} bags</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TierGate>
+      </TabsContent>
+      </Tabs>
     </div>
     </TierGate>
   );

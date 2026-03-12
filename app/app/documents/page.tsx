@@ -45,11 +45,24 @@ const DOCUMENT_TYPES = [
   { value: 'fumigation', label: 'Fumigation Certificate' },
   { value: 'organic_cert', label: 'Organic Certification' },
   { value: 'insurance', label: 'Insurance' },
-  { value: 'lab_result', label: 'Lab Result' },
+  { value: 'lab_result', label: 'Lab Result / COA' },
   { value: 'customs_declaration', label: 'Customs Declaration' },
   { value: 'bill_of_lading', label: 'Bill of Lading' },
   { value: 'certificate_of_origin', label: 'Certificate of Origin' },
   { value: 'quality_cert', label: 'Quality Certificate' },
+  // UK
+  { value: 'uk_due_diligence', label: 'UK Due Diligence Statement' },
+  // US
+  { value: 'fda_prior_notice', label: 'FDA Prior Notice' },
+  { value: 'lacey_act_declaration', label: 'Lacey Act Declaration' },
+  // China
+  { value: 'gacc_registration', label: 'China GACC Registration' },
+  { value: 'gb_standards_cert', label: 'China GB Standards Certificate' },
+  { value: 'china_customs_declaration', label: 'China Customs Declaration' },
+  // UAE / Middle East
+  { value: 'halal_certificate', label: 'Halal Certificate' },
+  { value: 'esma_compliance', label: 'UAE ESMA Compliance Cert' },
+  { value: 'gulf_certificate_of_conformity', label: 'Gulf CoC (GCC)' },
   { value: 'other', label: 'Other' },
 ];
 

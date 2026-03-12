@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +49,7 @@ export default function FarmerRegistrationPage() {
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [commodity, setCommodity] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedLGA, setSelectedLGA] = useState('');
   const [community, setCommunity] = useState('');
@@ -166,6 +168,7 @@ export default function FarmerRegistrationPage() {
           body: JSON.stringify({
             farmer_name: fullName.trim(),
             phone_number: phone || null,
+            commodity: commodity || null,
             community: community || selectedLGA || selectedState,
             state: selectedState,
             lga: selectedLGA || null,
@@ -243,6 +246,7 @@ export default function FarmerRegistrationPage() {
           id: `offline-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           farmer_name: fullName.trim(),
           community: community || selectedLGA || selectedState,
+          commodity: commodity || null,
           compliance_status: 'pending',
         };
         await cacheFarms([...existingFarms, offlineFarm]);
@@ -272,7 +276,7 @@ export default function FarmerRegistrationPage() {
         <h2 className="text-2xl font-bold">Farmer Registered</h2>
         <p className="text-muted-foreground">{fullName} has been added to the system.</p>
         <div className="space-y-3">
-          <Button onClick={() => { setIsSuccess(false); setFullName(''); setPhone(''); setCommunity(''); setCommunityMode('select'); setHasConsent(false); setConsentData(null); setFarmerPhoto(null); setFarmerPhotoPreview(null); setIdDocument(null); setIdDocPreview(null); }} className="w-full" data-testid="button-register-another">
+          <Button onClick={() => { setIsSuccess(false); setFullName(''); setPhone(''); setCommodity(''); setCommunity(''); setCommunityMode('select'); setHasConsent(false); setConsentData(null); setFarmerPhoto(null); setFarmerPhotoPreview(null); setIdDocument(null); setIdDocPreview(null); }} className="w-full" data-testid="button-register-another">
             Register Another Farmer
           </Button>
           <Link href="/app/farms/map" className="block">
@@ -330,8 +334,29 @@ export default function FarmerRegistrationPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Phone Number</Label>
-            <div className="relative">
+            <Label>Primary Commodity</Label>
+            <Select value={commodity} onValueChange={setCommodity}>
+              <SelectTrigger data-testid="select-commodity">
+                <SelectValue placeholder="Select crop / commodity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cocoa">Cocoa</SelectItem>
+                <SelectItem value="cashew">Cashew</SelectItem>
+                <SelectItem value="sesame">Sesame</SelectItem>
+                <SelectItem value="beans">Beans</SelectItem>
+                <SelectItem value="ginger">Ginger</SelectItem>
+                <SelectItem value="palm_oil">Palm Oil</SelectItem>
+                <SelectItem value="shea">Shea</SelectItem>
+                <SelectItem value="maize">Maize</SelectItem>
+                <SelectItem value="soybean">Soybean</SelectItem>
+                <SelectItem value="rubber">Rubber</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Phone Number</Label>            <div className="relative">
               <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 value={phone}

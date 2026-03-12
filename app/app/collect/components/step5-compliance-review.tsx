@@ -47,7 +47,7 @@ export function Step5ComplianceReview({ logic }: Step5Props) {
         {complianceScore === 100 ? (
           <div className="p-4 text-center space-y-2 border border-green-200 dark:border-green-800 rounded-lg bg-green-50 dark:bg-green-950/30">
             <CheckCircle className="h-8 w-8 text-green-500 mx-auto" />
-            <div className="font-medium text-green-700 dark:text-green-400">EUDR Ready</div>
+            <div className="font-medium text-green-700 dark:text-green-400">Export Ready</div>
             <div className="text-sm text-muted-foreground">All farms have GPS polygons and pass compliance checks.</div>
           </div>
         ) : (

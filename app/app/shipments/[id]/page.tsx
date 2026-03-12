@@ -175,6 +175,11 @@ const REGULATION_OPTIONS = [
   { value: 'uk_environment_act', label: 'UK Environment Act' },
   { value: 'fsma_204', label: 'US FSMA 204' },
   { value: 'lacey_act', label: 'US Lacey Act' },
+  { value: 'uflpa', label: 'US UFLPA (Forced Labor)' },
+  { value: 'china_green_trade', label: 'China Green Trade' },
+  { value: 'china_gacc', label: 'China GACC Registration' },
+  { value: 'uae_halal', label: 'UAE Halal Certification' },
+  { value: 'uae_esma', label: 'UAE ESMA Standards' },
   { value: 'buyer_standards', label: 'Buyer Standards' },
 ];
 
