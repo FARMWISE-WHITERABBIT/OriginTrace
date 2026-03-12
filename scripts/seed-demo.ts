@@ -218,32 +218,49 @@ async function seed() {
 
   // 6. Bags
   section('Bags');
-  // Live DB bags columns confirmed from app/api/bags/route.ts: org_id, status
-  // Additional cols probed safely: serial, collection_batch_id (or batch_id), weight_kg
-  // NOTE: grade, is_compliant may not exist on live DB — omit to avoid schema cache errors
-  // status on live DB: 'empty' (from API route) — schema.sql says unused/collected/processed
-  // but live DB was deployed differently
-  for (let i = 0; i < 6; i++) {
-    const b = batchDefs[i];
-    const batchRow = batches[i] as any;
-    // Try with extended columns first, fall back to minimal if it fails
-    const bagRows = Array.from({ length: b.bags }, (_, j) => ({
-      org_id: eId,
-      serial: `${b.code}-BAG-${String(j+1).padStart(3,'0')}`,
-      collection_batch_id: batchRow.id,
-      status: 'collected',
-      weight_kg: +(b.weight/b.bags).toFixed(1),
-    }));
-    const { data: bagResult, error: bagErr } = await db.from('bags').insert(bagRows).select('id');
-    if (bagErr) {
-      warn(`bags extended insert failed (${bagErr.message.slice(0,60)}) — trying minimal`);
-      // Minimal: just org_id and status (guaranteed from API route)
-      const minRows = Array.from({ length: b.bags }, () => ({ org_id: eId, status: 'collected' }));
-      const { error: minErr } = await db.from('bags').insert(minRows).select('id');
-      if (minErr) warn(`bags minimal insert also failed: ${minErr.message.slice(0,80)}`);
-      else ok(`bags: ${b.bags} row(s) (minimal) — ${b.code}`);
-    } else {
-      ok(`bags: ${bagResult!.length} row(s) — ${b.bags} bags for ${b.code}`);
+  // Discover which columns actually exist on live DB by probing a single row.
+  // The live bags table may be significantly older than schema.sql.
+  // Strategy: build the most complete row possible, strip columns that fail.
+  {
+    const probe = { org_id: eId, serial: 'PROBE-001', collection_batch_id: (batches[0] as any).id, status: 'collected', weight_kg: 1.0, grade: 'A', is_compliant: true };
+    const strippedProbe: Record<string, any> = { org_id: eId };
+
+    // Test each optional column individually
+    for (const col of ['serial','collection_batch_id','status','weight_kg','grade','is_compliant'] as const) {
+      const testRow = { ...strippedProbe, [col]: (probe as any)[col] };
+      const { error } = await db.from('bags').insert(testRow).select('id').single();
+      if (!error) {
+        // Accepted — delete probe row and keep the column
+        await db.from('bags').delete().eq('org_id', eId).eq('serial', 'PROBE-001').lte('weight_kg', 2);
+        strippedProbe[col] = (probe as any)[col];
+      } else if (error.message.includes('schema cache') || error.message.includes('Could not find')) {
+        warn(`bags.${col} not in live DB — skipping`);
+      } else if (error.message.includes('not-null') || error.message.includes('check constraint')) {
+        // Column exists but value is wrong — still include the column key
+        strippedProbe[col] = (probe as any)[col];
+      }
+      // else some other error — skip column
+    }
+    ok(`bags live columns: ${Object.keys(strippedProbe).join(', ')}`);
+
+    // Now insert bags using only confirmed columns
+    for (let i = 0; i < 6; i++) {
+      const b = batchDefs[i];
+      const batchRow = batches[i] as any;
+      const wt = +(b.weight / b.bags).toFixed(1);
+      const bagRows = Array.from({ length: b.bags }, (_, j) => {
+        const row: Record<string, any> = { org_id: eId };
+        if ('serial' in strippedProbe)               row.serial = `${b.code}-BAG-${String(j+1).padStart(3,'0')}`;
+        if ('collection_batch_id' in strippedProbe)   row.collection_batch_id = batchRow.id;
+        if ('status' in strippedProbe)                row.status = 'collected';
+        if ('weight_kg' in strippedProbe)             row.weight_kg = wt;
+        if ('grade' in strippedProbe)                 row.grade = b.grade === 'Grade 1' ? 'A' : 'B';
+        if ('is_compliant' in strippedProbe)          row.is_compliant = true;
+        return row;
+      });
+      const { data: bagResult, error: bagErr } = await db.from('bags').insert(bagRows).select('id');
+      if (bagErr) warn(`bags insert failed for ${b.code}: ${bagErr.message.slice(0,80)}`);
+      else ok(`bags: ${bagResult!.length} row(s) — ${b.bags} bags for ${b.code}`);
     }
   }
 
@@ -312,16 +329,35 @@ async function seed() {
   // status CHECK: active/expired/expiring_soon/archived
   // linked_entity_type CHECK: shipment/farm/farmer/organization/batch
   // NOTE: no shipment_id, type, or label columns
-  await ins('documents', [
-    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-001.pdf', uploaded_by: adminUserId },
-    { org_id: eId, title: 'Due Diligence Statement',         document_type: 'due_diligence_statement',   status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-001.pdf',   uploaded_by: adminUserId },
-    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-001.pdf',   uploaded_by: adminUserId },
-    { org_id: eId, title: 'Quality Certificate',             document_type: 'quality_certificate',       status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/qual-001.pdf',  uploaded_by: adminUserId },
-    { org_id: eId, title: 'Phytosanitary Certificate',       document_type: 'phytosanitary_certificate', status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-002.pdf', uploaded_by: adminUserId },
-    { org_id: eId, title: 'Certificate of Origin',           document_type: 'certificate_of_origin',     status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-002.pdf',   uploaded_by: adminUserId },
-    { org_id: eId, title: 'Phytosanitary Certificate (REJ)', document_type: 'phytosanitary_certificate', status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-003.pdf', uploaded_by: adminUserId },
-    { org_id: eId, title: 'Due Diligence Statement (DRAFT)', document_type: 'due_diligence_statement',   status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-003-draft.pdf', uploaded_by: adminUserId },
-  ], '8 documents');
+  {
+    // document_type: probe live DB — constraint may differ from schema.sql
+    // known live values: export_license/phytosanitary/fumigation/organic_cert/insurance/
+    //   lab_result/customs_declaration/bill_of_lading/certificate_of_origin/quality_cert/other
+    const docTypes = ['phytosanitary','certificate_of_origin','quality_cert','other'];
+    const validDocTypes: string[] = [];
+    for (const dt of docTypes) {
+      const { error } = await db.from('documents').insert({ org_id: eId, title: 'PROBE', document_type: dt, linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, uploaded_by: adminUserId, file_url: 'x' }).select('id').single();
+      if (error?.message?.includes('check constraint') || error?.message?.includes('document_type')) {
+        warn(`document_type '${dt}' invalid on live DB`);
+      } else {
+        validDocTypes.push(dt);
+        if (!error) await db.from('documents').delete().eq('title', 'PROBE').eq('org_id', eId);
+      }
+    }
+    const safe = (preferred: string) => validDocTypes.includes(preferred) ? preferred : (validDocTypes[0] ?? 'other');
+    ok(`Valid document_types: ${validDocTypes.join(', ')}`);
+
+    await ins('documents', [
+      { org_id: eId, title: 'Phytosanitary Certificate',       document_type: safe('phytosanitary'),        status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-001.pdf', uploaded_by: adminUserId },
+      { org_id: eId, title: 'Due Diligence Statement',         document_type: safe('other'),                status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-001.pdf',   uploaded_by: adminUserId },
+      { org_id: eId, title: 'Certificate of Origin',           document_type: safe('certificate_of_origin'),status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-001.pdf',   uploaded_by: adminUserId },
+      { org_id: eId, title: 'Quality Certificate',             document_type: safe('quality_cert'),         status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship1 as any).id, file_url: 'https://demo.origintrace.com/docs/qual-001.pdf',  uploaded_by: adminUserId },
+      { org_id: eId, title: 'Phytosanitary Certificate',       document_type: safe('phytosanitary'),        status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-002.pdf', uploaded_by: adminUserId },
+      { org_id: eId, title: 'Certificate of Origin',           document_type: safe('certificate_of_origin'),status: 'active',   linked_entity_type: 'shipment', linked_entity_id: (ship2 as any).id, file_url: 'https://demo.origintrace.com/docs/coo-002.pdf',   uploaded_by: adminUserId },
+      { org_id: eId, title: 'Phytosanitary Certificate (REJ)', document_type: safe('phytosanitary'),        status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/phyto-003.pdf', uploaded_by: adminUserId },
+      { org_id: eId, title: 'Due Diligence Statement (DRAFT)', document_type: safe('other'),                status: 'archived', linked_entity_type: 'shipment', linked_entity_id: (ship3 as any).id, file_url: 'https://demo.origintrace.com/docs/dds-003-draft.pdf', uploaded_by: adminUserId },
+    ], '8 documents');
+  }
 
   // 12. Contracts
   section('Contracts');
