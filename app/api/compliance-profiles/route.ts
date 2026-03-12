@@ -118,7 +118,10 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const { data: profiles, error } = await supabaseAdmin
+    const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
+
+    const { data: profiles, error, count } = await supabaseAdmin
       .from('compliance_profiles')
       .select('*', { count: 'exact' })
       .eq('org_id', profile.org_id)

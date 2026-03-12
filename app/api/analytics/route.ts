@@ -89,15 +89,15 @@ function groupByInterval(
 }
 
 export async function GET(request: NextRequest) {
-  const rateCheck = await checkRateLimit(request, profile?.org_id ?? null, RATE_LIMIT_PRESETS.analytics);
-  if (rateCheck) return rateCheck;
-
   try {
     const supabase = createServiceClient();
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const rateCheck = await checkRateLimit(request, profile?.org_id ?? null, RATE_LIMIT_PRESETS.analytics);
+    if (rateCheck) return rateCheck;
 
     const _roleError = requireRole(profile, ['admin', 'aggregator', 'quality_manager', 'compliance_officer']);
     if (_roleError) return _roleError;

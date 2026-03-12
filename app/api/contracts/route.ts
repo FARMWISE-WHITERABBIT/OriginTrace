@@ -59,6 +59,9 @@ export async function GET(request: NextRequest) {
       if (tierBlock) return tierBlock;
     }
 
+    const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
+
     let contracts = [];
 
     if (buyerProfile) {
@@ -78,7 +81,7 @@ export async function GET(request: NextRequest) {
       contracts = data || [];
     }
 
-    return NextResponse.json({ contracts, pagination: { page, limit, total: count ?? 0 } });
+    return NextResponse.json({ contracts, pagination: { page, limit, total: contracts.length } });
   } catch (error) {
     console.error('Contracts GET error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

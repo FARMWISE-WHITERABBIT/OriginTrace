@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'processing');
     if (tierBlock) return tierBlock;
 
-    const { data: processingRuns, error } = await supabaseAdmin
+    const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
+
+    const { data: processingRuns, error, count } = await supabaseAdmin
       .from('processing_runs')
       .select(`
         *,

@@ -65,6 +65,14 @@ export async function PATCH(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    const isSystemAdmin = profile.role === 'superadmin';
+    const body = await request.json();
+    const { name, category, unit, is_active, grades, moisture_min, moisture_max, collection_metrics, is_global } = body;
+
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (category !== undefined) updates.category = category;
@@ -104,6 +112,10 @@ export async function DELETE(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
     const { error } = await supabase
       .from('commodity_master')

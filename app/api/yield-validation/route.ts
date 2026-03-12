@@ -170,6 +170,14 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const { data: flaggedBatches } = await supabaseAdmin
+      .from('collection_batches')
+      .select('id, batch_code, commodity, total_weight, yield_validated, yield_flag_reason, created_at')
+      .eq('org_id', profile.org_id)
+      .eq('yield_validated', false)
+      .not('yield_flag_reason', 'is', null)
+      .order('created_at', { ascending: false });
+
     const { data: cropStandards } = await supabaseAdmin
       .from('crop_standards')
       .select('*')

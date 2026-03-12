@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
       .single();
 
     let tenders: any[] = [];
+    const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
+    let totalCount = 0;
 
     if (buyerProfile) {
       const { data } = await supabaseAdmin
@@ -109,7 +112,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ tenders, pagination: { page, limit, total: count ?? 0 } });
+    return NextResponse.json({ tenders, pagination: { page, limit, total: totalCount } });
   } catch (error) {
     console.error('Tenders GET error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

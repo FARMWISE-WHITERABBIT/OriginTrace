@@ -67,7 +67,10 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const { data: dpps, error } = await supabaseAdmin
+    const { searchParams } = new URL(request.url);
+    const { from, to, page, limit } = parsePagination(searchParams);
+
+    const { data: dpps, error, count } = await supabaseAdmin
       .from('digital_product_passports')
       .select(`
         *,

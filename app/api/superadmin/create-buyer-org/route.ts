@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
     await logSuperadminAction({
       superadminId: user.id,
       action: 'create_buyer_organization',
-      targetType: 'buyer_organization',
+      targetType: 'organization',
       targetId: buyerOrgData.id.toString(),
       targetLabel: companyName,
       afterState: { buyer_org_id: buyerOrgData.id, admin_email: adminEmail, email_sent: emailSent },

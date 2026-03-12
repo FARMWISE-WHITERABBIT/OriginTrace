@@ -5,6 +5,7 @@ import { enforceTier } from '@/lib/api/tier-guard';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildFarmConflictEmail } from '@/lib/email/templates';
 import { z } from 'zod';
+import { parseBody } from '@/lib/api/validation';
 
 const conflictPatchSchema = z.object({
   conflict_id: z.number({ required_error: 'Conflict ID is required' }),
@@ -246,7 +247,11 @@ export async function PATCH(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const { conflict_id, action, notes } = parsed.data;
+    const rawBody = await request.json();
+    const { data: parsed, error: validationError } = parseBody(conflictPatchSchema, rawBody);
+    if (validationError) return validationError;
+
+    const { conflict_id, action, notes } = parsed;
 
     const { data: conflict, error: fetchError } = await supabaseAdmin
       .from('farm_conflicts')

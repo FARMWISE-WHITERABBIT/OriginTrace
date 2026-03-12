@@ -336,6 +336,19 @@ export async function GET(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
+    const { searchParams } = new URL(request.url);
+    const farmId = searchParams.get('farm_id');
+    if (!farmId) return NextResponse.json({ error: 'farm_id is required' }, { status: 400 });
+
+    const { data: farm, error: farmError } = await supabaseAdmin
+      .from('farms')
+      .select('id, deforestation_check')
+      .eq('id', farmId)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (farmError || !farm) return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
+
     return NextResponse.json({
       farm_id: farm.id,
       result: farm.deforestation_check || null,

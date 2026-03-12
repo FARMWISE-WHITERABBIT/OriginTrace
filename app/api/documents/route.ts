@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         .eq('id', doc.id);
     }
 
-    return NextResponse.json({ documents: updatedDocs, pagination: { page, limit, total: count ?? 0 }, pagination: { page, limit, total: count ?? 0 } });
+    return NextResponse.json({ documents: updatedDocs, pagination: { page, limit, total: count ?? 0 } });
 
   } catch (error) {
     console.error('Documents API error:', error);

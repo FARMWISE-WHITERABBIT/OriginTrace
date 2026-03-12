@@ -74,9 +74,23 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
+    const bagRows = Array.from({ length: count }, () => ({
+      org_id: profile.org_id,
+      status: 'empty',
+    }));
+
+    const { data: createdBags, error: insertError } = await supabaseAdmin
+      .from('bags')
+      .insert(bagRows)
+      .select('id');
+
+    if (insertError) {
+      console.error('Bags insert error:', insertError);
+      return NextResponse.json({ error: 'Failed to create bags' }, { status: 500 });
+    }
+
     return NextResponse.json({ 
       bags: createdBags,
-      batchId,
       count: createdBags?.length || 0
     });
 
