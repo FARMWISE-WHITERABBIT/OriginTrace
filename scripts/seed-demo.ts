@@ -402,7 +402,7 @@ async function seed() {
   // status CHECK: pending/resolved/dismissed
   // NOTE: no org_id, conflict_type, overlap_area_hectares, notes, or detected_at
   try {
-    await ins('farm_conflicts', { farm_a_id: (fG as any).id, farm_b_id: (fH as any).id, overlap_ratio: 0.037, status: 'pending', resolution_notes: 'GPS boundaries overlap ~0.3ha (~3.7% of Farm G area). Field inspection required.' }, 'boundary overlap G↔H');
+    await ins('farm_conflicts', { farm_a_id: (fG as any).id, farm_b_id: (fH as any).id, overlap_ratio: 0.037, status: 'pending' }, 'boundary overlap G↔H');
   } catch (e: any) { warn(`farm_conflicts: ${e.message}`); }
 
   section('✅  Seed complete!');
