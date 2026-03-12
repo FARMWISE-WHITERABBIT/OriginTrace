@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Loader2, MapPin } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function FarmMapOverview() {
   const [center, setCenter] = useState({ lat: 7.5, lng: 4.5 });
   const [hoveredFarm, setHoveredFarm] = useState<Farm | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+  const router = useRouter();
   const tileCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, lat: 7.5, lng: 4.5 });
@@ -178,12 +180,13 @@ export default function FarmMapOverview() {
       <div className="relative rounded-lg overflow-hidden border">
         <canvas
           ref={canvasRef} width={800} height={400}
-          className="w-full cursor-grab active:cursor-grabbing" style={{ height: '400px' }}
+          className={`w-full ${hoveredFarm ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`} style={{ height: '400px' }}
           onMouseMove={handleMouseMove}
           onMouseDown={e => { isDragging.current = true; dragStart.current = { x: e.clientX, y: e.clientY, lat: center.lat, lng: center.lng }; }}
           onMouseUp={() => { isDragging.current = false; }}
           onMouseLeave={() => { isDragging.current = false; setHoveredFarm(null); setTooltip(null); }}
           onWheel={e => { e.preventDefault(); setZoom(z => Math.max(5, Math.min(14, z + (e.deltaY < 0 ? 1 : -1)))); }}
+          onClick={() => { if (hoveredFarm && !isDragging.current) { router.push(`/app/farms/map?farm_id=${hoveredFarm.id}`); } }}
         />
         <div className="absolute top-3 right-3 flex flex-col gap-1">
           {['+', '−'].map((label, i) => (
@@ -206,6 +209,7 @@ export default function FarmMapOverview() {
               <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: STATUS_COLORS[hoveredFarm.compliance_status] || '#94a3b8' }} />
               <span className="capitalize">{hoveredFarm.compliance_status}</span>
             </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">Click to open farm mapping</p>
           </div>
         )}
         {farms.length === 0 && (

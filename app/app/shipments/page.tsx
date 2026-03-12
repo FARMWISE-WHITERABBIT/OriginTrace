@@ -37,6 +37,7 @@ interface Shipment {
   total_items: number;
   readiness_score: number | null;
   readiness_decision: string | null;
+  score_breakdown: Array<{ name: string; score: number; weight: number }> | null;
   estimated_ship_date: string | null;
   created_at: string;
   item_count?: number;
@@ -55,6 +56,36 @@ const STATUS_LABELS: Record<string, string> = {
   shipped: 'Shipped',
   cancelled: 'Cancelled',
 };
+
+
+// Short names for the 5 dimensions used in sparkline bars
+const DIM_SHORT: Record<string, string> = {
+  'Traceability Integrity':        'Trace',
+  'Chemical & Contamination Risk': 'Chem',
+  'Documentation Completeness':    'Docs',
+  'Storage & Handling Controls':   'Store',
+  'Regulatory Alignment':          'Reg',
+};
+
+function ScoreSparkline({ breakdown }: { breakdown: Array<{ name: string; score: number }> | null }) {
+  if (!breakdown || breakdown.length === 0) return null;
+  return (
+    <div className="flex items-end gap-0.5 h-8" title={breakdown.map(d => `${DIM_SHORT[d.name] || d.name}: ${Math.round(d.score)}`).join(' | ')}>
+      {breakdown.map(dim => {
+        const pct = Math.round(dim.score);
+        const color = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626';
+        return (
+          <div key={dim.name} className="flex flex-col items-center gap-0.5" style={{ width: 10 }}>
+            <div
+              style={{ height: `${Math.max(4, (pct / 100) * 28)}px`, backgroundColor: color, borderRadius: 2, width: 8, opacity: 0.85 }}
+              title={`${DIM_SHORT[dim.name] || dim.name}: ${pct}`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ShipmentsPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -369,14 +400,22 @@ export default function ShipmentsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {shipment.readiness_score !== null && (
-                          <div className="text-right">
-                            <p className="text-2xl font-bold" data-testid={`text-score-${shipment.id}`}>
-                              {shipment.readiness_score}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Score</p>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {shipment.score_breakdown && shipment.score_breakdown.length > 0 ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <ScoreSparkline breakdown={shipment.score_breakdown} />
+                              <p className="text-[10px] text-muted-foreground">5 dimensions</p>
+                            </div>
+                          ) : null}
+                          {shipment.readiness_score !== null && (
+                            <div className="text-right">
+                              <p className="text-2xl font-bold" data-testid={`text-score-${shipment.id}`}>
+                                {shipment.readiness_score}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Score</p>
+                            </div>
+                          )}
+                        </div>
                         <Badge variant={decision.variant} data-testid={`badge-decision-${shipment.id}`}>
                           <DecisionIcon className="h-3 w-3 mr-1" />
                           {decision.label}

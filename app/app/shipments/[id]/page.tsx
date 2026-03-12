@@ -46,6 +46,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
+import dynamic from 'next/dynamic';
+
+const SupplyChainGraph = dynamic(
+  () => import('@/components/supply-chain-graph').then(m => ({ default: m.SupplyChainGraph })),
+  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" />Building supply chain graph...</div> }
+);
 
 interface ShipmentDetail {
   id: string;
@@ -732,6 +738,22 @@ export default function ShipmentDetailPage() {
       </Card>
 
       <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
+
+      {/* Supply Chain Visualisation */}
+      <Card data-testid="card-supply-chain-graph">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Supply Chain Traceability
+          </CardTitle>
+          <CardDescription>
+            End-to-end provenance chain — Farm → Batch → Processing → Finished Good → Shipment
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 pb-4">
+          <SupplyChainGraph shipmentId={shipmentId} />
+        </CardContent>
+      </Card>
 
       {readiness && readiness.risk_flags.length > 0 && (
         <Card>
