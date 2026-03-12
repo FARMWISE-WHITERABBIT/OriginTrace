@@ -108,13 +108,12 @@ async function seed() {
 
   // ── 1. Organizations ──────────────────────────────────────────────────────
   section('Organizations');
-  // Columns: name, slug, subscription_status, subscription_tier, commodity_types
+  // Columns: name, slug, subscription_status, subscription_tier
   // Source: app/api/superadmin/create-org/route.ts
   let exporterOrg: any;
   { const { data, error } = await db.from('organizations').upsert({
       name: 'WhiteRabbit Demo Co.', slug: DEMO_ORG_SLUG,
       subscription_status: 'active', subscription_tier: 'pro',
-      commodity_types: ['cocoa','plantain'],
     }, { onConflict: 'slug' }).select().single();
     if (error) { console.error(`❌  organizations: ${error.message}`); throw error; }
     exporterOrg = data; ok(`organizations: upserted exporter`);
