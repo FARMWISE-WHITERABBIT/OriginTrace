@@ -180,21 +180,46 @@ async function seed() {
 
   // 5. Collection Batches
   section('Collection Batches');
-  // status CHECK: collecting/completed/aggregated/shipped
-  // Extended cols (migration): batch_code, commodity, grade, yield_validated, yield_flag_reason
+  // Probe the live DB to find which status values are actually accepted
+  // (live constraint may differ from schema.sql)
+  const allCandidates = ['collecting','completed','aggregated','shipped','dispatched','pending','processed','active'];
+  const validStatuses: string[] = [];
+  for (const s of allCandidates) {
+    const { error } = await db.from('collection_batches').insert({
+      org_id: eId, farm_id: (fA as any).id, agent_id: agentId,
+      total_weight: 0, bag_count: 0, status: s, local_id: randomUUID(),
+    }).select('id').single();
+    if (error?.message?.includes('status_check') || error?.message?.includes('check constraint')) {
+      warn(`status '${s}' INVALID on live DB (constraint mismatch)`);
+    } else {
+      validStatuses.push(s);
+      // Delete the probe row
+      if (!error) {
+        const { data: probeRow } = await db.from('collection_batches').select('id').eq('org_id', eId).eq('total_weight', 0).eq('bag_count', 0).eq('status', s).single();
+        if (probeRow) await db.from('collection_batches').delete().eq('id', (probeRow as any).id);
+      }
+    }
+  }
+  ok(`Valid batch statuses on live DB: ${validStatuses.join(', ')}`);
+
+  // Pick statuses guaranteed to exist (fallback to 'completed' if nothing else works)
+  const doneStatus   = validStatuses.find(s => ['shipped','aggregated','completed'].includes(s)) ?? 'completed';
+  const activeStatus = validStatuses.includes('collecting') ? 'collecting' : doneStatus;
+  const partialStatus = validStatuses.find(s => ['completed','aggregated'].includes(s)) ?? doneStatus;
+
   const batchDefs = [
-    { farm: fA, code: 'WR-BCH-001', weight: 820,  bags: 41, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 50 },
-    { farm: fB, code: 'WR-BCH-002', weight: 1250, bags: 63, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 48 },
-    { farm: fC, code: 'WR-BCH-003', weight: 560,  bags: 28, grade: 'Grade 2', validated: true,  status: 'shipped',    daysBack: 45 },
-    { farm: fD, code: 'WR-BCH-004', weight: 940,  bags: 47, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 40 },
-    { farm: fE, code: 'WR-BCH-005', weight: 1100, bags: 55, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 38 },
-    { farm: fF, code: 'WR-BCH-006', weight: 720,  bags: 36, grade: 'Grade 1', validated: true,  status: 'shipped',    daysBack: 35 },
-    { farm: fA, code: 'WR-BCH-007', weight: 310,  bags: 16, grade: 'Grade 2', validated: false, status: 'collecting', daysBack: 20, flag: 'Weight per bag (19.4kg) exceeds Grade 2 benchmark (max 18kg). Manual verification required.' },
-    { farm: fG, code: 'WR-BCH-008', weight: 1640, bags: 82, grade: 'Grade 2', validated: false, status: 'collecting', daysBack: 15, flag: 'Farm has active deforestation risk flag. Batch quarantined pending farm remediation.' },
-    { farm: fH, code: 'WR-BCH-009', weight: 200,  bags: 10, grade: null,      validated: false, status: 'collecting', daysBack: 5 },
-    { farm: fB, code: 'WR-BCH-010', weight: 880,  bags: 44, grade: 'Grade 1', validated: true,  status: 'completed',  daysBack: 10 },
-    { farm: fC, code: 'WR-BCH-011', weight: 960,  bags: 48, grade: 'Grade 1', validated: true,  status: 'completed',  daysBack: 8 },
-    { farm: fD, code: 'WR-BCH-012', weight: 740,  bags: 37, grade: 'Grade 1', validated: true,  status: 'completed',  daysBack: 6 },
+    { farm: fA, code: 'WR-BCH-001', weight: 820,  bags: 41, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 50 },
+    { farm: fB, code: 'WR-BCH-002', weight: 1250, bags: 63, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 48 },
+    { farm: fC, code: 'WR-BCH-003', weight: 560,  bags: 28, grade: 'Grade 2', validated: true,  status: doneStatus,    daysBack: 45 },
+    { farm: fD, code: 'WR-BCH-004', weight: 940,  bags: 47, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 40 },
+    { farm: fE, code: 'WR-BCH-005', weight: 1100, bags: 55, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 38 },
+    { farm: fF, code: 'WR-BCH-006', weight: 720,  bags: 36, grade: 'Grade 1', validated: true,  status: doneStatus,    daysBack: 35 },
+    { farm: fA, code: 'WR-BCH-007', weight: 310,  bags: 16, grade: 'Grade 2', validated: false, status: activeStatus,  daysBack: 20, flag: 'Weight per bag (19.4kg) exceeds Grade 2 benchmark (max 18kg). Manual verification required.' },
+    { farm: fG, code: 'WR-BCH-008', weight: 1640, bags: 82, grade: 'Grade 2', validated: false, status: activeStatus,  daysBack: 15, flag: 'Farm has active deforestation risk flag. Batch quarantined pending farm remediation.' },
+    { farm: fH, code: 'WR-BCH-009', weight: 200,  bags: 10, grade: null,      validated: false, status: activeStatus,  daysBack: 5 },
+    { farm: fB, code: 'WR-BCH-010', weight: 880,  bags: 44, grade: 'Grade 1', validated: true,  status: partialStatus, daysBack: 10 },
+    { farm: fC, code: 'WR-BCH-011', weight: 960,  bags: 48, grade: 'Grade 1', validated: true,  status: partialStatus, daysBack: 8 },
+    { farm: fD, code: 'WR-BCH-012', weight: 740,  bags: 37, grade: 'Grade 1', validated: true,  status: partialStatus, daysBack: 6 },
   ];
   const batches = await ins('collection_batches', batchDefs.map(b => ({
     org_id: eId, farm_id: (b.farm as any).id, agent_id: agentId,
