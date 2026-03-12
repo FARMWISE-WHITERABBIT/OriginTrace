@@ -183,7 +183,7 @@ async function seed() {
     org_id: eId, name: 'US Cocoa — FSMA 204',
     destination_market: 'United States', regulation_framework: 'FSMA_204',
     required_documents: ['phytosanitary_certificate','fda_prior_notice','certificate_of_origin','bill_of_lading'],
-    required_certifications: [], geo_verification_level: 'point', min_traceability_depth: 1,
+    required_certifications: [], geo_verification_level: 'basic', min_traceability_depth: 1,
   }, 'FSMA 204');
 
   const [ukProf] = await ins('compliance_profiles', {
