@@ -218,22 +218,33 @@ async function seed() {
 
   // 6. Bags
   section('Bags');
-  // Cols: org_id, serial, collection_batch_id, status, weight_kg, grade, is_compliant
-  // status CHECK: unused/collected/processed
-  // grade CHECK: A/B/C  (NOT 'Grade 1'/'Grade 2')
-  // NOTE: no farm_id, no batch_id - FK is collection_batch_id
+  // Live DB bags columns confirmed from app/api/bags/route.ts: org_id, status
+  // Additional cols probed safely: serial, collection_batch_id (or batch_id), weight_kg
+  // NOTE: grade, is_compliant may not exist on live DB — omit to avoid schema cache errors
+  // status on live DB: 'empty' (from API route) — schema.sql says unused/collected/processed
+  // but live DB was deployed differently
   for (let i = 0; i < 6; i++) {
     const b = batchDefs[i];
     const batchRow = batches[i] as any;
-    await ins('bags', Array.from({ length: b.bags }, (_, j) => ({
+    // Try with extended columns first, fall back to minimal if it fails
+    const bagRows = Array.from({ length: b.bags }, (_, j) => ({
       org_id: eId,
       serial: `${b.code}-BAG-${String(j+1).padStart(3,'0')}`,
       collection_batch_id: batchRow.id,
       status: 'collected',
       weight_kg: +(b.weight/b.bags).toFixed(1),
-      grade: b.grade === 'Grade 1' ? 'A' : 'B',
-      is_compliant: true,
-    })), `${b.bags} bags for ${b.code}`);
+    }));
+    const { data: bagResult, error: bagErr } = await db.from('bags').insert(bagRows).select('id');
+    if (bagErr) {
+      warn(`bags extended insert failed (${bagErr.message.slice(0,60)}) — trying minimal`);
+      // Minimal: just org_id and status (guaranteed from API route)
+      const minRows = Array.from({ length: b.bags }, () => ({ org_id: eId, status: 'collected' }));
+      const { error: minErr } = await db.from('bags').insert(minRows).select('id');
+      if (minErr) warn(`bags minimal insert also failed: ${minErr.message.slice(0,80)}`);
+      else ok(`bags: ${b.bags} row(s) (minimal) — ${b.code}`);
+    } else {
+      ok(`bags: ${bagResult!.length} row(s) — ${b.bags} bags for ${b.code}`);
+    }
   }
 
   // 7. Processing Runs
