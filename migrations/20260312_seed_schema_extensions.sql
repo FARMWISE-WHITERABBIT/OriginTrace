@@ -16,6 +16,14 @@ ALTER TABLE collection_batches
   ADD COLUMN IF NOT EXISTS compliance_status   TEXT NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS dispatched          BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- collection_batches base columns missing from schema
+ALTER TABLE collection_batches
+  ADD COLUMN IF NOT EXISTS collected_at        TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS synced_at           TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS local_id            TEXT,
+  ADD COLUMN IF NOT EXISTS agent_id            UUID REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS notes               TEXT,
+
 -- Unique index on batch_code per org (allows nulls)
 CREATE UNIQUE INDEX IF NOT EXISTS collection_batches_batch_code_org_id_idx
   ON collection_batches (org_id, batch_code)

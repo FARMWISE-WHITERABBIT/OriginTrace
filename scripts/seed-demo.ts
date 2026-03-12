@@ -178,7 +178,8 @@ async function seed() {
   ];
   const farms = await ins('farms', farmDefs.map(f => ({
     org_id: eId, farmer_name: f.name, phone: f.phone, community: f.community,
-    area_hectares: f.area, compliance_status: f.status, compliance_notes: (f as any).notes || null, created_by: adminUserId,
+    area_hectares: f.area, compliance_status: f.status, compliance_notes: (f as any).notes || null,
+    commodity: 'cocoa', created_by: adminUserId,
     boundary: { type: 'Polygon', coordinates: [[[f.lng-0.002,f.lat-0.002],[f.lng+0.002,f.lat-0.002],[f.lng+0.002,f.lat+0.002],[f.lng-0.002,f.lat+0.002],[f.lng-0.002,f.lat-0.002]]] },
     created_at: daysAgo(rnd(60,120)),
   })), '8 farms');
@@ -395,6 +396,36 @@ async function seed() {
   // NOTE: no submitted_at column
   await ins('tender_bids', { tender_id: (tender1 as any).id, exporter_org_id: eId, price_per_mt: 3780, quantity_available_mt: 20, status: 'submitted', notes: 'Full EUDR traceability. DPPs for all lots. Ready to ship from Lagos.', submitted_by: adminUserId }, 'bid on tender 1');
 
+  // 14b. Additional Commodity Farms (cashew, sesame, beans, ginger)
+  section('Additional Commodity Farms');
+  const extraFarmDefs = [
+    { name: 'Aminu Garba',        phone: '+2348023456001', community: 'Kankara, Katsina',    area: 4.2, status: 'approved', lat: 12.520, lng:  7.650, commodity: 'cashew',        notes: 'Organically managed. AFEX-certified aggregation.' },
+    { name: 'Hauwa Abdullahi',    phone: '+2348023456002', community: 'Dutse, Jigawa',        area: 6.8, status: 'approved', lat: 11.660, lng:  9.340, commodity: 'cashew',        notes: null },
+    { name: 'Musa Danjuma',       phone: '+2348023456003', community: 'Gombe, Gombe',         area: 3.5, status: 'approved', lat: 10.280, lng: 11.170, commodity: 'sesame',        notes: 'High-oleic white sesame. Preferred by UAE/Japan buyers.' },
+    { name: 'Fatima Bello',       phone: '+2348023456004', community: 'Numan, Adamawa',       area: 2.9, status: 'approved', lat:  9.460, lng: 12.030, commodity: 'sesame',        notes: null },
+    { name: 'Chidi Okonkwo',      phone: '+2348023456005', community: 'Nkwerre, Imo',         area: 5.1, status: 'approved', lat:  5.660, lng:  7.010, commodity: 'beans',         notes: 'Black-eyed peas. Exports to EU and US.' },
+    { name: 'Ngozi Ihejirika',    phone: '+2348023456006', community: 'Oguta, Imo',           area: 3.3, status: 'approved', lat:  5.720, lng:  6.800, commodity: 'beans',         notes: null },
+    { name: 'Samuel Ojo',         phone: '+2348023456007', community: 'Ifelodun, Kwara',      area: 2.7, status: 'approved', lat:  8.560, lng:  5.110, commodity: 'ginger',        notes: 'Ginger grown under shade canopy. Export to Germany and UK.' },
+    { name: 'Adunola Adegbite',   phone: '+2348023456008', community: 'Oke-Ero, Kwara',       area: 1.9, status: 'pending',  lat:  8.120, lng:  5.450, commodity: 'ginger',        notes: 'Registration pending land verification.' },
+  ];
+  const extraFarms = await ins('farms', extraFarmDefs.map(f => ({
+    org_id: eId,
+    farmer_name: f.name,
+    phone: f.phone,
+    community: f.community,
+    area_hectares: f.area,
+    compliance_status: f.status,
+    compliance_notes: f.notes,
+    commodity: f.commodity,
+    created_by: adminUserId,
+    boundary: {
+      type: 'Polygon',
+      coordinates: [[[f.lng-0.003,f.lat-0.003],[f.lng+0.003,f.lat-0.003],[f.lng+0.003,f.lat+0.003],[f.lng-0.003,f.lat+0.003],[f.lng-0.003,f.lat-0.003]]],
+    },
+    created_at: daysAgo(rnd(20,60)),
+  })), '8 additional commodity farms');
+
+  // 14c. Farm Conflicts
   // 14. Farm Conflicts
   section('Farm Conflicts');
   // id is SERIAL bigint (not UUID) — wipe uses gt('id', 0)

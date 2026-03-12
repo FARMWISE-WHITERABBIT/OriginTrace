@@ -14,8 +14,14 @@ import {
 import {
   Package, Map, Users, Scale,
   TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck,
-  AlertTriangle, Ship, FileText, Activity
+  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
+  ssr: false,
+  loading: () => <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center"><div className="text-muted-foreground text-sm">Loading map...</div></div>
+});
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -437,6 +443,25 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Farm Polygon Overview Map */}
+      <Card data-testid="farm-map-overview">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Farm Polygon Overview
+            </CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/app/farms/map">Open Map</a>
+            </Button>
+          </div>
+          <CardDescription>GPS-mapped farm boundaries — colour coded by compliance status</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 pb-4 px-4">
+          <FarmMapOverview />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2" data-testid="row-agent-docs">
         <Card data-testid="chart-agent-performance">
