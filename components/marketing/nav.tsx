@@ -64,6 +64,32 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
         {link.label}
         <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </Link>
+
+      {/*
+       * SEO-critical: dropdown links are ALWAYS rendered in the DOM so Googlebot
+       * can discover sub-pages on first render without simulating mouse hover.
+       * The `aria-hidden` + `pointer-events-none` + `invisible` classes make them
+       * invisible and non-interactive when closed, while keeping them in the HTML.
+       * Framer Motion handles the visible animated layer on top for real users.
+       */}
+      <div
+        aria-hidden={!open}
+        className={`absolute top-full left-0 mt-1 w-52 ${open ? 'invisible' : 'invisible'}`}
+        data-seo="dropdown-links"
+      >
+        {link.dropdown!.map((sub) => (
+          <Link
+            key={sub.href}
+            href={sub.href}
+            tabIndex={-1}
+            className="block px-4 py-2 text-sm"
+          >
+            {sub.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Visible animated dropdown for real users */}
       <AnimatePresence>
         {open && (
           <motion.div

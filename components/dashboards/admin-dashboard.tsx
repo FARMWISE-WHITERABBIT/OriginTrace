@@ -17,6 +17,7 @@ import {
   AlertTriangle, Ship, FileText, Activity, MapPin, Leaf
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
   ssr: false,
@@ -137,6 +138,8 @@ export function AdminDashboard() {
       description: `${analytics?.farmSummary.approved || 0} approved`,
       trend: null as number | null,
       color: 'text-emerald-600 dark:text-emerald-400',
+      href: '/app/farms',
+      action: analytics?.farmSummary.pending ? `${analytics.farmSummary.pending} pending review →` : 'View all farms →',
     },
     {
       title: 'Collection Volume',
@@ -145,6 +148,8 @@ export function AdminDashboard() {
       description: `${analytics?.batchSummary.current || 0} batches collected`,
       trend: analytics?.weightSummary.trend ?? null,
       color: 'text-blue-600 dark:text-blue-400',
+      href: '/app/inventory',
+      action: 'View inventory →',
     },
     {
       title: 'Active Shipments',
@@ -153,6 +158,8 @@ export function AdminDashboard() {
       description: 'Recent shipments tracked',
       trend: null as number | null,
       color: 'text-violet-600 dark:text-violet-400',
+      href: '/app/shipments',
+      action: 'View shipments →',
     },
     {
       title: 'Compliance Rate',
@@ -165,24 +172,26 @@ export function AdminDashboard() {
         : overallComplianceRate >= 50
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-red-600 dark:text-red-400',
+      href: '/app/farms?status=pending',
+      action: overallComplianceRate < 100 ? 'Review compliance →' : 'View details →',
     },
   ];
 
   const flagItems = [
     ...(analytics?.compliance.flaggedBatches
-      ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle }]
+      ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle, href: '/app/yield-alerts', action: 'Review' }]
       : []),
     ...(analytics?.farmSummary.pending
-      ? [{ label: `${analytics.farmSummary.pending} farms pending compliance review`, priority: 'medium' as const, icon: Activity }]
+      ? [{ label: `${analytics.farmSummary.pending} farm${analytics.farmSummary.pending !== 1 ? 's' : ''} pending compliance review`, priority: 'medium' as const, icon: Activity, href: '/app/farms', action: 'Review' }]
       : []),
     ...(analytics?.farmSummary.rejected
-      ? [{ label: `${analytics.farmSummary.rejected} farm${analytics.farmSummary.rejected !== 1 ? 's' : ''} rejected`, priority: 'high' as const, icon: AlertTriangle }]
+      ? [{ label: `${analytics.farmSummary.rejected} farm${analytics.farmSummary.rejected !== 1 ? 's' : ''} rejected`, priority: 'high' as const, icon: AlertTriangle, href: '/app/farms?status=rejected', action: 'View' }]
       : []),
     ...((analytics?.documentHealth || []).filter(d => d.status === 'Expired').map(d => ({
-      label: `${d.count} document${d.count !== 1 ? 's' : ''} expired`, priority: 'high' as const, icon: FileText,
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expired`, priority: 'high' as const, icon: FileText, href: '/app/documents?status=expired', action: 'Renew',
     }))),
     ...((analytics?.documentHealth || []).filter(d => d.status === 'Expiring Soon').map(d => ({
-      label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText,
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText, href: '/app/documents?status=expiring_soon', action: 'Review',
     }))),
   ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
 
