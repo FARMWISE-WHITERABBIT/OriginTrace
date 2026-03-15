@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
@@ -556,7 +556,7 @@ function ComplianceProfilesSection() {
 }
 // ── End ComplianceProfilesSection ──────────────────────────────────────────
 
-export default function SettingsPage() {
+function SettingsContent() {
   const { profile, organization, isLoading, refreshProfile } = useOrg();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab') || 'general';
@@ -2062,5 +2062,17 @@ export default function SettingsPage() {
 
       </Tabs>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
