@@ -15,59 +15,15 @@ import {
   Search,
   Globe,
   ChevronRight,
-  ChevronDown,
-  Package,
   Tag,
   Microscope,
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
-  Landmark,
-  ShieldCheck,
   Lock,
   Truck,
   BookOpen,
-  Scale,
 } from 'lucide-react';
-
-const regulatoryBodies = [
-  {
-    name: 'GACC',
-    fullName: 'General Administration of Customs of China',
-    icon: Landmark,
-    description: 'Oversees all import/export customs operations, enforces food safety at borders, and manages the registration of overseas food production facilities.',
-    responsibilities: [
-      'Facility registration for overseas producers',
-      'Border inspection and quarantine',
-      'Import/export documentation review',
-      'Risk assessment and monitoring',
-    ],
-  },
-  {
-    name: 'SAMR',
-    fullName: 'State Administration for Market Regulation',
-    icon: Scale,
-    description: 'Responsible for domestic market supervision, food safety standards enforcement, and product quality certification within China.',
-    responsibilities: [
-      'Food safety standards enforcement',
-      'Product certification and labeling',
-      'Market access licensing',
-      'Quality inspection protocols',
-    ],
-  },
-  {
-    name: 'NHC',
-    fullName: 'National Health Commission',
-    icon: ShieldCheck,
-    description: 'Sets food safety risk assessment standards, manages national food safety standards (GB standards), and oversees public health aspects of imported food.',
-    responsibilities: [
-      'National food safety standards (GB)',
-      'Risk assessment frameworks',
-      'Maximum residue limits (MRLs)',
-      'Contaminant thresholds',
-    ],
-  },
-];
 
 const registrationRequirements = [
   {
@@ -276,7 +232,7 @@ export default function ChinaCompliancePage() {
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <ChinaRegulatoryTabs bodies={regulatoryBodies} />
+              <ChinaRegulatoryTabs />
             </FadeIn>
           </div>
         </section>
