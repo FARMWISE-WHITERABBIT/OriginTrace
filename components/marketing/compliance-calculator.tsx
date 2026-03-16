@@ -509,9 +509,25 @@ export function ComplianceCalculator() {
   const handleLeadSubmit = async () => {
     if (!leadData.fullName || !leadData.email || !leadData.company) return;
     setSubmittingLead(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSubmittingLead(false);
-    setStep('results');
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: leadData.fullName,
+          email: leadData.email,
+          organization_type: leadData.company,
+          role: leadData.role,
+          message: `Risk score: ${score}/100 | Tier: ${tier?.label || 'Unknown'} | Country: ${leadData.country} | Gaps: ${gaps.map(g => g.text).join(', ')}`,
+          source: 'calculator',
+        }),
+      });
+    } catch {
+      // fail silently — still show results
+    } finally {
+      setSubmittingLead(false);
+      setStep('results');
+    }
   };
 
   const slideVariants = {

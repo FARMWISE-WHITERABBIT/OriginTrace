@@ -16,8 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FadeIn } from '@/components/marketing/motion';
-import { MarketingNav } from '@/components/marketing/nav';
-import { MarketingFooter } from '@/components/marketing/footer';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Loader2, ArrowRight, Phone, MapPin, Rocket, Headphones, Calendar } from 'lucide-react';
 
@@ -51,6 +49,86 @@ const timelineSteps = [
       'Your compliance success manager ensures smooth adoption with training and optimization.',
   },
 ];
+
+// Success state — rendered inline inside the form card slot, no extra nav/footer
+function SubmittedState({ name }: { name: string }) {
+  return (
+    <FadeIn>
+      <div className="py-8">
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="mx-auto mb-6 h-20 w-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center"
+          >
+            <Check className="h-10 w-10 text-emerald-500" />
+          </motion.div>
+          <p
+            className="text-sm font-medium text-primary mb-3 tracking-wide uppercase"
+            data-testid="text-success-label"
+          >
+            [ Request Received ]
+          </p>
+          <h2
+            className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3"
+            data-testid="text-success-heading"
+          >
+            Your Pilot Slot is Secured
+          </h2>
+          <p
+            className="text-muted-foreground leading-relaxed max-w-sm mx-auto text-sm"
+            data-testid="text-success-description"
+          >
+            Our compliance team will contact you within 24 hours to schedule your personalised demonstration.
+          </p>
+        </div>
+
+        <div className="relative mb-8">
+          <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
+          <div className="space-y-0">
+            {timelineSteps.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + index * 0.15, duration: 0.4 }}
+                className="relative flex gap-5 py-4"
+                data-testid={`timeline-step-${index}`}
+              >
+                <div className="relative z-10 h-12 w-12 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <item.icon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 pt-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
+                    <h3 className="font-semibold text-sm">{item.title}</h3>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                      {item.duration}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="text-center"
+        >
+          <Link href="/">
+            <Button variant="outline" size="sm" data-testid="button-return-home">
+              Return to Homepage
+            </Button>
+          </Link>
+        </motion.div>
+      </div>
+    </FadeIn>
+  );
+}
 
 export function DemoFormWidget() {
   const [step, setStep] = useState(1);
@@ -94,95 +172,28 @@ export function DemoFormWidget() {
       return;
     }
     setSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSubmitted(true);
-    setSubmitting(false);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, source: 'demo' }),
+      });
+      if (!res.ok) throw new Error('Submission failed');
+      setSubmitted(true);
+    } catch {
+      toast({
+        title: 'Submission failed',
+        description: 'Something went wrong. Please email us directly at hello@origintrace.trade',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
+  // Success: render inline (no extra Nav/Footer — page.tsx already has them)
   if (submitted) {
-    return (
-      <div className="min-h-screen bg-background overflow-x-hidden">
-        <MarketingNav />
-        <main className="pt-28 pb-20 md:pb-28">
-          <div className="max-w-2xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-12">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                  className="mx-auto mb-6 h-20 w-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center"
-                >
-                  <Check className="h-10 w-10 text-emerald-500" />
-                </motion.div>
-                <p
-                  className="text-sm font-medium text-primary mb-3 tracking-wide uppercase"
-                  data-testid="text-success-label"
-                >
-                  [ Request Received ]
-                </p>
-                <h1
-                  className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4"
-                  data-testid="text-success-heading"
-                >
-                  Your Pilot Slot is Secured
-                </h1>
-                <p
-                  className="text-muted-foreground leading-relaxed max-w-lg mx-auto"
-                  data-testid="text-success-description"
-                >
-                  Our compliance team will contact you within 24 hours to schedule your personalized
-                  demonstration and discuss your pilot setup.
-                </p>
-              </div>
-            </FadeIn>
-
-            <div className="relative mb-12">
-              <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
-              <div className="space-y-0">
-                {timelineSteps.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.15, duration: 0.4 }}
-                    className="relative flex gap-5 py-5"
-                    data-testid={`timeline-step-${index}`}
-                  >
-                    <div className="relative z-10 h-12 w-12 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <item.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <div className="flex items-center gap-3 mb-1 flex-wrap">
-                        <h3 className="font-semibold">{item.title}</h3>
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                          {item.duration}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2 }}
-              className="text-center"
-            >
-              <Link href="/">
-                <Button variant="outline" data-testid="button-return-home">
-                  Return to Homepage
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
-        </main>
-        <MarketingFooter />
-      </div>
-    );
+    return <SubmittedState name={formData.full_name} />;
   }
 
   return (
@@ -420,7 +431,7 @@ export function DemoFormWidget() {
                     {submitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Processing...
+                        Sending...
                       </>
                     ) : (
                       'Secure My Pilot Slot'

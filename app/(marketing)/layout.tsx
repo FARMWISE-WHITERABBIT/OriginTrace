@@ -1,6 +1,7 @@
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { CookieBanner } from '@/components/marketing/cookie-banner';
 
 export const metadata: Metadata = {
   title: {
@@ -19,10 +20,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'OriginTrace — Supply Chain Compliance & Traceability Platform',
     description: 'The all-in-one platform for supply chain traceability, compliance verification, and export readiness.',
-  },  alternates: {
+  },
+  alternates: {
     canonical: 'https://origintrace.trade',
   },
-
 };
 
 export default function MarketingLayout({
@@ -32,7 +33,11 @@ export default function MarketingLayout({
 }) {
   return (
     <ThemeProvider>
-      {/* Google Analytics — marketing pages only, not /app */}
+      {/*
+       * Google Analytics — marketing pages only, not /app.
+       * GA is loaded with default_consent denied so it fires no cookies
+       * until the visitor explicitly accepts via the CookieBanner.
+       */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-EVZ942SKW9"
         strategy="afterInteractive"
@@ -41,11 +46,25 @@ export default function MarketingLayout({
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
+          gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            wait_for_update: 500,
+          });
           gtag('js', new Date());
-          gtag('config', 'G-EVZ942SKW9');
+          gtag('config', 'G-EVZ942SKW9', { anonymize_ip: true });
+
+          // Honour previously stored consent on page load
+          try {
+            var stored = localStorage.getItem('ot_cookie_consent');
+            if (stored === 'accepted') {
+              gtag('consent', 'update', { analytics_storage: 'granted' });
+            }
+          } catch(e) {}
         `}
       </Script>
       {children}
+      <CookieBanner />
     </ThemeProvider>
   );
 }
