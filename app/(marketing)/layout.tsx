@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import type { Metadata } from 'next';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: {
@@ -31,6 +32,19 @@ export default function MarketingLayout({
 }) {
   return (
     <ThemeProvider>
+      {/* Google Analytics — marketing pages only, not /app */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-EVZ942SKW9"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-EVZ942SKW9');
+        `}
+      </Script>
       {children}
     </ThemeProvider>
   );
