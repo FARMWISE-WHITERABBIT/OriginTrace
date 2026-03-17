@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
@@ -800,8 +801,12 @@ export default function HomePage() {
                 <StaggerItem key={post.slug}>
                   <Link href={`/blog/${post.slug}`} className="group block h-full">
                     <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all">
-                      <div className={`h-40 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
-                        <BookOpen className="h-8 w-8 text-white/10" />
+                      <div className={`h-40 relative overflow-hidden bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
+                        {post.coverImage ? (
+                          <Image src={post.coverImage} alt={post.coverImageAlt || post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+                        ) : (
+                          <BookOpen className="h-8 w-8 text-white/10" />
+                        )}
                       </div>
                       <CardContent className="p-5">
                         <div className="flex items-center gap-2 mb-3">

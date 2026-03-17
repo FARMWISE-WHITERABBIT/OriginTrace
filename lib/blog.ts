@@ -9,6 +9,8 @@ export interface BlogPost {
   author: string;
   authorRole: string;
   coverGradient: string;
+  coverImage?: string;      // e.g. '/blog/my-post/cover.jpg' — optional, falls back to gradient
+  coverImageAlt?: string;   // descriptive alt text; required if coverImage is set
   tags: string[];
   content: BlogSection[];
 }
@@ -21,6 +23,7 @@ export type BlogSection =
   | { type: 'numbered'; intro?: string; items: string[] }
   | { type: 'callout'; variant: 'info' | 'warning' | 'tip' | 'deadline'; title: string; text: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'image'; src: string; alt: string; caption?: string }
   | { type: 'cta'; heading: string; text: string; buttonText: string; href: string };
 
 import { posts } from '@/content/blog/index';

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getAllPosts, getPostBySlug, getRecentPosts } from '@/lib/blog';
@@ -29,11 +30,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       publishedTime: post.dateISO,
       authors: [post.author],
       tags: post.tags,
+      ...(post.coverImage && {
+        images: [{ url: `https://origintrace.trade${post.coverImage}`, alt: post.coverImageAlt || post.title }],
+      }),
     },
     twitter: {
-      card: 'summary_large_image',
+      card: post.coverImage ? 'summary_large_image' : 'summary',
       title: post.title,
       description: post.description,
+      ...(post.coverImage && { images: [`https://origintrace.trade${post.coverImage}`] }),
     },
   };
 }
@@ -162,6 +167,27 @@ function RenderSection({ section }: { section: BlogSection }) {
         </div>
       );
 
+    case 'image':
+      return (
+        <figure className="my-2">
+          <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+            <Image
+              src={section.src}
+              alt={section.alt}
+              width={800}
+              height={450}
+              className="w-full h-auto object-cover"
+              sizes="(max-width: 768px) 100vw, 720px"
+            />
+          </div>
+          {section.caption && (
+            <figcaption className="text-xs text-slate-400 dark:text-slate-500 text-center mt-2 italic">
+              {section.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
+
     case 'cta':
       return (
         <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 dark:from-emerald-950/30 dark:to-slate-900/30 border border-emerald-100 dark:border-emerald-900/50 p-8 text-center my-8">
@@ -212,9 +238,23 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
       <main className="pt-24 pb-20 md:pb-28">
         {/* ── Cover / Hero ── */}
-        <div className={`w-full h-56 md:h-72 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
-          <BookOpen className="h-16 w-16 text-white/10" />
-        </div>
+        {post.coverImage ? (
+          <div className="w-full h-56 md:h-72 relative overflow-hidden">
+            <Image
+              src={post.coverImage}
+              alt={post.coverImageAlt || post.title}
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
+          </div>
+        ) : (
+          <div className={`w-full h-56 md:h-72 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
+            <BookOpen className="h-16 w-16 text-white/10" />
+          </div>
+        )}
 
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid lg:grid-cols-[1fr_320px] gap-12 mt-10">
@@ -306,8 +346,12 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                     {recent.map(p => (
                       <Link key={p.slug} href={`/blog/${p.slug}`} className="group block">
                         <div className="flex gap-3">
-                          <div className={`h-14 w-14 shrink-0 rounded-lg bg-gradient-to-br ${p.coverGradient} flex items-center justify-center`}>
-                            <BookOpen className="h-4 w-4 text-white/20" />
+                          <div className={`h-14 w-14 shrink-0 rounded-lg overflow-hidden relative bg-gradient-to-br ${p.coverGradient} flex items-center justify-center`}>
+                            {p.coverImage ? (
+                              <Image src={p.coverImage} alt={p.coverImageAlt || p.title} fill className="object-cover" sizes="56px" />
+                            ) : (
+                              <BookOpen className="h-4 w-4 text-white/20" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[p.category] || 'bg-slate-100 text-slate-600'}`}>

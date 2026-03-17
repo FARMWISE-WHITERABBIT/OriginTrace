@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { getAllPosts } from '@/lib/blog';
 import { MarketingNav } from '@/components/marketing/nav';
@@ -64,8 +65,12 @@ export default function BlogListingPage() {
               <FadeIn>
                 <Link href={`/blog/${featured.slug}`} className="group block">
                   <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-                    <div className={`h-64 md:h-80 rounded-2xl bg-gradient-to-br ${featured.coverGradient} flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden`}>
-                      <BookOpen className="h-16 w-16 text-emerald-500/20 dark:text-emerald-400/20" />
+                    <div className={`h-64 md:h-80 rounded-2xl overflow-hidden relative bg-gradient-to-br ${featured.coverGradient} flex items-center justify-center border border-slate-200 dark:border-slate-700`}>
+                      {featured.coverImage ? (
+                        <Image src={featured.coverImage} alt={featured.coverImageAlt || featured.title} fill className="object-cover rounded-2xl" sizes="(max-width: 768px) 100vw, 50vw" />
+                      ) : (
+                        <BookOpen className="h-16 w-16 text-emerald-500/20 dark:text-emerald-400/20" />
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-4">
@@ -118,8 +123,12 @@ export default function BlogListingPage() {
                 <StaggerItem key={post.slug}>
                   <Link href={`/blog/${post.slug}`} className="group block h-full">
                     <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all">
-                      <div className={`h-36 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
-                        <BookOpen className="h-8 w-8 text-emerald-500/20 dark:text-emerald-400/20" />
+                      <div className={`h-36 relative overflow-hidden bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
+                        {post.coverImage ? (
+                          <Image src={post.coverImage} alt={post.coverImageAlt || post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+                        ) : (
+                          <BookOpen className="h-8 w-8 text-emerald-500/20 dark:text-emerald-400/20" />
+                        )}
                       </div>
                       <CardContent className="p-5 flex flex-col h-[calc(100%-9rem)]">
                         <div className="flex items-center gap-2 mb-3">
