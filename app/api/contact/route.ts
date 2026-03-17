@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail, FROM_ADDRESS } from '@/lib/email/resend-client';
+import { upsertHubSpotContact } from '@/lib/hubspot';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +67,16 @@ export async function POST(request: NextRequest) {
       subject: 'Your OriginTrace pilot slot is secured',
       html: autoReplyHtml,
     });
+
+    // ── Push lead to HubSpot CRM ────────────────────────────────────────────
+    try {
+      await upsertHubSpotContact({
+        full_name, email, phone, role, organization_type,
+        commodity, monthly_tonnage, farmer_count, biggest_concern, message, source,
+      });
+    } catch (hubspotErr) {
+      console.error('[api/contact] HubSpot upsert failed (non-fatal):', hubspotErr);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
