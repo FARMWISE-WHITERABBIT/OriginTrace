@@ -59,12 +59,12 @@ export default function SmartCollectPage() {
           >
             {isSaving ? (
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            ) : complianceScore < 100 || hasBlockingIssues ? (
+            ) : hasBlockingIssues ? (
               <AlertTriangle className="h-5 w-5 mr-2" />
             ) : (
               <CheckCircle className="h-5 w-5 mr-2" />
             )}
-            {complianceScore < 100 || hasBlockingIssues ? `Blocked (${complianceScore}%)` : 'Complete Batch'}
+            {hasBlockingIssues ? 'Blocked — resolve issues above' : `Complete Batch (${complianceScore}%)`}
           </Button>
         )}
       </div>
@@ -100,12 +100,12 @@ export default function SmartCollectPage() {
             >
               {isSaving ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : complianceScore < 100 || hasBlockingIssues ? (
+              ) : hasBlockingIssues ? (
                 <AlertTriangle className="h-5 w-5 mr-2" />
               ) : (
                 <CheckCircle className="h-5 w-5 mr-2" />
               )}
-              {complianceScore < 100 || hasBlockingIssues ? `Blocked (${complianceScore}%)` : 'Complete Batch'}
+              {hasBlockingIssues ? 'Blocked — resolve issues above' : `Complete Batch (${complianceScore}%)`}
             </Button>
           )}
         </div>

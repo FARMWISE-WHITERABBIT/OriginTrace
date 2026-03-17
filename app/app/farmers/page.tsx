@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -265,8 +266,25 @@ export default function FarmersPage() {
                   <TableBody>
                     {sorted.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
-                          {searchQuery ? 'No farmers match your search' : 'No farmers registered yet'}
+                        <TableCell colSpan={9} className="py-12">
+                          <div className="text-center">
+                            {searchQuery ? (
+                              <>
+                                <p className="font-medium text-muted-foreground">No farmers match your search</p>
+                                <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="font-medium">No farmers registered yet</p>
+                                <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                                  Register farmers using the field app during collection visits. Each farmer record is linked to their GPS-mapped farm for traceability.
+                                </p>
+                                <Link href="/app/farmers/new" className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-primary hover:underline">
+                                  Register your first farmer →
+                                </Link>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : sorted.map((farmer) => {
@@ -315,8 +333,23 @@ export default function FarmersPage() {
           {/* GRID VIEW */}
           {viewMode === 'grid' && (
             sorted.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {searchQuery ? 'No farmers match your search' : 'No farmers registered yet'}
+              <div className="text-center py-12">
+                {searchQuery ? (
+                  <>
+                    <p className="font-medium text-muted-foreground">No farmers match your search</p>
+                    <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">No farmers registered yet</p>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                      Register farmers using the field app during collection visits. Each record links to their GPS-mapped farm.
+                    </p>
+                    <Link href="/app/farmers/new" className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-primary hover:underline">
+                      Register your first farmer →
+                    </Link>
+                  </>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

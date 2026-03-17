@@ -17,7 +17,7 @@ import {
 import { TraceabilityTimeline } from '@/components/traceability-timeline';
 import { SupplyChainGraph } from '@/components/supply-chain-graph';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Package, AlertTriangle, Network } from 'lucide-react';
+import { Loader2, Search, Package, AlertTriangle, Network, Database } from 'lucide-react';
 import Link from 'next/link';
 import { TierGate } from '@/components/tier-gate';
 
@@ -192,6 +192,22 @@ export default function TraceabilityPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Pre-search guidance — shown before user has searched */}
+            {!result && !notFound && !isSearching && !searchSerial && (
+              <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
+                <Database className="h-10 w-10 mx-auto mb-4 text-muted-foreground opacity-40" />
+                <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">Trace any bag in your supply chain</p>
+                <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-4">
+                  Enter a bag serial number to see the complete journey — from the source farm through collection, processing, and shipment.
+                </p>
+                <div className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />Farm origin & GPS location</span>
+                  <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />Collection batch & agent</span>
+                  <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-violet-500 inline-block" />Processing & shipment chain</span>
+                </div>
+              </div>
+            )}
 
             {notFound && (
               <Card className="border-orange-500/50">

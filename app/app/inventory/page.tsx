@@ -306,9 +306,24 @@ export default function InventoryPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredBatches.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No batches found</p>
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+              {searchQuery || statusFilter !== 'all' ? (
+                <>
+                  <p className="font-medium text-muted-foreground">No batches match your filters</p>
+                  <p className="text-sm text-muted-foreground mt-1">Try clearing the search or changing the status filter</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">No collection batches yet</p>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Batches are created when a field agent completes a Smart Collect run. Each batch tracks weight, grade, and which farmers contributed.
+                  </p>
+                  <Link href="/app/collect" className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:underline">
+                    Start your first collection →
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
