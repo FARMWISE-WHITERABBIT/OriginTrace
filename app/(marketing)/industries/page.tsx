@@ -55,17 +55,17 @@ export default function IndustriesPage() {
 
       <main className="pt-24 pb-20 md:pb-28">
         {/* Hero */}
-        <section className="py-16 md:py-24 border-b border-slate-100 dark:border-slate-800">
-          <div className="max-w-6xl mx-auto px-6">
+        <section className="py-10 sm:py-16 md:py-24 border-b border-slate-100 dark:border-slate-800">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <FadeIn>
               <div className="max-w-2xl">
                 <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 block">
                   [ Industries ]
                 </span>
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-5">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-5">
                   Built for Origin-Sensitive Supply Chains
                 </h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
                   Every industry has its own compliance landscape. OriginTrace is configured for the specific regulations, data requirements, and market expectations of each sector.
                 </p>
               </div>
@@ -74,9 +74,9 @@ export default function IndustriesPage() {
         </section>
 
         {/* Industry cards */}
-        <section className="py-16">
-          <div className="max-w-6xl mx-auto px-6">
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
+        <section className="py-10 sm:py-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <StaggerContainer className="grid sm:grid-cols-2 gap-5 sm:gap-6">
               {industries.map((industry) => (
                 <StaggerItem key={industry.href}>
                   <Link href={industry.href} className="group block h-full">
@@ -111,13 +111,13 @@ export default function IndustriesPage() {
         </section>
 
         {/* CTA */}
-        <section className="max-w-6xl mx-auto px-6 pb-8">
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-8">
           <FadeIn>
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 dark:from-emerald-950/30 dark:to-slate-900/30 border border-emerald-100 dark:border-emerald-900/50 p-8 md:p-12 text-center">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white mb-4">
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 dark:from-emerald-950/30 dark:to-slate-900/30 border border-emerald-100 dark:border-emerald-900/50 p-6 sm:p-8 md:p-12 text-center">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white mb-4">
                 Don't see your exact sector?
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-8">
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-6 sm:mb-8">
                 If your business exports agricultural or natural resource commodities, OriginTrace can be configured for your supply chain. Talk to our team.
               </p>
               <Link href="/demo">

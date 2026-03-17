@@ -256,11 +256,11 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           </div>
         )}
 
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-[1fr_320px] gap-12 mt-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid lg:grid-cols-[1fr_300px] gap-12 mt-10">
 
             {/* ── Main content ── */}
-            <article>
+            <article className="min-w-0">
               {/* Back */}
               <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors mb-8">
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -280,14 +280,25 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">
                 {post.title}
               </h1>
 
               {/* Lead description */}
-              <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-8 pb-8 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-8 pb-8 border-b border-slate-100 dark:border-slate-800">
                 {post.description}
               </p>
+
+              {/* Mobile demo CTA — shown only below lg */}
+              <div className="lg:hidden mb-8 rounded-xl bg-emerald-600 p-5 text-white">
+                <p className="font-bold mb-1">Assess your compliance readiness</p>
+                <p className="text-sm text-emerald-100 mb-4 leading-relaxed">See how OriginTrace handles your specific commodity and target markets.</p>
+                <Link href="/demo">
+                  <Button size="sm" className="w-full bg-white text-emerald-700 hover:bg-emerald-50 font-semibold">
+                    Request a Demo
+                  </Button>
+                </Link>
+              </div>
 
               {/* Body */}
               <div className="space-y-6">
@@ -307,10 +318,33 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                   ))}
                 </div>
               </div>
+
+              {/* Mobile related posts */}
+              {recent.length > 0 && (
+                <div className="lg:hidden mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">More Insights</p>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    {recent.map(p => (
+                      <Link key={p.slug} href={`/blog/${p.slug}`} className="group flex gap-3 items-start">
+                        <div className={`h-12 w-12 shrink-0 rounded-lg overflow-hidden relative bg-gradient-to-br ${p.coverGradient} flex items-center justify-center`}>
+                          {p.coverImage ? (
+                            <Image src={p.coverImage} alt={p.coverImageAlt || p.title} fill className="object-cover" sizes="48px" />
+                          ) : (
+                            <BookOpen className="h-4 w-4 text-white/20" />
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug line-clamp-3">
+                          {p.title}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </article>
 
-            {/* ── Sidebar ── */}
-            <aside className="space-y-6">
+            {/* ── Sidebar — desktop only ── */}
+            <aside className="hidden lg:block space-y-6 sticky top-28 self-start">
               {/* Author card */}
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-5">
                 <div className="flex items-center gap-3 mb-3">
@@ -338,7 +372,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                 </Link>
               </div>
 
-              {/* Recent posts */}
+              {/* Related posts */}
               {recent.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">More Insights</p>
