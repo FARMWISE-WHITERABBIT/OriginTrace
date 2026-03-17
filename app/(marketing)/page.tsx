@@ -8,6 +8,7 @@ import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { LogoMarquee } from '@/components/marketing/logo-marquee';
 import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
 import { StatCounter } from '@/components/marketing/stat-counter';
+import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
@@ -162,28 +163,9 @@ const supplyChainSteps = [
   { icon: ClipboardCheck, label: 'Inspection', detail: 'Border compliance check' },
 ];
 
-const blogPosts = [
-  {
-    title: 'EUDR Compliance Deadline: What Exporters Need to Know in 2026',
-    date: 'Feb 28, 2026',
-    category: 'Regulatory',
-    excerpt: 'The EU Deforestation Regulation enforcement is here. Learn what data you need to have in place and how to build a compliance-ready supply chain.',
-  },
-  {
-    title: 'Pre-Shipment Scoring: Preventing Rejection Before It Happens',
-    date: 'Feb 15, 2026',
-    category: 'Best Practices',
-    excerpt: 'How dynamic compliance scoring across five risk dimensions helps exporters catch issues before cargo reaches port — saving millions in losses.',
-  },
-  {
-    title: 'Offline-First Traceability: Building Trust in Low-Connectivity Regions',
-    date: 'Jan 30, 2026',
-    category: 'Technology',
-    excerpt: 'Why traditional cloud-only solutions fail in remote agricultural regions, and how offline-first PWA architecture solves the connectivity gap.',
-  },
-];
 
 export default function HomePage() {
+  const recentPosts = getRecentPosts(3);
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -814,25 +796,36 @@ export default function HomePage() {
             </FadeIn>
 
             <StaggerContainer className="grid md:grid-cols-3 gap-6">
-              {blogPosts.map((post, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg transition-all group cursor-pointer">
-                    <div className="h-40 bg-gradient-to-br from-emerald-100 to-slate-100 dark:from-emerald-900/30 dark:to-slate-800/50 flex items-center justify-center">
-                      <BookOpen className="h-8 w-8 text-emerald-500/30 dark:text-emerald-400/30" />
-                    </div>
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">{post.category}</span>
-                        <span className="text-[10px] text-slate-400">{post.date}</span>
+              {recentPosts.map((post) => (
+                <StaggerItem key={post.slug}>
+                  <Link href={`/blog/${post.slug}`} className="group block h-full">
+                    <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all">
+                      <div className={`h-40 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
+                        <BookOpen className="h-8 w-8 text-white/10" />
                       </div>
-                      <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">{post.title}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">{post.excerpt}</p>
-                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">Read More →</span>
-                    </CardContent>
-                  </Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">{post.category}</span>
+                          <span className="text-[10px] text-slate-400">{post.date}</span>
+                        </div>
+                        <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">{post.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-3">{post.description}</p>
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">Read More →</span>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </StaggerItem>
               ))}
             </StaggerContainer>
+
+            <FadeIn className="text-center mt-10">
+              <Link href="/blog">
+                <Button variant="outline" className="gap-2">
+                  View All Insights
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </FadeIn>
           </div>
         </section>
 

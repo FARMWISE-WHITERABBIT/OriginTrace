@@ -35,11 +35,11 @@ export interface InventoryEntry {
 }
 
 export interface ComplianceFlag {
-  type: 'polygon_missing' | 'overlap' | 'yield_warning';
+  type: 'polygon_missing' | 'overlap' | 'yield_warning' | 'farm_rejected';
   farm_id: string;
   farmer_name: string;
   message: string;
-  severity: 'info' | 'warning';
+  severity: 'info' | 'warning' | 'error';
 }
 
 export const STEPS = [

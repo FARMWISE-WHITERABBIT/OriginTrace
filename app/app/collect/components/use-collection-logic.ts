@@ -301,15 +301,27 @@ export function useCollectionLogic() {
     if (step === 5) {
       const flags: ComplianceFlag[] = [];
       inventory.forEach(entry => {
-        if (!entry.has_boundary) {
+        // Hard block: rejected farm — this collection cannot proceed
+        if (entry.compliance_status === 'rejected') {
+          flags.push({
+            type: 'farm_rejected',
+            farm_id: entry.farm_id,
+            farmer_name: entry.farmer_name,
+            message: `${entry.farmer_name}'s farm has been rejected and cannot be included in collections`,
+            severity: 'error',
+          });
+        }
+        // Soft warning: no GPS polygon — collection can proceed but traceability is incomplete
+        if (!entry.has_boundary && entry.compliance_status !== 'rejected') {
           flags.push({
             type: 'polygon_missing',
             farm_id: entry.farm_id,
             farmer_name: entry.farmer_name,
-            message: `${entry.farmer_name}'s farm has no GPS polygon mapped`,
+            message: `${entry.farmer_name}'s farm has no GPS polygon — map it to strengthen traceability`,
             severity: 'warning',
           });
         }
+        // Soft warning: yield anomaly
         if (entry.area_hectares && entry.weight_kg > 0) {
           const yieldPerHa = entry.weight_kg / entry.area_hectares;
           if (yieldPerHa > 3000) {
@@ -339,7 +351,7 @@ export function useCollectionLogic() {
       checks++;
       if (entry.has_boundary) entryScore++;
       checks++;
-      if (entry.compliance_status !== 'flagged') entryScore++;
+      if (entry.compliance_status !== 'flagged' && entry.compliance_status !== 'rejected') entryScore++;
       if (entry.area_hectares && entry.weight_kg > 0) {
         checks++;
         const yieldPerHa = entry.weight_kg / entry.area_hectares;
@@ -350,7 +362,10 @@ export function useCollectionLogic() {
     return Math.round((compliant / totalEntries) * 100);
   }, [inventory]);
 
-  const hasBlockingIssues = complianceFlags.some(f => f.type === 'polygon_missing' || f.type === 'overlap');
+  // Hard blocks: rejected farm or confirmed boundary overlap — these prevent finalization.
+  // Soft warnings (polygon_missing, yield_warning) are surfaced but do NOT block the agent —
+  // missing polygons are a data quality issue, not the agent's fault to resolve in the field.
+  const hasBlockingIssues = complianceFlags.some(f => f.type === 'farm_rejected' || f.type === 'overlap');
 
   const canProceed = useCallback(() => {
     switch (step) {
@@ -359,10 +374,12 @@ export function useCollectionLogic() {
       case 3: return true;
       case 4: return totalBags > 0;
       case 5: return true;
-      case 6: return complianceScore === 100 && !hasBlockingIssues;
+      // Step 6: block only on hard issues (rejected farm, boundary overlap).
+      // Soft warnings (no polygon, yield anomaly) show amber but allow completion.
+      case 6: return !hasBlockingIssues;
       default: return false;
     }
-  }, [step, selectedState, selectedLGA, community, commodity, contributors.length, totalBags, complianceScore, hasBlockingIssues]);
+  }, [step, selectedState, selectedLGA, community, commodity, contributors.length, totalBags, hasBlockingIssues]);
 
   const handleFinalize = useCallback(async () => {
     setIsSaving(true);

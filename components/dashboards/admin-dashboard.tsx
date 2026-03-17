@@ -261,21 +261,26 @@ export function AdminDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stat-cards-row">
         {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
-              </div>
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
-                {stat.trend !== null && <TrendIndicator value={stat.trend} />}
-              </div>
-            </CardContent>
-          </Card>
+          <Link key={stat.title} href={stat.href} className="group" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Card className="h-full transition-shadow group-hover:shadow-md group-hover:border-primary/30">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {isLoading ? '...' : stat.value}
+                </div>
+                <div className="flex items-center justify-between flex-wrap gap-1 mt-1">
+                  <p className="text-xs text-muted-foreground">{stat.description}</p>
+                  {stat.trend !== null && <TrendIndicator value={stat.trend} />}
+                </div>
+                <p className="text-xs text-primary mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {stat.action}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -346,11 +351,12 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : flagItems.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {flagItems.map((flag, idx) => (
-                  <div
+                  <Link
                     key={idx}
-                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50"
+                    href={flag.href}
+                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors group"
                     data-testid={`flag-item-${idx}`}
                   >
                     <flag.icon className={`h-4 w-4 flex-shrink-0 ${
@@ -359,14 +365,17 @@ export function AdminDashboard() {
                         : 'text-amber-500 dark:text-amber-400'
                     }`} />
                     <span className="text-sm flex-1">{flag.label}</span>
-                    <Badge
-                      variant={flag.priority === 'high' ? 'destructive' : 'secondary'}
-                      className="text-xs"
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                        flag.priority === 'high'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                      }`}
                       data-testid={`badge-priority-${idx}`}
                     >
-                      {flag.priority}
-                    </Badge>
-                  </div>
+                      {flag.action} →
+                    </span>
+                  </Link>
                 ))}
               </div>
             ) : (

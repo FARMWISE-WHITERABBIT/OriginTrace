@@ -13,6 +13,7 @@ export function Step5ComplianceReview({ logic }: Step5Props) {
   const {
     organization, complianceScore, complianceFlags,
     complianceAttestations, setComplianceAttestations,
+    hasBlockingIssues,
   } = logic;
 
   return (
@@ -52,15 +53,38 @@ export function Step5ComplianceReview({ logic }: Step5Props) {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="text-sm font-medium text-muted-foreground">Issues blocking finalization:</div>
-            {complianceFlags.map((flag, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 border rounded-lg">
-                <AlertTriangle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${flag.type === 'polygon_missing' || flag.type === 'overlap' ? 'text-red-500' : 'text-amber-500'}`} />
+            {/* Hard blocks */}
+            {complianceFlags.some(f => f.type === 'farm_rejected' || f.type === 'overlap') && (
+              <div className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
+                Blocking Issues — must resolve before finalizing
+              </div>
+            )}
+            {complianceFlags.filter(f => f.type === 'farm_rejected' || f.type === 'overlap').map((flag, i) => (
+              <div key={`block-${i}`} className="flex items-start gap-3 p-3 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5 text-red-500" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{flag.farmer_name}</div>
+                  <div className="text-sm text-muted-foreground">{flag.message}</div>
+                  <Badge variant="outline" className="text-xs text-red-600 border-red-300 mt-1">
+                    {flag.type === 'farm_rejected' ? 'Farm rejected' : 'Boundary conflict'}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            {/* Soft warnings */}
+            {complianceFlags.some(f => f.type === 'polygon_missing' || f.type === 'yield_warning') && (
+              <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-1 mt-3">
+                Warnings — collection can proceed
+              </div>
+            )}
+            {complianceFlags.filter(f => f.type === 'polygon_missing' || f.type === 'yield_warning').map((flag, i) => (
+              <div key={`warn-${i}`} className="flex items-start gap-3 p-3 border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-500" />
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{flag.farmer_name}</div>
                   <div className="text-sm text-muted-foreground">{flag.message}</div>
                   {flag.type === 'polygon_missing' && (
-                    <Badge variant="outline" className="text-xs text-red-600 mt-1">Must map boundary</Badge>
+                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 mt-1">Map boundary later</Badge>
                   )}
                 </div>
               </div>
@@ -70,9 +94,11 @@ export function Step5ComplianceReview({ logic }: Step5Props) {
 
         <div className="p-3 bg-muted/30 rounded-lg">
           <div className="text-xs text-muted-foreground">
-            {complianceScore === 100
+            {!hasBlockingIssues && complianceFlags.length === 0
               ? 'All checks passed. You can finalize this batch.'
-              : 'Resolve all issues to reach 100% compliance before finalizing. Map missing farm boundaries and resolve spatial conflicts.'}
+              : hasBlockingIssues
+              ? 'Resolve the blocking issues above before finalizing. Remove rejected farms from this collection.'
+              : 'Warnings noted — you can still finalize. Map missing boundaries later to strengthen traceability.'}
           </div>
         </div>
 

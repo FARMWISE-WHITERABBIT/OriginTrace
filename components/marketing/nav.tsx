@@ -29,6 +29,7 @@ const navLinks = [
   { href: '/compliance', label: 'Compliance', dropdown: complianceLinks },
   { href: '/industries', label: 'Industries', dropdown: industryLinks },
   { href: '/pedigree', label: 'Pedigree' },
+  { href: '/blog', label: 'Insights' },
 ];
 
 function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: string | null }) {

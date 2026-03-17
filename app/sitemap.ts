@@ -108,7 +108,75 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
 
-    // ── Legal (trust signals — included for completeness) ──────────────────
+    // ── Blog ───────────────────────────────────────────────────────────────
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date('2026-03-10'),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/china-gacc-compliance-deadline-june-2026`,
+      lastModified: new Date('2026-03-10'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-compliance-tools-cocoa-exporters-practical-guide`,
+      lastModified: new Date('2026-02-28'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-compliance-tools-herbs-spices-exporters-practical-guide`,
+      lastModified: new Date('2026-02-20'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-cocoa-compliance-importers-readiness-guide`,
+      lastModified: new Date('2026-02-10'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-herbs-spices-compliance-importers-readiness-guide`,
+      lastModified: new Date('2026-01-30'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/sesame-seed-eudr-export-compliance-guide`,
+      lastModified: new Date('2026-01-20'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/soybean-eudr-export-compliance-guide`,
+      lastModified: new Date('2026-01-10'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/pre-shipment-compliance-scoring-prevent-rejection`,
+      lastModified: new Date('2026-02-15'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-compliance-deadline-2026-exporters-guide`,
+      lastModified: new Date('2026-02-28'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/offline-first-traceability-low-connectivity-regions`,
+      lastModified: new Date('2026-01-30'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+
+    // ── Legal (trust signals) ──────────────────────────────────────────────
     {
       url: `${baseUrl}/legal/privacy`,
       lastModified: new Date('2026-04-01'),
