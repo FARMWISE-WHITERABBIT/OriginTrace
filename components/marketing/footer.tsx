@@ -5,7 +5,7 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
       <div className="max-w-6xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
           <div className="col-span-2 md:col-span-1">
             <Image 
               src="/images/logo-green.png" 
@@ -36,17 +36,6 @@ export function MarketingFooter() {
             </div>
           </div>
           
-          <div>
-            <h4 className="text-sm font-semibold mb-4 text-slate-900 dark:text-white">Resources</h4>
-            <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
-              <li><Link href="/blog" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-blog">Insights Blog</Link></li>
-              <li><Link href="/blog/eudr-compliance-deadline-2026-exporters" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">EUDR Guide 2026</Link></li>
-              <li><Link href="/blog/china-gacc-compliance-deadline-june-2026" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">GACC Deadline Guide</Link></li>
-              <li><Link href="/blog/eudr-compliance-tools-cocoa-exporters-practical-guide" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Cocoa EUDR Guide</Link></li>
-              <li><Link href="/blog/pre-shipment-compliance-scoring-prevent-rejection" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Pre-Shipment Scoring</Link></li>
-            </ul>
-          </div>
-
           <div>
             <h4 className="text-sm font-semibold mb-4 text-slate-900 dark:text-white">Platform</h4>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
