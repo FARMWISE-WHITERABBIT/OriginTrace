@@ -4,10 +4,10 @@ import type { Metadata } from 'next';
 import { getAllPosts } from '@/lib/blog';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
-import { BookOpen, Clock, ArrowRight, ChevronRight } from 'lucide-react';
+import { FadeIn } from '@/components/marketing/motion';
+import { BlogGrid } from '@/components/marketing/blog-grid';
+import { BookOpen, Clock, ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Insights — Compliance & Traceability Blog',
@@ -101,64 +101,8 @@ export default function BlogListingPage() {
             </section>
           )}
 
-          {/* ── Category filter + grid ── */}
-          <section className="py-10 sm:py-12">
-            <FadeIn className="flex items-center gap-2 flex-wrap mb-8 sm:mb-10">
-              {categories.map(cat => (
-                <span
-                  key={cat}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border cursor-default select-none ${
-                    cat === 'All'
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  {cat}
-                </span>
-              ))}
-            </FadeIn>
-
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-              {rest.map(post => (
-                <StaggerItem key={post.slug}>
-                  <Link href={`/blog/${post.slug}`} className="group block h-full">
-                    <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all flex flex-col">
-                      <div className={`h-36 relative overflow-hidden shrink-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
-                        {post.coverImage ? (
-                          <Image src={post.coverImage} alt={post.coverImageAlt || post.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
-                        ) : (
-                          <BookOpen className="h-8 w-8 text-emerald-500/20 dark:text-emerald-400/20" />
-                        )}
-                      </div>
-                      <CardContent className="p-5 flex flex-col flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[post.category] || 'bg-slate-100 text-slate-600'}`}>
-                            {post.category}
-                          </span>
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5" />
-                            {post.readingTime}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-sm mb-2 text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug flex-1">
-                          {post.title}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-3">
-                          {post.description}
-                        </p>
-                        <div className="flex items-center justify-between mt-auto pt-2">
-                          <span className="text-[10px] text-slate-400">{post.date}</span>
-                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 group-hover:gap-1.5 transition-all">
-                            Read <ChevronRight className="h-3 w-3" />
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </section>
+          {/* ── Category filter + grid (client component for interactivity) ── */}
+          <BlogGrid posts={rest} categories={categories} />
 
           {/* ── Bottom CTA ── */}
           <section className="py-10 sm:py-12 border-t border-slate-100 dark:border-slate-800">
