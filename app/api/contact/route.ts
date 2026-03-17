@@ -5,7 +5,7 @@ import { upsertHubSpotContact } from '@/lib/hubspot';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { full_name, email, phone, role, organization_type, commodity, monthly_tonnage, farmer_count, biggest_concern, message, source } = body;
+    const { full_name, email, phone, company, role, organization_type, commodity, monthly_tonnage, farmer_count, biggest_concern, message, source } = body;
 
     if (!full_name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       <table style="border-collapse:collapse;width:100%;font-size:14px">
         <tr><td style="padding:8px;background:#f4f4f4;font-weight:600;width:160px">Name</td><td style="padding:8px;border-bottom:1px solid #eee">${full_name}</td></tr>
         <tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Email</td><td style="padding:8px;border-bottom:1px solid #eee"><a href="mailto:${email}">${email}</a></td></tr>
+        ${company ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Company</td><td style="padding:8px;border-bottom:1px solid #eee">${company}</td></tr>` : ''}
         ${phone ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Phone</td><td style="padding:8px;border-bottom:1px solid #eee">${phone}</td></tr>` : ''}
         ${role ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Role</td><td style="padding:8px;border-bottom:1px solid #eee">${role}</td></tr>` : ''}
         ${organization_type ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Org Type</td><td style="padding:8px;border-bottom:1px solid #eee">${organization_type}</td></tr>` : ''}
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     // ── Push lead to HubSpot CRM ────────────────────────────────────────────
     try {
       await upsertHubSpotContact({
-        full_name, email, phone, role, organization_type,
+        full_name, email, phone, company, role, organization_type,
         commodity, monthly_tonnage, farmer_count, biggest_concern, message, source,
       });
     } catch (hubspotErr) {

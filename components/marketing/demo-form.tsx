@@ -138,6 +138,7 @@ export function DemoFormWidget() {
 
   const [formData, setFormData] = useState({
     full_name: '',
+    company: '',
     role: '',
     organization_type: '',
     commodity: '',
@@ -150,13 +151,15 @@ export function DemoFormWidget() {
   });
 
   const handleNext = () => {
-    if (step === 1 && (!formData.full_name || !formData.email)) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter your name and email to continue',
-        variant: 'destructive',
-      });
-      return;
+    if (step === 1) {
+      if (!formData.full_name || !formData.email || !formData.company || !formData.phone) {
+        toast({
+          title: 'Missing Information',
+          description: 'Please fill in all required fields to continue',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     setStep(2);
   };
@@ -256,6 +259,16 @@ export function DemoFormWidget() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="company">Company Name *</Label>
+                    <Input
+                      id="company"
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      placeholder="Acme Exports Ltd"
+                      data-testid="input-company"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="email">Work Email *</Label>
                     <Input
                       id="email"
@@ -267,7 +280,7 @@ export function DemoFormWidget() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="phone">Phone (Optional)</Label>
+                    <Label htmlFor="phone">Phone Number *</Label>
                     <Input
                       id="phone"
                       type="tel"

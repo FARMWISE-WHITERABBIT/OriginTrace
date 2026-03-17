@@ -1,16 +1,20 @@
 import { ReplitConnectors } from '@replit/connectors-sdk';
 
 // HubSpot integration via Replit Connectors
-// Connection: conn_hubspot_01KKXMKM5P2RQ427TATHCVNWR7
-// Uses standard HubSpot contact properties only (no custom property creation required).
-// All OriginTrace-specific data (commodity, volume, etc.) is attached as a Note.
+// Uses standard contact properties only. Custom lead data is attached as a Note.
+// Every new lead also gets a Deal created in the "Sales Pipeline" at "Demo Requested" stage.
 
 const connectors = new ReplitConnectors();
+
+// Pipeline: "default" (Sales Pipeline) | Stage: "appointmentscheduled" (Demo Requested)
+const PIPELINE_ID = 'default';
+const DEAL_STAGE_ID = 'appointmentscheduled';
 
 export interface HubSpotLeadData {
   full_name: string;
   email: string;
   phone?: string;
+  company?: string;
   role?: string;
   organization_type?: string;
   commodity?: string;
@@ -38,7 +42,6 @@ function buildNoteBody(data: HubSpotLeadData): string {
 }
 
 async function attachNote(contactId: string, body: string): Promise<void> {
-  // Create note
   const noteRes = await connectors.proxy('hubspot', '/crm/v3/objects/notes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -52,8 +55,35 @@ async function attachNote(contactId: string, body: string): Promise<void> {
   const note = await noteRes.json() as { id?: string };
   if (!note.id) return;
 
-  // Associate note → contact
   await connectors.proxy('hubspot', `/crm/v3/objects/notes/${note.id}/associations/contacts/${contactId}/note_to_contact`, {
+    method: 'PUT',
+  });
+}
+
+async function createDealForContact(contactId: string, data: HubSpotLeadData): Promise<void> {
+  const company = data.company || data.organization_type || 'Unknown';
+  const dealName = `${company} — OriginTrace Demo`;
+
+  const dealRes = await connectors.proxy('hubspot', '/crm/v3/objects/deals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      properties: {
+        dealname: dealName,
+        pipeline: PIPELINE_ID,
+        dealstage: DEAL_STAGE_ID,
+        closedate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      },
+    }),
+  });
+  const deal = await dealRes.json() as { id?: string; message?: string };
+  if (!deal.id) {
+    console.error('[HubSpot] Deal creation failed:', deal.message);
+    return;
+  }
+
+  // Associate deal → contact
+  await connectors.proxy('hubspot', `/crm/v3/objects/deals/${deal.id}/associations/contacts/${contactId}/deal_to_contact`, {
     method: 'PUT',
   });
 }
@@ -61,7 +91,6 @@ async function attachNote(contactId: string, body: string): Promise<void> {
 export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void> {
   const { firstname, lastname } = splitName(data.full_name);
 
-  // Standard HubSpot contact properties only
   const properties: Record<string, string> = {
     email: data.email,
     firstname,
@@ -70,6 +99,7 @@ export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void>
   };
   if (data.phone) properties.phone = data.phone;
   if (data.role) properties.jobtitle = data.role;
+  if (data.company) properties.company = data.company;
   if (data.organization_type) properties.industry = data.organization_type;
 
   // Search for existing contact to avoid duplicates
@@ -85,6 +115,7 @@ export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void>
 
   const searchData = await searchRes.json() as { total: number; results: Array<{ id: string }> };
   let contactId: string;
+  let isNew = false;
 
   if (searchData.total > 0) {
     contactId = searchData.results[0].id;
@@ -104,9 +135,15 @@ export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void>
       throw new Error(`HubSpot contact creation failed: ${created.message || JSON.stringify(created)}`);
     }
     contactId = created.id;
+    isNew = true;
   }
 
-  // Attach note with all custom OriginTrace data
+  // Attach note with OriginTrace-specific data
   const noteBody = buildNoteBody(data);
   await attachNote(contactId, noteBody);
+
+  // Create a Deal in the sales pipeline for new contacts only
+  if (isNew) {
+    await createDealForContact(contactId, data);
+  }
 }

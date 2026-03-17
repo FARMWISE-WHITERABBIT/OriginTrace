@@ -45,6 +45,7 @@ interface LeadData {
   company: string;
   role: string;
   email: string;
+  phone: string;
   country: string;
   wantsWalkthrough: boolean;
 }
@@ -81,6 +82,7 @@ const INITIAL_LEAD: LeadData = {
   company: '',
   role: '',
   email: '',
+  phone: '',
   country: '',
   wantsWalkthrough: false
 };
@@ -507,7 +509,7 @@ export function ComplianceCalculator() {
   };
 
   const handleLeadSubmit = async () => {
-    if (!leadData.fullName || !leadData.email || !leadData.company) return;
+    if (!leadData.fullName || !leadData.email || !leadData.company || !leadData.phone) return;
     setSubmittingLead(true);
     try {
       await fetch('/api/contact', {
@@ -516,7 +518,8 @@ export function ComplianceCalculator() {
         body: JSON.stringify({
           full_name: leadData.fullName,
           email: leadData.email,
-          organization_type: leadData.company,
+          company: leadData.company,
+          phone: leadData.phone,
           role: leadData.role,
           message: `Risk score: ${score}/100 | Tier: ${tier?.label || 'Unknown'} | Country: ${leadData.country} | Gaps: ${gaps.map(g => g.text).join(', ')}`,
           source: 'calculator',
@@ -871,6 +874,10 @@ export function ComplianceCalculator() {
           <Input id="lead-email" type="email" value={leadData.email} onChange={e => updateLead('email', e.target.value)} placeholder="jane@acme-exports.com" data-testid="input-lead-email" />
         </div>
         <div>
+          <Label htmlFor="lead-phone" className="text-sm">Phone Number *</Label>
+          <Input id="lead-phone" type="tel" value={leadData.phone} onChange={e => updateLead('phone', e.target.value)} placeholder="+234..." data-testid="input-lead-phone" />
+        </div>
+        <div>
           <Label htmlFor="lead-country" className="text-sm">Country of Operation</Label>
           <Input id="lead-country" value={leadData.country} onChange={e => updateLead('country', e.target.value)} placeholder="Ghana" data-testid="input-lead-country" />
         </div>
@@ -894,7 +901,7 @@ export function ComplianceCalculator() {
         </Button>
         <Button
           onClick={handleLeadSubmit}
-          disabled={!leadData.fullName || !leadData.email || !leadData.company || submittingLead}
+          disabled={!leadData.fullName || !leadData.email || !leadData.company || !leadData.phone || submittingLead}
           className="gap-2"
           data-testid="button-send-report"
         >
