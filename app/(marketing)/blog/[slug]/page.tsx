@@ -16,8 +16,9 @@ export async function generateStaticParams() {
 }
 
 // ── Metadata per post ─────────────────────────────────────────────────────────
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = getPostBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   if (!post) return {};
   return {
     title: post.title,
@@ -208,8 +209,9 @@ function RenderSection({ section }: { section: BlogSection }) {
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   if (!post) notFound();
 
   const recent = getRecentPosts(3).filter(p => p.slug !== post.slug).slice(0, 3);
