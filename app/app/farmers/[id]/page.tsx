@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
@@ -61,7 +61,8 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default function FarmerDetailPage({ params }: { params: { id: string } }) {
+export default function FarmerDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise);
   const { profile } = useOrg();
   const router = useRouter();
   const { toast } = useToast();
