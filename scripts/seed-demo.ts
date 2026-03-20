@@ -340,7 +340,7 @@ async function seed() {
     compliance_status: (b.farm as any).compliance_status === 'approved' ? 'verified' : 'pending',
     notes:       `${b.code} — sole contributor`,
   }));
-  await tryIns('batch_contributions', singleFarmContribs, '12 cocoa batch contributions');
+  await ins('batch_contributions', singleFarmContribs, '12 cocoa batch contributions');
 
   // Ginger batch — 5 contributing farms (cooperative multi-farm contribution)
   // Weights distributed proportionally to farm area
@@ -351,7 +351,7 @@ async function seed() {
     { farm:gF4, def:gingerDefs[3], weight:1170, bags:23 },
     { farm:gF5, def:gingerDefs[4], weight:0,    bags:0  },
   ];
-  await tryIns('batch_contributions', gingerContribDefs.map(c => ({
+  await ins('batch_contributions', gingerContribDefs.map(c => ({
     batch_id:    (gingerBatch as any).id,
     farm_id:     (c.farm as any).id,
     farmer_name: c.def.name,
@@ -369,7 +369,7 @@ async function seed() {
   const [run2] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-002', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2040, output_weight_kg:1815, recovery_rate:88.9, mass_balance_valid:true,  processed_at:daysAgo(28), created_by:adminUserId, notes:'US export batch. Premium Grade 1 only.' }, 'RUN-002');
   const [run3] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-003', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:720,  output_weight_kg:432,  recovery_rate:60.0, mass_balance_valid:false, processed_at:daysAgo(20), created_by:adminUserId, notes:'UK batch — mass balance INVALID. 60% recovery below 75% threshold.' }, 'RUN-003 FAIL');
 
-  await tryIns('processing_run_batches', [
+  await ins('processing_run_batches', [
     { processing_run_id:(run1 as any).id, collection_batch_id:(cocoaBatches[0] as any).id, weight_contribution_kg:820  },
     { processing_run_id:(run1 as any).id, collection_batch_id:(cocoaBatches[1] as any).id, weight_contribution_kg:1250 },
     { processing_run_id:(run1 as any).id, collection_batch_id:(cocoaBatches[2] as any).id, weight_contribution_kg:560  },
@@ -387,7 +387,7 @@ async function seed() {
     mass_balance_valid:true, processed_at:daysAgo(12), created_by:adminUserId,
     notes:'Washed, peeled, split, tray-dried at 60°C/48hrs. Moisture <12%. ISO 22000/HACCP controls.',
   }, 'WRG-RUN-001 dried split ginger');
-  await tryIns('processing_run_batches', { processing_run_id:(gingerRun as any).id, collection_batch_id:(gingerBatch as any).id, weight_contribution_kg:4850 }, 'ginger run-batch link');
+  await ins('processing_run_batches', { processing_run_id:(gingerRun as any).id, collection_batch_id:(gingerBatch as any).id, weight_contribution_kg:4850 }, 'ginger run-batch link');
 
   // 12. Finished Goods
   section('Finished Goods');
@@ -409,7 +409,7 @@ async function seed() {
 
   // 14. Shipment Items (links finished goods → shipments)
   section('Shipment Items');
-  await tryIns('shipment_items', [
+  await ins('shipment_items', [
     { shipment_id:(ship1 as any).id,      item_type:'finished_good', finished_good_id:(fg1 as any).id,      weight_kg:(fg1 as any).weight_kg      },
     { shipment_id:(ship2 as any).id,      item_type:'finished_good', finished_good_id:(fg2 as any).id,      weight_kg:(fg2 as any).weight_kg      },
     { shipment_id:(ship3 as any).id,      item_type:'finished_good', finished_good_id:(fg3 as any).id,      weight_kg:(fg3 as any).weight_kg      },
@@ -419,7 +419,7 @@ async function seed() {
 
   // 15. Digital Product Passports
   section('DPPs');
-  await tryIns('digital_product_passports', [
+  await ins('digital_product_passports', [
     { org_id:eId, finished_good_id:(fg1 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{deforestation_free:true,eudr_compliant:true}, certifications:['Rainforest Alliance','EUDR-compliant'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:true}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — EU Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(10), created_by:adminUserId },
     { org_id:eId, finished_good_id:(fg2 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{fsma_traceable:true,cte_records:4}, certifications:['UTZ Certified','FSMA-204-traceable'], processing_history:[{run_code:'WR-RUN-002',input_kg:2040,output_kg:1815,recovery_rate:88.9}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(40)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(28)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Premium Cocoa Beans — US Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(8), created_by:adminUserId },
     { org_id:eId, finished_good_id:(fg3 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{mass_balance_hold:true}, certifications:[], processing_history:[{run_code:'WR-RUN-003',input_kg:720,output_kg:432,recovery_rate:60.0}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(35)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(20)}], regulatory_compliance:{pedigree_verified:false,mass_balance_valid:false,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Cocoa Beans — UK Batch (HOLD)',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'draft', issued_at:null, created_by:adminUserId },
@@ -439,7 +439,7 @@ async function seed() {
   ok(`valid doc types: ${validDt.join(', ')}`);
   const sd = (p: string) => validDt.includes(p) ? p : (validDt[0]??'other');
 
-  await tryIns('documents', [
+  await ins('documents', [
     { org_id:eId, title:'Phytosanitary Certificate — EU Shipment',        document_type:sd('phytosanitary'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-60),  file_url:'https://demo.origintrace.com/docs/phyto-001.pdf',           uploaded_by:adminUserId },
     { org_id:eId, title:'Due Diligence Statement — EU Shipment',           document_type:sd('other'),                  status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/dds-001.pdf',             uploaded_by:adminUserId },
     { org_id:eId, title:'Certificate of Origin — EU Shipment',             document_type:sd('certificate_of_origin'), status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-90),  file_url:'https://demo.origintrace.com/docs/coo-001.pdf',             uploaded_by:adminUserId },
@@ -490,11 +490,11 @@ async function seed() {
     batch_contributions: 12 rows (1 per batch, single-farm)
     Farmers page: 8 ledger rows with delivery totals
 
-  WHITERABBIT GINGER SUPPLY CHAIN (fully connected, rebranded from GACON)
+  WHITERABBIT GINGER SUPPLY CHAIN (fully connected)
     5 ginger farms (Southern Kaduna) → 1 batch WRG-GNG-2026-001 (4,850 kg, 97 bags)
     → 1 processing run WRG-RUN-001 (dried split ginger, 24% recovery)
     → 1 finished good PED-WRG-001 → WRG-SHP-2026-001 → Tianjin China (GO 82/100)
-    batch_contributions: 4 rows (cooperative multi-farm contribution)
+    batch_contributions: 5 rows (cooperative multi-farm, 4 delivering + 1 registered/no delivery)
     Documents: GACC cert · Phyto · Fumigation · MRL ⚠ expiring · COO · ISO 22000 · HACCP
     Farmers page: +5 ledger rows (4 with deliveries, 1 pending)
   `);

@@ -507,6 +507,9 @@ export default function InventoryPage() {
                               <p className="text-xs text-muted-foreground">
                                 {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
                               </p>
+                              <p className="text-[10px] text-muted-foreground/60 font-mono" data-testid={`text-contributor-farmid-${c.id}`}>
+                                {c.farm_id.slice(0, 8)}…
+                              </p>
                             </div>
                             <Badge
                               variant={complianceStatus === 'verified' || complianceStatus === 'approved' ? 'default' : complianceStatus === 'rejected' ? 'destructive' : 'secondary'}
