@@ -42,15 +42,17 @@ export async function getAuthenticatedProfile(request?: NextRequest) {
 export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
   const { data: org } = await supabase
     .from('organizations')
-    .select('settings')
+    .select('subscription_tier, settings')
     .eq('id', orgId)
     .single();
   if (!org) return false;
-  const settings = (org.settings as import('@/lib/types/organization').OrganizationSettings) || {};
-  const tier = settings.subscription_tier || 'starter';
+  // subscription_tier is a top-level column; settings JSONB may also carry overrides
+  const settings = (org as any).settings || {};
   const featureFlags = settings.feature_flags || {};
-  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
   const hasFeatureFlag = featureFlags.shipment_readiness === true;
+  // Read tier from top-level column first, fall back to settings.subscription_tier
+  const tier = (org as any).subscription_tier || settings.subscription_tier || 'starter';
+  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
   return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
 }
 
