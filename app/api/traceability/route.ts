@@ -88,14 +88,14 @@ export async function GET(request: NextRequest) {
       if (bagData.collection_batch_id) {
         const { data: batch } = await supabaseAdmin
           .from('collection_batches')
-          .select('id, farm_id, agent_id, weight_kg, grade, created_at')
+          .select('id, farm_id, agent_id, total_weight, grade, created_at')
           .eq('id', bagData.collection_batch_id)
           .single();
 
         if (batch) {
           if (!collectionData) {
             collectionData = {
-              weight: null,
+              weight: (batch as any).total_weight ?? null,
               grade: batch.grade,
               collected_at: batch.created_at,
             };
