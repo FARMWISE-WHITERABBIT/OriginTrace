@@ -21,6 +21,7 @@ interface Organization {
   monthly_collection_limit?: number;
   data_region?: string;
   brand_colors?: { primary?: string; secondary?: string; accent?: string } | null;
+  preferred_currency?: string;
 }
 
 interface Profile {
@@ -151,6 +152,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
             agent_seat_limit: org.agent_seat_limit ?? s.agent_seat_limit ?? 5,
             monthly_collection_limit: org.monthly_collection_limit ?? s.monthly_collection_limit ?? 1000,
             data_region: org.data_region || s.data_region,
+            preferred_currency: (org.preferred_currency as string) || (s.preferred_currency as string) || 'NGN',
+            settings: { ...s, preferred_currency: (org.preferred_currency as string) || (s.preferred_currency as string) || 'NGN' },
           } as Organization;
         };
 

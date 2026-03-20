@@ -332,7 +332,7 @@ function AnalyticsContent() {
 
         <TabsContent value="financial" className="space-y-6 print:break-after-page" data-testid="content-financial">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard title="Total Payments" value={`$${(data.paymentSummary?.total || 0).toLocaleString()}`} testId="stat-total-payments" />
+            <StatCard title="Total Payments" value={`₦${(data.paymentSummary?.total || 0).toLocaleString()}`} testId="stat-total-payments" />
             <StatCard title="Payment Count" value={data.paymentSummary?.count || 0} testId="stat-payment-count" />
             <StatCard title="Active Contracts" value={data.contractSummary?.total || 0} testId="stat-contracts" />
           </div>
@@ -349,7 +349,7 @@ function AnalyticsContent() {
                   dataKey="value"
                   categoryKey="name"
                   height={280}
-                  valueFormatter={(v) => `$${v.toLocaleString()}`}
+                  valueFormatter={(v) => `₦${v.toLocaleString()}`}
                 />
               </CardContent>
             </Card>
@@ -364,7 +364,7 @@ function AnalyticsContent() {
                   data={(data.paymentsByMethod || []).map((p: any) => ({ name: p.method, value: p.amount }))}
                   donut
                   height={280}
-                  labelFormatter={(name, value) => `$${value.toLocaleString()}`}
+                  labelFormatter={(name, value) => `₦${value.toLocaleString()}`}
                 />
               </CardContent>
             </Card>
@@ -397,7 +397,7 @@ function AnalyticsContent() {
                 <div className="space-y-6">
                   <MiniStat label="Total Contracts" value={data.contractSummary?.total || 0} testId="stat-contract-total" />
                   <MiniStat label="Contracted Volume" value={`${(data.contractSummary?.totalVolumeMT || 0).toLocaleString()} MT`} testId="stat-contract-volume" />
-                  <MiniStat label="Total Value" value={`$${(data.contractSummary?.totalValue || 0).toLocaleString()}`} testId="stat-contract-value" />
+                  <MiniStat label="Total Value" value={`₦${(data.contractSummary?.totalValue || 0).toLocaleString()}`} testId="stat-contract-value" />
                 </div>
               </CardContent>
             </Card>

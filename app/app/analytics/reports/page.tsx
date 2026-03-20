@@ -314,7 +314,7 @@ function PeriodPerformanceReport({ data, period }: { data: any; period: string }
               data={(data.paymentsByStatus || []).map((p: any) => ({ name: p.status, value: p.amount }))}
               dataKey="value"
               categoryKey="name"
-              height={200} valueFormatter={(v) => `$${v.toLocaleString()}`}
+              height={200} valueFormatter={(v) => `₦${v.toLocaleString()}`}
             />
           </CardContent>
         </Card>

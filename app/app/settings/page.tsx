@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key, ShieldCheck, Trash2 } from 'lucide-react';
+import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key, ShieldCheck, Trash2, Coins } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -297,6 +297,66 @@ function LanguagePreferenceSection() {
       >
         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {selectedLocale === 'fr' ? 'Enregistrer la langue' : selectedLocale === 'ar' ? 'حفظ اللغة' : 'Save Language'}
+      </Button>
+    </div>
+  );
+}
+
+// ── Currency Preference Section ────────────────────────────────────────────
+const CURRENCY_OPTIONS = [
+  { value: 'NGN', label: 'Nigerian Naira (₦)' },
+  { value: 'USD', label: 'US Dollar ($)' },
+  { value: 'EUR', label: 'Euro (€)' },
+  { value: 'GBP', label: 'British Pound (£)' },
+  { value: 'GHS', label: 'Ghanaian Cedi (GH₵)' },
+  { value: 'XOF', label: 'CFA Franc (XOF)' },
+];
+
+function CurrencyPreferenceSection() {
+  const { organization, setOrganization } = useOrg();
+  const { toast } = useToast();
+  const current = ((organization?.settings as any)?.preferred_currency as string) || (organization as any)?.preferred_currency || 'NGN';
+  const [selected, setSelected] = useState(current);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setSelected(current); }, [current]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { preferred_currency: selected } }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      if (organization) {
+        setOrganization({
+          ...organization,
+          preferred_currency: selected,
+          settings: { ...(organization.settings || {}), preferred_currency: selected },
+        });
+      }
+      toast({ title: 'Currency updated', description: `Default currency set to ${CURRENCY_OPTIONS.find(c => c.value === selected)?.label}.` });
+    } catch {
+      toast({ title: 'Error', description: 'Could not update currency preference.', variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Select value={selected} onValueChange={setSelected}>
+        <SelectTrigger data-testid="select-currency-preference"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {CURRENCY_OPTIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        This applies to payment records, analytics charts, and exported reports.
+      </p>
+      <Button size="sm" onClick={handleSave} disabled={saving || selected === current} data-testid="button-save-currency">
+        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Save Currency
       </Button>
     </div>
   );
@@ -1121,6 +1181,20 @@ function SettingsContent() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <LanguagePreferenceSection />
+              </CardContent>
+            </Card>
+
+            {/* Currency Preference */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Coins className="h-5 w-5" />
+                  Currency Preference
+                </CardTitle>
+                <CardDescription>Default currency for payments, analytics, and reports. Nigerian Naira (₦) is the default for Nigerian operations.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CurrencyPreferenceSection />
               </CardContent>
             </Card>
 
