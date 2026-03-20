@@ -62,7 +62,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function FarmerDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
-  const params = use(paramsPromise);
+  const { id } = use(paramsPromise);
   const { profile } = useOrg();
   const router = useRouter();
   const { toast } = useToast();
@@ -76,7 +76,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
 
   useEffect(() => {
-    fetch(`/api/farmers/${params.id}`)
+    fetch(`/api/farmers/${id}`)
       .then(r => r.json())
       .then(d => {
         if (d.error) { router.push('/app/farmers'); return; }
@@ -93,12 +93,12 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       })
       .catch(() => router.push('/app/farmers'))
       .finally(() => setLoading(false));
-  }, [params.id, router]);
+  }, [id, router]);
 
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/farmers/${params.id}`, {
+      const res = await fetch(`/api/farmers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
