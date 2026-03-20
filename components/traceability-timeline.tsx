@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Package, Warehouse, ShieldCheck, Check, Clock, Factory } from 'lucide-react';
+import { MapPin, Package, Warehouse, ShieldCheck, Check, Clock, Factory, Ship, Box } from 'lucide-react';
 
 interface TimelineStep {
   id: string;
@@ -38,6 +38,20 @@ interface TraceabilityTimelineProps {
     processedAt?: string;
     processedBy?: string;
   };
+  finishedGoodData?: {
+    pedigreeCode?: string;
+    productName?: string;
+    productType?: string;
+    weightKg?: number;
+    productionDate?: string;
+    buyerCompany?: string;
+  };
+  shipmentData?: {
+    shipmentCode?: string;
+    status?: string;
+    destinationCountry?: string;
+    estimatedShipDate?: string;
+  };
   verificationData?: {
     verifiedAt?: string;
     verifiedBy?: string;
@@ -51,6 +65,8 @@ export function TraceabilityTimeline({
   collectionData,
   aggregationData,
   processingData,
+  finishedGoodData,
+  shipmentData,
   verificationData
 }: TraceabilityTimelineProps) {
   const steps: TimelineStep[] = [
@@ -104,6 +120,35 @@ export function TraceabilityTimeline({
         ...(processingData.processingType ? { 'Type': processingData.processingType } : {}),
         ...(processingData.outputCode ? { 'Output Lot': processingData.outputCode } : {}),
         ...(processingData.processedBy ? { 'Processed By': processingData.processedBy } : {}),
+      } : undefined
+    },
+    {
+      id: 'finished_good',
+      title: 'Finished Good',
+      description: finishedGoodData?.productionDate ? `${finishedGoodData.productName || finishedGoodData.productType || 'Processed product'} — ${finishedGoodData.pedigreeCode || ''}` : 'Awaiting production',
+      timestamp: finishedGoodData?.productionDate,
+      completed: !!finishedGoodData?.productionDate,
+      icon: Box,
+      details: finishedGoodData?.productionDate ? {
+        ...(finishedGoodData.productName ? { 'Product': finishedGoodData.productName } : {}),
+        ...(finishedGoodData.productType ? { 'Type': finishedGoodData.productType } : {}),
+        ...(finishedGoodData.pedigreeCode ? { 'Pedigree Code': finishedGoodData.pedigreeCode } : {}),
+        ...(finishedGoodData.weightKg ? { 'Weight': `${finishedGoodData.weightKg} kg` } : {}),
+        ...(finishedGoodData.buyerCompany ? { 'Buyer': finishedGoodData.buyerCompany } : {}),
+      } : undefined
+    },
+    {
+      id: 'shipment',
+      title: 'Shipment',
+      description: shipmentData?.shipmentCode ? `${shipmentData.shipmentCode}${shipmentData.destinationCountry ? ` → ${shipmentData.destinationCountry}` : ''}` : 'Awaiting shipment',
+      timestamp: shipmentData?.estimatedShipDate,
+      completed: shipmentData?.status === 'shipped',
+      icon: Ship,
+      details: shipmentData?.shipmentCode ? {
+        'Shipment Code': shipmentData.shipmentCode,
+        'Status': shipmentData.status || 'draft',
+        ...(shipmentData.destinationCountry ? { 'Destination': shipmentData.destinationCountry } : {}),
+        ...(shipmentData.estimatedShipDate ? { 'Est. Ship Date': new Date(shipmentData.estimatedShipDate).toLocaleDateString() } : {}),
       } : undefined
     },
     {

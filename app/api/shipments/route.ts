@@ -60,10 +60,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Enrich with linked contracts via contract_shipments junction
+    const shipmentIds = (shipments || []).map((s: any) => s.id);
+    let contractsByShipment: Record<string, { contract_number: string; id: number }[]> = {};
+    if (shipmentIds.length > 0) {
+      const { data: contractLinks } = await supabase
+        .from('contract_shipments')
+        .select('shipment_id, contracts(id, contract_number)')
+        .in('shipment_id', shipmentIds);
+      if (contractLinks) {
+        for (const link of contractLinks as any[]) {
+          if (!contractsByShipment[link.shipment_id]) contractsByShipment[link.shipment_id] = [];
+          if (link.contracts) contractsByShipment[link.shipment_id].push(link.contracts);
+        }
+      }
+    }
+
     const shipmentsWithCount = (shipments || []).map((s: any) => ({
       ...s,
       item_count: s.shipment_items?.length || 0,
       shipment_items: undefined,
+      linked_contracts: contractsByShipment[s.id] || [],
     }));
 
     return NextResponse.json({ shipments: shipmentsWithCount, pagination: { page, limit, total: count ?? 0 } });

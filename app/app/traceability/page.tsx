@@ -37,6 +37,22 @@ interface TraceProcessing {
   processedBy?: string;
 }
 
+interface TraceFinishedGood {
+  pedigreeCode?: string;
+  productName?: string;
+  productType?: string;
+  weightKg?: number;
+  productionDate?: string;
+  buyerCompany?: string;
+}
+
+interface TraceShipment {
+  shipmentCode?: string;
+  status?: string;
+  destinationCountry?: string;
+  estimatedShipDate?: string;
+}
+
 interface TraceResult {
   bag: {
     serial: string;
@@ -59,6 +75,8 @@ interface TraceResult {
   } | null;
   contributors: TraceContributor[];
   processing: TraceProcessing | null;
+  finishedGood: TraceFinishedGood | null;
+  shipment: TraceShipment | null;
 }
 
 export default function TraceabilityPage() {
@@ -112,6 +130,8 @@ export default function TraceabilityPage() {
         agent: data.agent,
         contributors: data.contributors || [],
         processing: data.processing || null,
+        finishedGood: data.finishedGood || null,
+        shipment: data.shipment || null,
       });
       setSheetOpen(true);
     } catch (error) {
@@ -307,6 +327,20 @@ export default function TraceabilityPage() {
                   outputCode: result.processing.outputCode,
                   processedAt: result.processing.processedAt,
                   processedBy: result.processing.processedBy,
+                } : undefined}
+                finishedGoodData={result.finishedGood ? {
+                  pedigreeCode: result.finishedGood.pedigreeCode,
+                  productName: result.finishedGood.productName,
+                  productType: result.finishedGood.productType,
+                  weightKg: result.finishedGood.weightKg,
+                  productionDate: result.finishedGood.productionDate,
+                  buyerCompany: result.finishedGood.buyerCompany,
+                } : undefined}
+                shipmentData={result.shipment ? {
+                  shipmentCode: result.shipment.shipmentCode,
+                  status: result.shipment.status,
+                  destinationCountry: result.shipment.destinationCountry,
+                  estimatedShipDate: result.shipment.estimatedShipDate,
                 } : undefined}
                 verificationData={{
                   complianceStatus: result.farm?.compliance_status || 'pending',

@@ -171,14 +171,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Processing run: look up via bag's collection_batch (best-effort)
+    // Processing run + finished good + shipment chain (best-effort via collection_batch)
     let processingData: { processingType?: string; outputCode?: string; processedAt?: string; processedBy?: string } | null = null;
+    let finishedGoodData: { pedigreeCode?: string; productName?: string; productType?: string; weightKg?: number; productionDate?: string; buyerCompany?: string } | null = null;
+    let shipmentData: { shipmentCode?: string; status?: string; destinationCountry?: string; estimatedShipDate?: string } | null = null;
 
     if (bagData.collection_batch_id) {
       try {
         const { data: prBatch } = await supabaseAdmin
           .from('processing_run_batches')
-          .select('processing_run_id, processing_runs(run_code, commodity, processed_at, created_by, facility_name)')
+          .select('processing_run_id, processing_runs(run_code, commodity, processed_at, created_by, facility_name, id)')
           .eq('collection_batch_id', bagData.collection_batch_id)
           .limit(1)
           .maybeSingle();
@@ -200,9 +202,48 @@ export async function GET(request: NextRequest) {
             processedAt: pr.processed_at ?? undefined,
             processedBy,
           };
+
+          // Look up finished good linked to this processing run
+          if (pr.id) {
+            const { data: fg } = await supabaseAdmin
+              .from('finished_goods')
+              .select('pedigree_code, product_name, product_type, weight_kg, production_date, buyer_company')
+              .eq('processing_run_id', pr.id)
+              .limit(1)
+              .maybeSingle();
+
+            if (fg) {
+              finishedGoodData = {
+                pedigreeCode: fg.pedigree_code ?? undefined,
+                productName: fg.product_name ?? undefined,
+                productType: fg.product_type ?? undefined,
+                weightKg: fg.weight_kg ?? undefined,
+                productionDate: fg.production_date ?? undefined,
+                buyerCompany: fg.buyer_company ?? undefined,
+              };
+
+              // Look up shipment containing this finished good (via shipment_items)
+              const { data: shipItem } = await supabaseAdmin
+                .from('shipment_items')
+                .select('shipment_id, shipments(shipment_code, status, destination_country, estimated_ship_date)')
+                .eq('item_type', 'finished_good')
+                .limit(1)
+                .maybeSingle();
+
+              if (shipItem && (shipItem as any).shipments) {
+                const sh = (shipItem as any).shipments;
+                shipmentData = {
+                  shipmentCode: sh.shipment_code ?? undefined,
+                  status: sh.status ?? undefined,
+                  destinationCountry: sh.destination_country ?? undefined,
+                  estimatedShipDate: sh.estimated_ship_date ?? undefined,
+                };
+              }
+            }
+          }
         }
       } catch {
-        // Processing lookup is best-effort; ignore errors
+        // Chain lookup is best-effort; ignore errors
       }
     }
 
@@ -217,6 +258,8 @@ export async function GET(request: NextRequest) {
       agent: agentData,
       contributors: contributors.length > 1 ? contributors : [],
       processing: processingData,
+      finishedGood: finishedGoodData,
+      shipment: shipmentData,
     });
 
   } catch (error) {

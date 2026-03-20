@@ -153,6 +153,7 @@ export default function InventoryPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [contributions, setContributions] = useState<BatchContribution[]>([]);
   const [contributionsLoading, setContributionsLoading] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const { organization, profile } = useOrg();
   const supabase = createClient();
 
@@ -236,6 +237,25 @@ export default function InventoryPage() {
     return matchesSearch && matchesStatus;
   });
 
+
+  const handleResolveBatch = async () => {
+    if (!selectedBatch || !supabase) return;
+    setIsResolving(true);
+    try {
+      const { error } = await supabase
+        .from('collection_batches')
+        .update({ status: 'resolved' })
+        .eq('id', selectedBatch.id);
+      if (error) throw error;
+      toast({ title: 'Batch Resolved', description: `Batch ${selectedBatch.batch_id || selectedBatch.id.slice(0, 8)} locked for dispatch.` });
+      setSelectedBatch({ ...selectedBatch, status: 'resolved' });
+      setBatches(prev => prev.map(b => b.id === selectedBatch.id ? { ...b, status: 'resolved' } : b));
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resolve batch', variant: 'destructive' });
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   const handleRowClick = async (batch: Batch) => {
     setSelectedBatch(batch);
@@ -537,20 +557,37 @@ export default function InventoryPage() {
 
                 <div className="pt-2 border-t space-y-2">
                   {selectedBatch.status === 'collecting' && (
-                    <Link href={`/app/bags?batch=${selectedBatch.id}`}>
+                    <Link href="/app/collect">
                       <Button className="w-full" data-testid="button-add-bags">
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Bags
+                        Add More Produce
                       </Button>
                     </Link>
                   )}
                   {selectedBatch.status === 'collecting' && selectedBatch.bag_count > 0 && (
-                    <Link href={`/app/resolve?batch=${selectedBatch.id}`}>
-                      <Button variant="outline" className="w-full" data-testid="button-resolve">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Resolve & Lock
-                      </Button>
-                    </Link>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full" data-testid="button-resolve">
+                          <Lock className="h-4 w-4 mr-2" />
+                          Resolve & Lock
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Resolve Batch</DialogTitle>
+                          <DialogDescription>
+                            Lock batch {selectedBatch.batch_id || selectedBatch.id.slice(0, 8)} for dispatch. This cannot be undone — no more bags can be added after resolving.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                          <Button onClick={handleResolveBatch} disabled={isResolving} data-testid="button-confirm-resolve">
+                            {isResolving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
+                            Confirm Resolve
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                   {selectedBatch.status === 'resolved' && (
                     <Link href={`/app/dispatch?batch=${selectedBatch.id}`}>
