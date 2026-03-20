@@ -153,7 +153,7 @@ export default function YieldAlertsPage() {
     ) : (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <AlertTriangle className="h-6 w-6 text-amber-500" />
           Yield Alerts & Predictions
         </h1>
@@ -180,7 +180,7 @@ export default function YieldAlertsPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{flaggedBatches.length}</div>
+            <div className="text-2xl font-bold tracking-tight">{flaggedBatches.length}</div>
             <p className="text-xs text-muted-foreground">Batches requiring attention</p>
           </CardContent>
         </Card>
@@ -302,7 +302,7 @@ export default function YieldAlertsPage() {
                         <CardTitle className="text-sm font-medium capitalize">{commodity}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold" data-testid={`text-predicted-total-${commodity}`}>
+                        <div className="text-2xl font-bold tracking-tight" data-testid={`text-predicted-total-${commodity}`}>
                           {(summary.totalPredictedKg / 1000).toFixed(1)} t
                         </div>
                         <p className="text-xs text-muted-foreground">

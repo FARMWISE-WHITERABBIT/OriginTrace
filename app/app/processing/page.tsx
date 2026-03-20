@@ -293,7 +293,7 @@ export default function ProcessingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Factory className="h-6 w-6 text-orange-600" />
             Processing Runs
           </h1>
@@ -416,7 +416,7 @@ export default function ProcessingPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Calculated Recovery Rate</p>
-                        <p className="text-2xl font-bold">{calculateRecoveryRate()}%</p>
+                        <p className="text-2xl font-bold tracking-tight">{calculateRecoveryRate()}%</p>
                       </div>
                       <ArrowRight className="h-6 w-6 text-muted-foreground" />
                       <div>
@@ -565,7 +565,7 @@ export default function ProcessingPage() {
                 <Factory className="h-6 w-6 text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{processingRuns.length}</p>
+                <p className="text-2xl font-bold tracking-tight">{processingRuns.length}</p>
                 <p className="text-sm text-muted-foreground">Total Runs</p>
               </div>
             </div>
@@ -579,7 +579,7 @@ export default function ProcessingPage() {
                 <Package className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalInputWeight.toLocaleString()}</p>
+                <p className="text-2xl font-bold tracking-tight">{totalInputWeight.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Input (kg)</p>
               </div>
             </div>
@@ -593,7 +593,7 @@ export default function ProcessingPage() {
                 <Scale className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalOutputWeight.toLocaleString()}</p>
+                <p className="text-2xl font-bold tracking-tight">{totalOutputWeight.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Output (kg)</p>
               </div>
             </div>
@@ -607,7 +607,7 @@ export default function ProcessingPage() {
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{validRuns}/{processingRuns.length}</p>
+                <p className="text-2xl font-bold tracking-tight">{validRuns}/{processingRuns.length}</p>
                 <p className="text-sm text-muted-foreground">Valid Balance</p>
               </div>
             </div>

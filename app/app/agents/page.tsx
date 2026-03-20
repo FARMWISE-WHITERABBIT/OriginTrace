@@ -186,7 +186,7 @@ export default function AgentManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Field Agents</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Field Agents</h1>
           <p className="text-muted-foreground">Manage your field collection team</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -269,7 +269,7 @@ export default function AgentManagementPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : agentStats.total}</div>
+            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.total}</div>
             <p className="text-xs text-muted-foreground">Registered field agents</p>
           </CardContent>
         </Card>
@@ -279,7 +279,7 @@ export default function AgentManagementPage() {
             <Activity className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : agentStats.active}</div>
+            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.active}</div>
             <p className="text-xs text-muted-foreground">With at least 1 collection</p>
           </CardContent>
         </Card>
@@ -289,7 +289,7 @@ export default function AgentManagementPage() {
             <MapPin className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : agentStats.unassigned}</div>
+            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.unassigned}</div>
             <p className="text-xs text-muted-foreground">No state assigned</p>
           </CardContent>
         </Card>
@@ -311,10 +311,15 @@ export default function AgentManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : agents.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No agents yet</p>
-              <p className="text-sm">Add your first agent to get started</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border rounded-xl">
+              <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Users className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mb-1">No field agents yet</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mb-5">Add field agents to collect produce and register farmers using the mobile interface.</p>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />Add First Agent
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

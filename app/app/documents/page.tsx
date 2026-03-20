@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -355,7 +356,7 @@ function DocForm({
   );
 }
 
-export default function DocumentsPage() {
+function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -372,6 +373,24 @@ export default function DocumentsPage() {
 
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+
+  // Auto-open upload dialog pre-filled when navigated from shipment
+  useEffect(() => {
+    const entityType = searchParams.get('entity_type');
+    const entityId   = searchParams.get('entity_id');
+    const shipCode   = searchParams.get('shipment_code');
+    if (entityType && entityId) {
+      setCreateForm(f => ({
+        ...f,
+        linked_entity_type: entityType,
+        linked_entity_id:   entityId,
+        title: shipCode ? `Document for ${shipCode}` : '',
+      }));
+      setCreateOpen(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchDocuments = useCallback(async () => {
     if (orgLoading) return;
@@ -761,4 +780,8 @@ export default function DocumentsPage() {
       </div>
     </TierGate>
   );
+}
+
+export default function DocumentsPageWrapper() {
+  return <Suspense><DocumentsPage /></Suspense>;
 }

@@ -6,11 +6,13 @@ import { enforceTier } from '@/lib/api/tier-guard';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const serial = searchParams.get('serial');
+    const serial      = searchParams.get('serial');
+    const batchCode   = searchParams.get('batch_code');
+    const farmerName  = searchParams.get('farmer_name');
 
-    if (!serial) {
+    if (!serial && !batchCode && !farmerName) {
       return NextResponse.json(
-        { error: 'Serial number is required' },
+        { error: 'Provide serial, batch_code, or farmer_name' },
         { status: 400 }
       );
     }
@@ -34,11 +36,44 @@ export async function GET(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'traceability');
     if (tierBlock) return tierBlock;
 
+    // ── Batch-code search: return summary of batches matching the code ──────
+    if (batchCode && !serial) {
+      const { data: batches } = await supabaseAdmin
+        .from('collection_batches')
+        .select('id, batch_code, commodity, total_weight, bag_count, status, collected_at, farm:farms(id, farmer_name, community)')
+        .eq('org_id', profile.org_id)
+        .ilike('batch_code', `%${batchCode}%`)
+        .limit(20);
+      return NextResponse.json({ found: (batches || []).length > 0, mode: 'batch', batches: batches || [] });
+    }
+
+    // ── Farmer-name search: return batches from matching farmers ────────────
+    if (farmerName && !serial) {
+      const { data: farms } = await supabaseAdmin
+        .from('farms')
+        .select('id, farmer_name, community')
+        .eq('org_id', profile.org_id)
+        .ilike('farmer_name', `%${farmerName}%`)
+        .limit(10);
+
+      const farmIds = (farms || []).map((f: any) => f.id);
+      if (farmIds.length === 0) return NextResponse.json({ found: false, mode: 'farmer', batches: [] });
+
+      const { data: batches } = await supabaseAdmin
+        .from('collection_batches')
+        .select('id, batch_code, commodity, total_weight, bag_count, status, collected_at, farm_id, farm:farms(id, farmer_name, community)')
+        .eq('org_id', profile.org_id)
+        .in('farm_id', farmIds)
+        .order('collected_at', { ascending: false })
+        .limit(30);
+      return NextResponse.json({ found: (batches || []).length > 0, mode: 'farmer', farms: farms || [], batches: batches || [] });
+    }
+
     const { data: bagData, error: bagError } = await supabaseAdmin
       .from('bags')
       .select('id, serial, status, collection_batch_id, org_id')
       .eq('org_id', profile.org_id)
-      .eq('serial', serial.toUpperCase())
+      .eq('serial', (serial || '').toUpperCase())
       .single();
 
     if (bagError || !bagData) {

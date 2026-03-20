@@ -200,7 +200,7 @@ export default function PedigreePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Package className="h-6 w-6 text-green-600" />
             Finished Goods Pedigree
           </h1>
@@ -372,7 +372,7 @@ export default function PedigreePage() {
                 <Package className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{finishedGoods.length}</p>
+                <p className="text-2xl font-bold tracking-tight">{finishedGoods.length}</p>
                 <p className="text-sm text-muted-foreground">Total Pedigrees</p>
               </div>
             </div>
@@ -386,7 +386,7 @@ export default function PedigreePage() {
                 <CheckCircle className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tracking-tight">
                   {finishedGoods.filter(g => g.pedigree_verified).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Verified</p>
@@ -402,7 +402,7 @@ export default function PedigreePage() {
                 <Scale className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tracking-tight">
                   {finishedGoods.reduce((sum, g) => sum + (g.weight_kg || 0), 0).toLocaleString()}
                 </p>
                 <p className="text-sm text-muted-foreground">Total kg</p>
@@ -418,7 +418,7 @@ export default function PedigreePage() {
                 <Factory className="h-6 w-6 text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{processingRuns.length}</p>
+                <p className="text-2xl font-bold tracking-tight">{processingRuns.length}</p>
                 <p className="text-sm text-muted-foreground">Processing Runs</p>
               </div>
             </div>

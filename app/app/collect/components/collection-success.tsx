@@ -22,7 +22,7 @@ export function CollectionSuccess({ logic }: CollectionSuccessProps) {
         <div className="inline-flex items-center justify-center rounded-full bg-green-100 dark:bg-green-950/30 p-4">
           <CheckCircle className="h-10 w-10 text-green-600" />
         </div>
-        <h1 className="text-2xl font-bold" data-testid="text-success-title">Collection Complete</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-success-title">Collection Complete</h1>
         <p className="text-muted-foreground">
           {savedOffline ? 'Saved locally. Will sync when you are online.' : 'Batch has been saved successfully.'}
         </p>

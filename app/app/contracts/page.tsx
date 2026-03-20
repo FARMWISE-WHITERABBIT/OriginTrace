@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { TierGate } from '@/components/tier-gate';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, FileCheck, Calendar, Package, Ship, Link2 } from 'lucide-react';
+import { Loader2, Search, FileCheck, Calendar, Package, Ship, Link2, Banknote } from 'lucide-react';
 
 interface Contract {
   id: string;
@@ -39,6 +40,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
 };
 
 export default function ExporterContractsPage() {
+  const router = useRouter();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -250,6 +252,17 @@ export default function ExporterContractsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
+                      {contract.status === 'active' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/app/payments?contract_id=${contract.id}&contract_ref=${encodeURIComponent(contract.contract_reference)}&commodity=${encodeURIComponent(contract.commodity || '')}&buyer=${encodeURIComponent(contract.buyer_org?.name || '')}`)}
+                          data-testid={`button-record-payment-${contract.id}`}
+                        >
+                          <Banknote className="h-3.5 w-3.5 mr-1.5" />
+                          Record Payment
+                        </Button>
+                      )}
                       {contract.status === 'active' && (
                         <Button variant="outline" size="sm" onClick={() => handleStatusChange(contract.id, 'fulfilled')} data-testid={`button-fulfill-${contract.id}`}>
                           Mark Fulfilled

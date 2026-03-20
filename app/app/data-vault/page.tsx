@@ -132,7 +132,7 @@ export default function DataVaultPage() {
     ) : (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Database className="h-6 w-6" />
           Data Vault
         </h1>
@@ -169,7 +169,7 @@ export default function DataVaultPage() {
             <Map className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vaultStats?.stats.farms || 0}</div>
+            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.farms || 0}</div>
             <p className="text-xs text-muted-foreground">Registered farms</p>
           </CardContent>
         </Card>
@@ -180,7 +180,7 @@ export default function DataVaultPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vaultStats?.stats.batches || 0}</div>
+            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.batches || 0}</div>
             <p className="text-xs text-muted-foreground">Collection batches</p>
           </CardContent>
         </Card>
@@ -191,7 +191,7 @@ export default function DataVaultPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vaultStats?.stats.bags || 0}</div>
+            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.bags || 0}</div>
             <p className="text-xs text-muted-foreground">Individual bags</p>
           </CardContent>
         </Card>
@@ -202,7 +202,7 @@ export default function DataVaultPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vaultStats?.stats.users || 0}</div>
+            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.users || 0}</div>
             <p className="text-xs text-muted-foreground">Team members</p>
           </CardContent>
         </Card>

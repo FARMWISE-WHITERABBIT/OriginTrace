@@ -136,7 +136,7 @@ export default function FarmersPage() {
           {/* Header */}
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                 <Users className="h-6 w-6" />
                 Farmer Network
               </h1>
@@ -180,7 +180,7 @@ export default function FarmersPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{farmers.length}</div>
+                <div className="text-2xl font-bold tracking-tight">{farmers.length}</div>
                 <p className="text-xs text-muted-foreground">Registered in network</p>
               </CardContent>
             </Card>
@@ -190,7 +190,7 @@ export default function FarmersPage() {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{(totalDelivery / 1000).toFixed(1)}t</div>
+                <div className="text-2xl font-bold tracking-tight">{(totalDelivery / 1000).toFixed(1)}t</div>
                 <p className="text-xs text-muted-foreground">Lifetime deliveries</p>
               </CardContent>
             </Card>
@@ -200,7 +200,7 @@ export default function FarmersPage() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{avgGrade.toFixed(1)}/4.0</div>
+                <div className="text-2xl font-bold tracking-tight">{avgGrade.toFixed(1)}/4.0</div>
                 <p className="text-xs text-muted-foreground">Quality score</p>
               </CardContent>
             </Card>
@@ -210,7 +210,7 @@ export default function FarmersPage() {
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{withConsent}</div>
+                <div className="text-2xl font-bold tracking-tight">{withConsent}</div>
                 <p className="text-xs text-muted-foreground">
                   {farmers.length > 0 ? Math.round((withConsent / farmers.length) * 100) : 0}% of farmers
                 </p>

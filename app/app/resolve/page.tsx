@@ -249,7 +249,7 @@ function ResolveBatchContent() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
             Resolve & Lock Batch
           </h1>
           <p className="text-muted-foreground">

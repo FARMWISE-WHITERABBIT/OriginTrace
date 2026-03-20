@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +32,12 @@ export default function PaymentsPage() {
   const { organization, isLoading:orgLoading } = useOrg();
   const { format, currency:orgCurrency } = useCurrency();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+
+  // Pre-fill from contract deep-link: /app/payments?contract_id=X&contract_ref=Y&commodity=Z&buyer=B
+  const contractId  = searchParams.get('contract_id');
+  const contractRef = searchParams.get('contract_ref');
+  const contractBuyer = searchParams.get('buyer');
   const [payments,setPayments]=useState<Payment[]>([]);
   const [summary,setSummary]=useState<PaymentSummary|null>(null);
   const [isLoading,setIsLoading]=useState(true);
@@ -64,6 +71,22 @@ export default function PaymentsPage() {
 
   useEffect(()=>{if(dialogOpen&&form.payee_type==='farmer'&&farmers.length===0)fetchFarmers();},[dialogOpen,form.payee_type,farmers.length,fetchFarmers]);
   useEffect(()=>{if(dialogOpen)setForm(f=>({...f,currency:orgCurrency}));},[dialogOpen,orgCurrency]);
+
+  // Auto-open dialog pre-filled when navigated from Contracts page
+  useEffect(()=>{
+    if(contractId && contractRef){
+      setForm(f=>({
+        ...f,
+        payee_type:'aggregator',
+        payee_name: contractBuyer || '',
+        notes: `Contract: ${contractRef}`,
+        linked_entity_type:'contract',
+        linked_entity_id: contractId,
+      }));
+      setDialogOpen(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[contractId]);
 
   const fetchPayments=useCallback(async()=>{
     if(orgLoading||!organization){setIsLoading(false);return;}
@@ -271,7 +294,7 @@ export default function PaymentsPage() {
                   {payments.map(p=>(
                     <TableRow key={p.id} data-testid={`row-payment-${p.id}`}>
                       <TableCell className="whitespace-nowrap text-sm" data-testid={`text-date-${p.id}`}>{p.payment_date}</TableCell>
-                      <TableCell data-testid={`text-payee-${p.id}`}><div className="flex items-center gap-2"><div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">{p.payee_name.charAt(0).toUpperCase()}</div><div><p className="text-sm font-medium">{p.payee_name}</p>{p.farm_id&&<p className="text-xs text-muted-foreground font-mono">ID: {p.farm_id.slice(0,8)}…</p>}</div></div></TableCell>
+                      <TableCell data-testid={`text-payee-${p.id}`}><div className="flex items-center gap-2"><div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">{p.payee_name.charAt(0).toUpperCase()}</div><div><p className="text-sm font-medium">{p.payee_name}</p>{p.farm_id&&<a href={`/app/farmers/${p.farm_id}`} className="text-xs text-primary hover:underline" onClick={e=>e.stopPropagation()}>View Farmer →</a>}</div></div></TableCell>
                       <TableCell><Badge variant="outline" className="text-xs" data-testid={`badge-type-${p.id}`}>{PAYEE_LABELS[p.payee_type]||p.payee_type}</Badge></TableCell>
                       <TableCell className="text-right font-mono text-sm font-medium" data-testid={`text-amount-${p.id}`}>{format(p.amount)}</TableCell>
                       <TableCell className="text-sm" data-testid={`text-method-${p.id}`}>{METHOD_LABELS[p.payment_method]||p.payment_method}</TableCell>

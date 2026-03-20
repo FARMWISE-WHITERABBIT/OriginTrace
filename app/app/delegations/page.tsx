@@ -175,7 +175,7 @@ export default function DelegationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-page-title">
             <Shield className="h-6 w-6 text-primary" />
             Super-Aggregator Delegations
           </h1>

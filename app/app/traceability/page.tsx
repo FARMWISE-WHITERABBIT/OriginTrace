@@ -84,8 +84,13 @@ interface TraceResult {
 
 export default function TraceabilityPage() {
   const [searchSerial, setSearchSerial] = useState('');
+  const [searchBatch, setSearchBatch] = useState('');
+  const [searchFarmer, setSearchFarmer] = useState('');
+  const [searchMode, setSearchMode] = useState<'serial' | 'batch' | 'farmer'>('serial');
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<TraceResult | null>(null);
+  const [batchResults, setBatchResults] = useState<any[]>([]);
+  const [farmerResults, setFarmerResults] = useState<{ farms: any[]; batches: any[] } | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [flaggedCount, setFlaggedCount] = useState(0);
@@ -101,42 +106,48 @@ export default function TraceabilityPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!organization) return;
 
-    if (!organization || !searchSerial.trim()) {
-      return;
-    }
+    const query = searchMode === 'serial' ? searchSerial.trim()
+                : searchMode === 'batch'  ? searchBatch.trim()
+                : searchFarmer.trim();
+    if (!query) return;
 
     setIsSearching(true);
     setResult(null);
+    setBatchResults([]);
+    setFarmerResults(null);
     setNotFound(false);
 
     try {
-      const response = await fetch(`/api/traceability?serial=${encodeURIComponent(searchSerial.trim())}`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Search failed');
-      }
+      let url = '';
+      if (searchMode === 'serial')  url = `/api/traceability?serial=${encodeURIComponent(query)}`;
+      if (searchMode === 'batch')   url = `/api/traceability?batch_code=${encodeURIComponent(query)}`;
+      if (searchMode === 'farmer')  url = `/api/traceability?farmer_name=${encodeURIComponent(query)}`;
 
+      const response = await fetch(url);
+      if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Search failed'); }
       const data = await response.json();
 
-      if (!data.found) {
-        setNotFound(true);
-        setIsSearching(false);
-        return;
-      }
+      if (!data.found) { setNotFound(true); setIsSearching(false); return; }
 
-      setResult({
-        bag: data.bag,
-        farm: data.farm,
-        collection: data.collection,
-        agent: data.agent,
-        contributors: data.contributors || [],
-        processing: data.processing || null,
-        finishedGood: data.finishedGood || null,
-        shipment: data.shipment || null,
-      });
-      setSheetOpen(true);
+      if (data.mode === 'batch') {
+        setBatchResults(data.batches || []);
+      } else if (data.mode === 'farmer') {
+        setFarmerResults({ farms: data.farms || [], batches: data.batches || [] });
+      } else {
+        setResult({
+          bag: data.bag,
+          farm: data.farm,
+          collection: data.collection,
+          agent: data.agent,
+          contributors: data.contributors || [],
+          processing: data.processing || null,
+          finishedGood: data.finishedGood || null,
+          shipment: data.shipment || null,
+        });
+        setSheetOpen(true);
+      }
     } catch (error) {
       console.error('Search error:', error);
       toast({
@@ -209,32 +220,99 @@ export default function TraceabilityPage() {
           <div className="space-y-6 max-w-2xl">
             <Card>
               <CardHeader>
-                <CardTitle>Search by Bag Serial</CardTitle>
-                <CardDescription>
-                  Enter a bag serial number to trace its complete journey
-                </CardDescription>
+                <CardTitle>Trace Supply Chain</CardTitle>
+                <CardDescription>Search by bag serial, batch code, or farmer name</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Mode tabs */}
+                <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+                  {([['serial', 'Bag Serial'], ['batch', 'Batch Code'], ['farmer', 'Farmer Name']] as const).map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => { setSearchMode(mode); setResult(null); setBatchResults([]); setFarmerResults(null); setNotFound(false); }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${searchMode === mode ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <form onSubmit={handleSearch} className="flex gap-3">
                   <div className="flex-1">
-                    <Input
-                      value={searchSerial}
-                      onChange={(e) => setSearchSerial(e.target.value.toUpperCase())}
-                      placeholder="e.g., FW-B123-0001"
-                      className="touch-target font-mono"
-                      data-testid="input-trace-serial"
-                    />
-                  </div>
-                  <Button type="submit" disabled={isSearching || !searchSerial.trim()} data-testid="button-search">
-                    {isSearching ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
+                    {searchMode === 'serial' && (
+                      <Input value={searchSerial} onChange={e => setSearchSerial(e.target.value.toUpperCase())} placeholder="e.g. WR-BCH-001-042" className="font-mono" data-testid="input-trace-serial" />
                     )}
+                    {searchMode === 'batch' && (
+                      <Input value={searchBatch} onChange={e => setSearchBatch(e.target.value)} placeholder="e.g. WR-BCH-001 or WRG-GNG" data-testid="input-trace-batch" />
+                    )}
+                    {searchMode === 'farmer' && (
+                      <Input value={searchFarmer} onChange={e => setSearchFarmer(e.target.value)} placeholder="e.g. Yakubu or Adebayo" data-testid="input-trace-farmer" />
+                    )}
+                  </div>
+                  <Button type="submit" disabled={isSearching || !(searchMode === 'serial' ? searchSerial : searchMode === 'batch' ? searchBatch : searchFarmer).trim()} data-testid="button-search">
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </form>
               </CardContent>
             </Card>
+
+            {/* Batch results */}
+            {batchResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">{batchResults.length} batch{batchResults.length !== 1 ? 'es' : ''} found</p>
+                {batchResults.map((b: any) => (
+                  <a key={b.id} href={`/app/inventory/${b.id}`} className="block group">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/30 transition-colors">
+                      <div>
+                        <p className="text-sm font-mono font-medium group-hover:text-primary">{b.batch_code || b.id.slice(0,8)}</p>
+                        <p className="text-xs text-muted-foreground">{b.farm?.farmer_name} · {b.farm?.community} · {b.commodity}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{Number(b.total_weight || 0).toLocaleString()} kg</p>
+                        <p className="text-xs text-muted-foreground capitalize">{b.status}</p>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Farmer results */}
+            {farmerResults && (
+              <div className="space-y-3">
+                {farmerResults.farms.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-muted-foreground">{farmerResults.farms.length} farmer{farmerResults.farms.length !== 1 ? 's' : ''} matched</p>
+                    {farmerResults.farms.map((f: any) => (
+                      <a key={f.id} href={`/app/farmers/${f.id}`} className="flex items-center gap-2 p-2.5 rounded-lg border border-border hover:bg-muted/30 transition-colors group">
+                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">{f.farmer_name?.charAt(0)}</div>
+                        <div>
+                          <p className="text-sm font-medium group-hover:text-primary">{f.farmer_name}</p>
+                          <p className="text-xs text-muted-foreground">{f.community}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {farmerResults.batches.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-muted-foreground">{farmerResults.batches.length} collection batch{farmerResults.batches.length !== 1 ? 'es' : ''}</p>
+                    {farmerResults.batches.map((b: any) => (
+                      <a key={b.id} href={`/app/inventory/${b.id}`} className="block group">
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/30 transition-colors">
+                          <div>
+                            <p className="text-sm font-mono font-medium group-hover:text-primary">{b.batch_code || b.id.slice(0,8)}</p>
+                            <p className="text-xs text-muted-foreground">{b.farm?.farmer_name} · {b.commodity}</p>
+                          </div>
+                          <p className="text-sm font-medium">{Number(b.total_weight || 0).toLocaleString()} kg</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Pre-search guidance — shown before user has searched */}
             {!result && !notFound && !isSearching && !searchSerial && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -927,8 +928,17 @@ export default function ShipmentDetailPage() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Export Documentation</CardTitle>
-            <CardDescription>Mark documents that are ready for this shipment</CardDescription>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">Export Documentation</CardTitle>
+                <CardDescription>Mark documents that are ready for this shipment</CardDescription>
+              </div>
+              <Link href={`/app/documents?entity_type=shipment&entity_id=${shipment.id}&shipment_code=${encodeURIComponent(shipment.shipment_code)}`}>
+                <Button size="sm" variant="outline" className="shrink-0">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />Upload Document
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
