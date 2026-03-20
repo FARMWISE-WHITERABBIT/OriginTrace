@@ -34,10 +34,9 @@ export async function GET(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'traceability');
     if (tierBlock) return tierBlock;
 
-    // Search for the bag
     const { data: bagData, error: bagError } = await supabaseAdmin
       .from('bags')
-      .select('id, serial, status')
+      .select('id, serial, status, collection_batch_id')
       .eq('org_id', profile.org_id)
       .eq('serial', serial.toUpperCase())
       .single();
@@ -82,6 +81,66 @@ export async function GET(request: NextRequest) {
 
         if (agent) {
           agentData = agent;
+        }
+      }
+
+      if (!farmData && bagData.collection_batch_id) {
+        const { data: batch } = await supabaseAdmin
+          .from('collection_batches')
+          .select('id, farm_id, agent_id, weight_kg, grade, created_at')
+          .eq('id', bagData.collection_batch_id)
+          .single();
+
+        if (batch) {
+          if (!collectionData) {
+            collectionData = {
+              weight: null,
+              grade: batch.grade,
+              collected_at: batch.created_at,
+            };
+          }
+
+          if (batch.farm_id) {
+            const { data: batchFarm } = await supabaseAdmin
+              .from('farms')
+              .select('farmer_name, community, compliance_status')
+              .eq('id', batch.farm_id)
+              .single();
+            if (batchFarm) farmData = batchFarm;
+          }
+
+          if (!farmData) {
+            const { data: contribs } = await supabaseAdmin
+              .from('batch_contributions')
+              .select('farmer_name, weight_kg, bag_count, farm_id, compliance_status')
+              .eq('batch_id', batch.id)
+              .gt('weight_kg', 0)
+              .order('weight_kg', { ascending: false })
+              .limit(1);
+
+            if (contribs && contribs.length > 0) {
+              const c = contribs[0];
+              const { data: contribFarm } = await supabaseAdmin
+                .from('farms')
+                .select('farmer_name, community, compliance_status')
+                .eq('id', c.farm_id)
+                .maybeSingle();
+              farmData = contribFarm ?? {
+                farmer_name: c.farmer_name,
+                community: null,
+                compliance_status: c.compliance_status,
+              };
+            }
+          }
+
+          if (batch.agent_id && !agentData) {
+            const { data: agent } = await supabaseAdmin
+              .from('profiles')
+              .select('full_name')
+              .eq('user_id', batch.agent_id)
+              .single();
+            if (agent) agentData = agent;
+          }
         }
       }
     }

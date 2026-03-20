@@ -126,6 +126,12 @@ export default function InventoryPage() {
     bag_count: number;
     compliance_status: string;
     notes: string | null;
+    farm?: {
+      farmer_name: string | null;
+      community: string | null;
+      compliance_status: string | null;
+      area_hectares: number | null;
+    } | null;
   }
 
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -483,24 +489,34 @@ export default function InventoryPage() {
                     <p className="text-sm text-muted-foreground px-3 py-3">No contribution records found.</p>
                   ) : (
                     <div className="divide-y">
-                      {contributions.map(c => (
-                        <div key={c.id} className="px-3 py-2.5 flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate" data-testid={`text-contributor-name-${c.id}`}>
-                              {c.farmer_name || 'Unknown Farmer'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
-                            </p>
+                      {contributions.map(c => {
+                        const displayName = c.farm?.farmer_name ?? c.farmer_name ?? 'Unknown Farmer';
+                        const community = c.farm?.community ?? null;
+                        const complianceStatus = c.farm?.compliance_status ?? c.compliance_status;
+                        return (
+                          <div key={c.id} className="px-3 py-2.5 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate" data-testid={`text-contributor-name-${c.id}`}>
+                                {displayName}
+                              </p>
+                              {community && (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1" data-testid={`text-contributor-community-${c.id}`}>
+                                  <MapPin className="h-3 w-3 shrink-0" />{community}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
+                              </p>
+                            </div>
+                            <Badge
+                              variant={complianceStatus === 'verified' || complianceStatus === 'approved' ? 'default' : complianceStatus === 'rejected' ? 'destructive' : 'secondary'}
+                              className="text-[10px] shrink-0"
+                            >
+                              {complianceStatus}
+                            </Badge>
                           </div>
-                          <Badge
-                            variant={c.compliance_status === 'verified' ? 'default' : c.compliance_status === 'rejected' ? 'destructive' : 'secondary'}
-                            className="text-[10px] shrink-0"
-                          >
-                            {c.compliance_status}
-                          </Badge>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

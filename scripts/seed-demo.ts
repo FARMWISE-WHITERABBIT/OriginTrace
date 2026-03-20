@@ -349,6 +349,7 @@ async function seed() {
     { farm:gF2, def:gingerDefs[1], weight:1280, bags:26 },
     { farm:gF3, def:gingerDefs[2], weight:950,  bags:19 },
     { farm:gF4, def:gingerDefs[3], weight:1170, bags:23 },
+    { farm:gF5, def:gingerDefs[4], weight:0,    bags:0  },
   ];
   await tryIns('batch_contributions', gingerContribDefs.map(c => ({
     batch_id:    (gingerBatch as any).id,
@@ -357,8 +358,10 @@ async function seed() {
     weight_kg:   c.weight,
     bag_count:   c.bags,
     compliance_status: c.def.status === 'approved' ? 'verified' : 'pending',
-    notes:       `WRG-GNG-2026-001 — WhiteRabbit cooperative contributor`,
-  })), '4 ginger batch contributions (cooperative)');
+    notes:       c.weight === 0
+      ? 'WRG-GNG-2026-001 — registered cooperative member, no delivery this cycle'
+      : 'WRG-GNG-2026-001 — WhiteRabbit cooperative contributor',
+  })), '5 ginger batch contributions (cooperative)');
 
   // 10. Processing Runs — Cocoa
   section('Processing Runs — Cocoa');

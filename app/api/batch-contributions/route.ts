@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const { data: contributions, error } = await supabaseAdmin
       .from('batch_contributions')
-      .select('*')
+      .select('*, farm:farm_id(farmer_name, community, compliance_status, area_hectares)')
       .eq('batch_id', batchId)
       .order('created_at', { ascending: true });
 
