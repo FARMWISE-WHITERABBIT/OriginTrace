@@ -374,11 +374,11 @@ async function seed() {
   // 14. Shipment Items (links finished goods → shipments)
   section('Shipment Items');
   await tryIns('shipment_items', [
-    { shipment_id:(ship1 as any).id,      org_id:eId, item_type:'finished_good', finished_good_id:(fg1 as any).id,      weight_kg:(fg1 as any).weight_kg      },
-    { shipment_id:(ship2 as any).id,      org_id:eId, item_type:'finished_good', finished_good_id:(fg2 as any).id,      weight_kg:(fg2 as any).weight_kg      },
-    { shipment_id:(ship3 as any).id,      org_id:eId, item_type:'finished_good', finished_good_id:(fg3 as any).id,      weight_kg:(fg3 as any).weight_kg      },
-    { shipment_id:(ship4 as any).id,      org_id:eId, item_type:'finished_good', finished_good_id:(fg4 as any).id,      weight_kg:(fg4 as any).weight_kg      },
-    { shipment_id:(gingerShip as any).id, org_id:eId, item_type:'finished_good', finished_good_id:(gingerFG as any).id, weight_kg:(gingerFG as any).weight_kg  },
+    { shipment_id:(ship1 as any).id,      item_type:'finished_good', finished_good_id:(fg1 as any).id,      weight_kg:(fg1 as any).weight_kg      },
+    { shipment_id:(ship2 as any).id,      item_type:'finished_good', finished_good_id:(fg2 as any).id,      weight_kg:(fg2 as any).weight_kg      },
+    { shipment_id:(ship3 as any).id,      item_type:'finished_good', finished_good_id:(fg3 as any).id,      weight_kg:(fg3 as any).weight_kg      },
+    { shipment_id:(ship4 as any).id,      item_type:'finished_good', finished_good_id:(fg4 as any).id,      weight_kg:(fg4 as any).weight_kg      },
+    { shipment_id:(gingerShip as any).id, item_type:'finished_good', finished_good_id:(gingerFG as any).id, weight_kg:(gingerFG as any).weight_kg  },
   ], '5 shipment items');
 
   // 15. Digital Product Passports
