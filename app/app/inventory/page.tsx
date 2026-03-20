@@ -36,6 +36,8 @@ import {
   Download,
   FileText,
   QrCode,
+  Users,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateBatchManifestCSV, downloadCSV } from '@/lib/export/csv-export';
@@ -115,12 +117,25 @@ export default function InventoryPage() {
   // ── end bags state ──
   const filteredBags = bags.filter(b => b.serial.toLowerCase().includes(bagSearch.toLowerCase()) || (b.batch_id && b.batch_id.toLowerCase().includes(bagSearch.toLowerCase())));
 
+  interface BatchContribution {
+    id: string;
+    batch_id: string;
+    farm_id: string;
+    farmer_name: string | null;
+    weight_kg: number;
+    bag_count: number;
+    compliance_status: string;
+    notes: string | null;
+  }
+
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [contributions, setContributions] = useState<BatchContribution[]>([]);
+  const [contributionsLoading, setContributionsLoading] = useState(false);
   const { organization, profile } = useOrg();
   const supabase = createClient();
 
@@ -205,9 +220,20 @@ export default function InventoryPage() {
   });
 
 
-  const handleRowClick = (batch: Batch) => {
+  const handleRowClick = async (batch: Batch) => {
     setSelectedBatch(batch);
     setSheetOpen(true);
+    setContributions([]);
+    setContributionsLoading(true);
+    try {
+      const res = await fetch(`/api/batch-contributions?batch_id=${batch.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setContributions(data.contributions || []);
+      }
+    } catch { } finally {
+      setContributionsLoading(false);
+    }
   };
 
   const statusCounts = {
@@ -440,7 +466,46 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t space-y-2">
+                {/* Contributing farmers panel */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">Contributing Farmers</p>
+                    {contributions.length > 0 && (
+                      <span className="ml-auto text-xs text-muted-foreground">{contributions.length} farmer{contributions.length !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                  {contributionsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : contributions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground px-3 py-3">No contribution records found.</p>
+                  ) : (
+                    <div className="divide-y">
+                      {contributions.map(c => (
+                        <div key={c.id} className="px-3 py-2.5 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate" data-testid={`text-contributor-name-${c.id}`}>
+                              {c.farmer_name || 'Unknown Farmer'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
+                            </p>
+                          </div>
+                          <Badge
+                            variant={c.compliance_status === 'verified' ? 'default' : c.compliance_status === 'rejected' ? 'destructive' : 'secondary'}
+                            className="text-[10px] shrink-0"
+                          >
+                            {c.compliance_status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t space-y-2">
                   {selectedBatch.status === 'collecting' && (
                     <Link href={`/app/bags?batch=${selectedBatch.id}`}>
                       <Button className="w-full" data-testid="button-add-bags">

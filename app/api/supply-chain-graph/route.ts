@@ -138,7 +138,7 @@ async function buildBatchGraph(supabase: any, orgId: string, batchId: string, gr
   const { data: contributions } = await supabase
     .from('batch_contributions')
     .select('id, farm_id, farmer_name, weight_kg')
-    .eq('batch_id', parseInt(batchId));
+    .eq('batch_id', batchId);
 
   if (contributions) {
     for (const contrib of contributions) {

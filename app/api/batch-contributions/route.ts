@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { z } from 'zod';
 
-const ALLOWED_READ_ROLES = ['admin', 'aggregator', 'agent'];
+const ALLOWED_READ_ROLES = ['admin', 'aggregator', 'agent', 'quality_manager', 'compliance_officer'];
 
 const batchContributionSchema = z.object({
-  batch_id: z.number({ required_error: 'batch_id is required' }).int().positive(),
-  farm_id: z.number({ required_error: 'farm_id is required' }).int().positive(),
-  farmer_name: z.string().nullable().optional(),
-  weight_kg: z.number().min(0).default(0),
-  bag_count: z.number().int().min(0).default(0),
-  notes: z.string().nullable().optional(),
+  batch_id:     z.string().uuid({ message: 'batch_id must be a valid UUID' }),
+  farm_id:      z.string().uuid({ message: 'farm_id must be a valid UUID' }),
+  farmer_name:  z.string().nullable().optional(),
+  weight_kg:    z.number().min(0).default(0),
+  bag_count:    z.number().int().min(0).default(0),
+  notes:        z.string().nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const { data: contributions, error } = await supabaseAdmin
       .from('batch_contributions')
       .select('*')
-      .eq('batch_id', parseInt(batchId))
+      .eq('batch_id', batchId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -93,10 +93,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
     }
 
-    if (batch.status !== 'collecting') {
-      return NextResponse.json({ error: 'Batch is not in collecting status' }, { status: 400 });
-    }
-
     const { data: farm } = await supabaseAdmin
       .from('farms')
       .select('id, compliance_status')
@@ -108,7 +104,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
-    const complianceStatus = farm.compliance_status === 'verified' ? 'verified' : 'pending';
+    const complianceStatus = farm.compliance_status === 'approved' ? 'verified' : 'pending';
 
     const { data: contribution, error } = await supabaseAdmin
       .from('batch_contributions')
@@ -119,32 +115,14 @@ export async function POST(request: NextRequest) {
         weight_kg,
         bag_count,
         compliance_status: complianceStatus,
-        notes: notes ?? null
+        notes: notes ?? null,
       })
       .select()
       .single();
 
     if (error) {
       console.error('Insert contribution error:', error);
-      return NextResponse.json({ error: 'Failed to add contribution' }, { status: 500 });
-    }
-
-    const { data: allContributions } = await supabaseAdmin
-      .from('batch_contributions')
-      .select('weight_kg, bag_count')
-      .eq('batch_id', batch_id);
-
-    if (allContributions) {
-      const totalWeight = allContributions.reduce((sum, c) => sum + (parseFloat(c.weight_kg) || 0), 0);
-      const totalBags = allContributions.reduce((sum, c) => sum + (c.bag_count || 0), 0);
-
-      await supabaseAdmin
-        .from('collection_batches')
-        .update({
-          total_weight: totalWeight.toString(),
-          bag_count: totalBags
-        })
-        .eq('id', batch_id);
+      return NextResponse.json({ error: 'Failed to add contribution', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ contribution });
@@ -163,6 +141,10 @@ export async function DELETE(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    if (!['admin', 'aggregator'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
     const contributionId = request.nextUrl.searchParams.get('id');
     if (!contributionId) {
       return NextResponse.json({ error: 'id required' }, { status: 400 });
@@ -170,7 +152,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: contribution } = await supabaseAdmin
       .from('batch_contributions')
-      .select('batch_id, org_id')
+      .select('batch_id')
       .eq('id', contributionId)
       .single();
 
@@ -178,33 +160,23 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Contribution not found' }, { status: 404 });
     }
 
-    if (contribution.org_id !== profile.org_id) {
+    const { data: batch } = await supabaseAdmin
+      .from('collection_batches')
+      .select('id')
+      .eq('id', contribution.batch_id)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (!batch) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const { error } = await supabaseAdmin
       .from('batch_contributions')
       .delete()
-      .eq('id', contributionId)
-      .eq('org_id', profile.org_id);
+      .eq('id', contributionId);
 
     if (error) throw error;
-
-    const { data: remaining } = await supabaseAdmin
-      .from('batch_contributions')
-      .select('weight_kg, bag_count')
-      .eq('batch_id', contribution.batch_id);
-
-    const totalWeight = (remaining || []).reduce((sum, c) => sum + (parseFloat(c.weight_kg) || 0), 0);
-    const totalBags = (remaining || []).reduce((sum, c) => sum + (c.bag_count || 0), 0);
-
-    await supabaseAdmin
-      .from('collection_batches')
-      .update({
-        total_weight: totalWeight.toString(),
-        bag_count: totalBags
-      })
-      .eq('id', contribution.batch_id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

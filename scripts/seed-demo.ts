@@ -4,7 +4,7 @@
  *
  * Chain: farms → batches → bags → processing_run_batches
  *        → processing_runs → finished_goods → shipment_items → shipments
- *        → documents / DPPs / farmer_performance_ledger
+ *        → documents / DPPs / farmer_performance_ledger / batch_contributions
  *
  * Usage:
  *   npm run seed:demo              — seed only
@@ -14,6 +14,7 @@
  * Prerequisites (run in Supabase SQL Editor):
  *   migrations/20260312_seed_schema_extensions.sql
  *   migrations/20260320_expand_constraints.sql
+ *   migrations/20260320_batch_contributions_uuid.sql
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -138,7 +139,7 @@ async function seed() {
   const adminId = adminProfileId ?? adminUserId;
   const agentId  = agentProfileId  ?? agentUserId;
 
-  // 3. Compliance Profiles — all 6 markets including GACC
+  // 3. Compliance Profiles — all 6 markets
   section('Compliance Profiles');
   const [eudrProf] = await ins('compliance_profiles', {
     org_id: eId, name: 'EU EUDR Compliance', destination_market: 'European Union',
@@ -201,11 +202,11 @@ async function seed() {
   // 5. Farms — Ginger / Southern Kaduna (5)
   section('Farms — Ginger');
   const gingerDefs: FarmDef[] = [
-    { name:"Yakubu Dauda",  phone:'+2348031100001', community:'Kafanchan, Kaduna',   area:2.4, status:'approved', lat:9.587, lng:8.291, notes:'GACON cooperative member. 3rd season. High-quality yellow ginger.' },
-    { name:"Hannatu Musa",  phone:'+2348031100002', community:"Jema'a, Kaduna",      area:3.1, status:'approved', lat:9.531, lng:8.345, notes:'GACON cooperative member. Farm mapped Feb 2026.' },
-    { name:"Daniel Bawa",   phone:'+2348031100003', community:'Sanga, Kaduna',       area:1.8, status:'approved', lat:9.621, lng:8.470, notes:'GACON cooperative member. Adjacent to Sanga River.' },
-    { name:"Rachael Garba", phone:'+2348031100004', community:'Kaura, Kaduna',       area:2.9, status:'approved', lat:9.710, lng:8.180, notes:'GACON cooperative member. Intercropped with turmeric.' },
-    { name:"Ibrahim Tanko", phone:'+2348031100005', community:'Zangon Kataf, Kaduna',area:2.2, status:'pending',  lat:9.669, lng:8.233, notes:'Pending boundary verification. New member 2026 season.' },
+    { name:"Yakubu Dauda",  phone:'+2348031100001', community:'Kafanchan, Kaduna',    area:2.4, status:'approved', lat:9.587, lng:8.291, notes:'WhiteRabbit cooperative member. 3rd season. High-quality yellow ginger.' },
+    { name:"Hannatu Musa",  phone:'+2348031100002', community:"Jema'a, Kaduna",       area:3.1, status:'approved', lat:9.531, lng:8.345, notes:'WhiteRabbit cooperative member. Farm mapped Feb 2026.' },
+    { name:"Daniel Bawa",   phone:'+2348031100003', community:'Sanga, Kaduna',        area:1.8, status:'approved', lat:9.621, lng:8.470, notes:'WhiteRabbit cooperative member. Adjacent to Sanga River.' },
+    { name:"Rachael Garba", phone:'+2348031100004', community:'Kaura, Kaduna',        area:2.9, status:'approved', lat:9.710, lng:8.180, notes:'WhiteRabbit cooperative member. Intercropped with turmeric.' },
+    { name:"Ibrahim Tanko", phone:'+2348031100005', community:'Zangon Kataf, Kaduna', area:2.2, status:'pending',  lat:9.669, lng:8.233, notes:'Pending boundary verification. New member 2026 season.' },
   ];
   const gingerFarms = await ins('farms', gingerDefs.map(f => ({
     org_id:eId, farmer_name:f.name, phone:f.phone, community:f.community, area_hectares:f.area,
@@ -242,18 +243,18 @@ async function seed() {
     created_at:daysAgo(b.daysBack),
   })), '12 cocoa batches');
 
-  // 7. Ginger Collection Batch (GACON cooperative)
-  section('Ginger Collection Batch — GACON');
+  // 7. Ginger Collection Batch (WhiteRabbit cooperative)
+  section('Ginger Collection Batch — WhiteRabbit');
   const [gingerBatch] = await ins('collection_batches', {
     org_id:eId, farm_id:(gF1 as any).id, agent_id:agentId,
     status:'completed', total_weight:4850, bag_count:97,
-    batch_code:'GAC-GNG-2026-001', commodity:'ginger', grade:'Grade 1',
+    batch_code:'WRG-GNG-2026-001', commodity:'ginger', grade:'Grade 1',
     yield_validated:true, local_id:randomUUID(),
     collected_at:daysAgo(18), synced_at:daysAgo(18),
     community:'Kafanchan, Kaduna', state:'Kaduna', lga:"Jema'a",
-    notes:'Southern Kaduna cooperative. 4 member farms. Fresh ginger ready for processing.',
+    notes:'Southern Kaduna cooperative — WhiteRabbit Demo Co. 4 member farms. Fresh ginger ready for processing.',
     created_at:daysAgo(18),
-  }, 'GAC-GNG-2026-001 ginger batch');
+  }, 'WRG-GNG-2026-001 ginger batch');
 
   // 8. Bags — cocoa batches 1-6 (completed)
   section('Bags — Cocoa');
@@ -285,7 +286,7 @@ async function seed() {
   if ('collection_batch_id' in bagProbe) {
     const gRows = Array.from({length:97},(_,j) => {
       const r: Record<string,any> = { org_id:eId };
-      if('serial'               in bagProbe) r.serial               = `GAC-GNG-2026-001-${String(j+1).padStart(3,'0')}`;
+      if('serial'               in bagProbe) r.serial               = `WRG-GNG-2026-001-${String(j+1).padStart(3,'0')}`;
       if('collection_batch_id'  in bagProbe) r.collection_batch_id  = (gingerBatch as any).id;
       if('status'               in bagProbe) r.status               = 'collected';
       if('weight_kg'            in bagProbe) r.weight_kg            = 50;
@@ -327,6 +328,38 @@ async function seed() {
     last_delivery_date:r.last, current_season:'2026',
   })), '13 ledger rows');
 
+  // 9b. Batch Contributions — links farmers → batches
+  section('Batch Contributions');
+  // For single-farm cocoa batches (each batch came from one farm/farmer)
+  const singleFarmContribs = cocoaBatchDefs.map((b, i) => ({
+    batch_id:    (cocoaBatches[i] as any).id,
+    farm_id:     (b.farm as any).id,
+    farmer_name: (b.farm as any).farmer_name ?? 'Unknown',
+    weight_kg:   b.weight,
+    bag_count:   b.bags,
+    compliance_status: (b.farm as any).compliance_status === 'approved' ? 'verified' : 'pending',
+    notes:       `${b.code} — sole contributor`,
+  }));
+  await tryIns('batch_contributions', singleFarmContribs, '12 cocoa batch contributions');
+
+  // Ginger batch — 5 contributing farms (cooperative multi-farm contribution)
+  // Weights distributed proportionally to farm area
+  const gingerContribDefs = [
+    { farm:gF1, def:gingerDefs[0], weight:1450, bags:29 },
+    { farm:gF2, def:gingerDefs[1], weight:1280, bags:26 },
+    { farm:gF3, def:gingerDefs[2], weight:950,  bags:19 },
+    { farm:gF4, def:gingerDefs[3], weight:1170, bags:23 },
+  ];
+  await tryIns('batch_contributions', gingerContribDefs.map(c => ({
+    batch_id:    (gingerBatch as any).id,
+    farm_id:     (c.farm as any).id,
+    farmer_name: c.def.name,
+    weight_kg:   c.weight,
+    bag_count:   c.bags,
+    compliance_status: c.def.status === 'approved' ? 'verified' : 'pending',
+    notes:       `WRG-GNG-2026-001 — WhiteRabbit cooperative contributor`,
+  })), '4 ginger batch contributions (cooperative)');
+
   // 10. Processing Runs — Cocoa
   section('Processing Runs — Cocoa');
   const [run1] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-001', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2630, output_weight_kg:2265, recovery_rate:86.1, mass_balance_valid:true,  processed_at:daysAgo(35), created_by:adminUserId, notes:'EU export batch. Grade 1/2 blend, sun-dried 7 days.' }, 'RUN-001');
@@ -342,34 +375,34 @@ async function seed() {
     { processing_run_id:(run3 as any).id, collection_batch_id:(cocoaBatches[5] as any).id, weight_contribution_kg:720  },
   ], '6 cocoa run-batch links');
 
-  // 11. Processing Run — Ginger (GACON)
+  // 11. Processing Run — Ginger (WhiteRabbit)
   section('Processing Run — Ginger');
   const [gingerRun] = await ins('processing_runs', {
-    org_id:eId, run_code:'GAC-RUN-001',
-    facility_name:'GACON Processing Facility — Lagos', facility_location:'Magodo GRA, Lagos, Nigeria',
+    org_id:eId, run_code:'WRG-RUN-001',
+    facility_name:'WhiteRabbit Processing — Lagos', facility_location:'Magodo GRA, Lagos, Nigeria',
     commodity:'ginger', input_weight_kg:4850, output_weight_kg:1165, recovery_rate:24.0,
     mass_balance_valid:true, processed_at:daysAgo(12), created_by:adminUserId,
     notes:'Washed, peeled, split, tray-dried at 60°C/48hrs. Moisture <12%. ISO 22000/HACCP controls.',
-  }, 'GAC-RUN-001 dried split ginger');
+  }, 'WRG-RUN-001 dried split ginger');
   await tryIns('processing_run_batches', { processing_run_id:(gingerRun as any).id, collection_batch_id:(gingerBatch as any).id, weight_contribution_kg:4850 }, 'ginger run-batch link');
 
   // 12. Finished Goods
   section('Finished Goods');
   const fgB = { org_id:eId, created_by:adminUserId };
-  const [fg1] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-001', product_name:'Certified Cocoa Beans — EU Grade', product_type:'dried_beans', weight_kg:2265, batch_number:'FG-2026-001', lot_number:'LOT-EU-001', production_date:dateStr(35), destination_country:'Germany', buyer_company:'NibsEurope GmbH', pedigree_verified:true }, 'FG1 EU');
-  const [fg2] = await ins('finished_goods', { ...fgB, processing_run_id:(run2 as any).id, pedigree_code:'PED-WR-002', product_name:'Premium Cocoa Beans — US Grade',     product_type:'dried_beans', weight_kg:1815, batch_number:'FG-2026-002', lot_number:'LOT-US-001', production_date:dateStr(28), destination_country:'United States', buyer_company:'CacaoAmerica LLC', pedigree_verified:true }, 'FG2 US');
-  const [fg3] = await ins('finished_goods', { ...fgB, processing_run_id:(run3 as any).id, pedigree_code:'PED-WR-003', product_name:'Cocoa Beans — UK Batch (HOLD)',     product_type:'dried_beans', weight_kg:432,  batch_number:'FG-2026-003', lot_number:'LOT-UK-001', production_date:dateStr(20), destination_country:'United Kingdom', buyer_company:'BritishChoc Ltd', pedigree_verified:false, verification_notes:'Mass balance invalid — under investigation.' }, 'FG3 UK');
-  const [fg4] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-004', product_name:'Certified Cocoa Beans — UAE Grade',   product_type:'dried_beans', weight_kg:1200, batch_number:'FG-2026-004', lot_number:'LOT-UAE-001',production_date:dateStr(30), destination_country:'United Arab Emirates', buyer_company:'GulfChocolate FZCO', pedigree_verified:true }, 'FG4 UAE');
-  const [gingerFG] = await ins('finished_goods', { ...fgB, processing_run_id:(gingerRun as any).id, pedigree_code:'PED-GAC-001', product_name:'Dried Split Ginger — China Export Grade', product_type:'spice', weight_kg:1165, batch_number:'FG-GAC-2026-001', lot_number:'LOT-CN-001', production_date:dateStr(12), destination_country:'China', buyer_company:'Tianjin Spice Imports Co. Ltd', pedigree_verified:true }, 'FG5 ginger China');
+  const [fg1] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-001', product_name:'Certified Cocoa Beans — EU Grade',          product_type:'dried_beans', weight_kg:2265, batch_number:'FG-2026-001', lot_number:'LOT-EU-001',  production_date:dateStr(35), destination_country:'Germany',              buyer_company:'NibsEurope GmbH',             pedigree_verified:true }, 'FG1 EU');
+  const [fg2] = await ins('finished_goods', { ...fgB, processing_run_id:(run2 as any).id, pedigree_code:'PED-WR-002', product_name:'Premium Cocoa Beans — US Grade',            product_type:'dried_beans', weight_kg:1815, batch_number:'FG-2026-002', lot_number:'LOT-US-001',  production_date:dateStr(28), destination_country:'United States',         buyer_company:'CacaoAmerica LLC',            pedigree_verified:true }, 'FG2 US');
+  const [fg3] = await ins('finished_goods', { ...fgB, processing_run_id:(run3 as any).id, pedigree_code:'PED-WR-003', product_name:'Cocoa Beans — UK Batch (HOLD)',             product_type:'dried_beans', weight_kg:432,  batch_number:'FG-2026-003', lot_number:'LOT-UK-001',  production_date:dateStr(20), destination_country:'United Kingdom',        buyer_company:'BritishChoc Ltd',             pedigree_verified:false, verification_notes:'Mass balance invalid — under investigation.' }, 'FG3 UK');
+  const [fg4] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-004', product_name:'Certified Cocoa Beans — UAE Grade',         product_type:'dried_beans', weight_kg:1200, batch_number:'FG-2026-004', lot_number:'LOT-UAE-001', production_date:dateStr(30), destination_country:'United Arab Emirates',  buyer_company:'GulfChocolate FZCO',          pedigree_verified:true }, 'FG4 UAE');
+  const [gingerFG] = await ins('finished_goods', { ...fgB, processing_run_id:(gingerRun as any).id, pedigree_code:'PED-WRG-001', product_name:'Dried Split Ginger — China Export Grade', product_type:'spice', weight_kg:1165, batch_number:'FG-WRG-2026-001', lot_number:'LOT-CN-001', production_date:dateStr(12), destination_country:'China', buyer_company:'Tianjin Spice Imports Co. Ltd', pedigree_verified:true }, 'FG5 ginger China');
 
   // 13. Shipments
   section('Shipments');
   const sB = { org_id:eId, created_by:adminUserId };
-  const [ship1] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-001', status:'ready', destination_country:'Germany', destination_port:'Hamburg', commodity:'Cocoa Beans', buyer_company:'NibsEurope GmbH', buyer_contact:'demo.buyer@nibseurope-demo.com', target_regulations:['EUDR','Rainforest Alliance'], estimated_ship_date:dateStr(-14), compliance_profile_id:(eudrProf as any).id, readiness_score:91, readiness_decision:'go', risk_flags:[], score_breakdown:[{name:'Traceability',score:95},{name:'Documentation',score:90},{name:'Deforestation',score:100},{name:'Regulatory',score:88},{name:'Operational',score:82}], notes:'EU shipment fully cleared. Ready for booking.' }, 'SHP-001 EU go');
-  const [ship2] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-002', status:'ready', destination_country:'United States', destination_port:'New York', commodity:'Cocoa Beans', buyer_company:'CacaoAmerica LLC', buyer_contact:'imports@cacaoamerica-demo.com', target_regulations:['FSMA 204','Lacey Act'], estimated_ship_date:dateStr(-21), compliance_profile_id:(fsmaProf as any).id, readiness_score:68, readiness_decision:'conditional_go', risk_flags:[{severity:'critical',category:'Documentation',message:'FDA Prior Notice not submitted. Required 8 hours before US port arrival.',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Bill of Lading not uploaded.',is_hard_fail:false}], score_breakdown:[{name:'Traceability',score:88},{name:'Documentation',score:40},{name:'Deforestation',score:95},{name:'Regulatory',score:55},{name:'Operational',score:70}], notes:'Awaiting FDA Prior Notice.' }, 'SHP-002 US conditional');
-  const [ship3] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-003', status:'draft', destination_country:'United Kingdom', destination_port:'Tilbury', commodity:'Cocoa Beans', buyer_company:'BritishChoc Ltd', buyer_contact:'ops@britishchoc-demo.com', target_regulations:['UK Environment Act'], estimated_ship_date:dateStr(-7), compliance_profile_id:(ukProf as any).id, readiness_score:28, readiness_decision:'no_go', risk_flags:[{severity:'critical',category:'Deforestation',message:'Farm in supply chain has active deforestation risk.',is_hard_fail:true},{severity:'critical',category:'Mass Balance',message:'Processing Run WR-RUN-003 invalid mass balance (60% recovery, min 75%).',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Due Diligence Statement missing.',is_hard_fail:false}], score_breakdown:[{name:'Traceability',score:40},{name:'Documentation',score:20},{name:'Deforestation',score:0},{name:'Regulatory',score:35},{name:'Operational',score:50}], notes:'Blocked.' }, 'SHP-003 UK no-go');
-  const [ship4] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-004', status:'draft', destination_country:'United Arab Emirates', destination_port:'Jebel Ali', commodity:'Cocoa Beans', buyer_company:'GulfChocolate FZCO', buyer_contact:'trade@gulfchoc-demo.com', target_regulations:['UAE Halal','ESMA'], estimated_ship_date:dateStr(-30), compliance_profile_id:(uaeProf as any).id, readiness_score:null, readiness_decision:'pending', risk_flags:[], notes:'Draft. Documents not yet uploaded.' }, 'SHP-004 UAE pending');
-  const [gingerShip] = await ins('shipments', { ...sB, shipment_code:'GAC-SHP-2026-001', status:'ready', destination_country:'China', destination_port:'Tianjin', commodity:'Dried Split Ginger', buyer_company:'Tianjin Spice Imports Co. Ltd', buyer_contact:'imports@tianjinspice-demo.com', target_regulations:['China GACC','China Green Trade'], estimated_ship_date:dateStr(-5), compliance_profile_id:(gaccProf as any).id, readiness_score:82, readiness_decision:'go', risk_flags:[{severity:'warning',category:'Documentation',message:'MRL lab result issued 28 days ago — retest recommended before vessel loading.',is_hard_fail:false}], score_breakdown:[{name:'Traceability',score:90},{name:'Documentation',score:75},{name:'Deforestation',score:100},{name:'Regulatory',score:88},{name:'Operational',score:80}], notes:'GACC number on packaging. Phytosanitary applied. Fumigation complete 4 days ago.' }, 'SHP-005 GACON China go');
+  const [ship1] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-001', status:'ready', destination_country:'Germany',              destination_port:'Hamburg',   commodity:'Cocoa Beans',       buyer_company:'NibsEurope GmbH',             buyer_contact:'demo.buyer@nibseurope-demo.com',    target_regulations:['EUDR','Rainforest Alliance'],     estimated_ship_date:dateStr(-14), compliance_profile_id:(eudrProf as any).id,   readiness_score:91,   readiness_decision:'go',           risk_flags:[],                                                                                                                                                                                                                                                                                                                                                                score_breakdown:[{name:'Traceability Integrity',score:95},{name:'Documentation Completeness',score:90},{name:'Chemical & Contamination Risk',score:100},{name:'Storage & Handling Controls',score:88},{name:'Regulatory Alignment',score:82}], notes:'EU shipment fully cleared. Ready for booking.' }, 'SHP-001 EU go');
+  const [ship2] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-002', status:'ready', destination_country:'United States',         destination_port:'New York',  commodity:'Cocoa Beans',       buyer_company:'CacaoAmerica LLC',            buyer_contact:'imports@cacaoamerica-demo.com',     target_regulations:['FSMA 204','Lacey Act'],           estimated_ship_date:dateStr(-21), compliance_profile_id:(fsmaProf as any).id,   readiness_score:68,   readiness_decision:'conditional', risk_flags:[{severity:'critical',category:'Documentation',message:'FDA Prior Notice not submitted. Required 8 hours before US port arrival.',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Bill of Lading not uploaded.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:88},{name:'Documentation Completeness',score:40},{name:'Chemical & Contamination Risk',score:95},{name:'Storage & Handling Controls',score:55},{name:'Regulatory Alignment',score:70}], notes:'Awaiting FDA Prior Notice.' }, 'SHP-002 US conditional');
+  const [ship3] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-003', status:'draft', destination_country:'United Kingdom',        destination_port:'Tilbury',   commodity:'Cocoa Beans',       buyer_company:'BritishChoc Ltd',             buyer_contact:'ops@britishchoc-demo.com',          target_regulations:['UK Environment Act'],             estimated_ship_date:dateStr(-7),  compliance_profile_id:(ukProf as any).id,    readiness_score:28,   readiness_decision:'no_go',        risk_flags:[{severity:'critical',category:'Deforestation',message:'Farm in supply chain has active deforestation risk.',is_hard_fail:true},{severity:'critical',category:'Mass Balance',message:'Processing Run WR-RUN-003 invalid mass balance (60% recovery, min 75%).',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Due Diligence Statement missing.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:40},{name:'Documentation Completeness',score:20},{name:'Chemical & Contamination Risk',score:0},{name:'Storage & Handling Controls',score:35},{name:'Regulatory Alignment',score:50}], notes:'Blocked.' }, 'SHP-003 UK no-go');
+  const [ship4] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-004', status:'draft', destination_country:'United Arab Emirates',  destination_port:'Jebel Ali', commodity:'Cocoa Beans',       buyer_company:'GulfChocolate FZCO',          buyer_contact:'trade@gulfchoc-demo.com',           target_regulations:['UAE Halal','ESMA'],              estimated_ship_date:dateStr(-30), compliance_profile_id:(uaeProf as any).id,   readiness_score:null, readiness_decision:'pending',      risk_flags:[],                                                                                                                                                                                                                                                                                                                                                                score_breakdown:[], notes:'Draft. Documents not yet uploaded.' }, 'SHP-004 UAE pending');
+  const [gingerShip] = await ins('shipments', { ...sB, shipment_code:'WRG-SHP-2026-001', status:'ready', destination_country:'China',          destination_port:'Tianjin',   commodity:'Dried Split Ginger', buyer_company:'Tianjin Spice Imports Co. Ltd', buyer_contact:'imports@tianjinspice-demo.com',   target_regulations:['China GACC','China Green Trade'], estimated_ship_date:dateStr(-5),  compliance_profile_id:(gaccProf as any).id,  readiness_score:82,   readiness_decision:'go',           risk_flags:[{severity:'warning',category:'Documentation',message:'MRL lab result issued 28 days ago — retest recommended before vessel loading.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:90},{name:'Documentation Completeness',score:75},{name:'Chemical & Contamination Risk',score:100},{name:'Storage & Handling Controls',score:88},{name:'Regulatory Alignment',score:80}], notes:'GACC number on packaging. Phytosanitary applied. Fumigation complete 4 days ago.' }, 'SHP-005 WRG ginger China go');
 
   // 14. Shipment Items (links finished goods → shipments)
   section('Shipment Items');
@@ -384,11 +417,11 @@ async function seed() {
   // 15. Digital Product Passports
   section('DPPs');
   await tryIns('digital_product_passports', [
-    { org_id:eId, finished_good_id:(fg1 as any).id, dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{deforestation_free:true,eudr_compliant:true}, certifications:['Rainforest Alliance','EUDR-compliant'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:true}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — EU Grade',countryOfOrigin:'Nigeria'}, passport_version:1, status:'active', issued_at:daysAgo(10), created_by:adminUserId },
-    { org_id:eId, finished_good_id:(fg2 as any).id, dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{fsma_traceable:true,cte_records:4}, certifications:['UTZ Certified','FSMA-204-traceable'], processing_history:[{run_code:'WR-RUN-002',input_kg:2040,output_kg:1815,recovery_rate:88.9}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(40)},{stage:'processing',actor:'WhiteRabbit Processing',date:daysAgo(28)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Premium Cocoa Beans — US Grade',countryOfOrigin:'Nigeria'}, passport_version:1, status:'active', issued_at:daysAgo(8), created_by:adminUserId },
-    { org_id:eId, finished_good_id:(fg3 as any).id, dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{mass_balance_hold:true}, certifications:[], processing_history:[{run_code:'WR-RUN-003',input_kg:720,output_kg:432,recovery_rate:60.0}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(35)},{stage:'processing',actor:'WhiteRabbit Processing',date:daysAgo(20)}], regulatory_compliance:{pedigree_verified:false,mass_balance_valid:false,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Cocoa Beans — UK Batch (HOLD)',countryOfOrigin:'Nigeria'}, passport_version:1, status:'draft', issued_at:null, created_by:adminUserId },
-    { org_id:eId, finished_good_id:(fg4 as any).id, dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{halal_certified:true,esma_compliant:true}, certifications:['Halal Certified','UAE ESMA'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — UAE Grade',countryOfOrigin:'Nigeria'}, passport_version:1, status:'active', issued_at:daysAgo(7), created_by:adminUserId },
-    { org_id:eId, finished_good_id:(gingerFG as any).id, dpp_code:'DPP-GAC-'+randomUUID().slice(0,8).toUpperCase(), product_category:'spice', origin_country:'NG', sustainability_claims:{gacc_registered:true,iso_22000_certified:true,haccp_certified:true,cooperative_sourced:true,gps_traced_farms:4}, certifications:['ISO 22000:2018','HACCP','GACC Registered','NAFDAC Approved'], processing_history:[{run_code:'GAC-RUN-001',input_kg:4850,output_kg:1165,recovery_rate:24.0,process:'Washed→Peeled→Split→Tray-dried 60°C/48hrs'}], chain_of_custody:[{stage:'farm collection',actor:'GACON Cooperative — Southern Kaduna',date:daysAgo(18)},{stage:'processing',actor:'GACON Processing Facility — Lagos',date:daysAgo(12)},{stage:'export',actor:'GACON LTD Export Division',date:daysAgo(5)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,gacc_compliant:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Dried Split Ginger — China Export Grade',countryOfOrigin:'Nigeria',producer:'GACON LTD'}, passport_version:1, status:'active', issued_at:daysAgo(4), created_by:adminUserId },
+    { org_id:eId, finished_good_id:(fg1 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{deforestation_free:true,eudr_compliant:true}, certifications:['Rainforest Alliance','EUDR-compliant'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:true}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — EU Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(10), created_by:adminUserId },
+    { org_id:eId, finished_good_id:(fg2 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{fsma_traceable:true,cte_records:4}, certifications:['UTZ Certified','FSMA-204-traceable'], processing_history:[{run_code:'WR-RUN-002',input_kg:2040,output_kg:1815,recovery_rate:88.9}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(40)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(28)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Premium Cocoa Beans — US Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(8), created_by:adminUserId },
+    { org_id:eId, finished_good_id:(fg3 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{mass_balance_hold:true}, certifications:[], processing_history:[{run_code:'WR-RUN-003',input_kg:720,output_kg:432,recovery_rate:60.0}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(35)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(20)}], regulatory_compliance:{pedigree_verified:false,mass_balance_valid:false,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Cocoa Beans — UK Batch (HOLD)',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'draft', issued_at:null, created_by:adminUserId },
+    { org_id:eId, finished_good_id:(fg4 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{halal_certified:true,esma_compliant:true}, certifications:['Halal Certified','UAE ESMA'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — UAE Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(7), created_by:adminUserId },
+    { org_id:eId, finished_good_id:(gingerFG as any).id,  dpp_code:'DPP-WRG-'+randomUUID().slice(0,8).toUpperCase(), product_category:'spice', origin_country:'NG', sustainability_claims:{gacc_registered:true,iso_22000_certified:true,haccp_certified:true,cooperative_sourced:true,gps_traced_farms:4}, certifications:['ISO 22000:2018','HACCP','GACC Registered','NAFDAC Approved'], processing_history:[{run_code:'WRG-RUN-001',input_kg:4850,output_kg:1165,recovery_rate:24.0,process:'Washed→Peeled→Split→Tray-dried 60°C/48hrs'}], chain_of_custody:[{stage:'farm collection',actor:'WhiteRabbit Cooperative — Southern Kaduna',date:daysAgo(18)},{stage:'processing',actor:'WhiteRabbit Processing — Lagos',date:daysAgo(12)},{stage:'export',actor:'WhiteRabbit Demo Co. Export Division',date:daysAgo(5)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,gacc_compliant:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Dried Split Ginger — China Export Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(4), created_by:adminUserId },
   ], '5 DPPs');
 
   // 16. Documents
@@ -404,23 +437,21 @@ async function seed() {
   const sd = (p: string) => validDt.includes(p) ? p : (validDt[0]??'other');
 
   await tryIns('documents', [
-    { org_id:eId, title:'Phytosanitary Certificate — EU Shipment',    document_type:sd('phytosanitary'),         status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-60),  file_url:'https://demo.origintrace.com/docs/phyto-001.pdf',    uploaded_by:adminUserId },
-    { org_id:eId, title:'Due Diligence Statement — EU Shipment',       document_type:sd('other'),                 status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/dds-001.pdf',      uploaded_by:adminUserId },
-    { org_id:eId, title:'Certificate of Origin — EU Shipment',         document_type:sd('certificate_of_origin'),status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-90),  file_url:'https://demo.origintrace.com/docs/coo-001.pdf',      uploaded_by:adminUserId },
-    { org_id:eId, title:'Quality Certificate — EU Shipment',           document_type:sd('quality_cert'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-30),  file_url:'https://demo.origintrace.com/docs/qual-001.pdf',     uploaded_by:adminUserId },
-    { org_id:eId, title:'Phytosanitary Certificate — US Shipment',    document_type:sd('phytosanitary'),         status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship2 as any).id,      expiry_date:dateStr(-45),  file_url:'https://demo.origintrace.com/docs/phyto-002.pdf',    uploaded_by:adminUserId },
-    { org_id:eId, title:'Certificate of Origin — US Shipment',         document_type:sd('certificate_of_origin'),status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship2 as any).id,      expiry_date:dateStr(-60),  file_url:'https://demo.origintrace.com/docs/coo-002.pdf',      uploaded_by:adminUserId },
-    { org_id:eId, title:'Phytosanitary Certificate (REJECTED)',        document_type:sd('phytosanitary'),         status:'archived',      linked_entity_type:'shipment',      linked_entity_id:(ship3 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/phyto-003.pdf',    uploaded_by:adminUserId },
-    { org_id:eId, title:'Due Diligence Statement (DRAFT)',             document_type:sd('other'),                 status:'archived',      linked_entity_type:'shipment',      linked_entity_id:(ship3 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/dds-003-draft.pdf',uploaded_by:adminUserId },
-    // GACON — org-level certifications
-    { org_id:eId, title:'GACC Facility Registration Certificate',      document_type:sd('gacc_registration'),     status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-365), file_url:'https://demo.origintrace.com/docs/gacon/gacc-reg.pdf',    uploaded_by:adminUserId, notes:'GACON LTD — ginger processing facility. Valid until March 2027.' },
-    { org_id:eId, title:'ISO 22000:2018 Certification',                document_type:sd('iso_cert'),              status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-720), file_url:'https://demo.origintrace.com/docs/gacon/iso22000.pdf',     uploaded_by:adminUserId, notes:'Food safety management system certification.' },
-    { org_id:eId, title:'HACCP Certificate',                           document_type:sd('haccp_cert'),            status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-365), file_url:'https://demo.origintrace.com/docs/gacon/haccp.pdf',         uploaded_by:adminUserId, notes:'Annex to ISO 22000.' },
-    // GACON — ginger China shipment docs
-    { org_id:eId, title:'Phytosanitary Certificate — Ginger/China',    document_type:sd('phytosanitary'),         status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-20),  file_url:'https://demo.origintrace.com/docs/gacon/phyto-ginger.pdf', uploaded_by:adminUserId, notes:'Issued by NAFDAC. No live pests detected.' },
-    { org_id:eId, title:'Fumigation Certificate — Ginger/China',       document_type:sd('fumigation'),            status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-18),  file_url:'https://demo.origintrace.com/docs/gacon/fumigation.pdf',    uploaded_by:adminUserId, notes:'Methyl bromide. 4 days pre-shipment. IPPC stamp attached.' },
-    { org_id:eId, title:'MRL Lab Result — Pesticide Residue (Ginger)', document_type:sd('lab_result'),            status:'expiring_soon', linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-3),   file_url:'https://demo.origintrace.com/docs/gacon/mrl-ginger.pdf',    uploaded_by:adminUserId, notes:'NAFDAC-accredited lab. Compliant with China GB 2763-2021 MRL limits. Retest recommended.' },
-    { org_id:eId, title:'Certificate of Origin — Ginger/China (NEPC)', document_type:sd('certificate_of_origin'),status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-25),  file_url:'https://demo.origintrace.com/docs/gacon/coo-ginger.pdf',    uploaded_by:adminUserId, notes:'Issued by NEPC. Origin: Kaduna State, Nigeria.' },
+    { org_id:eId, title:'Phytosanitary Certificate — EU Shipment',        document_type:sd('phytosanitary'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-60),  file_url:'https://demo.origintrace.com/docs/phyto-001.pdf',           uploaded_by:adminUserId },
+    { org_id:eId, title:'Due Diligence Statement — EU Shipment',           document_type:sd('other'),                  status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/dds-001.pdf',             uploaded_by:adminUserId },
+    { org_id:eId, title:'Certificate of Origin — EU Shipment',             document_type:sd('certificate_of_origin'), status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-90),  file_url:'https://demo.origintrace.com/docs/coo-001.pdf',             uploaded_by:adminUserId },
+    { org_id:eId, title:'Quality Certificate — EU Shipment',               document_type:sd('quality_cert'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship1 as any).id,      expiry_date:dateStr(-30),  file_url:'https://demo.origintrace.com/docs/qual-001.pdf',            uploaded_by:adminUserId },
+    { org_id:eId, title:'Phytosanitary Certificate — US Shipment',        document_type:sd('phytosanitary'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship2 as any).id,      expiry_date:dateStr(-45),  file_url:'https://demo.origintrace.com/docs/phyto-002.pdf',           uploaded_by:adminUserId },
+    { org_id:eId, title:'Certificate of Origin — US Shipment',             document_type:sd('certificate_of_origin'), status:'active',        linked_entity_type:'shipment',      linked_entity_id:(ship2 as any).id,      expiry_date:dateStr(-60),  file_url:'https://demo.origintrace.com/docs/coo-002.pdf',             uploaded_by:adminUserId },
+    { org_id:eId, title:'Phytosanitary Certificate (REJECTED)',            document_type:sd('phytosanitary'),          status:'archived',      linked_entity_type:'shipment',      linked_entity_id:(ship3 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/phyto-003.pdf',           uploaded_by:adminUserId },
+    { org_id:eId, title:'Due Diligence Statement (DRAFT)',                 document_type:sd('other'),                  status:'archived',      linked_entity_type:'shipment',      linked_entity_id:(ship3 as any).id,      expiry_date:null,          file_url:'https://demo.origintrace.com/docs/dds-003-draft.pdf',       uploaded_by:adminUserId },
+    { org_id:eId, title:'GACC Facility Registration Certificate',          document_type:sd('gacc_registration'),      status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-365), file_url:'https://demo.origintrace.com/docs/whiterabbit/gacc-reg.pdf',    uploaded_by:adminUserId, notes:'WhiteRabbit Demo Co. — ginger processing facility. Valid until March 2027.' },
+    { org_id:eId, title:'ISO 22000:2018 Certification',                    document_type:sd('iso_cert'),               status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-720), file_url:'https://demo.origintrace.com/docs/whiterabbit/iso22000.pdf',     uploaded_by:adminUserId, notes:'Food safety management system certification.' },
+    { org_id:eId, title:'HACCP Certificate',                               document_type:sd('haccp_cert'),             status:'active',        linked_entity_type:'organization',  linked_entity_id:eId,                    expiry_date:dateStr(-365), file_url:'https://demo.origintrace.com/docs/whiterabbit/haccp.pdf',        uploaded_by:adminUserId, notes:'Annex to ISO 22000.' },
+    { org_id:eId, title:'Phytosanitary Certificate — Ginger/China',       document_type:sd('phytosanitary'),          status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-20),  file_url:'https://demo.origintrace.com/docs/whiterabbit/phyto-ginger.pdf', uploaded_by:adminUserId, notes:'Issued by NAFDAC. No live pests detected.' },
+    { org_id:eId, title:'Fumigation Certificate — Ginger/China',          document_type:sd('fumigation'),             status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-18),  file_url:'https://demo.origintrace.com/docs/whiterabbit/fumigation.pdf',   uploaded_by:adminUserId, notes:'Methyl bromide. 4 days pre-shipment. IPPC stamp attached.' },
+    { org_id:eId, title:'MRL Lab Result — Pesticide Residue (Ginger)',    document_type:sd('lab_result'),             status:'expiring_soon', linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-3),   file_url:'https://demo.origintrace.com/docs/whiterabbit/mrl-ginger.pdf',   uploaded_by:adminUserId, notes:'NAFDAC-accredited lab. Compliant with China GB 2763-2021 MRL limits. Retest recommended.' },
+    { org_id:eId, title:'Certificate of Origin — Ginger/China (NEPC)',    document_type:sd('certificate_of_origin'), status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-25),  file_url:'https://demo.origintrace.com/docs/whiterabbit/coo-ginger.pdf',   uploaded_by:adminUserId, notes:'Issued by NEPC. Origin: Kaduna State, Nigeria.' },
   ], '15 documents');
 
   // 17. Contracts + Tenders
@@ -453,12 +484,14 @@ async function seed() {
 
   COCOA SUPPLY CHAIN (fully connected)
     8 farms → 12 batches → bags → 3 processing runs → 4 FGs → 4 shipments
+    batch_contributions: 12 rows (1 per batch, single-farm)
     Farmers page: 8 ledger rows with delivery totals
 
-  GACON GINGER SUPPLY CHAIN (fully connected)
-    5 ginger farms (Southern Kaduna) → 1 batch (4,850 kg, 97 bags)
-    → 1 processing run (dried split ginger, 24% recovery)
-    → 1 finished good → GAC-SHP-2026-001 → Tianjin China (GO 82/100)
+  WHITERABBIT GINGER SUPPLY CHAIN (fully connected, rebranded from GACON)
+    5 ginger farms (Southern Kaduna) → 1 batch WRG-GNG-2026-001 (4,850 kg, 97 bags)
+    → 1 processing run WRG-RUN-001 (dried split ginger, 24% recovery)
+    → 1 finished good PED-WRG-001 → WRG-SHP-2026-001 → Tianjin China (GO 82/100)
+    batch_contributions: 4 rows (cooperative multi-farm contribution)
     Documents: GACC cert · Phyto · Fumigation · MRL ⚠ expiring · COO · ISO 22000 · HACCP
     Farmers page: +5 ledger rows (4 with deliveries, 1 pending)
   `);
