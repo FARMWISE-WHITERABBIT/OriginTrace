@@ -113,7 +113,7 @@ async function seed() {
   let eId: string;
   if (existingOrg) { eId = (existingOrg as any).id; ok('organizations: already exists'); }
   else {
-    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'pro', commodities: ['cocoa'] }, 'exporter org');
+    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'pro', commodities: ['cocoa','ginger','sesame','turmeric'] }, 'exporter org');
     eId = (org as any).id;
   }
 
@@ -436,6 +436,339 @@ async function seed() {
     await ins('farm_conflicts', { org_id: eId, farm_a_id: (fG as any).id, farm_b_id: (fH as any).id, overlap_ratio: 0.037, status: 'pending' }, 'boundary overlap G↔H');
   } catch (e: any) { warn(`farm_conflicts: ${e.message}`); }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GACON DEMO SCENARIO — Ginger Supply Chain (Southern Kaduna)
+  // Mirrors GACON Ltd's actual cooperative project in Kaduna State.
+  // Shows: farmer registry → GPS farms → collection batch → processing
+  //        (dried split ginger) → China GACC shipment → document vault
+  // ─────────────────────────────────────────────────────────────────────────────
+  section('GACON — China GACC Compliance Profile');
+  const [gacnProf] = await ins('compliance_profiles', {
+    org_id: eId,
+    name: 'China GACC Export',
+    destination_market: 'China',
+    regulation_framework: 'GACC',
+    required_documents: [
+      'gacc_registration',
+      'phytosanitary_certificate',
+      'certificate_of_origin',
+      'fumigation_certificate',
+      'lab_result',
+    ],
+    required_certifications: ['ISO 22000', 'HACCP'],
+    geo_verification_level: 'basic',
+    min_traceability_depth: 2,
+    is_default: false,
+  }, 'China GACC profile');
+
+  section('GACON — Southern Kaduna Ginger Cooperative Farms');
+  // 5 cooperative members from GACON's actual growing regions in Southern Kaduna
+  const gingerFarmDefs = [
+    { name: 'Yakubu Dauda',       phone: '+2348031100001', community: 'Kafanchan, Kaduna',   area: 2.4, status: 'approved', lat: 9.587, lng: 8.291, notes: 'GACON cooperative member. 3rd season. High-quality yellow ginger.' },
+    { name: 'Hannatu Musa',       phone: '+2348031100002', community: 'Jema\'a, Kaduna',      area: 3.1, status: 'approved', lat: 9.531, lng: 8.345, notes: 'GACON cooperative member. Farm mapped Feb 2026.' },
+    { name: 'Daniel Bawa',        phone: '+2348031100003', community: 'Sanga, Kaduna',        area: 1.8, status: 'approved', lat: 9.621, lng: 8.470, notes: 'GACON cooperative member. Adjacent to Sanga River.' },
+    { name: 'Rachael Garba',      phone: '+2348031100004', community: 'Kaura, Kaduna',        area: 2.9, status: 'approved', lat: 9.710, lng: 8.180, notes: 'GACON cooperative member. Intercropped with turmeric.' },
+    { name: 'Ibrahim Tanko',      phone: '+2348031100005', community: 'Zangon Kataf, Kaduna', area: 2.2, status: 'pending',  lat: 9.669, lng: 8.233, notes: 'Pending boundary verification. New member 2026 season.' },
+  ];
+  const gingerFarms = await ins('farms', gingerFarmDefs.map(f => ({
+    org_id: eId,
+    farmer_name: f.name,
+    phone: f.phone,
+    community: f.community,
+    area_hectares: f.area,
+    compliance_status: f.status,
+    compliance_notes: f.notes,
+    commodity: 'ginger',
+    created_by: adminUserId,
+    boundary: {
+      type: 'Polygon',
+      coordinates: [[[f.lng-0.004,f.lat-0.004],[f.lng+0.004,f.lat-0.004],[f.lng+0.004,f.lat+0.004],[f.lng-0.004,f.lat+0.004],[f.lng-0.004,f.lat-0.004]]],
+    },
+    created_at: daysAgo(rnd(30, 60)),
+  })), '5 Southern Kaduna ginger farms');
+
+  section('GACON — Ginger Collection Batch');
+  // A cooperative collection from 4 approved farms — mirrors GACON's field operation
+  const [gingerBatch] = await ins('collection_batches', {
+    org_id: eId,
+    batch_id: 'GAC-GNG-2026-001',
+    status: 'resolved',
+    total_weight: 4850,
+    commodity: 'ginger',
+    grade: 'Grade 1',
+    bag_count: 97,
+    community: 'Kafanchan, Kaduna',
+    state: 'Kaduna',
+    lga: 'Jema\'a',
+    collected_by: agentId,
+    created_at: daysAgo(18),
+    notes: 'Southern Kaduna cooperative collection. 4 member farms. Fresh ginger ready for processing.',
+  }, 'ginger collection batch');
+
+  // Link 4 approved farms as contributors to the batch
+  if (gingerBatch && gingerFarms?.length >= 4) {
+    const approvedGingerFarms = (gingerFarms as any[]).filter((_:any, i:number) => i < 4);
+    const contributions = approvedGingerFarms.map((farm: any, i: number) => ({
+      collection_batch_id: gingerBatch.id,
+      farm_id: farm.id,
+      farmer_name: gingerFarmDefs[i].name,
+      weight_kg: [1450, 1280, 950, 1170][i],
+      bag_count: [29, 26, 19, 23][i],
+      grade: 'Grade 1',
+    }));
+    try {
+      await ins('batch_contributions', contributions, '4 ginger farm contributions');
+    } catch (e: any) { warn(`batch_contributions: ${e.message}`); }
+  }
+
+  section('GACON — Dried Split Ginger Processing Run');
+  const [gingerRun] = await ins('processing_runs', {
+    org_id: eId,
+    run_code: 'GAC-RUN-001',
+    facility_name: 'GACON Processing Facility — Lagos',
+    facility_location: 'Magodo GRA, Lagos, Nigeria',
+    commodity: 'ginger',
+    input_weight_kg: 4850,
+    output_weight_kg: 1165,   // ~24% recovery — standard for dried split ginger
+    recovery_rate: 24.0,
+    mass_balance_valid: true,
+    processed_at: daysAgo(12),
+    created_by: adminUserId,
+    notes: 'Washed, peeled, split, and tray-dried at 60°C for 48hrs. Moisture <12%. ISO 22000 / HACCP process controls applied.',
+  }, 'GAC-RUN-001 dried split ginger');
+
+  try {
+    if (gingerBatch && gingerRun) {
+      await ins('processing_run_batches', {
+        processing_run_id: (gingerRun as any).id,
+        collection_batch_id: (gingerBatch as any).id,
+        weight_contribution_kg: 4850,
+      }, 'ginger run-batch link');
+    }
+  } catch (e: any) { warn(`ginger processing_run_batches: ${e.message}`); }
+
+  section('GACON — Dried Split Ginger Finished Good');
+  const [gingerFG] = await ins('finished_goods', {
+    org_id: eId,
+    processing_run_id: (gingerRun as any).id,
+    pedigree_code: 'PED-GAC-001',
+    product_name: 'Dried Split Ginger — China Export Grade',
+    product_type: 'spice',
+    weight_kg: 1165,
+    batch_number: 'FG-GAC-2026-001',
+    lot_number: 'LOT-CN-001',
+    production_date: dateStr(12),
+    destination_country: 'China',
+    buyer_company: 'Tianjin Spice Imports Co. Ltd',
+    pedigree_verified: true,
+    created_by: adminUserId,
+  }, 'ginger finished good');
+
+  section('GACON — China Shipment (GACC)');
+  const [gingerShip] = await ins('shipments', [{
+    org_id: eId,
+    shipment_code: 'GAC-SHP-2026-001',
+    status: 'ready',
+    destination_country: 'China',
+    destination_port: 'Tianjin',
+    commodity: 'Dried Split Ginger',
+    buyer_company: 'Tianjin Spice Imports Co. Ltd',
+    buyer_contact: 'imports@tianjinspice-demo.com',
+    target_regulations: ['China GACC', 'China Green Trade'],
+    estimated_ship_date: dateStr(-5),
+    compliance_profile_id: (gacnProf as any)?.id ?? null,
+    readiness_score: 82,
+    readiness_decision: 'go',
+    risk_flags: [
+      {
+        severity: 'warning',
+        category: 'Documentation',
+        message: 'MRL lab result issued 28 days ago — retest recommended before vessel loading.',
+        is_hard_fail: false,
+      },
+    ],
+    score_breakdown: [
+      { name: 'Traceability',   score: 90 },
+      { name: 'Documentation',  score: 75 },
+      { name: 'Deforestation',  score: 100 },
+      { name: 'Regulatory',     score: 88 },
+      { name: 'Operational',    score: 80 },
+    ],
+    notes: 'GACC registration number on all packaging. Phytosanitary applied. Fumigation completed 4 days ago.',
+    created_by: adminUserId,
+  }], 'GAC China ginger shipment');
+
+  try {
+    if (gingerShip && gingerFG) {
+      await ins('shipment_items', {
+        shipment_id: (gingerShip as any).id,
+        item_type: 'finished_good',
+        finished_good_id: (gingerFG as any).id,
+        weight_kg: 1165,
+      }, 'ginger shipment item');
+    }
+  } catch (e: any) { warn(`ginger shipment_items: ${e.message}`); }
+
+  section('GACON — Ginger Export Documents');
+  // Realistic document set for a GACON-type ginger-to-China shipment
+  // Probing valid doc types then inserting what the live DB accepts
+  {
+    const gingerDocDefs = [
+      {
+        title: 'GACC Facility Registration Certificate',
+        preferred_type: 'gacc_registration',
+        status: 'active',
+        expiry: dateStr(-365),  // expires ~1 year from issue
+        entity_type: 'organization',
+        entity_id: eId,
+        notes: 'GACON LTD — GACC registration for ginger processing facility. Valid until March 2027.',
+      },
+      {
+        title: 'Phytosanitary Certificate — Dried Split Ginger',
+        preferred_type: 'phytosanitary',
+        status: 'active',
+        expiry: dateStr(-20),
+        entity_type: 'shipment',
+        entity_id: (gingerShip as any)?.id,
+        notes: 'Issued by NAFDAC. No live pests or disease detected.',
+      },
+      {
+        title: 'Fumigation Certificate',
+        preferred_type: 'fumigation',
+        status: 'active',
+        expiry: dateStr(-18),
+        entity_type: 'shipment',
+        entity_id: (gingerShip as any)?.id,
+        notes: 'Methyl bromide treatment. 4 days pre-shipment. IPPC stamp attached.',
+      },
+      {
+        title: 'MRL Lab Result — Pesticide Residue Analysis',
+        preferred_type: 'lab_result',
+        status: 'expiring_soon',
+        expiry: dateStr(-3),   // expires in 3 days — triggers alert
+        entity_type: 'shipment',
+        entity_id: (gingerShip as any)?.id,
+        notes: 'NAFDAC-accredited laboratory. Compliant with China GB 2763-2021 MRL limits. Retest recommended.',
+      },
+      {
+        title: 'Certificate of Origin',
+        preferred_type: 'certificate_of_origin',
+        status: 'active',
+        expiry: dateStr(-25),
+        entity_type: 'shipment',
+        entity_id: (gingerShip as any)?.id,
+        notes: 'Issued by Nigerian Export Promotion Council (NEPC). Origin: Kaduna State, Nigeria.',
+      },
+      {
+        title: 'ISO 22000:2018 Certification',
+        preferred_type: 'quality_cert',
+        status: 'active',
+        expiry: dateStr(-720),   // 2-year cert
+        entity_type: 'organization',
+        entity_id: eId,
+        notes: 'Food safety management system certification. Covers ginger and spice processing operations.',
+      },
+      {
+        title: 'HACCP Certificate',
+        preferred_type: 'quality_cert',
+        status: 'active',
+        expiry: dateStr(-365),
+        entity_type: 'organization',
+        entity_id: eId,
+        notes: 'Hazard Analysis Critical Control Point certification. Annex to ISO 22000.',
+      },
+    ];
+
+    // Probe valid doc types (same pattern as existing documents section)
+    const gingerDocTypes = ['gacc_registration','phytosanitary','fumigation','lab_result','certificate_of_origin','quality_cert','other'];
+    const validGingerDocTypes: string[] = [];
+    for (const dt of gingerDocTypes) {
+      const { error } = await db.from('documents').insert({
+        org_id: eId, title: 'PROBE_GACON', document_type: dt,
+        linked_entity_type: 'organization', linked_entity_id: eId,
+        uploaded_by: adminUserId, file_url: 'x',
+      }).select('id').single();
+      if (error?.message?.includes('check constraint') || error?.message?.includes('document_type')) {
+        warn(`ginger doc_type '${dt}' not valid on live DB`);
+      } else {
+        validGingerDocTypes.push(dt);
+        if (!error) await db.from('documents').delete().eq('title', 'PROBE_GACON').eq('org_id', eId);
+      }
+    }
+    const safeG = (preferred: string) =>
+      validGingerDocTypes.includes(preferred) ? preferred : (validGingerDocTypes[0] ?? 'other');
+
+    const gingerDocs = gingerDocDefs
+      .filter(d => d.entity_id) // skip if entity not created
+      .map(d => ({
+        org_id: eId,
+        title: d.title,
+        document_type: safeG(d.preferred_type),
+        status: d.status,
+        expiry_date: d.expiry,
+        linked_entity_type: d.entity_type,
+        linked_entity_id: d.entity_id,
+        file_url: `https://demo.origintrace.com/docs/gacon/${d.preferred_type}-gac-001.pdf`,
+        uploaded_by: adminUserId,
+        notes: d.notes,
+      }));
+
+    await ins('documents', gingerDocs, `${gingerDocs.length} GACON ginger export documents`);
+  }
+
+  section('GACON — Ginger Digital Product Passport');
+  try {
+    if (gingerFG) {
+      await ins('digital_product_passports', [{
+        org_id: eId,
+        finished_good_id: (gingerFG as any).id,
+        dpp_code: 'DPP-GAC-' + randomUUID().slice(0,8).toUpperCase(),
+        product_category: 'spice',
+        origin_country: 'NG',
+        sustainability_claims: {
+          gacc_registered: true,
+          iso_22000_certified: true,
+          haccp_certified: true,
+          cooperative_sourced: true,
+          gps_traced_farms: 4,
+          origin_state: 'Kaduna',
+        },
+        certifications: ['ISO 22000:2018', 'HACCP', 'GACC Registered', 'NAFDAC Approved'],
+        processing_history: [{
+          run_code: 'GAC-RUN-001',
+          input_kg: 4850,
+          output_kg: 1165,
+          recovery_rate: 24.0,
+          process: 'Washed → Peeled → Split → Tray-dried 60°C / 48hrs',
+        }],
+        chain_of_custody: [
+          { stage: 'farm collection', actor: 'GACON Cooperative Members — Southern Kaduna', date: daysAgo(18) },
+          { stage: 'processing',      actor: 'GACON Processing Facility — Lagos',           date: daysAgo(12) },
+          { stage: 'export',          actor: 'GACON LTD Export Division',                   date: daysAgo(5)  },
+        ],
+        regulatory_compliance: {
+          pedigree_verified: true,
+          mass_balance_valid: true,
+          gacc_compliant: true,
+          dds_submitted: false,
+        },
+        machine_readable_data: {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: 'Dried Split Ginger — China Export Grade',
+          countryOfOrigin: 'Nigeria',
+          producer: 'GACON LTD',
+        },
+        passport_version: 1,
+        status: 'active',
+        issued_at: daysAgo(4),
+        created_by: adminUserId,
+      }], 'GACON ginger DPP');
+    }
+  } catch (e: any) { warn(`ginger DPP: ${e.message}`); }
+
+
+
   section('✅  Seed complete!');
   console.log(`
   Demo credentials (password: Demo1234!)
@@ -444,11 +777,21 @@ async function seed() {
   Exporter Agent:  demo.agent@origintrace-demo.com
   Buyer Admin:     demo.buyer@nibseurope-demo.com
 
-  /app/shipments    GO · CONDITIONAL · NO-GO · PENDING
-  /app/farms        6 clean · 1 deforestation risk · 1 pending
-  /app/batches      12 batches — flag #7, quarantined #8
-  /app/processing   3 runs — mass balance FAIL on RUN-003
-  /app/dpp          4 DPPs — 3 active, 1 draft
+  CORE DEMO DATA
+  /app/shipments    GO · CONDITIONAL · NO-GO · PENDING  (+ GACON China shipment)
+  /app/farms        6 cocoa + 5 Southern Kaduna ginger cooperative farms
+  /app/batches      12 cocoa batches + 1 ginger batch (GAC-GNG-2026-001)
+  /app/processing   3 cocoa runs + 1 dried split ginger run (GAC-RUN-001)
+  /app/dpp          4 cocoa DPPs + 1 ginger DPP (GACON/China)
+  /app/documents    8 cocoa docs + 7 GACON ginger export docs
+
+  GACON DEMO SCENARIO (ginger, China GACC)
+  Compliance profile:  China GACC Export
+  Farms:               5 cooperative members — Kafanchan, Jema'a, Sanga, Kaura, Zangon Kataf
+  Collection batch:    GAC-GNG-2026-001 — 4,850 kg, 97 bags, 4 farms
+  Processing run:      GAC-RUN-001 — 4,850 kg → 1,165 kg dried split ginger (24% recovery)
+  Shipment:            GAC-SHP-2026-001 → Tianjin, China — GACC + Green Trade — 82/100 GO
+  Documents:           GACC cert · Phytosanitary · Fumigation · MRL lab (⚠ expiring) · COO · ISO 22000 · HACCP
   `);
 }
 
