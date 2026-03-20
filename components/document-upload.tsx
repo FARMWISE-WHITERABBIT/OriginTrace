@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Camera, Upload, X, Loader2, CheckCircle, File, AlertCircle } from 'lucide-react';
 
 export interface UploadResult {
@@ -23,6 +24,129 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function CameraModal({
+  open,
+  onClose,
+  onCapture,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCapture: (blob: Blob, name: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(true);
+
+  const startCamera = useCallback(async () => {
+    setCameraError(null);
+    setIsStarting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Camera access failed';
+      setCameraError(
+        msg.includes('Permission') || msg.includes('NotAllowed')
+          ? 'Camera permission denied. Please allow camera access and try again.'
+          : 'Could not start camera. Please use the file picker instead.'
+      );
+    } finally {
+      setIsStarting(false);
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      startCamera();
+    }
+    return () => stopCamera();
+  }, [open, startCamera, stopCamera]);
+
+  const captureFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      stopCamera();
+      onCapture(blob, `camera-capture-${Date.now()}.jpg`);
+      onClose();
+    }, 'image/jpeg', 0.92);
+  }, [onCapture, onClose, stopCamera]);
+
+  return (
+    <Dialog open={open} onOpenChange={val => { if (!val) { stopCamera(); onClose(); } }}>
+      <DialogContent className="max-w-lg" data-testid="camera-modal">
+        <DialogHeader>
+          <DialogTitle>Scan Document with Camera</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {isStarting && (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {cameraError && (
+            <div
+              className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm"
+              data-testid="camera-error"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {cameraError}
+            </div>
+          )}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full rounded-md bg-black ${isStarting || cameraError ? 'hidden' : 'block'}`}
+            style={{ maxHeight: '280px', objectFit: 'cover' }}
+            data-testid="camera-video-preview"
+          />
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { stopCamera(); onClose(); }} data-testid="button-close-camera">
+            Cancel
+          </Button>
+          {!cameraError && !isStarting && (
+            <Button onClick={captureFrame} data-testid="button-capture-frame">
+              <Camera className="h-4 w-4 mr-2" />
+              Capture Photo
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function DocumentUpload({
   onUploadComplete,
   onClear,
@@ -32,6 +156,7 @@ export function DocumentUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadResult | null>(
     currentFileName && currentFileUrl
       ? { url: currentFileUrl, file_name: currentFileName, file_size: 0 }
@@ -39,10 +164,10 @@ export function DocumentUpload({
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const uploadFile = useCallback(async (file: File) => {
-    if (file.size > 20 * 1024 * 1024) {
+  const uploadFile = useCallback(async (file: File | Blob, overrideName?: string) => {
+    const size = file.size;
+    if (size > 20 * 1024 * 1024) {
       setError('File too large. Maximum size is 20MB.');
       return;
     }
@@ -52,7 +177,8 @@ export function DocumentUpload({
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      const name = overrideName ?? (file instanceof File ? (file as File).name : 'upload');
+      formData.append('file', file, name);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -112,9 +238,7 @@ export function DocumentUpload({
             {uploadedFile.file_name}
           </p>
           {uploadedFile.file_size > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {formatBytes(uploadedFile.file_size)}
-            </p>
+            <p className="text-xs text-muted-foreground">{formatBytes(uploadedFile.file_size)}</p>
           )}
         </div>
         <Button
@@ -132,7 +256,7 @@ export function DocumentUpload({
   }
 
   return (
-    <div className="space-y-2">
+    <>
       <input
         ref={fileInputRef}
         type="file"
@@ -140,15 +264,6 @@ export function DocumentUpload({
         onChange={handleFileSelect}
         className="hidden"
         data-testid="input-doc-file-picker"
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-        data-testid="input-doc-camera"
       />
 
       <div
@@ -170,10 +285,8 @@ export function DocumentUpload({
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
             <File className="h-6 w-6 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Drag & drop a file here, or
-            </p>
-            <div className="flex gap-2">
+            <p className="text-sm text-muted-foreground">Drag & drop a file here, or</p>
+            <div className="flex gap-2 flex-wrap justify-center">
               <Button
                 variant="outline"
                 size="sm"
@@ -187,7 +300,7 @@ export function DocumentUpload({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={() => setCameraOpen(true)}
                 type="button"
                 data-testid="button-scan-camera"
               >
@@ -195,9 +308,7 @@ export function DocumentUpload({
                 Scan with Camera
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              PDF, images, Word, Excel — max 20MB
-            </p>
+            <p className="text-xs text-muted-foreground">PDF, images, Word, Excel — max 20MB</p>
           </div>
         )}
       </div>
@@ -211,6 +322,12 @@ export function DocumentUpload({
           <span>{error}</span>
         </div>
       )}
-    </div>
+
+      <CameraModal
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(blob, name) => uploadFile(blob, name)}
+      />
+    </>
   );
 }

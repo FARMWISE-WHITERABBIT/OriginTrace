@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,11 @@ interface DocFormState {
   file_size: number | null;
 }
 
+interface EntityOption {
+  id: string;
+  label: string;
+}
+
 const EMPTY_FORM: DocFormState = {
   title: '',
   document_type: '',
@@ -104,6 +109,136 @@ const ENTITY_TYPES = [
 const TYPE_LABELS: Record<string, string> = Object.fromEntries(
   DOCUMENT_TYPES.map(t => [t.value, t.label])
 );
+
+async function fetchEntityOptions(entityType: string): Promise<EntityOption[]> {
+  try {
+    if (entityType === 'shipment') {
+      const res = await fetch('/api/shipments?limit=100');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.shipments || []).map((s: Record<string, unknown>) => ({
+        id: String(s.id),
+        label: `${s.shipment_code || s.id} — ${s.destination_country || ''}`.trim().replace(/—\s*$/, ''),
+      }));
+    }
+    if (entityType === 'farm') {
+      const res = await fetch('/api/farms?limit=100');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.farms || []).map((f: Record<string, unknown>) => ({
+        id: String(f.id),
+        label: `${f.farmer_name || 'Farm'} — ${f.community || ''}`.trim().replace(/—\s*$/, ''),
+      }));
+    }
+    if (entityType === 'farmer') {
+      const res = await fetch('/api/farmers?limit=100');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.farmers || []).map((f: Record<string, unknown>) => ({
+        id: String(f.id || f.farmer_id),
+        label: String(f.farmer_name || f.full_name || f.id),
+      }));
+    }
+    if (entityType === 'batch') {
+      const res = await fetch('/api/batches?limit=100');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.batches || []).map((b: Record<string, unknown>) => {
+        const farm = b.farm as Record<string, unknown> | undefined;
+        const label = farm
+          ? `${farm.farmer_name || 'Batch'} — ${(b.id as string)?.slice(0, 8) || ''}`
+          : String((b.id as string)?.slice(0, 8) || b.id);
+        return { id: String(b.id), label };
+      });
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function EntitySelect({
+  entityType,
+  value,
+  onChange,
+}: {
+  entityType: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [options, setOptions] = useState<EntityOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  useEffect(() => {
+    if (!entityType || entityType === 'none' || entityType === 'organization') {
+      setOptions([]);
+      setUseFallback(entityType === 'organization');
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+    setUseFallback(false);
+
+    fetchEntityOptions(entityType).then(opts => {
+      if (cancelled) return;
+      setIsLoading(false);
+      if (opts.length === 0) {
+        setUseFallback(true);
+      } else {
+        setOptions(opts);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [entityType]);
+
+  if (!entityType || entityType === 'none') {
+    return (
+      <Input
+        placeholder="Select an entity type first"
+        disabled
+        data-testid="input-doc-entity-id"
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 h-9 px-3 border rounded-md bg-muted/50">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span className="text-sm text-muted-foreground">Loading {entityType}s...</span>
+      </div>
+    );
+  }
+
+  if (useFallback || entityType === 'organization') {
+    return (
+      <Input
+        placeholder="Paste entity ID (UUID)"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        data-testid="input-doc-entity-id"
+      />
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger data-testid="select-doc-entity-id">
+        <SelectValue placeholder={`Select ${entityType}`} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(opt => (
+          <SelectItem key={opt.id} value={opt.id}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function DocForm({
   form,
@@ -191,12 +326,12 @@ function DocForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="doc-entity-type">Link to Entity</Label>
+      <div className="space-y-3">
+        <Label>Link to Entity</Label>
+        <div className="grid grid-cols-2 gap-3">
           <Select
-            value={form.linked_entity_type}
-            onValueChange={v => onChange({ linked_entity_type: v, linked_entity_id: '' })}
+            value={form.linked_entity_type || 'none'}
+            onValueChange={v => onChange({ linked_entity_type: v === 'none' ? '' : v, linked_entity_id: '' })}
           >
             <SelectTrigger data-testid="select-doc-entity-type">
               <SelectValue placeholder="None" />
@@ -208,16 +343,11 @@ function DocForm({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="doc-entity-id">Entity ID</Label>
-          <Input
-            id="doc-entity-id"
-            placeholder="UUID"
+
+          <EntitySelect
+            entityType={form.linked_entity_type}
             value={form.linked_entity_id}
-            onChange={e => onChange({ linked_entity_id: e.target.value })}
-            data-testid="input-doc-entity-id"
-            disabled={!form.linked_entity_type || form.linked_entity_type === 'none'}
+            onChange={v => onChange({ linked_entity_id: v })}
           />
         </div>
       </div>
@@ -243,7 +373,7 @@ export default function DocumentsPage() {
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (orgLoading) return;
     if (!organization) {
       setIsLoading(false);
@@ -264,11 +394,11 @@ export default function DocumentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organization, orgLoading, typeFilter, statusFilter]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [organization, orgLoading, typeFilter, statusFilter]);
+  }, [fetchDocuments]);
 
   const handleCreate = async () => {
     if (!createForm.title || !createForm.document_type) {
@@ -571,7 +701,7 @@ export default function DocumentsPage() {
             <DialogHeader>
               <DialogTitle>Add Document</DialogTitle>
               <DialogDescription>
-                Add a new document to your organization vault. You can attach a file or scan with your camera.
+                Add a new document to your organization vault. Attach a file or scan it with your camera.
               </DialogDescription>
             </DialogHeader>
             <DocForm
@@ -602,7 +732,7 @@ export default function DocumentsPage() {
             <DialogHeader>
               <DialogTitle>Edit Document</DialogTitle>
               <DialogDescription>
-                Update the document details. You can also replace the attached file.
+                Update the document details or replace the attached file.
               </DialogDescription>
             </DialogHeader>
             <DocForm

@@ -64,7 +64,7 @@ export async function PATCH(
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
 
-    const patchAllowedRoles = ['admin', 'compliance_officer', 'quality_manager'];
+    const patchAllowedRoles = ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'];
     if (!patchAllowedRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
