@@ -61,7 +61,7 @@ export async function GET(
     // KYC / compliance files
     const { data: files } = await supabase
       .from('compliance_files')
-      .select('id, file_type, file_url, created_at')
+      .select('id, file_type, file_name, file_path, created_at')
       .eq('farm_id', farmId)
       .order('created_at', { ascending: false })
       .limit(10);

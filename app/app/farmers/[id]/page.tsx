@@ -330,7 +330,7 @@ export default function FarmerDetailPage({ params }: { params: { id: string } })
                     {files.map((f: any) => (
                       <div key={f.id} className="flex items-center justify-between text-sm">
                         <span className="capitalize text-muted-foreground">{f.file_type?.replace('_', ' ')}</span>
-                        <a href={f.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs">View</a>
+                        <span className="text-xs text-muted-foreground">{f.file_name}</span>
                       </div>
                     ))}
                   </div>
