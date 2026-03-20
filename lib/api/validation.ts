@@ -162,9 +162,13 @@ export const delegationActionSchema = z.object({
 // Documents
 // ---------------------------------------------------------------------------
 const VALID_DOC_TYPES = [
-  'certificate_of_origin', 'phytosanitary', 'bill_of_lading', 'packing_list',
-  'commercial_invoice', 'fumigation_certificate', 'lab_report', 'customs_declaration',
-  'insurance_certificate', 'other',
+  'export_license', 'phytosanitary', 'fumigation', 'organic_cert', 'insurance',
+  'lab_result', 'customs_declaration', 'bill_of_lading', 'certificate_of_origin',
+  'quality_cert',
+  'uk_due_diligence', 'fda_prior_notice', 'lacey_act_declaration',
+  'gacc_registration', 'gb_standards_cert', 'china_customs_declaration',
+  'halal_certificate', 'esma_compliance', 'gulf_certificate_of_conformity',
+  'other',
 ] as const;
 
 export const documentCreateSchema = z.object({
