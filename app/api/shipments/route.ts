@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
 
     // Enrich with linked contracts via contract_shipments junction
     const shipmentIds = (shipments || []).map((s: any) => s.id);
-    let contractsByShipment: Record<string, { contract_number: string; id: number }[]> = {};
+    let contractsByShipment: Record<string, { contract_reference: string; id: number }[]> = {};
     if (shipmentIds.length > 0) {
       const { data: contractLinks } = await supabase
         .from('contract_shipments')
-        .select('shipment_id, contracts(id, contract_number)')
+        .select('shipment_id, contracts(id, contract_reference)')
         .in('shipment_id', shipmentIds);
       if (contractLinks) {
         for (const link of contractLinks as any[]) {

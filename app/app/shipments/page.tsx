@@ -42,7 +42,7 @@ interface Shipment {
   estimated_ship_date: string | null;
   created_at: string;
   item_count?: number;
-  linked_contracts?: Array<{ id: number; contract_number: string }>;
+  linked_contracts?: Array<{ id: number; contract_reference: string }>;
 }
 
 const DECISION_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2 }> = {
@@ -401,7 +401,7 @@ export default function ShipmentsPage() {
                             {shipment.linked_contracts && shipment.linked_contracts.length > 0 && (
                               <span className="flex items-center gap-1 text-xs font-medium text-primary" data-testid={`text-contract-link-${shipment.id}`}>
                                 <FileText className="h-3 w-3" />
-                                {shipment.linked_contracts.map(c => c.contract_number).join(', ')}
+                                {shipment.linked_contracts.map(c => c.contract_reference).join(', ')}
                               </span>
                             )}
                           </div>

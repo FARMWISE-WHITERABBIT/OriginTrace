@@ -37,6 +37,9 @@ interface TraceabilityTimelineProps {
     outputCode?: string;
     processedAt?: string;
     processedBy?: string;
+    facilityName?: string;
+    inputWeightKg?: number;
+    outputWeightKg?: number;
   };
   finishedGoodData?: {
     pedigreeCode?: string;
@@ -117,8 +120,11 @@ export function TraceabilityTimeline({
       completed: !!processingData?.processedAt,
       icon: Factory,
       details: processingData?.processedAt ? {
-        ...(processingData.processingType ? { 'Type': processingData.processingType } : {}),
-        ...(processingData.outputCode ? { 'Output Lot': processingData.outputCode } : {}),
+        ...(processingData.facilityName ? { 'Facility': processingData.facilityName } : {}),
+        ...(processingData.processingType ? { 'Commodity': processingData.processingType } : {}),
+        ...(processingData.outputCode ? { 'Run Code': processingData.outputCode } : {}),
+        ...(processingData.inputWeightKg != null ? { 'Input Weight': `${processingData.inputWeightKg} kg` } : {}),
+        ...(processingData.outputWeightKg != null ? { 'Output Weight': `${processingData.outputWeightKg} kg` } : {}),
         ...(processingData.processedBy ? { 'Processed By': processingData.processedBy } : {}),
       } : undefined
     },

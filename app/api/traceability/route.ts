@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     const { data: bagData, error: bagError } = await supabaseAdmin
       .from('bags')
-      .select('id, serial, status, collection_batch_id')
+      .select('id, serial, status, collection_batch_id, org_id')
       .eq('org_id', profile.org_id)
       .eq('serial', serial.toUpperCase())
       .single();
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Processing run + finished good + shipment chain (best-effort via collection_batch)
-    let processingData: { processingType?: string; outputCode?: string; processedAt?: string; processedBy?: string } | null = null;
+    let processingData: { processingType?: string; outputCode?: string; processedAt?: string; processedBy?: string; facilityName?: string; inputWeightKg?: number; outputWeightKg?: number } | null = null;
     let finishedGoodData: { pedigreeCode?: string; productName?: string; productType?: string; weightKg?: number; productionDate?: string; buyerCompany?: string } | null = null;
     let shipmentData: { shipmentCode?: string; status?: string; destinationCountry?: string; estimatedShipDate?: string } | null = null;
 
@@ -180,64 +180,74 @@ export async function GET(request: NextRequest) {
       try {
         const { data: prBatch } = await supabaseAdmin
           .from('processing_run_batches')
-          .select('processing_run_id, processing_runs(run_code, commodity, processed_at, created_by, facility_name, id)')
+          .select('processing_run_id, processing_runs(run_code, commodity, processed_at, created_by, facility_name, id, input_weight_kg, output_weight_kg, org_id)')
           .eq('collection_batch_id', bagData.collection_batch_id)
           .limit(1)
           .maybeSingle();
 
         if (prBatch && (prBatch as any).processing_runs) {
           const pr = (prBatch as any).processing_runs;
-          let processedBy: string | undefined;
-          if (pr.created_by) {
-            const { data: creator } = await supabaseAdmin
-              .from('profiles')
-              .select('full_name')
-              .eq('user_id', pr.created_by)
-              .maybeSingle();
-            processedBy = creator?.full_name ?? undefined;
-          }
-          processingData = {
-            processingType: pr.commodity ?? pr.facility_name ?? undefined,
-            outputCode: pr.run_code ?? undefined,
-            processedAt: pr.processed_at ?? undefined,
-            processedBy,
-          };
+          // Org-scope guard: only use this processing run if it belongs to same org as the bag
+          const bagOrgId = bagData.org_id;
+          if (!bagOrgId || pr.org_id === bagOrgId) {
+            let processedBy: string | undefined;
+            if (pr.created_by) {
+              const { data: creator } = await supabaseAdmin
+                .from('profiles')
+                .select('full_name')
+                .eq('user_id', pr.created_by)
+                .maybeSingle();
+              processedBy = creator?.full_name ?? undefined;
+            }
+            processingData = {
+              processingType: pr.commodity ?? undefined,
+              outputCode: pr.run_code ?? undefined,
+              processedAt: pr.processed_at ?? undefined,
+              processedBy,
+              facilityName: pr.facility_name ?? undefined,
+              inputWeightKg: pr.input_weight_kg ?? undefined,
+              outputWeightKg: pr.output_weight_kg ?? undefined,
+            };
 
-          // Look up finished good linked to this processing run
-          if (pr.id) {
-            const { data: fg } = await supabaseAdmin
-              .from('finished_goods')
-              .select('pedigree_code, product_name, product_type, weight_kg, production_date, buyer_company')
-              .eq('processing_run_id', pr.id)
-              .limit(1)
-              .maybeSingle();
-
-            if (fg) {
-              finishedGoodData = {
-                pedigreeCode: fg.pedigree_code ?? undefined,
-                productName: fg.product_name ?? undefined,
-                productType: fg.product_type ?? undefined,
-                weightKg: fg.weight_kg ?? undefined,
-                productionDate: fg.production_date ?? undefined,
-                buyerCompany: fg.buyer_company ?? undefined,
-              };
-
-              // Look up shipment containing this finished good (via shipment_items)
-              const { data: shipItem } = await supabaseAdmin
-                .from('shipment_items')
-                .select('shipment_id, shipments(shipment_code, status, destination_country, estimated_ship_date)')
-                .eq('item_type', 'finished_good')
+            // Look up finished good linked to this processing run
+            if (pr.id) {
+              const { data: fg } = await supabaseAdmin
+                .from('finished_goods')
+                .select('id, pedigree_code, product_name, product_type, weight_kg, production_date, buyer_company, org_id')
+                .eq('processing_run_id', pr.id)
                 .limit(1)
                 .maybeSingle();
 
-              if (shipItem && (shipItem as any).shipments) {
-                const sh = (shipItem as any).shipments;
-                shipmentData = {
-                  shipmentCode: sh.shipment_code ?? undefined,
-                  status: sh.status ?? undefined,
-                  destinationCountry: sh.destination_country ?? undefined,
-                  estimatedShipDate: sh.estimated_ship_date ?? undefined,
+              if (fg && (!bagOrgId || fg.org_id === bagOrgId)) {
+                finishedGoodData = {
+                  pedigreeCode: fg.pedigree_code ?? undefined,
+                  productName: fg.product_name ?? undefined,
+                  productType: fg.product_type ?? undefined,
+                  weightKg: fg.weight_kg ?? undefined,
+                  productionDate: fg.production_date ?? undefined,
+                  buyerCompany: fg.buyer_company ?? undefined,
                 };
+
+                // Look up shipment containing this specific finished good (org-scoped via shipments join)
+                const { data: shipItem } = await supabaseAdmin
+                  .from('shipment_items')
+                  .select('shipment_id, shipments!inner(shipment_code, status, destination_country, estimated_ship_date, org_id)')
+                  .eq('finished_good_id', fg.id)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (shipItem && (shipItem as any).shipments) {
+                  const sh = (shipItem as any).shipments;
+                  // Org-scope guard on shipment
+                  if (!bagOrgId || sh.org_id === bagOrgId) {
+                    shipmentData = {
+                      shipmentCode: sh.shipment_code ?? undefined,
+                      status: sh.status ?? undefined,
+                      destinationCountry: sh.destination_country ?? undefined,
+                      estimatedShipDate: sh.estimated_ship_date ?? undefined,
+                    };
+                  }
+                }
               }
             }
           }

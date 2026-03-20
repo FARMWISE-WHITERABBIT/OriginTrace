@@ -35,6 +35,9 @@ interface TraceProcessing {
   outputCode?: string;
   processedAt?: string;
   processedBy?: string;
+  facilityName?: string;
+  inputWeightKg?: number;
+  outputWeightKg?: number;
 }
 
 interface TraceFinishedGood {
@@ -327,6 +330,9 @@ export default function TraceabilityPage() {
                   outputCode: result.processing.outputCode,
                   processedAt: result.processing.processedAt,
                   processedBy: result.processing.processedBy,
+                  facilityName: result.processing.facilityName,
+                  inputWeightKg: result.processing.inputWeightKg,
+                  outputWeightKg: result.processing.outputWeightKg,
                 } : undefined}
                 finishedGoodData={result.finishedGood ? {
                   pedigreeCode: result.finishedGood.pedigreeCode,
