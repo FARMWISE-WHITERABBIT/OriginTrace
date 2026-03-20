@@ -17,7 +17,7 @@ import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { 
   Package, 
@@ -557,7 +557,7 @@ export default function InventoryPage() {
 
                 <div className="pt-2 border-t space-y-2">
                   {selectedBatch.status === 'collecting' && (
-                    <Link href="/app/collect">
+                    <Link href={`/app/collect?batch=${selectedBatch.id}`}>
                       <Button className="w-full" data-testid="button-add-bags">
                         <Plus className="h-4 w-4 mr-2" />
                         Add More Produce
@@ -580,7 +580,9 @@ export default function InventoryPage() {
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                          <DialogClose asChild>
+                            <Button variant="outline" data-testid="button-cancel-resolve">Cancel</Button>
+                          </DialogClose>
                           <Button onClick={handleResolveBatch} disabled={isResolving} data-testid="button-confirm-resolve">
                             {isResolving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
                             Confirm Resolve
