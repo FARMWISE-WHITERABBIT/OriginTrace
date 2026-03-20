@@ -164,22 +164,21 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-4xl">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-          <p className="text-muted-foreground">
-            {isAdmin 
-              ? 'Invite admins, aggregators, and field agents to your organization'
-              : 'Invite field agents to your organization'}
+          <h1 className="text-2xl font-bold tracking-tight">Team</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {isAdmin ? 'Manage accounts and roles for your organisation' : 'View your field team'}
           </p>
         </div>
-        
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-add-member">
+            <Button data-testid="button-add-member" className="shrink-0">
               <Plus className="h-4 w-4 mr-2" />
-              Add Team Member
+              Add Member
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -191,65 +190,37 @@ export default function TeamPage() {
             </DialogHeader>
             <form onSubmit={handleCreateUser}>
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="John Doe"
-                    required
-                    data-testid="input-new-name"
-                  />
+                  <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Amaka Obi" required data-testid="input-new-name" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="user@example.com"
-                    required
-                    data-testid="input-new-email"
-                  />
+                  <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="amaka@yourcompany.com" required data-testid="input-new-email" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="password">Temporary Password</Label>
-                  <Input
-                    id="password"
-                    type="text"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    required
-                    minLength={6}
-                    data-testid="input-new-password"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Share this password with the user. They can change it later.
-                  </p>
+                  <Input id="password" type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 6 characters" required minLength={6} data-testid="input-new-password" />
+                  <p className="text-xs text-muted-foreground">Share this with the user — they can change it after first login.</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="role">Role</Label>
                   <Select value={newRole} onValueChange={setNewRole}>
-                    <SelectTrigger data-testid="select-role">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger data-testid="select-role"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {isAdmin && (
                         <>
-                          <SelectItem value="admin">Admin - Full access</SelectItem>
-                          <SelectItem value="aggregator">Aggregator - Manage agents & collections</SelectItem>
+                          <SelectItem value="admin">Admin — Full access</SelectItem>
+                          <SelectItem value="aggregator">Aggregator — Manage agents & collections</SelectItem>
                         </>
                       )}
-                      <SelectItem value="agent">Agent - Field data collection</SelectItem>
+                      <SelectItem value="agent">Agent — Field data collection</SelectItem>
                       {isAdmin && (
                         <>
-                          <SelectItem value="quality_manager">Quality Manager - Quality control & grading</SelectItem>
-                          <SelectItem value="logistics_coordinator">Logistics Coordinator - Shipment & transport management</SelectItem>
-                          <SelectItem value="compliance_officer">Compliance Officer - Regulatory compliance & audit</SelectItem>
-                          <SelectItem value="warehouse_supervisor">Warehouse Supervisor - Warehouse & inventory management</SelectItem>
+                          <SelectItem value="quality_manager">Quality Manager — Grading & yield control</SelectItem>
+                          <SelectItem value="logistics_coordinator">Logistics Coordinator — Shipments & transport</SelectItem>
+                          <SelectItem value="compliance_officer">Compliance Officer — Regulatory & audit</SelectItem>
+                          <SelectItem value="warehouse_supervisor">Warehouse Supervisor — Inventory management</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -257,18 +228,9 @@ export default function TeamPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isCreating} data-testid="button-create-user">
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
+                  {isCreating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating...</> : 'Create Account'}
                 </Button>
               </DialogFooter>
             </form>
@@ -276,100 +238,85 @@ export default function TeamPage() {
         </Dialog>
       </div>
 
+      {/* ── Member list ── */}
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : team.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Add your first team member to get started with field collections.
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Users className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold mb-1">No team members yet</h3>
+            <p className="text-sm text-muted-foreground mb-5 max-w-xs">
+              Add your first team member to get started with field collections and supply chain management.
             </p>
             <Button onClick={() => setDialogOpen(true)} data-testid="button-add-first-member">
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Member
+              <Plus className="h-4 w-4 mr-2" />Add First Member
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {team.map((member) => (
-            <Card key={member.id} data-testid={`card-member-${member.id}`}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                    {roleIcons[member.role] || <User className="h-5 w-5" />}
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {team.map((member) => (
+                <div key={member.id} className="flex items-center gap-4 px-5 py-4" data-testid={`card-member-${member.id}`}>
+                  {/* Avatar */}
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0 text-sm font-semibold text-muted-foreground">
+                    {member.full_name?.charAt(0)?.toUpperCase() || <User className="h-5 w-5" />}
                   </div>
-                  <div>
-                    <p className="font-medium" data-testid={`text-member-name-${member.id}`}>
-                      {member.full_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground" data-testid={`text-member-email-${member.id}`}>
-                      {member.email}
-                    </p>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" data-testid={`text-member-name-${member.id}`}>{member.full_name}</p>
+                    <p className="text-xs text-muted-foreground truncate" data-testid={`text-member-email-${member.id}`}>{member.email}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge className={roleColors[member.role] || 'bg-gray-500 text-white'} data-testid={`badge-role-${member.id}`}>
-                    {roleLabels[member.role] || member.role}
-                  </Badge>
+                  {/* Role badge */}
+                  <div className="shrink-0">
+                    <Badge className={`${roleColors[member.role] || 'bg-muted text-muted-foreground'} text-xs`} data-testid={`badge-role-${member.id}`}>
+                      {roleLabels[member.role] || member.role}
+                    </Badge>
+                  </div>
+                  {/* Remove */}
                   {isAdmin && member.user_id !== profile?.user_id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveUser(member.user_id, member.full_name)}
-                      data-testid={`button-remove-${member.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveUser(member.user_id, member.full_name)} data-testid={`button-remove-${member.id}`}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
+      {/* ── Role reference ── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Role Permissions</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Role Permissions</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.admin}>Admin</Badge>
-              <span>Full access: manage team, farms, bags, compliance, exports, and settings</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.aggregator}>Aggregator</Badge>
-              <span>Manage field agents, view collections, oversee sync status</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.agent}>Agent</Badge>
-              <span>Map farms, collect produce (offline-capable), scan IDs</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.quality_manager}>Quality Manager</Badge>
-              <span>Quality control, grading standards, yield validation, and batch review</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.logistics_coordinator}>Logistics Coordinator</Badge>
-              <span>Shipment planning, transport management, and delivery tracking</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.compliance_officer}>Compliance Officer</Badge>
-              <span>Regulatory compliance, audit log access, farm reviews, and certifications</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge className={roleColors.warehouse_supervisor}>Warehouse Supervisor</Badge>
-              <span>Warehouse operations, inventory management, and stock tracking</span>
-            </div>
+        <CardContent className="pt-0">
+          <div className="divide-y divide-border">
+            {[
+              { role: 'admin',                label: 'Admin',                desc: 'Full access: team, farms, compliance, exports, and settings' },
+              { role: 'aggregator',           label: 'Aggregator',           desc: 'Manage field agents, view collections, oversee sync status' },
+              { role: 'agent',                label: 'Agent',                desc: 'Map farms, collect produce (offline-capable), scan IDs' },
+              { role: 'quality_manager',      label: 'Quality Manager',      desc: 'Quality control, grading standards, yield validation, batch review' },
+              { role: 'logistics_coordinator',label: 'Logistics',            desc: 'Shipment planning, transport management, delivery tracking' },
+              { role: 'compliance_officer',   label: 'Compliance Officer',   desc: 'Regulatory compliance, audit logs, farm reviews, certifications' },
+              { role: 'warehouse_supervisor', label: 'Warehouse Supervisor', desc: 'Inventory management, stock tracking, warehouse operations' },
+            ].map(({ role, label, desc }) => (
+              <div key={role} className="flex items-start gap-3 py-3">
+                <Badge className={`${roleColors[role] || 'bg-muted text-muted-foreground'} text-xs shrink-0 mt-0.5`}>{label}</Badge>
+                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }

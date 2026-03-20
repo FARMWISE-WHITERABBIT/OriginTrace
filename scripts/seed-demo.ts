@@ -472,6 +472,59 @@ async function seed() {
   section('Farm Conflicts');
   await tryIns('farm_conflicts', { org_id:eId, farm_a_id:(fG as any).id, farm_b_id:(fH as any).id, overlap_ratio:0.037, status:'pending' }, 'overlap G↔H');
 
+  // 19. Farmer Inputs (agricultural production records — GACC MRL + Rainforest Alliance)
+  section('Farmer Inputs');
+  const inputDefs = [
+    { farm:fA,  type:'fertilizer',         name:'NPK 15-15-15',                      qty:50,  unit:'kg',     date:dateStr(55), area:3.2, notes:'Basal application at beginning of season.' },
+    { farm:fA,  type:'organic_amendment',  name:'Composted Palm Bunch',               qty:200, unit:'kg',     date:dateStr(45), area:3.2, notes:'Applied to improve soil organic matter.' },
+    { farm:fB,  type:'fertilizer',         name:'Urea 46%',                           qty:75,  unit:'kg',     date:dateStr(52), area:5.1, notes:'Top dressing after heavy rains.' },
+    { farm:fB,  type:'pesticide',          name:'Confidor (Imidacloprid)',             qty:2,   unit:'liters', date:dateStr(40), area:5.1, notes:'Target: black pod disease. RA approved list.' },
+    { farm:fC,  type:'fertilizer',         name:'NPK 15-15-15',                       qty:40,  unit:'kg',     date:dateStr(50), area:2.8, notes:null },
+    { farm:gF1, type:'fertilizer',         name:'CAN (Calcium Ammonium Nitrate)',      qty:60,  unit:'kg',     date:dateStr(25), area:2.4, notes:'Pre-planting fertilizer application.' },
+    { farm:gF1, type:'herbicide',          name:'Atrazine 80%WP',                     qty:1.5, unit:'kg',     date:dateStr(22), area:2.4, notes:'Pre-emergence weed control. Compliant with China GB 2763-2021 MRL.' },
+    { farm:gF2, type:'fertilizer',         name:'NPK 20-10-10',                       qty:45,  unit:'kg',     date:dateStr(28), area:3.1, notes:'Split application. Second dose at 6 weeks.' },
+    { farm:gF2, type:'organic_amendment',  name:'Poultry Manure',                     qty:500, unit:'kg',     date:dateStr(35), area:3.1, notes:'Applied 2 weeks before planting.' },
+    { farm:gF3, type:'fertilizer',         name:'CAN (Calcium Ammonium Nitrate)',      qty:40,  unit:'kg',     date:dateStr(26), area:1.8, notes:null },
+    { farm:gF4, type:'fertilizer',         name:'NPK 15-15-15',                       qty:55,  unit:'kg',     date:dateStr(24), area:2.9, notes:'Combined for ginger and turmeric intercrop.' },
+  ];
+  await tryIns('farmer_inputs', inputDefs.map(d => ({
+    org_id:eId, farm_id:(d.farm as any).id,
+    input_type:d.type, product_name:d.name,
+    quantity:d.qty, unit:d.unit,
+    application_date:d.date, area_applied_hectares:d.area,
+    notes:d.notes, recorded_by:adminUserId,
+  })), `${inputDefs.length} input records`);
+
+  // 20. Farmer Training (compliance modules — Rainforest Alliance, EUDR, GACC awareness)
+  section('Farmer Training');
+  const trainingDefs = [
+    // Cocoa farmers
+    { farm:fA,  name:'Good Agricultural Practices — Cocoa 2026',  type:'gap',            status:'completed',   score:88, completedAt:daysAgo(45) },
+    { farm:fA,  name:'Child Labor Awareness & Prevention',         type:'child_labor',    status:'completed',   score:95, completedAt:daysAgo(44) },
+    { farm:fA,  name:'EUDR Deforestation Compliance Awareness',    type:'eudr_awareness', status:'completed',   score:82, completedAt:daysAgo(43) },
+    { farm:fB,  name:'Good Agricultural Practices — Cocoa 2026',  type:'gap',            status:'completed',   score:91, completedAt:daysAgo(48) },
+    { farm:fB,  name:'Health & Safety in the Field',               type:'safety',         status:'completed',   score:78, completedAt:daysAgo(47) },
+    { farm:fB,  name:'Child Labor Awareness & Prevention',         type:'child_labor',    status:'in_progress', score:null, completedAt:null },
+    { farm:fC,  name:'Good Agricultural Practices — Cocoa 2026',  type:'gap',            status:'completed',   score:85, completedAt:daysAgo(50) },
+    { farm:fC,  name:'Sustainability & Environment Module',        type:'sustainability',  status:'not_started', score:null, completedAt:null },
+    // Ginger farmers — GACC and safety focus
+    { farm:gF1, name:'GACC Export Standards Awareness',            type:'gap',            status:'completed',   score:90, completedAt:daysAgo(20) },
+    { farm:gF1, name:'Pesticide Safety & MRL Compliance',          type:'safety',         status:'completed',   score:87, completedAt:daysAgo(19) },
+    { farm:gF1, name:'Good Agricultural Practices — Ginger 2026', type:'gap',            status:'completed',   score:93, completedAt:daysAgo(18) },
+    { farm:gF2, name:'GACC Export Standards Awareness',            type:'gap',            status:'completed',   score:85, completedAt:daysAgo(21) },
+    { farm:gF2, name:'Pesticide Safety & MRL Compliance',          type:'safety',         status:'completed',   score:92, completedAt:daysAgo(20) },
+    { farm:gF3, name:'GACC Export Standards Awareness',            type:'gap',            status:'completed',   score:88, completedAt:daysAgo(22) },
+    { farm:gF3, name:'Good Agricultural Practices — Ginger 2026', type:'gap',            status:'in_progress', score:null, completedAt:null },
+    { farm:gF4, name:'GACC Export Standards Awareness',            type:'gap',            status:'completed',   score:79, completedAt:daysAgo(23) },
+    { farm:gF4, name:'EUDR Deforestation Compliance Awareness',    type:'eudr_awareness', status:'not_started', score:null, completedAt:null },
+  ];
+  await tryIns('farmer_training', trainingDefs.map(d => ({
+    org_id:eId, farm_id:(d.farm as any).id,
+    module_name:d.name, module_type:d.type,
+    status:d.status, score:d.score,
+    completed_at:d.completedAt, assigned_by:adminUserId,
+  })), `${trainingDefs.length} training records`);
+
   // ── Done ──────────────────────────────────────────────────────────────────
   section('✅  Seed complete!');
   console.log(`
@@ -487,8 +540,7 @@ async function seed() {
 
   COCOA SUPPLY CHAIN (fully connected)
     8 farms → 12 batches → bags → 3 processing runs → 4 FGs → 4 shipments
-    batch_contributions: 12 rows (1 per batch, single-farm)
-    Farmers page: 8 ledger rows with delivery totals
+    Farmers page: 8 ledger rows | 5 input records | 8 training records
 
   WHITERABBIT GINGER SUPPLY CHAIN (fully connected)
     5 ginger farms (Southern Kaduna) → 1 batch WRG-GNG-2026-001 (4,850 kg, 97 bags)
@@ -496,7 +548,7 @@ async function seed() {
     → 1 finished good PED-WRG-001 → WRG-SHP-2026-001 → Tianjin China (GO 82/100)
     batch_contributions: 5 rows (cooperative multi-farm, 4 delivering + 1 registered/no delivery)
     Documents: GACC cert · Phyto · Fumigation · MRL ⚠ expiring · COO · ISO 22000 · HACCP
-    Farmers page: +5 ledger rows (4 with deliveries, 1 pending)
+    Farmers: +5 ledger rows | 6 input records | 9 training records
   `);
 }
 

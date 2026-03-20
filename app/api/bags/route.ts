@@ -61,21 +61,24 @@ export async function GET(request: NextRequest) {
         batch_id: string | null;
         farm_id: string | null;
         farms: { farmer_name: string | null; community: string | null } | null;
-      } | null;
+      }[] | null;
     };
 
-    const enriched = (bags as BagRow[]).map((b) => ({
-      id: b.id,
-      serial: b.serial,
-      status: b.status,
-      collection_batch_id: b.collection_batch_id,
-      batch_id: b.collection_batches?.batch_id ?? null,
-      weight_kg: b.weight_kg ?? null,
-      grade: b.grade ?? null,
-      farmer_name: b.collection_batches?.farms?.farmer_name ?? null,
-      community: b.collection_batches?.farms?.community ?? null,
-      created_at: b.created_at,
-    }));
+    const enriched = ((bags as unknown) as BagRow[]).map((b) => {
+      const batch = Array.isArray(b.collection_batches) ? b.collection_batches[0] : b.collection_batches;
+      return {
+        id: b.id,
+        serial: b.serial,
+        status: b.status,
+        collection_batch_id: b.collection_batch_id,
+        batch_id: batch?.batch_id ?? null,
+        weight_kg: b.weight_kg ?? null,
+        grade: b.grade ?? null,
+        farmer_name: batch?.farms?.farmer_name ?? null,
+        community: batch?.farms?.community ?? null,
+        created_at: b.created_at,
+      };
+    });
 
     return NextResponse.json({ bags: enriched });
 

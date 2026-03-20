@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // kept for potential future use
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Users, Search, MapPin, Package, TrendingUp,
@@ -43,8 +44,8 @@ const COMMODITY_COLORS: Record<string, string> = {
 };
 
 export default function FarmersPage() {
+  const router = useRouter();
   const [farmers, setFarmers] = useState<FarmerLedger[]>([]);
-  const [selectedFarmer, setSelectedFarmer] = useState<FarmerLedger | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -292,8 +293,8 @@ export default function FarmersPage() {
                       return (
                         <TableRow
                           key={farmer.farm_id}
-                          className="cursor-pointer"
-                          onClick={() => setSelectedFarmer(farmer)}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/app/farmers/${farmer.farm_id}`)}
                           data-testid={`farmer-row-${farmer.farm_id}`}
                         >
                           <TableCell className="font-medium">{farmer.farmer_name}</TableCell>
@@ -359,7 +360,7 @@ export default function FarmersPage() {
                     <Card
                       key={farmer.farm_id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setSelectedFarmer(farmer)}
+                      onClick={() => router.push(`/app/farmers/${farmer.farm_id}`)}
                       data-testid={`farmer-card-${farmer.farm_id}`}
                     >
                       <CardContent className="pt-5 pb-4 space-y-3">
@@ -413,79 +414,6 @@ export default function FarmersPage() {
               </div>
             )
           )}
-
-          {/* Detail drawer */}
-          <Sheet open={!!selectedFarmer} onOpenChange={(open) => !open && setSelectedFarmer(null)}>
-            <SheetContent className="sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{selectedFarmer?.farmer_name}</SheetTitle>
-                <SheetDescription>
-                  {selectedFarmer?.community && (
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{selectedFarmer.community}</span>
-                  )}
-                </SheetDescription>
-              </SheetHeader>
-
-              {selectedFarmer && (
-                <div className="space-y-5 py-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Commodity</Label>
-                      <p className="font-medium capitalize mt-0.5">{selectedFarmer.commodity || '–'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Farm Area</Label>
-                      <p className="font-medium mt-0.5">{selectedFarmer.area_hectares?.toFixed(2) || '–'} ha</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Consent</Label>
-                      <p className="font-medium flex items-center gap-1 mt-0.5">
-                        {selectedFarmer.has_consent
-                          ? <><CheckCircle2 className="h-4 w-4 text-green-500" />Captured</>
-                          : <><AlertCircle className="h-4 w-4 text-amber-500" />Pending</>}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Delivery Frequency</Label>
-                      <div className="mt-0.5">{getFrequencyBadge(selectedFarmer.delivery_frequency)}</div>
-                    </div>
-                  </div>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Delivery Performance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2.5">
-                      {[
-                        { label: 'Total Volume', value: `${Number(selectedFarmer.total_delivery_kg).toLocaleString()} kg` },
-                        { label: 'Total Batches', value: String(selectedFarmer.total_batches) },
-                        { label: 'Total Bags', value: String(selectedFarmer.total_bags) },
-                        { label: 'Average Grade', value: selectedFarmer.avg_grade_score ? `${selectedFarmer.avg_grade_score.toFixed(2)} / 4.0` : '–' },
-                        { label: 'Last Delivery', value: selectedFarmer.last_delivery_date ? new Date(selectedFarmer.last_delivery_date).toLocaleDateString() : 'Never' },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">{label}</span>
-                          <span className="font-medium">{value}</span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-primary/30 bg-primary/5">
-                    <CardContent className="pt-4 pb-4">
-                      <p className="text-sm text-muted-foreground">
-                        {selectedFarmer.total_delivery_kg > 1000 && selectedFarmer.avg_grade_score && selectedFarmer.avg_grade_score >= 3
-                          ? '⭐ High-performing supplier — strong volume and quality grades.'
-                          : selectedFarmer.total_batches > 0
-                            ? 'Building delivery history — encourage consistent collection frequency.'
-                            : 'No deliveries recorded yet — follow up with field agent.'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </SheetContent>
-          </Sheet>
         </div>
       )}
     </TierGate>
