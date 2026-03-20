@@ -57,6 +57,7 @@ export type TierFeature =
   | 'compliance_profiles'
   | 'buyer_portal'
   | 'contracts'
+  | 'spot_market'
   | 'digital_product_passport'
   | 'enterprise_api'
   | 'api_access';
@@ -90,6 +91,7 @@ export const FEATURE_LABELS: Record<TierFeature, string> = {
   compliance_profiles: 'Compliance Profiles',
   buyer_portal: 'Buyer Portal',
   contracts: 'Contract Management',
+  spot_market: 'Spot Market & Tenders',
   digital_product_passport: 'Digital Product Passport',
   enterprise_api: 'Enterprise API Access',
   api_access: 'API Access',
@@ -129,6 +131,7 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   compliance_profiles: 'pro',
   buyer_portal: 'pro',
   contracts: 'pro',
+  spot_market: 'pro',
 
   // ── Enterprise: infrastructure — DPP, bulk data, API integrations
   data_vault: 'enterprise',

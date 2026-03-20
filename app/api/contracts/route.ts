@@ -194,7 +194,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: contract } = await supabaseAdmin
       .from('contracts')
-      .select('id, buyer_org_id, exporter_org_id')
+      .select('id, buyer_org_id, exporter_org_id, contract_reference')
       .eq('id', contract_id)
       .single();
 
@@ -244,7 +244,16 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to link shipment' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true });
+      // Bidirectional update: stamp the contract reference onto the shipment record
+      // so shipments reflect the link without a separate join at read time.
+      await supabaseAdmin
+        .from('shipments')
+        .update({ notes: `Linked to contract: ${contract.contract_reference}` })
+        .eq('id', shipment_id)
+        .eq('org_id', orgId)
+        .is('notes', null); // Only set if notes are currently empty (non-destructive)
+
+      return NextResponse.json({ success: true, contract_reference: contract.contract_reference });
     }
 
     if (status) {

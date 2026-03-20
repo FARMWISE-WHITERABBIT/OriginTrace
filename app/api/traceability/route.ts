@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
         if (batch) {
           if (!collectionData) {
             collectionData = {
-              weight: (batch as any).total_weight ?? null,
+              weight: (batch as { total_weight?: number | null; grade?: string | null; created_at: string }).total_weight ?? null,
               grade: batch.grade,
               collected_at: batch.created_at,
             };
@@ -185,8 +185,23 @@ export async function GET(request: NextRequest) {
           .limit(1)
           .maybeSingle();
 
-        if (prBatch && (prBatch as any).processing_runs) {
-          const pr = (prBatch as any).processing_runs;
+        type ProcessingRunRow = {
+          id: string;
+          run_code: string | null;
+          commodity: string | null;
+          processed_at: string | null;
+          created_by: string | null;
+          facility_name: string | null;
+          input_weight_kg: number | null;
+          output_weight_kg: number | null;
+          org_id: number | null;
+        };
+        type ProcessingRunBatchRow = { processing_run_id: string; processing_runs: ProcessingRunRow | null };
+
+        const typedPrBatch = prBatch as ProcessingRunBatchRow | null;
+
+        if (typedPrBatch?.processing_runs) {
+          const pr = typedPrBatch.processing_runs;
           // Org-scope guard: only use this processing run if it belongs to same org as the bag
           const bagOrgId = bagData.org_id;
           if (!bagOrgId || pr.org_id === bagOrgId) {
@@ -229,6 +244,10 @@ export async function GET(request: NextRequest) {
                 };
 
                 // Look up shipment containing this specific finished good (org-scoped via shipments join)
+                type ShipmentItemRow = {
+                  shipment_id: string;
+                  shipments: { shipment_code: string | null; status: string | null; destination_country: string | null; estimated_ship_date: string | null; org_id: number | null } | null;
+                };
                 const { data: shipItem } = await supabaseAdmin
                   .from('shipment_items')
                   .select('shipment_id, shipments!inner(shipment_code, status, destination_country, estimated_ship_date, org_id)')
@@ -236,8 +255,9 @@ export async function GET(request: NextRequest) {
                   .limit(1)
                   .maybeSingle();
 
-                if (shipItem && (shipItem as any).shipments) {
-                  const sh = (shipItem as any).shipments;
+                const typedShipItem = shipItem as ShipmentItemRow | null;
+                if (typedShipItem?.shipments) {
+                  const sh = typedShipItem.shipments;
                   // Org-scope guard on shipment
                   if (!bagOrgId || sh.org_id === bagOrgId) {
                     shipmentData = {

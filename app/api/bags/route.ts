@@ -49,7 +49,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const enriched = (bags || []).map((b: any) => ({
+    type BagRow = {
+      id: string;
+      serial: string;
+      status: string;
+      collection_batch_id: string | null;
+      weight_kg: number | null;
+      grade: string | null;
+      created_at: string;
+      collection_batches: {
+        batch_id: string | null;
+        farm_id: string | null;
+        farms: { farmer_name: string | null; community: string | null } | null;
+      } | null;
+    };
+
+    const enriched = (bags as BagRow[]).map((b) => ({
       id: b.id,
       serial: b.serial,
       status: b.status,

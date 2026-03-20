@@ -115,7 +115,7 @@ export default function ExporterTendersPage() {
   });
 
   return (
-    <TierGate feature="contracts" requiredTier="pro" featureLabel="Marketplace">
+    <TierGate feature="spot_market" requiredTier="pro" featureLabel="Spot Market & Tenders">
     <div className="flex-1 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Marketplace</h1>
