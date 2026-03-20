@@ -64,7 +64,12 @@ interface Bag {
   id: string;
   serial: string;
   status: string;
+  collection_batch_id: string | null;
   batch_id: string | null;
+  weight_kg: number | null;
+  grade: string | null;
+  farmer_name: string | null;
+  community: string | null;
   created_at: string;
 }
 
@@ -115,7 +120,13 @@ export default function InventoryPage() {
     } finally { setIsGenerating(false); }
   };
   // ── end bags state ──
-  const filteredBags = bags.filter(b => b.serial.toLowerCase().includes(bagSearch.toLowerCase()) || (b.batch_id && b.batch_id.toLowerCase().includes(bagSearch.toLowerCase())));
+  const filteredBags = bags.filter(b => {
+    const q = bagSearch.toLowerCase();
+    return b.serial.toLowerCase().includes(q)
+      || (b.batch_id && b.batch_id.toLowerCase().includes(q))
+      || (b.farmer_name && b.farmer_name.toLowerCase().includes(q))
+      || (b.community && b.community.toLowerCase().includes(q));
+  });
 
   interface BatchContribution {
     id: string;
@@ -646,6 +657,9 @@ export default function InventoryPage() {
                       <TableRow>
                         <TableHead>Serial</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Grade</TableHead>
+                        <TableHead>Weight</TableHead>
+                        <TableHead>Farmer</TableHead>
                         <TableHead>Batch ID</TableHead>
                         <TableHead>Created</TableHead>
                       </TableRow>
@@ -655,6 +669,9 @@ export default function InventoryPage() {
                         <TableRow key={bag.id} data-testid={`bag-row-${bag.id}`}>
                           <TableCell className="font-mono text-sm">{bag.serial}</TableCell>
                           <TableCell><StatusBadge domain="bag" status={bag.status} /></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{bag.grade || '—'}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{bag.weight_kg != null ? `${Number(bag.weight_kg).toLocaleString()} kg` : '—'}</TableCell>
+                          <TableCell className="text-sm">{bag.farmer_name || <span className="text-muted-foreground">—</span>}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{bag.batch_id || '—'}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{new Date(bag.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>

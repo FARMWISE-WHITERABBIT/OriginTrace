@@ -25,12 +25,21 @@ export async function GET(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'bags');
     if (tierBlock) return tierBlock;
 
-    const { data: bags, error: bagsError } = await supabaseAdmin
+    const { searchParams } = new URL(request.url);
+    const batchIdFilter = searchParams.get('batch_id');
+
+    let query = supabaseAdmin
       .from('bags')
-      .select('id, serial, status, batch_id, created_at')
+      .select('id, serial, status, collection_batch_id, weight_kg, grade, created_at, collection_batches(id, batch_id, farm_id, farms(farmer_name, community))')
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: false })
       .limit(500);
+
+    if (batchIdFilter) {
+      query = query.eq('collection_batch_id', batchIdFilter);
+    }
+
+    const { data: bags, error: bagsError } = await query;
 
     if (bagsError) {
       console.error('Bags fetch error:', bagsError);
@@ -40,7 +49,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ bags: bags || [] });
+    const enriched = (bags || []).map((b: any) => ({
+      id: b.id,
+      serial: b.serial,
+      status: b.status,
+      collection_batch_id: b.collection_batch_id,
+      batch_id: b.collection_batches?.batch_id ?? null,
+      weight_kg: b.weight_kg ?? null,
+      grade: b.grade ?? null,
+      farmer_name: b.collection_batches?.farms?.farmer_name ?? null,
+      community: b.collection_batches?.farms?.community ?? null,
+      created_at: b.created_at,
+    }));
+
+    return NextResponse.json({ bags: enriched });
 
   } catch (error) {
     console.error('Bags API error:', error);

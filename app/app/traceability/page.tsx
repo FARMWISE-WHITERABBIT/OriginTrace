@@ -30,6 +30,13 @@ interface TraceContributor {
   compliance_status: string | null;
 }
 
+interface TraceProcessing {
+  processingType?: string;
+  outputCode?: string;
+  processedAt?: string;
+  processedBy?: string;
+}
+
 interface TraceResult {
   bag: {
     serial: string;
@@ -51,6 +58,7 @@ interface TraceResult {
     full_name: string;
   } | null;
   contributors: TraceContributor[];
+  processing: TraceProcessing | null;
 }
 
 export default function TraceabilityPage() {
@@ -103,6 +111,7 @@ export default function TraceabilityPage() {
         collection: data.collection,
         agent: data.agent,
         contributors: data.contributors || [],
+        processing: data.processing || null,
       });
       setSheetOpen(true);
     } catch (error) {
@@ -292,6 +301,12 @@ export default function TraceabilityPage() {
                   warehouse: 'Main Warehouse',
                   aggregatorName: 'Aggregator',
                   receivedAt: result.collection?.collected_at
+                } : undefined}
+                processingData={result.processing ? {
+                  processingType: result.processing.processingType,
+                  outputCode: result.processing.outputCode,
+                  processedAt: result.processing.processedAt,
+                  processedBy: result.processing.processedBy,
                 } : undefined}
                 verificationData={{
                   complianceStatus: result.farm?.compliance_status || 'pending',

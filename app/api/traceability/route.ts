@@ -171,6 +171,41 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Processing run: look up via bag's collection_batch (best-effort)
+    let processingData: { processingType?: string; outputCode?: string; processedAt?: string; processedBy?: string } | null = null;
+
+    if (bagData.collection_batch_id) {
+      try {
+        const { data: prBatch } = await supabaseAdmin
+          .from('processing_run_batches')
+          .select('processing_run_id, processing_runs(run_code, commodity, processed_at, created_by, facility_name)')
+          .eq('collection_batch_id', bagData.collection_batch_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (prBatch && (prBatch as any).processing_runs) {
+          const pr = (prBatch as any).processing_runs;
+          let processedBy: string | undefined;
+          if (pr.created_by) {
+            const { data: creator } = await supabaseAdmin
+              .from('profiles')
+              .select('full_name')
+              .eq('user_id', pr.created_by)
+              .maybeSingle();
+            processedBy = creator?.full_name ?? undefined;
+          }
+          processingData = {
+            processingType: pr.commodity ?? pr.facility_name ?? undefined,
+            outputCode: pr.run_code ?? undefined,
+            processedAt: pr.processed_at ?? undefined,
+            processedBy,
+          };
+        }
+      } catch {
+        // Processing lookup is best-effort; ignore errors
+      }
+    }
+
     return NextResponse.json({
       found: true,
       bag: {
@@ -181,6 +216,7 @@ export async function GET(request: NextRequest) {
       collection: collectionData,
       agent: agentData,
       contributors: contributors.length > 1 ? contributors : [],
+      processing: processingData,
     });
 
   } catch (error) {

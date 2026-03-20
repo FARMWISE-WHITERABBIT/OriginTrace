@@ -222,11 +222,22 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (shipment_id && isExporter) {
+      const orgId = exporterProfile!.org_id;
+
+      const { data: shipment } = await supabaseAdmin
+        .from('shipments')
+        .select('id, org_id')
+        .eq('id', shipment_id)
+        .eq('org_id', orgId)
+        .single();
+
+      if (!shipment) {
+        return NextResponse.json({ error: 'Shipment not found or not owned by your organization' }, { status: 403 });
+      }
+
       const { error: linkError } = await supabaseAdmin
         .from('contract_shipments')
-        .insert({ contract_id, shipment_id })
-        .select()
-        .single();
+        .upsert({ contract_id, shipment_id }, { onConflict: 'contract_id,shipment_id', ignoreDuplicates: true });
 
       if (linkError) {
         console.error('Contract shipment link error:', linkError);
