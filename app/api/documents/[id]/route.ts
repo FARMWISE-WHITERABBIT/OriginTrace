@@ -1,7 +1,9 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { documentPatchSchema, parseBody } from '@/lib/api/validation';
+import { deleteDocumentFile } from '@/lib/supabase/storage';
 
 type AuthResult =
   | { error: NextResponse }
@@ -59,7 +61,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const rawBody = await request.json();
+
+    const { data: body, error: validationError } = parseBody(documentPatchSchema, rawBody);
+    if (validationError) return validationError;
+
     const auth = await getAuthAndProfile(request);
     if ('error' in auth) return auth.error;
     const { profile, supabaseAdmin } = auth;
@@ -71,7 +77,7 @@ export async function PATCH(
 
     const { data: existing } = await supabaseAdmin
       .from('documents')
-      .select('id')
+      .select('id, file_url, file_name')
       .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
@@ -80,21 +86,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    const allowedFields = [
-      'title', 'document_type', 'file_url', 'file_name', 'file_size',
-      'issued_date', 'expiry_date', 'status', 'linked_entity_type',
-      'linked_entity_id', 'notes'
-    ];
-
-    const updates: Record<string, unknown> = {};
-    for (const key of allowedFields) {
-      if (key in body) {
-        updates[key] = body[key];
-      }
-    }
+    const updates: Record<string, unknown> = { ...body };
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    if ('file_url' in updates && updates.file_url !== existing.file_url && existing.file_url) {
+      try {
+        const oldPath = extractStoragePath(existing.file_url as string);
+        if (oldPath) await deleteDocumentFile(oldPath);
+      } catch (cleanupErr) {
+        console.warn('Failed to delete old storage file:', cleanupErr);
+      }
     }
 
     const { data: document, error } = await supabaseAdmin
@@ -135,13 +139,22 @@ export async function DELETE(
 
     const { data: existing } = await supabaseAdmin
       .from('documents')
-      .select('id')
+      .select('id, file_url')
       .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
     if (!existing) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    if (existing.file_url) {
+      try {
+        const storagePath = extractStoragePath(existing.file_url as string);
+        if (storagePath) await deleteDocumentFile(storagePath);
+      } catch (cleanupErr) {
+        console.warn('Failed to delete storage file on document delete:', cleanupErr);
+      }
     }
 
     const { error } = await supabaseAdmin
@@ -160,5 +173,18 @@ export async function DELETE(
   } catch (error) {
     console.error('Document DELETE error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  }
+}
+
+function extractStoragePath(signedUrl: string): string | null {
+  try {
+    const url = new URL(signedUrl);
+    const match = url.pathname.match(/\/storage\/v1\/object\/sign\/documents\/(.+)/);
+    if (match && match[1]) return decodeURIComponent(match[1]);
+    const fallback = url.pathname.match(/\/storage\/v1\/object\/(?:public|authenticated)\/documents\/(.+)/);
+    if (fallback && fallback[1]) return decodeURIComponent(fallback[1]);
+    return null;
+  } catch {
+    return null;
   }
 }

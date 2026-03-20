@@ -736,6 +736,7 @@ export default function DocumentsPage() {
               </DialogDescription>
             </DialogHeader>
             <DocForm
+              key={editDoc?.id}
               form={editForm}
               onChange={updates => setEditForm(s => ({ ...s, ...updates }))}
               onUploadComplete={result => setEditForm(s => ({

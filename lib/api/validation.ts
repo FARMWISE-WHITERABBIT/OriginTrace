@@ -185,6 +185,8 @@ export const documentCreateSchema = z.object({
   notes:              z.string().max(1000).optional().nullable(),
 });
 
+export const documentPatchSchema = documentCreateSchema.partial();
+
 // ---------------------------------------------------------------------------
 // Feature toggles (superadmin)
 // ---------------------------------------------------------------------------
