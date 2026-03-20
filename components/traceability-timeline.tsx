@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Package, Warehouse, ShieldCheck, Check, Clock } from 'lucide-react';
+import { MapPin, Package, Warehouse, ShieldCheck, Check, Clock, Factory } from 'lucide-react';
 
 interface TimelineStep {
   id: string;
@@ -32,6 +32,12 @@ interface TraceabilityTimelineProps {
     aggregatorName?: string;
     receivedAt?: string;
   };
+  processingData?: {
+    processingType?: string;
+    outputCode?: string;
+    processedAt?: string;
+    processedBy?: string;
+  };
   verificationData?: {
     verifiedAt?: string;
     verifiedBy?: string;
@@ -44,6 +50,7 @@ export function TraceabilityTimeline({
   farmData,
   collectionData,
   aggregationData,
+  processingData,
   verificationData
 }: TraceabilityTimelineProps) {
   const steps: TimelineStep[] = [
@@ -84,6 +91,19 @@ export function TraceabilityTimeline({
       details: aggregationData?.receivedAt ? {
         'Warehouse': aggregationData.warehouse || 'Main Warehouse',
         'Received By': aggregationData.aggregatorName || 'Aggregator'
+      } : undefined
+    },
+    {
+      id: 'processed',
+      title: 'Processing Run',
+      description: processingData?.processedAt ? `Processed — ${processingData.processingType || 'Standard'}` : 'Awaiting processing',
+      timestamp: processingData?.processedAt,
+      completed: !!processingData?.processedAt,
+      icon: Factory,
+      details: processingData?.processedAt ? {
+        ...(processingData.processingType ? { 'Type': processingData.processingType } : {}),
+        ...(processingData.outputCode ? { 'Output Lot': processingData.outputCode } : {}),
+        ...(processingData.processedBy ? { 'Processed By': processingData.processedBy } : {}),
       } : undefined
     },
     {

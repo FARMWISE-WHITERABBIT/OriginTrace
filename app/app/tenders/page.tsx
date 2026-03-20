@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { TierGate } from '@/components/tier-gate';
 import { Loader2, Search, Store, Calendar, Package, DollarSign, Send, CheckCircle, Clock } from 'lucide-react';
 
 interface Tender {
@@ -114,6 +115,7 @@ export default function ExporterTendersPage() {
   });
 
   return (
+    <TierGate feature="contracts" requiredTier="pro" featureLabel="Marketplace">
     <div className="flex-1 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Marketplace</h1>
@@ -261,5 +263,6 @@ export default function ExporterTendersPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </TierGate>
   );
 }

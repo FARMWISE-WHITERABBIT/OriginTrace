@@ -8,7 +8,7 @@ import { parsePagination } from '@/lib/api/validation';
 import { z } from 'zod';
 
 const contractCreateSchema = z.object({
-  exporter_org_id: z.number({ required_error: 'Exporter is required' }),
+  exporter_org_id: z.string().uuid({ message: 'Exporter is required' }),
   commodity: z.string().min(1, 'Commodity is required'),
   quantity_mt: z.number().positive().optional(),
   delivery_deadline: z.string().optional(),
@@ -18,9 +18,9 @@ const contractCreateSchema = z.object({
 });
 
 const contractPatchSchema = z.object({
-  contract_id: z.number({ required_error: 'contract_id is required' }),
+  contract_id: z.string().uuid({ message: 'contract_id is required' }),
   status: z.enum(['draft', 'active', 'fulfilled', 'cancelled']).optional(),
-  shipment_id: z.number().optional(),
+  shipment_id: z.string().uuid().optional(),
 });
 
 function getAdminClient() {
