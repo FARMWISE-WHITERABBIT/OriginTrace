@@ -168,7 +168,7 @@ export default function DPPPage() {
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
               Digital Product Passports
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -323,6 +323,14 @@ export default function DPPPage() {
                           <ExternalLink className="h-3 w-3 mr-1" />
                           Preview
                         </Button>
+                        <a href={`/app/dpp/${dpp.id}`}>
+                          <Button
+                            size="sm"
+                            data-testid={`button-view-${dpp.id}`}
+                          >
+                            View
+                          </Button>
+                        </a>
                       </div>
                     </div>
                   </CardContent>

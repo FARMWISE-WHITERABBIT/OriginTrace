@@ -29,7 +29,7 @@ export default function GuidePage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Getting Started Guide</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Getting Started Guide</h1>
         <p className="text-muted-foreground">
           Learn how to use OriginTrace for agricultural traceability
         </p>

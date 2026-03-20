@@ -529,7 +529,7 @@ export default function DocumentsPage() {
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
               Document Vault
             </h1>
             <p className="text-sm text-muted-foreground mt-1">

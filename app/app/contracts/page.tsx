@@ -130,7 +130,7 @@ export default function ExporterContractsPage() {
       <div className="flex-1 space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Buyer Contracts</h1>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Buyer Contracts</h1>
             <p className="text-sm text-muted-foreground mt-1">View and manage contracts from your buyers</p>
           </div>
           <Button variant="outline" onClick={() => setLinkDialogOpen(true)} data-testid="button-link-shipment">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,7 @@ interface Bag {
 }
 
 export default function InventoryPage() {
+  const router = useRouter();
   // ── Bags sub-tab state ──
   const [bags, setBags] = useState<Bag[]>([]);
   const [bagsLoading, setBagsLoading] = useState(false);
@@ -149,11 +151,6 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [contributions, setContributions] = useState<BatchContribution[]>([]);
-  const [contributionsLoading, setContributionsLoading] = useState(false);
-  const [isResolving, setIsResolving] = useState(false);
   const { organization, profile } = useOrg();
   const supabase = createClient();
 
@@ -238,39 +235,8 @@ export default function InventoryPage() {
   });
 
 
-  const handleResolveBatch = async () => {
-    if (!selectedBatch || !supabase) return;
-    setIsResolving(true);
-    try {
-      const { error } = await supabase
-        .from('collection_batches')
-        .update({ status: 'resolved' })
-        .eq('id', selectedBatch.id);
-      if (error) throw error;
-      toast({ title: 'Batch Resolved', description: `Batch ${selectedBatch.batch_id || selectedBatch.id.slice(0, 8)} locked for dispatch.` });
-      setSelectedBatch({ ...selectedBatch, status: 'resolved' });
-      setBatches(prev => prev.map(b => b.id === selectedBatch.id ? { ...b, status: 'resolved' } : b));
-    } catch {
-      toast({ title: 'Error', description: 'Failed to resolve batch', variant: 'destructive' });
-    } finally {
-      setIsResolving(false);
-    }
-  };
-
   const handleRowClick = async (batch: Batch) => {
-    setSelectedBatch(batch);
-    setSheetOpen(true);
-    setContributions([]);
-    setContributionsLoading(true);
-    try {
-      const res = await fetch(`/api/batch-contributions?batch_id=${batch.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setContributions(data.contributions || []);
-      }
-    } catch { } finally {
-      setContributionsLoading(false);
-    }
+    router.push(`/app/inventory/${batch.id}`);
   };
 
   const statusCounts = {
@@ -285,7 +251,7 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Inventory</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Inventory</h1>
           <p className="text-muted-foreground">
             Collection batches and bag management
           </p>
@@ -426,200 +392,6 @@ export default function InventoryPage() {
         </CardContent>
       </Card>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="overflow-y-auto">
-          {selectedBatch && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Batch Details
-                </SheetTitle>
-                <SheetDescription>
-                  {selectedBatch.batch_id || selectedBatch.id.slice(0, 8)}
-                </SheetDescription>
-              </SheetHeader>
-              
-              <div className="mt-6 space-y-6">
-                <div className="flex justify-center">
-                  <StatusBadge domain="batch" status={selectedBatch.status} />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Farmer</p>
-                      <p className="text-sm text-muted-foreground">{selectedBatch.farm?.farmer_name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Community</p>
-                      <p className="text-sm text-muted-foreground">{selectedBatch.farm?.community}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Bags in Batch</p>
-                      <p className="text-sm text-muted-foreground">{selectedBatch.bag_count} bags</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <Scale className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Total Weight</p>
-                      <p className="text-sm text-muted-foreground">{selectedBatch.total_weight} kg</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Collected By</p>
-                      <p className="text-sm text-muted-foreground">{selectedBatch.agent?.full_name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Collection Date</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(selectedBatch.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contributing farmers panel */}
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium">Contributing Farmers</p>
-                    {contributions.length > 0 && (
-                      <span className="ml-auto text-xs text-muted-foreground">{contributions.length} farmer{contributions.length !== 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                  {contributionsLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : contributions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground px-3 py-3">No contribution records found.</p>
-                  ) : (
-                    <div className="divide-y">
-                      {contributions.map(c => {
-                        const displayName = c.farm?.farmer_name ?? c.farmer_name ?? 'Unknown Farmer';
-                        const community = c.farm?.community ?? null;
-                        const complianceStatus = c.farm?.compliance_status ?? c.compliance_status;
-                        return (
-                          <div key={c.id} className="px-3 py-2.5 flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate" data-testid={`text-contributor-name-${c.id}`}>
-                                {displayName}
-                              </p>
-                              {community && (
-                                <p className="text-xs text-muted-foreground flex items-center gap-1" data-testid={`text-contributor-community-${c.id}`}>
-                                  <MapPin className="h-3 w-3 shrink-0" />{community}
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
-                              </p>
-                              <p className="text-[10px] text-muted-foreground/60 font-mono" data-testid={`text-contributor-farmid-${c.id}`}>
-                                {c.farm_id.slice(0, 8)}…
-                              </p>
-                            </div>
-                            <Badge
-                              variant={complianceStatus === 'verified' || complianceStatus === 'approved' ? 'default' : complianceStatus === 'rejected' ? 'destructive' : 'secondary'}
-                              className="text-[10px] shrink-0"
-                            >
-                              {complianceStatus}
-                            </Badge>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t space-y-2">
-                  {selectedBatch.status === 'collecting' && (
-                    <Link href={`/app/collect?batch=${selectedBatch.id}`}>
-                      <Button className="w-full" data-testid="button-add-bags">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add More Produce
-                      </Button>
-                    </Link>
-                  )}
-                  {selectedBatch.status === 'collecting' && selectedBatch.bag_count > 0 && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full" data-testid="button-resolve">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Resolve & Lock
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Resolve Batch</DialogTitle>
-                          <DialogDescription>
-                            Lock batch {selectedBatch.batch_id || selectedBatch.id.slice(0, 8)} for dispatch. This cannot be undone — no more bags can be added after resolving.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button variant="outline" data-testid="button-cancel-resolve">Cancel</Button>
-                          </DialogClose>
-                          <Button onClick={handleResolveBatch} disabled={isResolving} data-testid="button-confirm-resolve">
-                            {isResolving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
-                            Confirm Resolve
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                  {selectedBatch.status === 'resolved' && (
-                    <Link href={`/app/dispatch?batch=${selectedBatch.id}`}>
-                      <Button className="w-full" data-testid="button-dispatch">
-                        <Send className="h-4 w-4 mr-2" />
-                        Dispatch
-                      </Button>
-                    </Link>
-                  )}
-                  {selectedBatch.status === 'dispatched' && (
-                    <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                      <Truck className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-700 dark:text-green-400">
-                        Dispatched
-                      </span>
-                    </div>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    className="w-full"
-                    onClick={() => setSheetOpen(false)}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
       </TabsContent>
 
       {/* ── BAGS TAB ── */}

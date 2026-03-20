@@ -124,7 +124,7 @@ export default function DDSExportPage() {
     <TierGate feature="dds_export" requiredTier="pro" featureLabel="DDS Export">
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">DDS Export</h1>
+        <h1 className="text-2xl font-bold tracking-tight">DDS Export</h1>
         <p className="text-muted-foreground">
           Export farm boundary data for regulatory submissions — EU EUDR, UK due diligence, US Lacey Act, China GACC, UAE ESMA and more.
         </p>

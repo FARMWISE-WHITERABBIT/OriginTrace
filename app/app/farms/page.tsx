@@ -122,7 +122,7 @@ export default function FarmsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Farm Polygons</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Farm Polygons</h1>
           <p className="text-muted-foreground">GPS boundaries, compliance status, and farmer registry</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

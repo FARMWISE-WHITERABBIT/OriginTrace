@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +60,7 @@ interface CommodityMaster {
 }
 
 export default function ProcessingPage() {
+  const router = useRouter();
   const [processingRuns, setProcessingRuns] = useState<ProcessingRun[]>([]);
   const [availableBatches, setAvailableBatches] = useState<CollectionBatch[]>([]);
   const [commodities, setCommodities] = useState<CommodityMaster[]>([]);
@@ -653,7 +655,12 @@ export default function ProcessingPage() {
               </TableHeader>
               <TableBody>
                 {processingRuns.map((run) => (
-                  <TableRow key={run.id} data-testid={`row-run-${run.id}`}>
+                  <TableRow
+                    key={run.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/app/processing/${run.id}`)}
+                    data-testid={`row-run-${run.id}`}
+                  >
                     <TableCell className="font-mono font-medium">
                       {run.run_code}
                     </TableCell>
