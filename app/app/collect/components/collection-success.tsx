@@ -85,17 +85,8 @@ export function CollectionSuccess({ logic }: CollectionSuccessProps) {
         </Card>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => router.push('/app/sync')}
-          data-testid="button-go-sync"
-        >
-          View Sync Status
-        </Button>
-        <Button
-          variant="outline"
           className="flex-1"
           onClick={() => router.push(`/app/inventory?search=${encodeURIComponent(savedBatchId)}`)}
           data-testid="button-go-inventory"
@@ -103,11 +94,20 @@ export function CollectionSuccess({ logic }: CollectionSuccessProps) {
           View in Inventory
         </Button>
         <Button
+          variant="outline"
           className="flex-1"
           onClick={() => router.push('/app')}
           data-testid="button-go-dashboard"
         >
           Back to Dashboard
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex-1"
+          onClick={() => router.push('/app/sync')}
+          data-testid="button-go-sync"
+        >
+          View Sync Status
         </Button>
       </div>
     </div>

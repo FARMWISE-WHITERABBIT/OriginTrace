@@ -244,24 +244,24 @@ export default function FarmersPage() {
                       <TableHead className="cursor-pointer select-none" onClick={() => handleSort('farmer_name')}>
                         Farmer <SortIcon col="farmer_name" />
                       </TableHead>
-                      <TableHead>Community</TableHead>
+                      <TableHead className="hidden md:table-cell">Community</TableHead>
                       <TableHead>Commodity</TableHead>
-                      <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('area_hectares')}>
+                      <TableHead className="hidden md:table-cell text-right cursor-pointer select-none" onClick={() => handleSort('area_hectares')}>
                         Area (ha) <SortIcon col="area_hectares" />
                       </TableHead>
                       <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('total_delivery_kg')}>
                         Volume (kg) <SortIcon col="total_delivery_kg" />
                       </TableHead>
-                      <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('total_batches')}>
+                      <TableHead className="hidden md:table-cell text-right cursor-pointer select-none" onClick={() => handleSort('total_batches')}>
                         Batches <SortIcon col="total_batches" />
                       </TableHead>
                       <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort('avg_grade_score')}>
                         Grade <SortIcon col="avg_grade_score" />
                       </TableHead>
-                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('last_delivery_date')}>
+                      <TableHead className="hidden md:table-cell cursor-pointer select-none" onClick={() => handleSort('last_delivery_date')}>
                         Last Collection <SortIcon col="last_delivery_date" />
                       </TableHead>
-                      <TableHead className="text-center">Consent</TableHead>
+                      <TableHead className="hidden md:table-cell text-center">Consent</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -298,7 +298,7 @@ export default function FarmersPage() {
                           data-testid={`farmer-row-${farmer.farm_id}`}
                         >
                           <TableCell className="font-medium">{farmer.farmer_name}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{farmer.community || '–'}</TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{farmer.community || '–'}</TableCell>
                           <TableCell>
                             {farmer.commodity ? (
                               <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${COMMODITY_COLORS[farmer.commodity] || 'bg-muted'}`}>
@@ -306,18 +306,18 @@ export default function FarmersPage() {
                               </span>
                             ) : <span className="text-muted-foreground text-sm">–</span>}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-sm">{farmer.area_hectares?.toFixed(2) || '–'}</TableCell>
+                          <TableCell className="hidden md:table-cell text-right font-mono text-sm">{farmer.area_hectares?.toFixed(2) || '–'}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{Number(farmer.total_delivery_kg).toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{farmer.total_batches}</TableCell>
+                          <TableCell className="hidden md:table-cell text-right font-mono text-sm">{farmer.total_batches}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant={grade.color}>{grade.label}</Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                             {farmer.last_delivery_date
                               ? new Date(farmer.last_delivery_date).toLocaleDateString()
                               : <span className="text-muted-foreground/50">Never</span>}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="hidden md:table-cell text-center">
                             {farmer.has_consent
                               ? <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
                               : <AlertCircle className="h-4 w-4 text-amber-500 mx-auto" />}

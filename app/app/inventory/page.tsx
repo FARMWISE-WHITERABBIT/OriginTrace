@@ -361,10 +361,10 @@ export default function InventoryPage() {
                   <TableRow>
                     <TableHead>Batch ID</TableHead>
                     <TableHead>Farmer</TableHead>
-                    <TableHead>Bags</TableHead>
+                    <TableHead className="hidden md:table-cell">Bags</TableHead>
                     <TableHead>Weight</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden md:table-cell">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -377,10 +377,10 @@ export default function InventoryPage() {
                     >
                       <TableCell className="font-medium">{batch.batch_id || batch.id.slice(0, 8)}</TableCell>
                       <TableCell>{batch.farm?.farmer_name}</TableCell>
-                      <TableCell>{batch.bag_count}</TableCell>
+                      <TableCell className="hidden md:table-cell">{batch.bag_count}</TableCell>
                       <TableCell>{batch.total_weight} kg</TableCell>
                       <TableCell><StatusBadge domain="batch" status={batch.status} /></TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
                         {new Date(batch.created_at).toLocaleDateString()}
                       </TableCell>
                     </TableRow>

@@ -289,17 +289,17 @@ export default function PaymentsPage() {
           <>
             <Card><CardContent className="p-0"><div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Farmer / Payee</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Method</TableHead><TableHead>Reference</TableHead><TableHead>Linked To</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Farmer / Payee</TableHead><TableHead className="hidden sm:table-cell">Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="hidden md:table-cell">Method</TableHead><TableHead className="hidden md:table-cell">Reference</TableHead><TableHead className="hidden md:table-cell">Linked To</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {payments.map(p=>(
                     <TableRow key={p.id} data-testid={`row-payment-${p.id}`}>
                       <TableCell className="whitespace-nowrap text-sm" data-testid={`text-date-${p.id}`}>{p.payment_date}</TableCell>
                       <TableCell data-testid={`text-payee-${p.id}`}><div className="flex items-center gap-2"><div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">{p.payee_name.charAt(0).toUpperCase()}</div><div><p className="text-sm font-medium">{p.payee_name}</p>{p.farm_id&&<a href={`/app/farmers/${p.farm_id}`} className="text-xs text-primary hover:underline" onClick={e=>e.stopPropagation()}>View Farmer →</a>}</div></div></TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs" data-testid={`badge-type-${p.id}`}>{PAYEE_LABELS[p.payee_type]||p.payee_type}</Badge></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Badge variant="outline" className="text-xs" data-testid={`badge-type-${p.id}`}>{PAYEE_LABELS[p.payee_type]||p.payee_type}</Badge></TableCell>
                       <TableCell className="text-right font-mono text-sm font-medium" data-testid={`text-amount-${p.id}`}>{format(p.amount)}</TableCell>
-                      <TableCell className="text-sm" data-testid={`text-method-${p.id}`}>{METHOD_LABELS[p.payment_method]||p.payment_method}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground" data-testid={`text-reference-${p.id}`}>{p.reference_number||'—'}</TableCell>
-                      <TableCell data-testid={`text-linked-entity-${p.id}`}>{p.linked_entity_type?<Badge variant="outline" className="text-xs">{p.linked_entity_type==='collection_batch'?'Batch':'Contract'}</Badge>:'—'}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm" data-testid={`text-method-${p.id}`}>{METHOD_LABELS[p.payment_method]||p.payment_method}</TableCell>
+                      <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground" data-testid={`text-reference-${p.id}`}>{p.reference_number||'—'}</TableCell>
+                      <TableCell className="hidden md:table-cell" data-testid={`text-linked-entity-${p.id}`}>{p.linked_entity_type?<Badge variant="outline" className="text-xs">{p.linked_entity_type==='collection_batch'?'Batch':'Contract'}</Badge>:'—'}</TableCell>
                       <TableCell><Badge variant={STATUS_VARIANTS[p.status]||'outline'} className="text-xs capitalize" data-testid={`badge-status-${p.id}`}>{p.status}</Badge></TableCell>
                     </TableRow>
                   ))}

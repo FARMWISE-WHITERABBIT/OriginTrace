@@ -46,6 +46,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 import dynamic from 'next/dynamic';
 
@@ -497,6 +498,8 @@ export default function ShipmentDetailPage() {
 
   const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
   const [items, setItems] = useState<ShipmentItem[]>([]);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
+  const [isRemovingItem, setIsRemovingItem] = useState(false);
   const [readiness, setReadiness] = useState<ShipmentReadinessResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -597,19 +600,26 @@ export default function ShipmentDetailPage() {
     updateField('target_regulations', updated);
   };
 
-  const removeItem = async (itemId: string) => {
+  const removeItem = (itemId: string) => {
+    setConfirmRemoveItem(itemId);
+  };
+
+  const doRemoveItem = async () => {
+    if (!confirmRemoveItem) return;
+    setIsRemovingItem(true);
     try {
       const response = await fetch(`/api/shipments/${shipmentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ remove_items: [itemId] }),
+        body: JSON.stringify({ remove_items: [confirmRemoveItem] }),
       });
       if (!response.ok) throw new Error('Failed to remove item');
       toast({ title: 'Item removed' });
+      setConfirmRemoveItem(null);
       fetchShipment();
     } catch {
       toast({ title: 'Error', description: 'Failed to remove item', variant: 'destructive' });
-    }
+    } finally { setIsRemovingItem(false); }
   };
 
   const recordOutcome = async (formData: { outcome: string; outcome_date: string; rejection_reason?: string; rejection_category?: string; port_of_entry?: string; financial_impact_usd?: number; inspector_notes?: string }) => {
@@ -1293,6 +1303,16 @@ export default function ShipmentDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!confirmRemoveItem}
+        onOpenChange={open => { if (!open) setConfirmRemoveItem(null); }}
+        title="Remove item from shipment"
+        description="Remove this item from the shipment? The finished good record will remain, but it will no longer be linked to this shipment."
+        confirmLabel="Remove Item"
+        loading={isRemovingItem}
+        onConfirm={doRemoveItem}
+      />
     </div>
   );
 }

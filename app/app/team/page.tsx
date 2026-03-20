@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2, Plus, Trash2, Users, Shield, UserCheck, User,
@@ -124,6 +125,7 @@ export default function TeamPage() {
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('agent');
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{ userId: string; userName: string } | null>(null);
 
   const { profile } = useOrg();
   const { toast } = useToast();
@@ -167,8 +169,13 @@ export default function TeamPage() {
     } finally { setIsCreating(false); }
   };
 
-  const handleRemoveUser = async (userId: string, userName: string) => {
-    if (!confirm(`Remove ${userName} from your team? They will lose access immediately.`)) return;
+  const handleRemoveUser = (userId: string, userName: string) => {
+    setConfirmRemove({ userId, userName });
+  };
+
+  const doRemoveUser = async () => {
+    if (!confirmRemove) return;
+    const { userId, userName } = confirmRemove;
     setRemovingId(userId);
     try {
       const res = await fetch(`/api/team?userId=${userId}`, { method: 'DELETE' });
@@ -181,7 +188,7 @@ export default function TeamPage() {
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to remove user', variant: 'destructive' });
-    } finally { setRemovingId(null); }
+    } finally { setRemovingId(null); setConfirmRemove(null); }
   };
 
   if (!canManageTeam) {
@@ -397,29 +404,36 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* ── Permissions reference ── */}
-      {team.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Role Permissions</h2>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {Object.entries(ROLE_CONFIG).map(([role, cfg]) => {
-              const Icon = cfg.icon;
-              return (
-                <div key={role} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card/50">
-                  <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg}`}>
-                    <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{cfg.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{cfg.desc}</p>
-                  </div>
+      {/* Role reference */}
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-3">Role Permissions</h2>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {Object.entries(ROLE_CONFIG).map(([role, cfg]) => {
+            const Icon = cfg.icon;
+            return (
+              <div key={role} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card/50">
+                <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg}`}>
+                  <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
                 </div>
-              );
-            })}
-          </div>
+                <div>
+                  <p className="text-sm font-medium">{cfg.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{cfg.desc}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
+      <ConfirmDialog
+        open={!!confirmRemove}
+        onOpenChange={open => { if (!open) setConfirmRemove(null); }}
+        title="Remove team member"
+        description={`Remove ${confirmRemove?.userName} from your organisation? They will lose access immediately and cannot be undone.`}
+        confirmLabel="Remove Member"
+        loading={!!removingId}
+        onConfirm={doRemoveUser}
+      />
     </div>
   );
 }

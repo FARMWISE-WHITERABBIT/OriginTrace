@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -370,6 +371,8 @@ function DocumentsPage() {
   const [editDoc, setEditDoc] = useState<Document | null>(null);
   const [editForm, setEditForm] = useState<DocFormState>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
@@ -518,15 +521,22 @@ function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (doc: Document) => {
+    setConfirmDelete(doc);
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/documents/${confirmDelete.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete document');
-      toast({ title: 'Document deleted' });
+      toast({ title: 'Document deleted', description: `"${confirmDelete.title}" has been removed.` });
+      setConfirmDelete(null);
       fetchDocuments();
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete', variant: 'destructive' });
-    }
+    } finally { setIsDeleting(false); }
   };
 
   const filteredDocuments = useMemo(() => {
@@ -665,7 +675,7 @@ function DocumentsPage() {
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7"
-                        onClick={() => handleDelete(doc.id)}
+                        onClick={() => handleDelete(doc)}
                         data-testid={`button-delete-doc-${doc.id}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -778,6 +788,16 @@ function DocumentsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={open => { if (!open) setConfirmDelete(null); }}
+        title="Delete document"
+        description={`Delete "${confirmDelete?.title}"? This cannot be undone.`}
+        confirmLabel="Delete Document"
+        loading={isDeleting}
+        onConfirm={doDelete}
+      />
     </TierGate>
   );
 }
