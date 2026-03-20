@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +22,8 @@ import {
   AlertTriangle,
   Factory,
   Scale,
-  Loader2
+  Loader2,
+  Fingerprint,
 } from 'lucide-react';
 import { TierGate } from '@/components/tier-gate';
 
@@ -59,6 +62,7 @@ interface ProcessingRun {
 }
 
 export default function PedigreePage() {
+  const router = useRouter();
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [processingRuns, setProcessingRuns] = useState<ProcessingRun[]>([]);
   const [loading, setLoading] = useState(true);
@@ -460,7 +464,12 @@ export default function PedigreePage() {
               </TableHeader>
               <TableBody>
                 {finishedGoods.map((good) => (
-                  <TableRow key={good.id} data-testid={`row-pedigree-${good.id}`}>
+                  <TableRow
+                    key={good.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/app/pedigree/${good.id}`)}
+                    data-testid={`row-pedigree-${good.id}`}
+                  >
                     <TableCell className="font-mono font-medium">
                       {good.pedigree_code}
                     </TableCell>
@@ -521,6 +530,17 @@ export default function PedigreePage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
+                        <Link href={`/app/dpp?finished_good_id=${good.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 gap-1"
+                            title="Generate Digital Product Passport"
+                            data-testid={`button-generate-dpp-${good.id}`}
+                          >
+                            <Fingerprint className="h-3 w-3" />DPP
+                          </Button>
+                        </Link>
                       </div>
                     </TableCell>
                   </TableRow>

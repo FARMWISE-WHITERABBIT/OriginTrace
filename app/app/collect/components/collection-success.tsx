@@ -95,6 +95,14 @@ export function CollectionSuccess({ logic }: CollectionSuccessProps) {
           View Sync Status
         </Button>
         <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => router.push(`/app/inventory?search=${encodeURIComponent(savedBatchId)}`)}
+          data-testid="button-go-inventory"
+        >
+          View in Inventory
+        </Button>
+        <Button
           className="flex-1"
           onClick={() => router.push('/app')}
           data-testid="button-go-dashboard"
