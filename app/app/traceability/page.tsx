@@ -17,9 +17,18 @@ import {
 import { TraceabilityTimeline } from '@/components/traceability-timeline';
 import { SupplyChainGraph } from '@/components/supply-chain-graph';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Package, AlertTriangle, Network, Database } from 'lucide-react';
+import { Loader2, Search, Package, AlertTriangle, Network, Database, Users, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { TierGate } from '@/components/tier-gate';
+
+interface TraceContributor {
+  farmer_name: string | null;
+  weight_kg: number;
+  bag_count: number;
+  farm_id: string | null;
+  community: string | null;
+  compliance_status: string | null;
+}
 
 interface TraceResult {
   bag: {
@@ -41,6 +50,7 @@ interface TraceResult {
   agent: {
     full_name: string;
   } | null;
+  contributors: TraceContributor[];
 }
 
 export default function TraceabilityPage() {
@@ -92,6 +102,7 @@ export default function TraceabilityPage() {
         farm: data.farm,
         collection: data.collection,
         agent: data.agent,
+        contributors: data.contributors || [],
       });
       setSheetOpen(true);
     } catch (error) {
@@ -261,7 +272,7 @@ export default function TraceabilityPage() {
           </SheetHeader>
           
           {result && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-6">
               <TraceabilityTimeline
                 bagId={result.bag.serial}
                 farmData={result.farm ? {
@@ -288,6 +299,41 @@ export default function TraceabilityPage() {
                   verifiedBy: result.farm?.compliance_status === 'approved' ? 'Admin' : undefined
                 }}
               />
+
+              {result.contributors.length > 1 && (
+                <div className="border rounded-lg overflow-hidden" data-testid="section-contributors">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">Contributing Farmers</p>
+                    <span className="ml-auto text-xs text-muted-foreground">{result.contributors.length} farms</span>
+                  </div>
+                  <div className="divide-y">
+                    {result.contributors.map((c, i) => (
+                      <div key={c.farm_id ?? i} className="px-3 py-2.5 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate" data-testid={`text-trace-contributor-${i}`}>
+                            {c.farmer_name || 'Unknown Farmer'}
+                          </p>
+                          {c.community && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />{c.community}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {c.bag_count} bags · {Number(c.weight_kg).toLocaleString()} kg
+                          </p>
+                        </div>
+                        <Badge
+                          variant={c.compliance_status === 'verified' || c.compliance_status === 'approved' ? 'default' : c.compliance_status === 'rejected' ? 'destructive' : 'secondary'}
+                          className="text-[10px] shrink-0"
+                        >
+                          {c.compliance_status || 'unknown'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </SheetContent>
