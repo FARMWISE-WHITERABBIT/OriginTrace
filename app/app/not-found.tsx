@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { FileSearch, ArrowLeft, Home } from 'lucide-react';
+import { FileSearch, Home } from 'lucide-react';
 
 /**
  * Next.js App Router not-found boundary for the /app segment.
- * Shown when notFound() is called from any server component within /app,
- * or when navigating to a dynamic route that returns no record.
+ * Server component — no event handlers, no window.* calls.
  */
 export default function NotFound() {
   return (
@@ -16,7 +15,7 @@ export default function NotFound() {
       <div className="space-y-2 max-w-sm">
         <h2 className="text-xl font-semibold tracking-tight">Page not found</h2>
         <p className="text-sm text-muted-foreground">
-          This record doesn't exist or you don't have access to it. It may have been deleted or the link is incorrect.
+          This record doesn&apos;t exist or you don&apos;t have access to it. It may have been deleted or the link is incorrect.
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -26,11 +25,10 @@ export default function NotFound() {
             Dashboard
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => window.history.back()} asChild>
-          <span className="cursor-pointer">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go back
-          </span>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/app/inventory">
+            Back to Inventory
+          </Link>
         </Button>
       </div>
     </div>

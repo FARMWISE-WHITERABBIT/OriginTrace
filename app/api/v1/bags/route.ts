@@ -46,7 +46,18 @@ export async function GET(request: NextRequest) {
     if (status) query = (query as any).eq('status', status);
     if (grade) query = (query as any).eq('grade', grade);
 
-    const { data, error, count } = await query;
+    let result = await query;
+    // weight_kg/grade/bag_code/collected_at may not exist on older DB installs — retry minimal
+    if (result.error?.message?.includes('weight_kg') || result.error?.message?.includes('grade') ||
+        result.error?.message?.includes('bag_code') || result.error?.message?.includes('collected_at')) {
+      result = await supabase
+        .from('bags')
+        .select('id, batch_id, farm_id, status, created_at', { count: 'exact' })
+        .eq('org_id', auth.orgId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1) as any;
+    }
+    const { data, error, count } = result;
     if (error) {
       console.error('[v1/bags]', error.message);
       return NextResponse.json({ error: 'Database error' }, { status: 500 });

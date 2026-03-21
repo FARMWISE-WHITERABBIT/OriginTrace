@@ -1284,3 +1284,59 @@ ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatched_at TIMESTAMPT
 ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatched_by UUID REFERENCES auth.users(id);
 ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatch_destination TEXT;
 ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS vehicle_reference TEXT;
+
+-- ============================================
+-- Missing tables: shipment_outcomes + cold_chain_logs
+-- Both defined in schema.sql but never added to this migration file.
+-- Safe to run: CREATE TABLE IF NOT EXISTS is idempotent.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS shipment_outcomes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID REFERENCES shipments(id),
+  outcome TEXT NOT NULL CHECK (outcome IN ('accepted', 'rejected', 'conditional', 'withdrawn')),
+  reason TEXT,
+  destination_country TEXT,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipment_outcomes_org_id ON shipment_outcomes(org_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_outcomes_shipment_id ON shipment_outcomes(shipment_id);
+
+ALTER TABLE shipment_outcomes ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'shipment_outcomes' AND policyname = 'org_access_shipment_outcomes'
+  ) THEN
+    CREATE POLICY "org_access_shipment_outcomes" ON shipment_outcomes
+      FOR ALL USING (org_id = get_user_org_id());
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS cold_chain_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  temperature_celsius NUMERIC(6,2),
+  humidity_percent NUMERIC(5,2),
+  location TEXT,
+  is_alert BOOLEAN DEFAULT false,
+  alert_reason TEXT,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cold_chain_logs_shipment_id ON cold_chain_logs(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_cold_chain_logs_org_id ON cold_chain_logs(org_id);
+
+ALTER TABLE cold_chain_logs ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'cold_chain_logs' AND policyname = 'org_access_cold_chain_logs'
+  ) THEN
+    CREATE POLICY "org_access_cold_chain_logs" ON cold_chain_logs
+      FOR ALL USING (org_id = get_user_org_id());
+  END IF;
+END $$;
