@@ -30,59 +30,61 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
       </CardHeader>
       <CardContent className="space-y-4">
         <OfflineStepBanner isOnline={isOnline} />
-        <div className="space-y-2">
-          <Label>State *</Label>
-          {locLoading ? (
-            <div className="flex items-center gap-2 p-3 border rounded-md"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm text-muted-foreground">Loading states...</span></div>
-          ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>State *</Label>
+            {locLoading ? (
+              <div className="flex items-center gap-2 p-3 border rounded-md"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm text-muted-foreground">Loading states...</span></div>
+            ) : (
+              <select
+                value={selectedState}
+                onChange={(e) => { setSelectedState(e.target.value); setSelectedLGA(''); }}
+                className="w-full h-12 px-3 border rounded-md bg-background text-base"
+                data-testid="select-state"
+              >
+                <option value="">Select State</option>
+                {states.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              </select>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>LGA *</Label>
             <select
-              value={selectedState}
-              onChange={(e) => { setSelectedState(e.target.value); setSelectedLGA(''); }}
-              className="w-full h-12 px-3 border rounded-md bg-background text-base"
-              data-testid="select-state"
+              value={selectedLGA}
+              onChange={(e) => setSelectedLGA(e.target.value)}
+              disabled={!selectedState}
+              className="w-full h-12 px-3 border rounded-md bg-background text-base disabled:opacity-50"
+              data-testid="select-lga"
             >
-              <option value="">Select State</option>
-              {states.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              <option value="">Select LGA</option>
+              {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
-          )}
-        </div>
+          </div>
 
-        <div className="space-y-2">
-          <Label>LGA *</Label>
-          <select
-            value={selectedLGA}
-            onChange={(e) => setSelectedLGA(e.target.value)}
-            disabled={!selectedState}
-            className="w-full h-12 px-3 border rounded-md bg-background text-base disabled:opacity-50"
-            data-testid="select-lga"
-          >
-            <option value="">Select LGA</option>
-            {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-          </select>
-        </div>
+          <div className="space-y-2">
+            <Label>Community / Village *</Label>
+            <Input
+              value={community}
+              onChange={(e) => setCommunity(e.target.value)}
+              placeholder="Enter community name"
+              className="h-12 text-base"
+              data-testid="input-community"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label>Community / Village *</Label>
-          <Input
-            value={community}
-            onChange={(e) => setCommunity(e.target.value)}
-            placeholder="Enter community name"
-            className="h-12 text-base"
-            data-testid="input-community"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Commodity *</Label>
-          <select
-            value={commodity}
-            onChange={(e) => setCommodity(e.target.value)}
-            className="w-full h-12 px-3 border rounded-md bg-background text-base"
-            data-testid="select-commodity"
-          >
-            <option value="">Select Commodity</option>
-            {commodityOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <div className="space-y-2">
+            <Label>Commodity *</Label>
+            <select
+              value={commodity}
+              onChange={(e) => setCommodity(e.target.value)}
+              className="w-full h-12 px-3 border rounded-md bg-background text-base"
+              data-testid="select-commodity"
+            >
+              <option value="">Select Commodity</option>
+              {commodityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="p-3 bg-muted/50 rounded-lg space-y-1">

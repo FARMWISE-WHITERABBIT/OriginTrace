@@ -267,7 +267,7 @@ export default function DPPPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             {dpps.map(dpp => {
               const statusConf = STATUS_CONFIG[dpp.status] || STATUS_CONFIG.draft;
               const StatusIcon = statusConf.icon;

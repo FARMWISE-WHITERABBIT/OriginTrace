@@ -46,6 +46,7 @@ export default function FarmerRegistrationPage() {
   const { toast } = useToast();
   const supabase = createClient();
   const isOnline = useOnlineStatus();
+  const [commodityList, setCommodityList] = useState<{name: string; slug: string}[]>([]);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -74,6 +75,12 @@ export default function FarmerRegistrationPage() {
   const [locLoading, setLocLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch commodities from master
+    fetch('/api/commodities')
+      .then(r => r.ok ? r.json() : { commodities: [] })
+      .then(d => setCommodityList((d.commodities || []).map((c: any) => ({ name: c.name, slug: c.slug }))))
+      .catch(() => {});
+
     async function loadLocations() {
       const cached = await getCachedLocations();
       if (cached) {
@@ -333,51 +340,57 @@ export default function FarmerRegistrationPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Full Name *</Label>
-            <Input
-              value={fullName}
-              onChange={(e) => { setFullName(e.target.value); if (fieldErrors.fullName) setFieldErrors(fe => ({ ...fe, fullName: '' })); }}
-              placeholder="Enter farmer's full name"
-              className={fieldErrors.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}
-              aria-describedby={fieldErrors.fullName ? 'err-fullName' : undefined}
-              data-testid="input-full-name"
-            />
-            {fieldErrors.fullName && <p id="err-fullName" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.fullName}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label>Primary Commodity</Label>
-            <Select value={commodity} onValueChange={setCommodity}>
-              <SelectTrigger data-testid="select-commodity">
-                <SelectValue placeholder="Select crop / commodity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cocoa">Cocoa</SelectItem>
-                <SelectItem value="cashew">Cashew</SelectItem>
-                <SelectItem value="sesame">Sesame</SelectItem>
-                <SelectItem value="beans">Beans</SelectItem>
-                <SelectItem value="ginger">Ginger</SelectItem>
-                <SelectItem value="palm_oil">Palm Oil</SelectItem>
-                <SelectItem value="shea">Shea</SelectItem>
-                <SelectItem value="maize">Maize</SelectItem>
-                <SelectItem value="soybean">Soybean</SelectItem>
-                <SelectItem value="rubber">Rubber</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Phone Number</Label>            <div className="relative">
-              <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
               <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="08012345678"
-                type="tel"
-                className="pl-9"
-                data-testid="input-phone"
+                value={fullName}
+                onChange={(e) => { setFullName(e.target.value); if (fieldErrors.fullName) setFieldErrors(fe => ({ ...fe, fullName: '' })); }}
+                placeholder="Enter farmer's full name"
+                className={fieldErrors.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}
+                aria-describedby={fieldErrors.fullName ? 'err-fullName' : undefined}
+                data-testid="input-full-name"
               />
+              {fieldErrors.fullName && <p id="err-fullName" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.fullName}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="08012345678"
+                  type="tel"
+                  className="pl-9"
+                  data-testid="input-phone"
+                />
+              </div>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Primary Commodity</Label>
+              <Select value={commodity} onValueChange={setCommodity}>
+                <SelectTrigger data-testid="select-commodity">
+                  <SelectValue placeholder="Select crop / commodity" />
+                </SelectTrigger>
+                <SelectContent>
+                  {commodityList.length > 0
+                    ? commodityList.map(c => (
+                        <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>
+                      ))
+                    : (
+                      <>
+                        <SelectItem value="cocoa">Cocoa</SelectItem>
+                        <SelectItem value="cashew">Cashew</SelectItem>
+                        <SelectItem value="ginger">Ginger</SelectItem>
+                        <SelectItem value="sesame">Sesame</SelectItem>
+                        <SelectItem value="hibiscus">Hibiscus</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </>
+                    )
+                  }
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -391,6 +404,7 @@ export default function FarmerRegistrationPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>State *</Label>
             {locLoading ? (
@@ -475,6 +489,7 @@ export default function FarmerRegistrationPage() {
               </div>
             )}
           </div>
+          </div>{/* end grid */}
         </CardContent>
       </Card>
 
