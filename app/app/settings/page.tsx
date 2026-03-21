@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -596,7 +596,7 @@ function ComplianceProfilesSection() {
                     <p className="font-medium text-sm truncate">{p.name}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" />{p.destination_market}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => handleCPDelete(p.id)} disabled={cpDeleting === p.id}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" aria-label="Delete compliance profile" onClick={() => handleCPDelete(p.id)} disabled={cpDeleting === p.id}>
                     {cpDeleting === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   </Button>
                 </div>
@@ -619,7 +619,16 @@ function ComplianceProfilesSection() {
 function SettingsContent() {
   const { profile, organization, isLoading, refreshProfile } = useOrg();
   const searchParams = useSearchParams();
-  const tabParam = searchParams?.get('tab') || 'general';
+  const router = useRouter();
+  const rawTab = searchParams?.get('tab') || 'general';
+  // Normalise legacy 'compliance-profiles' → 'compliance'
+  const tabParam = rawTab === 'compliance-profiles' ? 'compliance' : rawTab;
+
+  const setTab = (tab: string) => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', tab);
+    router.replace(`/app/settings?${params.toString()}`, { scroll: false });
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [fullName, setFullName] = useState('');
   const [orgData, setOrgData] = useState<Organization | null>(null);
@@ -1076,16 +1085,29 @@ function SettingsContent() {
 
   const isAdmin = profile.role === 'admin';
 
+  const TAB_LABELS: Record<string, string> = {
+    general:      'General',
+    compliance:   'Compliance Profiles',
+    'supply-chain': 'Supply Chain',
+    team:         'Team',
+    import:       'Data Import',
+    webhooks:     'Webhooks',
+    'api-keys':   'API Keys',
+    audit:        'Audit Log',
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Settings{tabParam !== 'general' ? ` — ${TAB_LABELS[tabParam] || tabParam}` : ''}
+        </h1>
         <p className="text-muted-foreground">
           {isAdmin ? 'Configure your organization settings and compliance rules' : 'Manage your profile settings'}
         </p>
       </div>
 
-      <Tabs defaultValue={tabParam === "compliance-profiles" || tabParam === "compliance" ? "compliance" : tabParam || "general"} className="space-y-6">
+      <Tabs value={tabParam} onValueChange={setTab} className="space-y-6">
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" data-testid="tab-general">
             <Settings className="h-4 w-4 mr-2" />

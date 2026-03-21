@@ -136,7 +136,7 @@ export default function PedigreeDetailPage({ params: paramsPromise }: { params: 
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Link href="/app/pedigree">
-            <Button variant="ghost" size="icon" className="h-8 w-8 mt-0.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8 mt-0.5" aria-label="Back to pedigree">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>

@@ -654,6 +654,7 @@ function DocumentsPage() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          aria-label="Download attachment"
                           className="h-7 w-7"
                           onClick={() => window.open(doc.file_url!, '_blank')}
                           title={doc.file_name || 'Download attachment'}

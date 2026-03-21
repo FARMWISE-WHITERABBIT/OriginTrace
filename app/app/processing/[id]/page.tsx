@@ -148,7 +148,7 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Link href="/app/processing">
-            <Button variant="ghost" size="icon" className="h-8 w-8 mt-0.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8 mt-0.5" aria-label="Back to processing">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>

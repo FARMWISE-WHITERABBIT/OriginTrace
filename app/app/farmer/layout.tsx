@@ -70,11 +70,11 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
                 key={tab.href}
                 href={tab.href}
                 className={`flex flex-col items-center py-2 px-3 text-xs min-h-[60px] justify-center ${
-                  isActive ? 'text-[#2E7D6B] font-medium' : 'text-gray-500'
+                  isActive ? 'text-primary font-medium' : 'text-muted-foreground'
                 }`}
                 data-testid={`nav-farmer-${tab.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <Icon className={`h-5 w-5 mb-1 ${isActive ? 'text-[#2E7D6B]' : 'text-gray-400'}`} />
+                <Icon className={`h-5 w-5 mb-1 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                 {tab.label}
               </Link>
             );

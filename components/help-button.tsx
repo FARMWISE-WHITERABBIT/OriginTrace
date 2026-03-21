@@ -37,6 +37,7 @@ export function HelpButton() {
         <Button 
           variant="ghost" 
           size="icon"
+      aria-label="Help"
           data-tour="help-button"
           data-testid="button-help"
         >

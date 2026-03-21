@@ -244,7 +244,7 @@ function ResolveBatchContent() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/app/bags?batch=${batch.id}`}>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>

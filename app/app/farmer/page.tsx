@@ -42,7 +42,7 @@ export default function FarmerHomePage() {
   }
 
   const farm = data.farm;
-  const complianceColor = farm.compliance_status === 'approved' ? 'text-green-600' : farm.compliance_status === 'flagged' ? 'text-amber-600' : 'text-gray-500';
+  const complianceColor = farm.compliance_status === 'approved' ? 'text-green-600' : farm.compliance_status === 'flagged' ? 'text-amber-600' : 'text-muted-foreground';
 
   return (
     <div className="space-y-4">
@@ -89,7 +89,7 @@ export default function FarmerHomePage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {data.exportDestinations.map(country => (
-                <Badge key={country} variant="secondary" className="bg-white" data-testid={`badge-destination-${country}`}>
+                <Badge key={country} variant="secondary" className="bg-background" data-testid={`badge-destination-${country}`}>
                   {country}
                 </Badge>
               ))}

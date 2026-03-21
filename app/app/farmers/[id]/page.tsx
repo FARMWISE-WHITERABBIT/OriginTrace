@@ -153,7 +153,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/app/farmers">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Back to farmers">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>

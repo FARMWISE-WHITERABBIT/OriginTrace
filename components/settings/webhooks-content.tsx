@@ -118,7 +118,7 @@ export function WebhooksContent() {
           <CardContent className="pt-4">
             <p className="text-sm font-medium text-amber-800 mb-2">Signing Secret (save this now — it won't be shown again):</p>
             <div className="flex items-center gap-2">
-              <code className="text-xs bg-white px-3 py-2 rounded border flex-1 break-all" data-testid="text-webhook-secret">{newSecret}</code>
+              <code className="text-xs bg-muted px-3 py-2 rounded border flex-1 break-all font-mono" data-testid="text-webhook-secret">{newSecret}</code>
               <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(newSecret); toast({ title: 'Copied' }); }}>
                 <Copy className="h-4 w-4" />
               </Button>
@@ -187,7 +187,7 @@ export function WebhooksContent() {
                       ))}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(ep.id)} data-testid={`button-delete-webhook-${ep.id}`}>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(ep.id)} aria-label="Delete webhook" data-testid={`button-delete-webhook-${ep.id}`}>
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </div>

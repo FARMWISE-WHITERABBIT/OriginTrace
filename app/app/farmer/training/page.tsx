@@ -17,7 +17,7 @@ const moduleTypeLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-  not_started: { icon: PlayCircle, color: 'text-gray-500', label: 'Not Started' },
+  not_started: { icon: PlayCircle, color: 'text-muted-foreground', label: 'Not Started' },
   in_progress: { icon: Clock, color: 'text-amber-600', label: 'In Progress' },
   completed: { icon: CheckCircle2, color: 'text-green-600', label: 'Completed' },
 };

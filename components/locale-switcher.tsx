@@ -20,6 +20,7 @@ export function LocaleSwitcher() {
         <Button
           variant="ghost"
           size="icon"
+      aria-label="Change language"
           data-testid="button-locale-switcher"
         >
           <Globe className="h-4 w-4" />

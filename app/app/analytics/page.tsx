@@ -93,7 +93,7 @@ function AnalyticsContent() {
       <div className="print:block">
         <div className="hidden print:block mb-4">
           <h1 className="text-xl font-bold">OriginTrace Analytics Report — {period} period</h1>
-          <p className="text-sm text-gray-500">Generated {new Date().toLocaleDateString()}</p>
+          <p className="text-sm text-muted-foreground">Generated {new Date().toLocaleDateString()}</p>
         </div>
       </div>
 

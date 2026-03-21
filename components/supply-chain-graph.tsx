@@ -340,13 +340,13 @@ export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGr
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.min(3, z * 1.2))} data-testid="button-zoom-in">
+          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.min(3, z * 1.2))} aria-label="Zoom in" data-testid="button-zoom-in">
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.max(0.2, z * 0.8))} data-testid="button-zoom-out">
+          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.max(0.2, z * 0.8))} aria-label="Zoom out" data-testid="button-zoom-out">
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={resetView} data-testid="button-reset-view">
+          <Button size="icon" variant="ghost" onClick={resetView} aria-label="Reset view" data-testid="button-reset-view">
             <Maximize2 className="h-4 w-4" />
           </Button>
         </div>
@@ -472,7 +472,7 @@ export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGr
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[selectedNode.type] }} />
                   <CardTitle className="text-sm truncate">{selectedNode.label}</CardTitle>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setSelectedNode(null)} data-testid="button-close-detail">
+                <Button size="icon" variant="ghost" onClick={() => setSelectedNode(null)} aria-label="Close detail" data-testid="button-close-detail">
                   <X className="h-4 w-4" />
                 </Button>
               </div>

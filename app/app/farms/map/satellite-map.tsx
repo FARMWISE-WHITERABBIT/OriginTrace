@@ -332,11 +332,11 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
             <Layers className="h-4 w-4 mr-1" />
             {tileLayer === 'satellite' ? 'Street' : 'Satellite'}
           </Button>
-          <Button variant="outline" size="icon" onClick={zoomOut} data-testid="button-zoom-out">
+          <Button variant="outline" size="icon" onClick={zoomOut} aria-label="Zoom out" data-testid="button-zoom-out">
             <ZoomOut className="h-4 w-4" />
           </Button>
           <Badge variant="outline" className="font-mono text-xs">{zoom}</Badge>
-          <Button variant="outline" size="icon" onClick={zoomIn} data-testid="button-zoom-in">
+          <Button variant="outline" size="icon" onClick={zoomIn} aria-label="Zoom in" data-testid="button-zoom-in">
             <ZoomIn className="h-4 w-4" />
           </Button>
           <Button

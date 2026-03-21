@@ -712,7 +712,7 @@ export default function ShipmentDetailPage() {
   return (
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center gap-3 flex-wrap">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/app/shipments')} data-testid="button-back">
+        <Button variant="ghost" size="icon" onClick={() => router.push('/app/shipments')} aria-label="Back to shipments" data-testid="button-back">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">

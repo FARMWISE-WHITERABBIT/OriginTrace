@@ -460,6 +460,7 @@ export default function ConflictsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="View conflict"
                         onClick={() => {
                           setSelectedConflict(conflict);
                           setResolutionNotes('');
