@@ -34,7 +34,7 @@ interface Bag {
 
 interface Batch {
   id: number;
-  batch_id: string;
+  batch_code: string | null;
   status: string;
   commodity: string;
   estimated_bags: number;
@@ -88,7 +88,7 @@ function ResolveBatchContent() {
           .from('collection_batches')
           .select(`
             id,
-            batch_id,
+            batch_code,
             status,
             commodity,
             estimated_bags,
@@ -179,7 +179,7 @@ function ResolveBatchContent() {
 
       toast({
         title: 'Batch Resolved',
-        description: `Batch ${batch.batch_id || batch.id} has been locked and is ready for dispatch`
+        description: `Batch ${batch.batch_code || batch.id} has been locked and is ready for dispatch`
       });
 
       router.push('/app/inventory');
@@ -253,7 +253,7 @@ function ResolveBatchContent() {
             Resolve & Lock Batch
           </h1>
           <p className="text-muted-foreground">
-            Batch: {batch.batch_id || `#${batch.id}`}
+            Batch: {batch.batch_code || `#${batch.id}`}
           </p>
         </div>
       </div>

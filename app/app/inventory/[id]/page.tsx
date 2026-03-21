@@ -21,7 +21,6 @@ import {
 interface BatchDetail {
   id: string;
   batch_code?: string;
-  batch_id?: string;
   status: string;
   total_weight: number;
   bag_count: number;
@@ -158,7 +157,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
   );
   if (!batch) { notFound(); return null; }
 
-  const batchCode = batch.batch_code || batch.batch_id || batch.id.slice(0, 8);
+  const batchCode = batch.batch_code || batch.batch_code || batch.id.slice(0, 8);
   const statusCfg = STATUS_CONFIG[batch.status] || STATUS_CONFIG.collecting;
   const StatusIcon = statusCfg.icon;
   const canDispatch = batch.status === 'completed' || batch.status === 'resolved';

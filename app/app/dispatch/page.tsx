@@ -27,7 +27,7 @@ import { TierGate } from '@/components/tier-gate';
 
 interface Batch {
   id: number;
-  batch_id: string;
+  batch_code: string | null;
   status: string;
   commodity: string;
   total_weight: number;
@@ -96,7 +96,7 @@ function DispatchContent() {
           .from('collection_batches')
           .select(`
             id,
-            batch_id,
+            batch_code,
             status,
             commodity,
             total_weight,
@@ -184,7 +184,7 @@ function DispatchContent() {
 
       toast({
         title: 'Batch Dispatched',
-        description: `Batch ${batch.batch_id || batch.id} has been dispatched to ${destination}`
+        description: `Batch ${batch.batch_code || batch.id} has been dispatched to ${destination}`
       });
 
       router.push('/app/inventory');
@@ -285,7 +285,7 @@ function DispatchContent() {
             Dispatch Batch
           </h1>
           <p className="text-muted-foreground">
-            Batch: {batch.batch_id || `#${batch.id}`}
+            Batch: {batch.batch_code || `#${batch.id}`}
           </p>
         </div>
         <Badge variant="secondary" className="ml-auto">
@@ -371,7 +371,7 @@ function DispatchContent() {
               onClick={async () => {
                 const { generateWaybillPDF } = await import('@/lib/export/waybill-pdf');
                 const doc = generateWaybillPDF({
-                  batchId: batch.batch_id || `#${batch.id}`,
+                  batchId: batch.batch_code || `#${batch.id}`,
                   commodity: batch.commodity || '-',
                   farmerName: batch.farm.farmer_name,
                   community: batch.farm.community,
@@ -386,7 +386,7 @@ function DispatchContent() {
                   bags: bags.length > 0 ? bags : undefined,
                   contributions: contributions.length > 0 ? contributions : undefined,
                 });
-                doc.save(`waybill-${batch.batch_id || batch.id}.pdf`);
+                doc.save(`waybill-${batch.batch_code || batch.id}.pdf`);
               }}
               data-testid="button-download-waybill"
             >
@@ -406,7 +406,7 @@ function DispatchContent() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm text-muted-foreground">Batch ID</span>
-              <span className="font-mono font-medium">{batch.batch_id || `#${batch.id}`}</span>
+              <span className="font-mono font-medium">{batch.batch_code || `#${batch.id}`}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <span className="text-sm text-muted-foreground">Farmer</span>
