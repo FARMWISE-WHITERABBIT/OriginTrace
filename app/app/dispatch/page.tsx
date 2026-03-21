@@ -121,12 +121,12 @@ function DispatchContent() {
 
         const { data: bagsData } = await supabase
           .from('bags')
-          .select('serial_number, weight_kg, grade')
-          .eq('batch_id', batchIdParam);
+          .select('serial, weight_kg, grade')
+          .eq('collection_batch_id', batchIdParam);
 
         if (bagsData && bagsData.length > 0) {
           setBags(bagsData.map(b => ({
-            serial: b.serial_number || '-',
+            serial: b.serial || '-',
             weight: parseFloat(b.weight_kg) || 0,
             grade: b.grade || 'Standard'
           })));

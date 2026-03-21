@@ -31,11 +31,11 @@ interface BagDetails {
     community: string;
   };
   collection?: {
-    weight: number;
-    grade: string;
-    agent?: {
-      full_name: string;
-    };
+    weight: number | null;
+    grade: string | null;
+    agent?: { full_name: string } | null;
+    batch_code?: string | null;
+    commodity?: string | null;
   };
 }
 
@@ -65,22 +65,22 @@ export default function VerifyPage() {
         .from('bags')
         .select(`
           id,
-          bag_id,
+          serial,
           status,
-          collections (
-            weight,
-            grade,
+          weight_kg,
+          grade,
+          collection_batch_id,
+          collection_batches (
+            batch_code,
+            commodity,
             farm:farms (
               farmer_name,
               community
-            ),
-            agent:profiles (
-              full_name
             )
           )
         `)
         .eq('org_id', organization.id)
-        .eq('bag_id', searchCode.trim().toUpperCase())
+        .eq('serial', searchCode.trim().toUpperCase())
         .single();
 
       if (error || !bag) {
@@ -92,23 +92,25 @@ export default function VerifyPage() {
         return;
       }
 
-      const collection = Array.isArray(bag.collections) ? bag.collections[0] : bag.collections;
+      const batchData = Array.isArray((bag as any).collection_batches) ? (bag as any).collection_batches[0] : (bag as any).collection_batches;
       
       setBagDetails({
         id: bag.id,
-        bag_id: bag.bag_id,
+        bag_id: (bag as any).serial,
         status: bag.status,
-        farm: collection?.farm as any,
+        farm: batchData?.farm as any,
         collection: {
-          weight: collection?.weight,
-          grade: collection?.grade,
-          agent: collection?.agent as any
+          weight: (bag as any).weight_kg,
+          grade: (bag as any).grade,
+          agent: null,
+          batch_code: batchData?.batch_code,
+          commodity: batchData?.commodity,
         }
       });
 
       toast({
         title: 'Bag Found',
-        description: `Found bag ${bag.bag_id}`,
+        description: `Found bag ${(bag as any).serial}`,
       });
     } catch (error) {
       console.error('Search error:', error);
@@ -128,7 +130,7 @@ export default function VerifyPage() {
     setIsVerifying(true);
 
     try {
-      const newStatus = approved ? 'verified' : 'rejected';
+      const newStatus = approved ? 'processed' : 'collected'; // 'processed' = passed QC
       
       const { error } = await supabase
         .from('bags')
@@ -139,7 +141,7 @@ export default function VerifyPage() {
 
       toast({
         title: approved ? 'Bag Verified' : 'Bag Rejected',
-        description: `Bag ${bagDetails.bag_id} has been ${approved ? 'verified' : 'rejected'}.`
+        description: `Bag ${bagDetails.bag_id} has been ${approved ? 'approved' : 'flagged'}.`
       });
 
       setRecentScans(prev => [{ ...bagDetails, status: newStatus }, ...prev.slice(0, 9)]);

@@ -82,12 +82,13 @@ interface ShipmentDetail {
 interface ShipmentItem {
   id: string;
   item_type: string;
-  batch_id: number | null;
+  batch_id: string | null;
   finished_good_id: string | null;
   weight_kg: number;
   farm_count: number;
   traceability_complete: boolean;
   compliance_status: string;
+  batch_data?: { batch_code?: string | null; [key: string]: any };
 }
 
 interface ShipmentOutcome {
@@ -133,7 +134,7 @@ interface ShipmentLot {
   farm_count: number;
   mass_balance_valid: boolean;
   notes: string | null;
-  items: Array<{ id: string; batch_id: number | null; weight_kg: number; bag_count: number }>;
+  items: Array<{ id: string; batch_id: string | null; weight_kg: number; bag_count: number }>;
   created_at: string;
 }
 
@@ -1105,7 +1106,9 @@ export default function ShipmentDetailPage() {
                     </Badge>
                     <div className="min-w-0 text-sm">
                       <span className="font-mono">
-                        {item.item_type === 'batch' ? `#${item.batch_id}` : item.finished_good_id?.slice(0, 8)}
+                        {item.item_type === 'batch'
+                          ? (item.batch_data?.batch_code || item.batch_id?.toString().slice(0, 8) || '—')
+                          : item.finished_good_id?.slice(0, 8)}
                       </span>
                       <span className="text-muted-foreground ml-2">
                         {Number(item.weight_kg).toLocaleString()} kg
@@ -1299,7 +1302,7 @@ export default function ShipmentDetailPage() {
                   {lot.items && lot.items.length > 0 && (
                     <div className="mt-2 flex items-center gap-1 flex-wrap">
                       {lot.items.map((li: any) => (
-                        <Badge key={li.id} variant="outline" className="text-xs">Batch #{li.batch_id}</Badge>
+                        <Badge key={li.id} variant="outline" className="text-xs">Batch {li.batch_code || li.batch_id?.toString().slice(0, 8) || li.id?.slice(0, 8)}</Badge>
                       ))}
                     </div>
                   )}

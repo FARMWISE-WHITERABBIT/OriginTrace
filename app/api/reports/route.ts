@@ -144,8 +144,8 @@ async function buildShipmentDDS(supabase: any, orgId: number, start: string, end
     shipmentList.slice(0, 50).map(async (s: any) => {
       const [itemsRes, lotsRes, outcomesRes] = await Promise.all([
         supabase.from('shipment_items').select('id, item_type, batch_id, finished_good_id').eq('shipment_id', s.id),
-        supabase.from('shipment_lots').select('id, lot_number, weight_kg, source_batch_id').eq('shipment_id', s.id),
-        supabase.from('shipment_outcomes').select('id, outcome_type, status, notes').eq('shipment_id', s.id),
+        supabase.from('shipment_lots').select('id, lot_number, weight_kg, mass_balance_valid').eq('shipment_id', s.id),
+        supabase.from('shipment_outcomes').select('id, outcome, reason').eq('shipment_id', s.id),
       ]);
 
       return {

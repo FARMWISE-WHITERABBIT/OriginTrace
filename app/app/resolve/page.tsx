@@ -25,7 +25,7 @@ import { TierGate } from '@/components/tier-gate';
 
 interface Bag {
   id: string;
-  bag_id: string;
+  bag_id: string; // mapped from serial
   weight: number;
   grade: string;
   status: string;
@@ -117,7 +117,7 @@ function ResolveBatchContent() {
 
         const { data: bagsData, error: bagsError } = await supabase
           .from('bags')
-          .select('id, bag_id, weight_kg, grade, status')
+          .select('id, serial, weight_kg, grade, status')
           .eq('org_id', organization.id)
           .eq('collection_batch_id', batchIdParam);
 
@@ -125,7 +125,7 @@ function ResolveBatchContent() {
 
         setBags((bagsData || []).map(b => ({
           id: b.id,
-          bag_id: b.bag_id || b.id,
+          bag_id: b.serial || b.id,
           weight: parseFloat(b.weight_kg) || 0,
           grade: b.grade || 'B',
           status: b.status,
