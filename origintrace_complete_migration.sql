@@ -1,4 +1,10 @@
 -- =============================================
+-- OriginTrace — Complete Database Migration
+-- Run in Supabase SQL Editor
+-- ALL STATEMENTS ARE IDEMPOTENT (safe to re-run)
+-- Last updated: 2026-03-21
+-- =============================================
+-- =============================================
 -- MIGRATION: Create all missing tables
 -- Run this in Supabase SQL Editor
 -- Safe to re-run (uses IF NOT EXISTS)
@@ -47,52 +53,24 @@ CREATE TABLE IF NOT EXISTS document_alerts (
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_alerts ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'Users can view documents in their org') THEN
-    CREATE POLICY "Users can view documents in their org" ON documents
+CREATE POLICY "Users can view documents in their org" ON documents
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'Users can create documents in their org') THEN
-    CREATE POLICY "Users can create documents in their org" ON documents
+CREATE POLICY "Users can create documents in their org" ON documents
   FOR INSERT WITH CHECK (org_id = get_user_org_id());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'Users can update documents in their org') THEN
-    CREATE POLICY "Users can update documents in their org" ON documents
+CREATE POLICY "Users can update documents in their org" ON documents
   FOR UPDATE USING (org_id = get_user_org_id());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'Admins can delete documents in their org') THEN
-    CREATE POLICY "Admins can delete documents in their org" ON documents
+CREATE POLICY "Admins can delete documents in their org" ON documents
   FOR DELETE USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'System admins can manage all documents') THEN
-    CREATE POLICY "System admins can manage all documents" ON documents
+CREATE POLICY "System admins can manage all documents" ON documents
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'document_alerts' AND policyname = 'Users can view document alerts in their org') THEN
-    CREATE POLICY "Users can view document alerts in their org" ON document_alerts
+CREATE POLICY "Users can view document alerts in their org" ON document_alerts
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'document_alerts' AND policyname = 'Users can manage document alerts in their org') THEN
-    CREATE POLICY "Users can manage document alerts in their org" ON document_alerts
+CREATE POLICY "Users can manage document alerts in their org" ON document_alerts
   FOR ALL USING (org_id = get_user_org_id());
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_documents_org_id ON documents(org_id);
 CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents(expiry_date);
@@ -124,33 +102,17 @@ CREATE TABLE IF NOT EXISTS payments (
 
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payments' AND policyname = 'Users can view payments in their org') THEN
-    CREATE POLICY "Users can view payments in their org" ON payments
+CREATE POLICY "Users can view payments in their org" ON payments
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payments' AND policyname = 'Users can create payments in their org') THEN
-    CREATE POLICY "Users can create payments in their org" ON payments
+CREATE POLICY "Users can create payments in their org" ON payments
   FOR INSERT WITH CHECK (org_id = get_user_org_id());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payments' AND policyname = 'Admins can manage payments in their org') THEN
-    CREATE POLICY "Admins can manage payments in their org" ON payments
+CREATE POLICY "Admins can manage payments in their org" ON payments
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payments' AND policyname = 'System admins can manage all payments') THEN
-    CREATE POLICY "System admins can manage all payments" ON payments
+CREATE POLICY "System admins can manage all payments" ON payments
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_payments_org_id ON payments(org_id);
 CREATE INDEX IF NOT EXISTS idx_payments_payee ON payments(payee_id);
@@ -219,78 +181,42 @@ ALTER TABLE buyer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_chain_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'buyer_organizations' AND policyname = 'Buyer users can view their own org') THEN
-    CREATE POLICY "Buyer users can view their own org" ON buyer_organizations
+CREATE POLICY "Buyer users can view their own org" ON buyer_organizations
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = buyer_organizations.id)
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'buyer_organizations' AND policyname = 'System admins can manage buyer orgs') THEN
-    CREATE POLICY "System admins can manage buyer orgs" ON buyer_organizations
+CREATE POLICY "System admins can manage buyer orgs" ON buyer_organizations
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'buyer_profiles' AND policyname = 'Buyer users can view their own profile') THEN
-    CREATE POLICY "Buyer users can view their own profile" ON buyer_profiles
+CREATE POLICY "Buyer users can view their own profile" ON buyer_profiles
   FOR SELECT USING (user_id = auth.uid() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'buyer_profiles' AND policyname = 'System admins can manage buyer profiles') THEN
-    CREATE POLICY "System admins can manage buyer profiles" ON buyer_profiles
+CREATE POLICY "System admins can manage buyer profiles" ON buyer_profiles
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'supply_chain_links' AND policyname = 'Linked parties can view supply chain links') THEN
-    CREATE POLICY "Linked parties can view supply chain links" ON supply_chain_links
+CREATE POLICY "Linked parties can view supply chain links" ON supply_chain_links
   FOR SELECT USING (
     exporter_org_id = get_user_org_id()
     OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = supply_chain_links.buyer_org_id)
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'supply_chain_links' AND policyname = 'Buyer admins can create supply chain links') THEN
-    CREATE POLICY "Buyer admins can create supply chain links" ON supply_chain_links
+CREATE POLICY "Buyer admins can create supply chain links" ON supply_chain_links
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = supply_chain_links.buyer_org_id AND role = 'buyer_admin')
   );
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'contracts' AND policyname = 'Linked parties can view contracts') THEN
-    CREATE POLICY "Linked parties can view contracts" ON contracts
+CREATE POLICY "Linked parties can view contracts" ON contracts
   FOR SELECT USING (
     exporter_org_id = get_user_org_id()
     OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = contracts.buyer_org_id)
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'contracts' AND policyname = 'Buyer admins can manage contracts') THEN
-    CREATE POLICY "Buyer admins can manage contracts" ON contracts
+CREATE POLICY "Buyer admins can manage contracts" ON contracts
   FOR ALL USING (
     EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = contracts.buyer_org_id AND role = 'buyer_admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'contracts' AND policyname = 'System admins can manage all contracts') THEN
-    CREATE POLICY "System admins can manage all contracts" ON contracts
+CREATE POLICY "System admins can manage all contracts" ON contracts
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_supply_chain_links_buyer ON supply_chain_links(buyer_org_id);
 CREATE INDEX IF NOT EXISTS idx_supply_chain_links_exporter ON supply_chain_links(exporter_org_id);
@@ -337,25 +263,15 @@ CREATE TABLE IF NOT EXISTS contract_shipments (
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_shipments ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipments' AND policyname = 'Users can view shipments in their org') THEN
-    CREATE POLICY "Users can view shipments in their org" ON shipments
+CREATE POLICY "Users can view shipments in their org" ON shipments
   FOR SELECT USING (org_id = get_user_org_id());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipments' AND policyname = 'Admins can manage shipments') THEN
-    CREATE POLICY "Admins can manage shipments" ON shipments
+CREATE POLICY "Admins can manage shipments" ON shipments
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
   );
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'contract_shipments' AND policyname = 'Linked parties can view contract shipments') THEN
-    CREATE POLICY "Linked parties can view contract shipments" ON contract_shipments
+CREATE POLICY "Linked parties can view contract shipments" ON contract_shipments
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM contracts c WHERE c.id = contract_shipments.contract_id AND (
       c.exporter_org_id = get_user_org_id()
@@ -363,8 +279,6 @@ DO $$ BEGIN
     ))
     OR is_system_admin()
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_shipments_org ON shipments(org_id);
 CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
@@ -391,27 +305,15 @@ CREATE TABLE IF NOT EXISTS compliance_profiles (
 
 ALTER TABLE compliance_profiles ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'compliance_profiles' AND policyname = 'Users can view compliance profiles in their org') THEN
-    CREATE POLICY "Users can view compliance profiles in their org" ON compliance_profiles
+CREATE POLICY "Users can view compliance profiles in their org" ON compliance_profiles
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'compliance_profiles' AND policyname = 'Admins can manage compliance profiles') THEN
-    CREATE POLICY "Admins can manage compliance profiles" ON compliance_profiles
+CREATE POLICY "Admins can manage compliance profiles" ON compliance_profiles
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'compliance_profiles' AND policyname = 'System admins can manage all compliance profiles') THEN
-    CREATE POLICY "System admins can manage all compliance profiles" ON compliance_profiles
+CREATE POLICY "System admins can manage all compliance profiles" ON compliance_profiles
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_compliance_profiles_org ON compliance_profiles(org_id);
 
@@ -481,68 +383,36 @@ ALTER TABLE processing_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE processing_run_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finished_goods ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processing_runs' AND policyname = 'Users can view processing runs in their org') THEN
-    CREATE POLICY "Users can view processing runs in their org" ON processing_runs
+CREATE POLICY "Users can view processing runs in their org" ON processing_runs
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processing_runs' AND policyname = 'Admins can manage processing runs') THEN
-    CREATE POLICY "Admins can manage processing runs" ON processing_runs
+CREATE POLICY "Admins can manage processing runs" ON processing_runs
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processing_runs' AND policyname = 'System admins can manage all processing runs') THEN
-    CREATE POLICY "System admins can manage all processing runs" ON processing_runs
+CREATE POLICY "System admins can manage all processing runs" ON processing_runs
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processing_run_batches' AND policyname = 'Users can view processing run batches in their org') THEN
-    CREATE POLICY "Users can view processing run batches in their org" ON processing_run_batches
+CREATE POLICY "Users can view processing run batches in their org" ON processing_run_batches
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM processing_runs pr WHERE pr.id = processing_run_id AND pr.org_id = get_user_org_id())
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processing_run_batches' AND policyname = 'Admins can manage processing run batches') THEN
-    CREATE POLICY "Admins can manage processing run batches" ON processing_run_batches
+CREATE POLICY "Admins can manage processing run batches" ON processing_run_batches
   FOR ALL USING (
     EXISTS (SELECT 1 FROM processing_runs pr WHERE pr.id = processing_run_id AND pr.org_id = get_user_org_id())
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'finished_goods' AND policyname = 'Users can view finished goods in their org') THEN
-    CREATE POLICY "Users can view finished goods in their org" ON finished_goods
+CREATE POLICY "Users can view finished goods in their org" ON finished_goods
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'finished_goods' AND policyname = 'Admins can manage finished goods') THEN
-    CREATE POLICY "Admins can manage finished goods" ON finished_goods
+CREATE POLICY "Admins can manage finished goods" ON finished_goods
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'finished_goods' AND policyname = 'System admins can manage all finished goods') THEN
-    CREATE POLICY "System admins can manage all finished goods" ON finished_goods
+CREATE POLICY "System admins can manage all finished goods" ON finished_goods
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- ============================================
 -- DIGITAL PRODUCT PASSPORTS
@@ -573,33 +443,17 @@ CREATE TABLE IF NOT EXISTS digital_product_passports (
 
 ALTER TABLE digital_product_passports ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'digital_product_passports' AND policyname = 'Users can view DPPs in their org') THEN
-    CREATE POLICY "Users can view DPPs in their org" ON digital_product_passports
+CREATE POLICY "Users can view DPPs in their org" ON digital_product_passports
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'digital_product_passports' AND policyname = 'Admins can manage DPPs') THEN
-    CREATE POLICY "Admins can manage DPPs" ON digital_product_passports
+CREATE POLICY "Admins can manage DPPs" ON digital_product_passports
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'digital_product_passports' AND policyname = 'System admins can manage all DPPs') THEN
-    CREATE POLICY "System admins can manage all DPPs" ON digital_product_passports
+CREATE POLICY "System admins can manage all DPPs" ON digital_product_passports
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'digital_product_passports' AND policyname = 'Public can view active DPPs') THEN
-    CREATE POLICY "Public can view active DPPs" ON digital_product_passports
+CREATE POLICY "Public can view active DPPs" ON digital_product_passports
   FOR SELECT USING (status = 'active');
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_dpp_org ON digital_product_passports(org_id);
 CREATE INDEX IF NOT EXISTS idx_dpp_code ON digital_product_passports(dpp_code);
@@ -626,30 +480,18 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_keys' AND policyname = 'Admins can view API keys in their org') THEN
-    CREATE POLICY "Admins can view API keys in their org" ON api_keys
+CREATE POLICY "Admins can view API keys in their org" ON api_keys
   FOR SELECT USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_keys' AND policyname = 'Admins can manage API keys') THEN
-    CREATE POLICY "Admins can manage API keys" ON api_keys
+CREATE POLICY "Admins can manage API keys" ON api_keys
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_keys' AND policyname = 'System admins can manage all API keys') THEN
-    CREATE POLICY "System admins can manage all API keys" ON api_keys
+CREATE POLICY "System admins can manage all API keys" ON api_keys
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
@@ -684,14 +526,10 @@ CREATE TABLE IF NOT EXISTS audit_events (
 
 ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_events' AND policyname = 'Org members can view audit events') THEN
-    CREATE POLICY "Org members can view audit events" ON audit_events
+CREATE POLICY "Org members can view audit events" ON audit_events
   FOR SELECT USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_audit_events_org ON audit_events(org_id);
 CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action);
@@ -716,14 +554,10 @@ CREATE TABLE IF NOT EXISTS webhook_endpoints (
 
 ALTER TABLE webhook_endpoints ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'webhook_endpoints' AND policyname = 'Org admins can manage webhooks') THEN
-    CREATE POLICY "Org admins can manage webhooks" ON webhook_endpoints
+CREATE POLICY "Org admins can manage webhooks" ON webhook_endpoints
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
 
 CREATE TABLE IF NOT EXISTS webhook_deliveries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -776,20 +610,12 @@ CREATE TABLE IF NOT EXISTS farmer_accounts (
 
 ALTER TABLE farmer_accounts ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_accounts' AND policyname = 'Farmers can view own account') THEN
-    CREATE POLICY "Farmers can view own account" ON farmer_accounts
+CREATE POLICY "Farmers can view own account" ON farmer_accounts
   FOR SELECT USING (user_id = auth.uid());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_accounts' AND policyname = 'Org members can view farmer accounts') THEN
-    CREATE POLICY "Org members can view farmer accounts" ON farmer_accounts
+CREATE POLICY "Org members can view farmer accounts" ON farmer_accounts
   FOR SELECT USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_farmer_accounts_phone ON farmer_accounts(phone);
 CREATE INDEX IF NOT EXISTS idx_farmer_accounts_farm ON farmer_accounts(farm_id);
@@ -817,22 +643,14 @@ CREATE TABLE IF NOT EXISTS farmer_deliveries (
 
 ALTER TABLE farmer_deliveries ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_deliveries' AND policyname = 'Farmers can view own deliveries') THEN
-    CREATE POLICY "Farmers can view own deliveries" ON farmer_deliveries
+CREATE POLICY "Farmers can view own deliveries" ON farmer_deliveries
   FOR SELECT USING (
     farmer_account_id IN (SELECT id FROM farmer_accounts WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_deliveries' AND policyname = 'Org members can view farmer deliveries') THEN
-    CREATE POLICY "Org members can view farmer deliveries" ON farmer_deliveries
+CREATE POLICY "Org members can view farmer deliveries" ON farmer_deliveries
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_farmer_deliveries_farmer ON farmer_deliveries(farmer_account_id);
 CREATE INDEX IF NOT EXISTS idx_farmer_deliveries_org ON farmer_deliveries(org_id);
@@ -858,22 +676,14 @@ CREATE TABLE IF NOT EXISTS farmer_payments (
 
 ALTER TABLE farmer_payments ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_payments' AND policyname = 'Farmers can view own payments') THEN
-    CREATE POLICY "Farmers can view own payments" ON farmer_payments
+CREATE POLICY "Farmers can view own payments" ON farmer_payments
   FOR SELECT USING (
     farmer_account_id IN (SELECT id FROM farmer_accounts WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_payments' AND policyname = 'Org members can manage farmer payments') THEN
-    CREATE POLICY "Org members can manage farmer payments" ON farmer_payments
+CREATE POLICY "Org members can manage farmer payments" ON farmer_payments
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_farmer_payments_farmer ON farmer_payments(farmer_account_id);
 CREATE INDEX IF NOT EXISTS idx_farmer_payments_org ON farmer_payments(org_id);
@@ -899,14 +709,10 @@ CREATE TABLE IF NOT EXISTS farmer_training (
 
 ALTER TABLE farmer_training ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_training' AND policyname = 'Org members can manage training') THEN
-    CREATE POLICY "Org members can manage training" ON farmer_training
+CREATE POLICY "Org members can manage training" ON farmer_training
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_farmer_training_farmer ON farmer_training(farmer_account_id);
 CREATE INDEX IF NOT EXISTS idx_farmer_training_org ON farmer_training(org_id);
@@ -932,14 +738,10 @@ CREATE TABLE IF NOT EXISTS farmer_inputs (
 
 ALTER TABLE farmer_inputs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_inputs' AND policyname = 'Org members can manage inputs') THEN
-    CREATE POLICY "Org members can manage inputs" ON farmer_inputs
+CREATE POLICY "Org members can manage inputs" ON farmer_inputs
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_farmer_inputs_farm ON farmer_inputs(farm_id);
 
@@ -987,42 +789,26 @@ CREATE TABLE IF NOT EXISTS tender_bids (
 ALTER TABLE tenders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tender_bids ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenders' AND policyname = 'Buyer orgs can manage their tenders') THEN
-    CREATE POLICY "Buyer orgs can manage their tenders" ON tenders
+CREATE POLICY "Buyer orgs can manage their tenders" ON tenders
   FOR ALL USING (
     EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id AND role = 'buyer_admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenders' AND policyname = 'Exporters can view public or invited tenders') THEN
-    CREATE POLICY "Exporters can view public or invited tenders" ON tenders
+CREATE POLICY "Exporters can view public or invited tenders" ON tenders
   FOR SELECT USING (
     (visibility = 'public' AND status = 'open')
     OR (visibility = 'invited' AND get_user_org_id() = ANY(invited_orgs))
     OR EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = tenders.buyer_org_id)
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenders' AND policyname = 'System admins can manage all tenders') THEN
-    CREATE POLICY "System admins can manage all tenders" ON tenders
+CREATE POLICY "System admins can manage all tenders" ON tenders
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tender_bids' AND policyname = 'Exporters can manage their own bids') THEN
-    CREATE POLICY "Exporters can manage their own bids" ON tender_bids
+CREATE POLICY "Exporters can manage their own bids" ON tender_bids
   FOR ALL USING (
     exporter_org_id = get_user_org_id()
     OR EXISTS (SELECT 1 FROM tenders t WHERE t.id = tender_bids.tender_id AND EXISTS (SELECT 1 FROM buyer_profiles WHERE user_id = auth.uid() AND buyer_org_id = t.buyer_org_id))
     OR is_system_admin()
   );
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS idx_tenders_buyer_org ON tenders(buyer_org_id);
 CREATE INDEX IF NOT EXISTS idx_tenders_status ON tenders(status);
@@ -1047,12 +833,8 @@ CREATE TABLE IF NOT EXISTS recovery_standards (
 );
 
 ALTER TABLE recovery_standards ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'recovery_standards' AND policyname = 'Anyone can view recovery standards') THEN
-    CREATE POLICY "Anyone can view recovery standards" ON recovery_standards
+CREATE POLICY "Anyone can view recovery standards" ON recovery_standards
   FOR SELECT USING (true);
-  END IF;
-END $$;
 
 INSERT INTO recovery_standards (commodity, product_type, standard_recovery_rate, tolerance_percent, notes) VALUES
   ('cocoa', 'cocoa_butter', 41.6, 5.0, 'Standard butter extraction from dried beans'),
@@ -1103,14 +885,10 @@ CREATE TABLE IF NOT EXISTS farm_certifications (
 );
 
 ALTER TABLE farm_certifications ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farm_certifications' AND policyname = 'Org members can manage certifications') THEN
-    CREATE POLICY "Org members can manage certifications" ON farm_certifications
+CREATE POLICY "Org members can manage certifications" ON farm_certifications
   FOR ALL USING (
     org_id IN (SELECT org_id FROM profiles WHERE user_id = auth.uid())
   );
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_farm_certifications_farm ON farm_certifications(farm_id);
 CREATE INDEX IF NOT EXISTS idx_farm_certifications_expiry ON farm_certifications(expiry_date);
 
@@ -1122,12 +900,8 @@ CREATE TABLE IF NOT EXISTS system_config (
   updated_by UUID
 );
 ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'system_config' AND policyname = 'system_config_service_role_only') THEN
-    CREATE POLICY "system_config_service_role_only" ON system_config
+CREATE POLICY "system_config_service_role_only" ON system_config
   FOR ALL USING (auth.role() = 'service_role');
-  END IF;
-END $$;
 
 -- Shipment Items
 CREATE TABLE IF NOT EXISTS shipment_items (
@@ -1145,30 +919,18 @@ CREATE TABLE IF NOT EXISTS shipment_items (
 );
 
 ALTER TABLE shipment_items ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_items' AND policyname = 'Users can view shipment items in their org') THEN
-    CREATE POLICY "Users can view shipment items in their org" ON shipment_items
+CREATE POLICY "Users can view shipment items in their org" ON shipment_items
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM shipments s WHERE s.id = shipment_items.shipment_id AND s.org_id = get_user_org_id())
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_items' AND policyname = 'Authorized users can manage shipment items') THEN
-    CREATE POLICY "Authorized users can manage shipment items" ON shipment_items
+CREATE POLICY "Authorized users can manage shipment items" ON shipment_items
   FOR ALL USING (
     EXISTS (SELECT 1 FROM shipments s WHERE s.id = shipment_items.shipment_id AND s.org_id = get_user_org_id())
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_items' AND policyname = 'System admins can manage all shipment items') THEN
-    CREATE POLICY "System admins can manage all shipment items" ON shipment_items
+CREATE POLICY "System admins can manage all shipment items" ON shipment_items
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment ON shipment_items(shipment_id);
 
 -- Shipment Lots
@@ -1188,27 +950,15 @@ CREATE TABLE IF NOT EXISTS shipment_lots (
 );
 
 ALTER TABLE shipment_lots ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lots' AND policyname = 'Users can view shipment lots in their org') THEN
-    CREATE POLICY "Users can view shipment lots in their org" ON shipment_lots
+CREATE POLICY "Users can view shipment lots in their org" ON shipment_lots
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lots' AND policyname = 'Authorized users can manage shipment lots') THEN
-    CREATE POLICY "Authorized users can manage shipment lots" ON shipment_lots
+CREATE POLICY "Authorized users can manage shipment lots" ON shipment_lots
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lots' AND policyname = 'System admins can manage all shipment lots') THEN
-    CREATE POLICY "System admins can manage all shipment lots" ON shipment_lots
+CREATE POLICY "System admins can manage all shipment lots" ON shipment_lots
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_shipment_lots_shipment ON shipment_lots(shipment_id);
 
 -- Shipment Lot Items
@@ -1223,30 +973,18 @@ CREATE TABLE IF NOT EXISTS shipment_lot_items (
 );
 
 ALTER TABLE shipment_lot_items ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lot_items' AND policyname = 'Users can view shipment lot items via lot org') THEN
-    CREATE POLICY "Users can view shipment lot items via lot org" ON shipment_lot_items
+CREATE POLICY "Users can view shipment lot items via lot org" ON shipment_lot_items
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM shipment_lots sl WHERE sl.id = shipment_lot_items.lot_id AND sl.org_id = get_user_org_id())
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lot_items' AND policyname = 'Authorized users can manage shipment lot items') THEN
-    CREATE POLICY "Authorized users can manage shipment lot items" ON shipment_lot_items
+CREATE POLICY "Authorized users can manage shipment lot items" ON shipment_lot_items
   FOR ALL USING (
     EXISTS (SELECT 1 FROM shipment_lots sl WHERE sl.id = shipment_lot_items.lot_id AND sl.org_id = get_user_org_id())
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'logistics_coordinator', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_lot_items' AND policyname = 'System admins can manage all shipment lot items') THEN
-    CREATE POLICY "System admins can manage all shipment lot items" ON shipment_lot_items
+CREATE POLICY "System admins can manage all shipment lot items" ON shipment_lot_items
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Notifications
 CREATE TABLE IF NOT EXISTS notifications (
@@ -1263,30 +1001,14 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can view their own notifications') THEN
-    CREATE POLICY "Users can view their own notifications" ON notifications
+CREATE POLICY "Users can view their own notifications" ON notifications
   FOR SELECT USING (user_id = auth.uid() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can update their own notifications') THEN
-    CREATE POLICY "Users can update their own notifications" ON notifications
+CREATE POLICY "Users can update their own notifications" ON notifications
   FOR UPDATE USING (user_id = auth.uid());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'System can insert notifications') THEN
-    CREATE POLICY "System can insert notifications" ON notifications
+CREATE POLICY "System can insert notifications" ON notifications
   FOR INSERT WITH CHECK (true);
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'System admins can manage all notifications') THEN
-    CREATE POLICY "System admins can manage all notifications" ON notifications
+CREATE POLICY "System admins can manage all notifications" ON notifications
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(org_id);
 
@@ -1302,24 +1024,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_logs' AND policyname = 'System admins can view audit logs') THEN
-    CREATE POLICY "System admins can view audit logs" ON audit_logs
+CREATE POLICY "System admins can view audit logs" ON audit_logs
   FOR SELECT USING (is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_logs' AND policyname = 'Service role can insert audit logs') THEN
-    CREATE POLICY "Service role can insert audit logs" ON audit_logs
+CREATE POLICY "Service role can insert audit logs" ON audit_logs
   FOR INSERT WITH CHECK (true);
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_logs' AND policyname = 'System admins can manage all audit logs') THEN
-    CREATE POLICY "System admins can manage all audit logs" ON audit_logs
+CREATE POLICY "System admins can manage all audit logs" ON audit_logs
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Delegations
 CREATE TABLE IF NOT EXISTS delegations (
@@ -1335,27 +1045,15 @@ CREATE TABLE IF NOT EXISTS delegations (
 );
 
 ALTER TABLE delegations ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegations' AND policyname = 'Users can view delegations in their org') THEN
-    CREATE POLICY "Users can view delegations in their org" ON delegations
+CREATE POLICY "Users can view delegations in their org" ON delegations
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegations' AND policyname = 'Admins can manage delegations in their org') THEN
-    CREATE POLICY "Admins can manage delegations in their org" ON delegations
+CREATE POLICY "Admins can manage delegations in their org" ON delegations
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegations' AND policyname = 'System admins can manage all delegations') THEN
-    CREATE POLICY "System admins can manage all delegations" ON delegations
+CREATE POLICY "System admins can manage all delegations" ON delegations
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Delegation Audit Log
 CREATE TABLE IF NOT EXISTS delegation_audit_log (
@@ -1369,24 +1067,12 @@ CREATE TABLE IF NOT EXISTS delegation_audit_log (
 );
 
 ALTER TABLE delegation_audit_log ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegation_audit_log' AND policyname = 'Users can view delegation audit log in their org') THEN
-    CREATE POLICY "Users can view delegation audit log in their org" ON delegation_audit_log
+CREATE POLICY "Users can view delegation audit log in their org" ON delegation_audit_log
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegation_audit_log' AND policyname = 'System can insert delegation audit log') THEN
-    CREATE POLICY "System can insert delegation audit log" ON delegation_audit_log
+CREATE POLICY "System can insert delegation audit log" ON delegation_audit_log
   FOR INSERT WITH CHECK (true);
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'delegation_audit_log' AND policyname = 'System admins can manage all delegation audit logs') THEN
-    CREATE POLICY "System admins can manage all delegation audit logs" ON delegation_audit_log
+CREATE POLICY "System admins can manage all delegation audit logs" ON delegation_audit_log
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Tenant Health Metrics
 CREATE TABLE IF NOT EXISTS tenant_health_metrics (
@@ -1407,24 +1093,12 @@ CREATE TABLE IF NOT EXISTS tenant_health_metrics (
 );
 
 ALTER TABLE tenant_health_metrics ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenant_health_metrics' AND policyname = 'System admins can view tenant health metrics') THEN
-    CREATE POLICY "System admins can view tenant health metrics" ON tenant_health_metrics
+CREATE POLICY "System admins can view tenant health metrics" ON tenant_health_metrics
   FOR SELECT USING (is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenant_health_metrics' AND policyname = 'Service role can manage tenant health metrics') THEN
-    CREATE POLICY "Service role can manage tenant health metrics" ON tenant_health_metrics
+CREATE POLICY "Service role can manage tenant health metrics" ON tenant_health_metrics
   FOR ALL USING (auth.role() = 'service_role');
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenant_health_metrics' AND policyname = 'System admins can manage all tenant health metrics') THEN
-    CREATE POLICY "System admins can manage all tenant health metrics" ON tenant_health_metrics
+CREATE POLICY "System admins can manage all tenant health metrics" ON tenant_health_metrics
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Batch Contributions
 CREATE TABLE IF NOT EXISTS batch_contributions (
@@ -1440,30 +1114,18 @@ CREATE TABLE IF NOT EXISTS batch_contributions (
 );
 
 ALTER TABLE batch_contributions ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'batch_contributions' AND policyname = 'Users can view batch contributions in their org') THEN
-    CREATE POLICY "Users can view batch contributions in their org" ON batch_contributions
+CREATE POLICY "Users can view batch contributions in their org" ON batch_contributions
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM collection_batches cb WHERE cb.id = batch_contributions.batch_id AND cb.org_id = get_user_org_id())
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'batch_contributions' AND policyname = 'Authorized users can manage batch contributions') THEN
-    CREATE POLICY "Authorized users can manage batch contributions" ON batch_contributions
+CREATE POLICY "Authorized users can manage batch contributions" ON batch_contributions
   FOR ALL USING (
     EXISTS (SELECT 1 FROM collection_batches cb WHERE cb.id = batch_contributions.batch_id AND cb.org_id = get_user_org_id())
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'batch_contributions' AND policyname = 'System admins can manage all batch contributions') THEN
-    CREATE POLICY "System admins can manage all batch contributions" ON batch_contributions
+CREATE POLICY "System admins can manage all batch contributions" ON batch_contributions
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_batch_contributions_batch ON batch_contributions(batch_id);
 CREATE INDEX IF NOT EXISTS idx_batch_contributions_farm ON batch_contributions(farm_id);
 
@@ -1488,27 +1150,15 @@ CREATE TABLE IF NOT EXISTS farmer_performance_ledger_table (
 );
 
 ALTER TABLE farmer_performance_ledger_table ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_performance_ledger_table' AND policyname = 'Users can view farmer performance in their org') THEN
-    CREATE POLICY "Users can view farmer performance in their org" ON farmer_performance_ledger_table
+CREATE POLICY "Users can view farmer performance in their org" ON farmer_performance_ledger_table
   FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_performance_ledger_table' AND policyname = 'Admins can manage farmer performance in their org') THEN
-    CREATE POLICY "Admins can manage farmer performance in their org" ON farmer_performance_ledger_table
+CREATE POLICY "Admins can manage farmer performance in their org" ON farmer_performance_ledger_table
   FOR ALL USING (
     org_id = get_user_org_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'aggregator'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_performance_ledger_table' AND policyname = 'System admins can manage all farmer performance') THEN
-    CREATE POLICY "System admins can manage all farmer performance" ON farmer_performance_ledger_table
+CREATE POLICY "System admins can manage all farmer performance" ON farmer_performance_ledger_table
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
 
 -- Pedigree Verification Records
 CREATE TABLE IF NOT EXISTS pedigree_verification_records (
@@ -1550,36 +1200,20 @@ CREATE TABLE IF NOT EXISTS pedigree_verification_records (
 );
 
 ALTER TABLE pedigree_verification_records ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'pedigree_verification_records' AND policyname = 'Users can view pedigree records in their org') THEN
-    CREATE POLICY "Users can view pedigree records in their org" ON pedigree_verification_records
+CREATE POLICY "Users can view pedigree records in their org" ON pedigree_verification_records
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
     OR is_system_admin()
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'pedigree_verification_records' AND policyname = 'Admins can manage pedigree records') THEN
-    CREATE POLICY "Admins can manage pedigree records" ON pedigree_verification_records
+CREATE POLICY "Admins can manage pedigree records" ON pedigree_verification_records
   FOR ALL USING (
     EXISTS (SELECT 1 FROM finished_goods fg WHERE fg.id = pedigree_verification_records.finished_good_id AND fg.org_id = get_user_org_id())
     AND EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('admin', 'compliance_officer'))
   );
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'pedigree_verification_records' AND policyname = 'System admins can manage all pedigree records') THEN
-    CREATE POLICY "System admins can manage all pedigree records" ON pedigree_verification_records
+CREATE POLICY "System admins can manage all pedigree records" ON pedigree_verification_records
   FOR ALL USING (is_system_admin());
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'pedigree_verification_records' AND policyname = 'Public can view verified pedigree records') THEN
-    CREATE POLICY "Public can view verified pedigree records" ON pedigree_verification_records
+CREATE POLICY "Public can view verified pedigree records" ON pedigree_verification_records
   FOR SELECT USING (pedigree_verified = true);
-  END IF;
-END $$;
 
 -- Add deforestation_check column to farms if not exists
 ALTER TABLE farms ADD COLUMN IF NOT EXISTS deforestation_check JSONB;
@@ -1682,12 +1316,8 @@ DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE tablename = 'shipment_outcomes' AND policyname = 'org_access_shipment_outcomes'
   ) THEN
-    DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'shipment_outcomes' AND policyname = 'org_access_shipment_outcomes') THEN
     CREATE POLICY "org_access_shipment_outcomes" ON shipment_outcomes
       FOR ALL USING (org_id = get_user_org_id());
-  END IF;
-END $$;
   END IF;
 END $$;
 
@@ -1712,12 +1342,8 @@ DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE tablename = 'cold_chain_logs' AND policyname = 'org_access_cold_chain_logs'
   ) THEN
-    DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'cold_chain_logs' AND policyname = 'org_access_cold_chain_logs') THEN
     CREATE POLICY "org_access_cold_chain_logs" ON cold_chain_logs
       FOR ALL USING (org_id = get_user_org_id());
-  END IF;
-END $$;
   END IF;
 END $$;
 
@@ -1758,11 +1384,7 @@ CREATE INDEX IF NOT EXISTS idx_farmer_ledger_org ON farmer_performance_ledger(or
 ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farmer_performance_ledger' AND policyname='org_access_farmer_performance_ledger') THEN
-    DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'farmer_performance_ledger' AND policyname = 'org_access_farmer_performance_ledger') THEN
     CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger FOR ALL USING (org_id = get_user_org_id());
-  END IF;
-END $$;
   END IF;
 END $$;
 
@@ -1785,11 +1407,7 @@ CREATE INDEX IF NOT EXISTS idx_yield_predictions_org ON yield_predictions(org_id
 ALTER TABLE yield_predictions ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='yield_predictions' AND policyname='org_yield_predictions') THEN
-    DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'yield_predictions' AND policyname = 'org_yield_predictions') THEN
     CREATE POLICY "org_yield_predictions" ON yield_predictions FOR ALL USING (org_id = get_user_org_id());
-  END IF;
-END $$;
   END IF;
 END $$;
 
@@ -1815,11 +1433,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_links_status ON payment_links(status);
 ALTER TABLE payment_links ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_links' AND policyname='payment_links_service_only') THEN
-    DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'payment_links' AND policyname = 'payment_links_service_only') THEN
     CREATE POLICY "payment_links_service_only" ON payment_links USING (false);
-  END IF;
-END $$;
   END IF;
 END $$;
 
