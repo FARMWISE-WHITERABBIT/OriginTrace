@@ -22,6 +22,10 @@ export default function SmartCollectPage() {
 
   return (
     <div className="space-y-4 pb-28 lg:pb-4">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Smart Collect</h1>
+        <p className="text-sm text-muted-foreground mt-1">Record produce collected from farmers — step by step.</p>
+      </div>
       <CollectionStepper step={step} setStep={setStep} />
 
       {step === 1 && <Step1BatchIdentity logic={logic} />}

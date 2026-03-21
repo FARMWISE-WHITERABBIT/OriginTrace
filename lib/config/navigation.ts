@@ -121,7 +121,6 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Farmers', url: '/app/farmers', icon: Users, tourId: 'nav-farmers', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'starter', tierFeature: 'farmers_list' },
         { title: 'Register Farmer', url: '/app/farmers/new', icon: UserPlus, tourId: 'nav-register', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'farmer_registration' },
-        { title: 'Map Farm', url: '/app/farms/map', icon: Map, tourId: 'nav-farms', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'farm_mapping' },
         { title: 'Farm Polygons', url: '/app/farms', icon: Layers, tourId: 'nav-farm-polygons', allowedRoles: ['admin', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'farm_polygons' },
         { title: 'Boundary Conflicts', url: '/app/conflicts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-conflicts', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'boundary_conflicts' },
       ],
@@ -148,9 +147,8 @@ const appNavigation: NavigationConfig = {
         { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'processing' },
         { title: 'Pedigree', url: '/app/pedigree', icon: QrCode, tourId: 'nav-pedigree', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'pedigree' },
         { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
-        { title: 'Dispatch', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
+        { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
-        { title: 'Documents', url: '/app/documents', icon: FolderOpen, allowedRoles: ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'documents' },
         { title: 'DDS Export', url: '/app/dds', icon: FileText, tourId: 'nav-dds', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'dds_export' },
       ],
     },
@@ -205,6 +203,7 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Settings', url: '/app/settings', icon: Settings, allowedRoles: ['admin', 'aggregator'] },
         { title: 'Data Vault', url: '/app/data-vault', icon: Download, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'data_vault' },
+        { title: 'Document Vault', url: '/app/documents', icon: FolderOpen, allowedRoles: ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'documents' },
         { title: 'API Keys', url: '/app/settings?tab=api-keys', icon: Key, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'enterprise_api' },
         { title: 'Guide', url: '/app/guide', icon: BookOpen, allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'compliance_officer', 'logistics_coordinator', 'warehouse_supervisor'] },
       ],

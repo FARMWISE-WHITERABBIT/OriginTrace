@@ -383,6 +383,7 @@ function DispatchContent() {
                   collectedBy: profile?.full_name || 'Unknown',
                   collectionDate: new Date().toLocaleDateString(),
                   orgName: organization?.name || 'OriginTrace',
+                  orgLogoUrl: organization?.logo_url || null,
                   bags: bags.length > 0 ? bags : undefined,
                   contributions: contributions.length > 0 ? contributions : undefined,
                 });

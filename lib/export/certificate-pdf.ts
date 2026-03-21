@@ -1,11 +1,12 @@
 /**
  * Generates a proper PDF for the EUDR compliance certificate.
  * Uses jsPDF (already a dependency) — runs in both server and client contexts.
- * Returns a Buffer (server) or triggers download (client).
+ * Returns a data URI string.
  */
 
 export interface CertificateData {
   orgName: string;
+  orgLogoUrl?: string | null;
   productName: string;
   productType: string;
   weightKg: number;
@@ -26,13 +27,23 @@ export interface CertificateData {
   generatedAt: string;
 }
 
-/**
- * Generate certificate as a PDF data URL (works in browser via jsPDF).
- * For server-side PDF generation, the pedigree/certificate route returns
- * HTML — clients can call this client-side after fetching cert data.
- */
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateCertificatePdf(data: CertificateData): Promise<string> {
-  // Dynamic import so this only loads in contexts where it's needed
   const { jsPDF } = await import('jspdf');
   // @ts-ignore
   await import('jspdf-autotable');
@@ -43,20 +54,40 @@ export async function generateCertificatePdf(data: CertificateData): Promise<str
   const contentW = pageW - margin * 2;
 
   // ── Green header bar ──
-  doc.setFillColor(22, 101, 52); // #166534
+  doc.setFillColor(22, 101, 52);
   doc.rect(0, 0, pageW, 45, 'F');
 
+  // ── Logo or org name ──
+  let logoLoaded = false;
+  if (data.orgLogoUrl) {
+    const imgData = await loadImageAsDataUrl(data.orgLogoUrl);
+    if (imgData) {
+      try {
+        doc.addImage(imgData, 'PNG', margin, 8, 28, 28);
+        logoLoaded = true;
+      } catch {
+        logoLoaded = false;
+      }
+    }
+  }
+
+  const textX = logoLoaded ? margin + 32 : margin;
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.orgName, margin, 18);
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('EU Deforestation Regulation (EUDR) Compliance Certificate', margin, 27);
-
+  doc.text(data.orgName, textX, 18);
   doc.setFontSize(9);
-  doc.text('Regulation (EU) 2023/1115 — Verified Deforestation-Free', margin, 35);
+  doc.setFont('helvetica', 'normal');
+  doc.text('EU Deforestation Regulation (EUDR) Compliance Certificate', textX, 27);
+  doc.setFontSize(8);
+  doc.text('Regulation (EU) 2023/1115 — Verified Deforestation-Free', textX, 35);
+
+  // If no org logo, show OriginTrace wordmark at top-right
+  if (!logoLoaded) {
+    doc.setFontSize(7);
+    doc.setTextColor(187, 247, 208);
+    doc.text('Powered by OriginTrace', pageW - margin, 40, { align: 'right' });
+  }
 
   // ── Verified badge ──
   doc.setFillColor(240, 253, 244);
@@ -67,7 +98,6 @@ export async function generateCertificatePdf(data: CertificateData): Promise<str
   doc.setFont('helvetica', 'bold');
   doc.text('✓  VERIFIED DEFORESTATION-FREE', pageW / 2, 62, { align: 'center' });
 
-  // ── Product information ──
   let y = 78;
   const addSection = (title: string) => {
     doc.setFillColor(240, 253, 244);
@@ -111,7 +141,6 @@ export async function generateCertificatePdf(data: CertificateData): Promise<str
   y += 16;
 
   addSection('Supply Chain Summary');
-  // 3 summary boxes
   const boxW = (contentW - 8) / 3;
   const boxes = [
     { label: 'Smallholder Farmers', value: String(data.totalSmallholders) },
@@ -140,7 +169,6 @@ export async function generateCertificatePdf(data: CertificateData): Promise<str
   addField('Processing Facility', [data.facilityName, data.facilityLocation].filter(Boolean).join(' — ') || 'N/A', margin, 1);
   y += 16;
 
-  // ── Pedigree code + verify URL ──
   addSection('Verification');
   doc.setTextColor(107, 114, 128);
   doc.setFontSize(7);
