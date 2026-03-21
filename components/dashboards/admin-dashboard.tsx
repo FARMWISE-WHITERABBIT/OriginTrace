@@ -159,8 +159,8 @@ export function AdminDashboard() {
       description: 'Recent shipments tracked',
       trend: null as number | null,
       color: 'text-violet-600 dark:text-violet-400',
-      href: '/app/shipments',
-      action: 'View shipments →',
+      href: '/app/shipments?status=pending',
+      action: 'View active shipments →',
     },
     {
       title: 'Compliance Rate',
@@ -173,8 +173,12 @@ export function AdminDashboard() {
         : overallComplianceRate >= 50
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-red-600 dark:text-red-400',
-      href: '/app/farms?status=pending',
-      action: overallComplianceRate < 100 ? 'Review compliance →' : 'View details →',
+      href: analytics?.farmSummary.pending
+        ? '/app/farms?status=pending'
+        : analytics?.compliance.flaggedBatches
+        ? '/app/yield-alerts'
+        : '/app/farms',
+      action: overallComplianceRate < 100 ? 'Review compliance →' : 'All compliant →',
     },
   ];
 
