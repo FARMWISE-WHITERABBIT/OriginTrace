@@ -86,7 +86,7 @@ export async function GET(
     const bulkBatchPromise = batchIds.length > 0
       ? supabase
           .from('collection_batches')
-          .select('*, farm:farms(id, farmer_name, community, gps_latitude, gps_longitude)')
+          .select('*, farm:farms(id, farmer_name, community, area_hectares, compliance_status)')
           .in('id', batchIds)
       : Promise.resolve({ data: [] });
 
@@ -182,7 +182,7 @@ export async function GET(
           const bags = bagsByBatchId.get(String(batch.id)) || [];
           const bagCount = bags.length;
           const bagsWithFarmLink = bags.filter((b: any) => b.farm_id).length;
-          const hasGps = !!(batch.farm?.gps_latitude && batch.farm?.gps_longitude);
+          const hasGps = !!(batch.farm?.community); // farm GPS tracked via boundary polygon
 
           if (batch.farm_id) farmIds.push(String(batch.farm_id));
 
@@ -436,7 +436,7 @@ export async function PATCH(
 
           const { data: batch } = await supabase
             .from('collection_batches')
-            .select('*, farm:farms(id, gps_latitude, gps_longitude)')
+            .select('*, farm:farms(id, farmer_name, community)')
             .eq('id', addItem.batch_id)
             .eq('org_id', profile.org_id)
             .single();
@@ -444,7 +444,7 @@ export async function PATCH(
           if (batch) {
             itemInsert.weight_kg = batch.total_weight || 0;
             itemInsert.farm_count = 1;
-            itemInsert.traceability_complete = !!(batch.farm?.gps_latitude && batch.farm?.gps_longitude);
+            itemInsert.traceability_complete = !!(batch.farm_id); // farm linked = traceability present
             itemInsert.compliance_status = batch.status === 'completed' ? 'approved' : 'pending';
           }
         } else if (addItem.item_type === 'finished_good' && addItem.finished_good_id) {

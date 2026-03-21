@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const { data: batchData } = await supabase
       .from('collection_batches')
       .select('id, batch_code, commodity, status, total_weight, bag_count, farm_id, org_id, created_at, synced_at')
-      .eq('batch_id', code)
+      .eq('batch_code', code)
       .limit(1)
       .single();
 
