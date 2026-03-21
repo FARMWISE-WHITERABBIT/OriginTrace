@@ -1,5 +1,5 @@
-import { Suspense } from 'react';
 'use client';
+import { Suspense } from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
