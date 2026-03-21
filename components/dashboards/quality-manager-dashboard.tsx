@@ -180,9 +180,9 @@ export function QualityManagerDashboard() {
     { title: 'Yield Alerts', value: stats.yieldAlertCount, icon: AlertTriangle, color: 'text-yellow-600' },
   ];
 
-  const GRADE_COLORS = ['#2E7D6B', '#E9A23B', '#D84315', '#6FB8A8', '#8ECDC0'];
-  const LAB_COLORS = ['#2E7D6B', '#D84315'];
-  const RISK_COLORS = ['#D84315', '#E9A23B', '#1F5F52', '#6FB8A8', '#8ECDC0'];
+  const GRADE_COLORS = ['#16a34a', '#f59e0b', '#ef4444', '#4ade80', '#86efac'];
+  const LAB_COLORS = ['#16a34a', '#ef4444'];
+  const RISK_COLORS = ['#ef4444', '#f59e0b', '#15803d', '#4ade80', '#86efac'];
 
   return (
     <div className="space-y-4" data-testid="quality-manager-dashboard">
@@ -309,7 +309,7 @@ export function QualityManagerDashboard() {
                 categoryKey="commodity"
                 height={280}
                 barLabel="Batches"
-                color="#2E7D6B"
+                color="#16a34a"
               />
             )}
           </CardContent>

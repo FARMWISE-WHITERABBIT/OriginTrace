@@ -26,19 +26,25 @@ export default function FarmerDeliveriesPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-deliveries-title">
-        <Package className="h-5 w-5 text-[#2E7D6B]" />
+        <Package className="h-5 w-5 text-primary" />
         My Deliveries
       </h2>
 
-      <Card className="bg-[#2E7D6B]/5 border-[#2E7D6B]/20">
+      <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-3 flex justify-between items-center">
-          <span className="text-sm text-[#1F5F52] font-medium">Total Delivered</span>
-          <span className="text-lg font-bold text-[#1F5F52]" data-testid="text-total-delivered">{(totalWeight / 1000).toFixed(1)} tonnes</span>
+          <span className="text-sm text-primary font-medium">Total Delivered</span>
+          <span className="text-lg font-bold text-primary" data-testid="text-total-delivered">{(totalWeight / 1000).toFixed(1)} tonnes</span>
         </CardContent>
       </Card>
 
       {batches.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No deliveries recorded yet.</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Package className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="font-medium text-sm">No deliveries recorded yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Your collection batches will appear here once recorded.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {batches.map(batch => (

@@ -307,8 +307,13 @@ export default function AgentManagementPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="rounded-md border border-border overflow-hidden">
+              <table className="w-full">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>{['Name','Region','Collections','Joined'].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>)}</tr>
+                </thead>
+                <tbody>{Array.from({length:5}).map((_,i)=><tr key={i} className="border-b border-border"><td className="px-4 py-3"><div className="h-4 w-32 bg-muted animate-pulse rounded"/></td><td className="hidden md:table-cell px-4 py-3"><div className="h-4 w-24 bg-muted animate-pulse rounded"/></td><td className="px-4 py-3"><div className="h-5 w-10 bg-muted animate-pulse rounded-full"/></td><td className="hidden md:table-cell px-4 py-3"><div className="h-4 w-20 bg-muted animate-pulse rounded"/></td></tr>)}</tbody>
+              </table>
             </div>
           ) : agents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border rounded-xl">
@@ -327,16 +332,16 @@ export default function AgentManagementPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Region</TableHead>
+                    <TableHead className="hidden md:table-cell">Region</TableHead>
                     <TableHead>Collections</TableHead>
-                    <TableHead>Joined</TableHead>
+                    <TableHead className="hidden md:table-cell">Joined</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {agents.map((agent) => (
                     <TableRow key={agent.id} data-testid={`agent-row-${agent.id}`}>
                       <TableCell className="font-medium">{agent.full_name}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {agent.assigned_states.length > 0 || agent.assigned_lgas.length > 0 ? (
                           <div className="flex flex-wrap items-center gap-1">
                             <MapPin className="h-3 w-3 flex-shrink-0" />
@@ -357,7 +362,7 @@ export default function AgentManagementPage() {
                           {agent.collections_count || 0}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
                         {new Date(agent.created_at).toLocaleDateString()}
                       </TableCell>
                     </TableRow>

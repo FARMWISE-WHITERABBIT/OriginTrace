@@ -313,9 +313,7 @@ export default function TeamPage() {
 
       {/* ── Content ── */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <div className="grid sm:grid-cols-2 gap-3">{Array.from({length:4}).map((_,i)=><div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-border"><div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0"/><div className="space-y-2 flex-1"><div className="h-4 w-28 bg-muted animate-pulse rounded"/><div className="h-3 w-36 bg-muted animate-pulse rounded"/></div></div>)}</div>
       ) : team.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-xl">
           <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">

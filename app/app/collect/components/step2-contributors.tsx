@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Users, Search, Plus, Trash2, X, Loader2, User } from 'lucide-react';
 import type { CollectionLogic } from './use-collection-logic';
+import { OfflineSectionBadge } from '@/components/offline-indicator';
 
 interface Step2Props {
   logic: CollectionLogic;
@@ -17,7 +18,7 @@ export function Step2Contributors({ logic }: Step2Props) {
     showQuickAdd, setShowQuickAdd, quickName, setQuickName,
     quickPhone, setQuickPhone, quickCommunity, setQuickCommunity,
     community, isAddingFarmer, quickAddFarmer,
-    contributors, removeContributor,
+    contributors, removeContributor, isOnline,
   } = logic;
 
   return (

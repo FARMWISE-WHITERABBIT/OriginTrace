@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // kept for potential future use
 import { Label } from '@/components/ui/label';
@@ -46,6 +47,9 @@ const COMMODITY_COLORS: Record<string, string> = {
 
 export default function FarmersPage() {
   const router = useRouter();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const toggleSelect = (id: number) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = (ids: number[]) => setSelected(p => p.size === ids.length && ids.every(id => p.has(id)) ? new Set() : new Set(ids));
   const [farmers, setFarmers] = useState<FarmerLedger[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -262,6 +266,13 @@ export default function FarmersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={sorted.length > 0 && sorted.every(f => selected.has(f.farm_id))}
+                          onCheckedChange={() => toggleAll(sorted.map(f => f.farm_id))}
+                          aria-label="Select all farmers"
+                        />
+                      </TableHead>
                       <TableHead className="cursor-pointer select-none" onClick={() => handleSort('farmer_name')}>
                         Farmer <SortIcon col="farmer_name" />
                       </TableHead>
@@ -314,10 +325,13 @@ export default function FarmersPage() {
                       return (
                         <TableRow
                           key={farmer.farm_id}
-                          className="cursor-pointer hover:bg-muted/50"
+                          className={`cursor-pointer hover:bg-muted/50 ${selected.has(farmer.farm_id) ? 'bg-primary/5' : ''}`}
                           onClick={() => router.push(`/app/farmers/${farmer.farm_id}`)}
                           data-testid={`farmer-row-${farmer.farm_id}`}
                         >
+                          <TableCell onClick={e => { e.stopPropagation(); toggleSelect(farmer.farm_id); }}>
+                            <Checkbox checked={selected.has(farmer.farm_id)} onCheckedChange={() => toggleSelect(farmer.farm_id)} aria-label={`Select ${farmer.farmer_name}`} />
+                          </TableCell>
                           <TableCell className="font-medium">{farmer.farmer_name}</TableCell>
                           <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{farmer.community || '–'}</TableCell>
                           <TableCell>
@@ -350,6 +364,23 @@ export default function FarmersPage() {
                 </Table>
               </CardContent>
             </Card>
+          )}
+
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
+              <span className="text-sm font-medium text-muted-foreground">{selected.size} farmer{selected.size !== 1 ? 's' : ''} selected</span>
+              <div className="w-px h-4 bg-border" />
+              <Button size="sm" variant="outline" onClick={() => {
+                const selectedFarmers = sorted.filter(f => selected.has(f.farm_id));
+                const csv = ['Farmer,Community,Commodity,Area (ha),Deliveries (kg)',
+                  ...selectedFarmers.map(f => [f.farmer_name, f.community||'', f.commodity||'', f.area_hectares||'', f.total_delivery_kg||''].join(','))
+                ].join('\n');
+                const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv],{type:'text/csv'})), download: 'farmers.csv' });
+                a.click();
+              }}>Export CSV</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            </div>
           )}
 
           {/* GRID VIEW */}

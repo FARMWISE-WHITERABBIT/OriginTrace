@@ -75,9 +75,9 @@ interface ESGData {
 }
 
 const RISK_COLORS: Record<string, string> = {
-  low: '#2E7D6B',
-  medium: '#D4A843',
-  high: '#C75050',
+  low: '#16a34a',
+  medium: '#f59e0b',
+  high: '#ef4444',
 };
 
 const RISK_LABELS: Record<string, string> = {
@@ -160,8 +160,8 @@ export function BuyerESGDashboard() {
   ].filter(d => d.value > 0);
 
   const docPieData = [
-    { name: 'Valid', value: data.documentHealth.valid, color: '#2E7D6B' },
-    { name: 'Expiring', value: data.documentHealth.expiringSoon, color: '#D4A843' },
+    { name: 'Valid', value: data.documentHealth.valid, color: '#16a34a' },
+    { name: 'Expiring', value: data.documentHealth.expiringSoon, color: '#f59e0b' },
     { name: 'Expired', value: data.documentHealth.expired, color: '#C75050' },
   ].filter(d => d.value > 0);
 
@@ -202,7 +202,7 @@ export function BuyerESGDashboard() {
               <TrendLineChart
                 data={data.complianceTrend as unknown as Array<Record<string, string | number>>}
                 xKey="month"
-                series={[{ dataKey: 'score', label: 'Avg Score', color: '#2E7D6B' }]}
+                series={[{ dataKey: 'score', label: 'Avg Score', color: '#16a34a' }]}
                 height={250}
                 valueFormatter={(v) => `${v}%`}
               />

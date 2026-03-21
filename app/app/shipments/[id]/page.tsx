@@ -510,6 +510,20 @@ export default function ShipmentDetailPage() {
   const [coldChainLogs, setColdChainLogs] = useState<ColdChainLog[]>([]);
   const [coldChainSummary, setColdChainSummary] = useState<ColdChainSummary | null>(null);
   const [lots, setLots] = useState<ShipmentLot[]>([]);
+  const [activityEvents, setActivityEvents] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityFetched, setActivityFetched] = useState(false);
+
+  const fetchActivity = async () => {
+    if (activityFetched || !shipmentId) return;
+    setActivityLoading(true);
+    try {
+      const res = await fetch(`/api/audit?resource_type=shipment&resource_id=${shipmentId}&limit=20`);
+      if (res.ok) { const d = await res.json(); setActivityEvents(d.logs || d.events || []); }
+      setActivityFetched(true);
+    } catch { /* ignore */ }
+    finally { setActivityLoading(false); }
+  };
   const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
   const [coldChainDialogOpen, setColdChainDialogOpen] = useState(false);
   const [lotDialogOpen, setLotDialogOpen] = useState(false);
@@ -1309,6 +1323,57 @@ export default function ShipmentDetailPage() {
               data-testid="input-edit-notes"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" />Activity
+            </CardTitle>
+            {!activityFetched && (
+              <Button variant="outline" size="sm" onClick={fetchActivity}>Load Activity</Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {activityLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !activityFetched ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Click Load Activity to view the audit trail.</p>
+          ) : activityEvents.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-center">
+              <Clock className="h-8 w-8 text-muted-foreground opacity-30 mb-2" />
+              <p className="text-sm font-medium">No activity recorded</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Changes to this shipment will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {activityEvents.map((ev: any, i: number) => {
+                const isLast = i === activityEvents.length - 1;
+                const label = (ev.action || ev.event_type || 'updated').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+                return (
+                  <div key={ev.id || i} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      {!isLast && <div className="w-0.5 flex-1 bg-border mt-1 min-h-[16px]" />}
+                    </div>
+                    <div className="pb-3">
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ev.actor_email || 'System'}{ev.created_at && ` · ${new Date(ev.created_at).toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -34,21 +34,27 @@ export default function FarmerPaymentsPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-payments-title">
-        <Banknote className="h-5 w-5 text-[#2E7D6B]" />
+        <Banknote className="h-5 w-5 text-primary" />
         My Payments
       </h2>
 
-      <Card className="bg-[#2E7D6B]/5 border-[#2E7D6B]/20">
+      <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-3 flex justify-between items-center">
-          <span className="text-sm text-[#1F5F52] font-medium">Total Received</span>
-          <span className="text-lg font-bold text-[#1F5F52]" data-testid="text-total-received">
+          <span className="text-sm text-primary font-medium">Total Received</span>
+          <span className="text-lg font-bold text-primary" data-testid="text-total-received">
             {currency} {totalReceived.toLocaleString()}
           </span>
         </CardContent>
       </Card>
 
       {payments.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No payments recorded yet.</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Banknote className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="font-medium text-sm">No payments recorded yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Payments from your aggregator will appear here.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {payments.map(payment => {
@@ -58,7 +64,7 @@ export default function FarmerPaymentsPage() {
                 <CardContent className="py-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <MethodIcon className="h-4 w-4 text-[#2E7D6B]" />
+                      <MethodIcon className="h-4 w-4 text-primary" />
                       <span className="font-medium text-sm capitalize">{payment.payment_method?.replace(/_/g, ' ')}</span>
                     </div>
                     <Badge variant={payment.status === 'completed' ? 'default' : payment.status === 'pending' ? 'secondary' : 'destructive'} className="text-xs">

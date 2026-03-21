@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Loader2, Navigation } from 'lucide-react';
 import type { CollectionLogic } from './use-collection-logic';
+import { OfflineStepBanner } from '@/components/offline-indicator';
 
 interface Step1Props {
   logic: CollectionLogic;
@@ -16,7 +17,7 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
     locLoading, states, selectedState, setSelectedState,
     selectedLGA, setSelectedLGA, filteredLGAs,
     community, setCommunity, commodity, setCommodity,
-    commodityOptions, batchId, gpsLat, gpsLng,
+    commodityOptions, batchId, gpsLat, gpsLng, isOnline,
   } = logic;
 
   return (
@@ -28,6 +29,7 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <OfflineStepBanner isOnline={isOnline} />
         <div className="space-y-2">
           <Label>State *</Label>
           {locLoading ? (

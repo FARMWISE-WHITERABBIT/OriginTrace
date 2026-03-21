@@ -146,7 +146,13 @@ export default function FarmerInputsPage() {
       {inputs.length === 0 ? (
         <div className="text-center py-8 space-y-2">
           <Sprout className="h-10 w-10 text-muted-foreground mx-auto" />
-          <p className="text-muted-foreground">No inputs recorded yet.</p>
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <Sprout className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="font-medium text-sm">No inputs recorded yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Log fertilizers, pesticides, and other inputs using the form above.</p>
+          </div>
           <p className="text-xs text-muted-foreground">Tap + to record fertilizer, pesticide, or seed usage.</p>
         </div>
       ) : (

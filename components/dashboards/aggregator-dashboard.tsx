@@ -193,7 +193,7 @@ export function AggregatorDashboard() {
     { label: 'Total Dispatched', value: stats.totalWeight },
   ];
 
-  const DEFORESTATION_COLORS = ['#2E7D6B', '#6FB8A8', '#E9A23B', '#D84315'];
+  const DEFORESTATION_COLORS = ['#16a34a', '#4ade80', '#f59e0b', '#ef4444'];
 
   return (
     <div data-testid="aggregator-dashboard">
@@ -340,7 +340,7 @@ export function AggregatorDashboard() {
                 categoryKey="grade"
                 height={280}
                 barLabel="Bags"
-                colors={['#2E7D6B', '#1F5F52', '#6FB8A8', '#3A9B8A', '#8ECDC0']}
+                colors={['#16a34a', '#15803d', '#4ade80', '#22c55e', '#86efac']}
               />
             )}
           </CardContent>

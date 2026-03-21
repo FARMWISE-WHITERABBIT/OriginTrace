@@ -128,7 +128,10 @@ export default function FarmerProfilePage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">No training assigned yet.</p>
+            <div className="flex flex-col items-center py-6 text-center">
+              <p className="text-sm font-medium">No training assigned yet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Check the Training tab for full details.</p>
+            </div>
           )}
         </CardContent>
       </Card>

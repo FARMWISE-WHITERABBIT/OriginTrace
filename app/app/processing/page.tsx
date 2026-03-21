@@ -624,9 +624,7 @@ export default function ProcessingPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <div className="rounded-md border border-border overflow-hidden"><table className="w-full"><thead className="border-b border-border bg-muted/30"><tr>{["Run Code","Facility","Product","Input","Output","Recovery","Status"].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>)}</tr></thead><tbody>{Array.from({length:5}).map((_,i)=><tr key={i} className="border-b border-border">{[24,32,24,16,16,16,16].map((w,j)=><td key={j} className="px-4 py-3"><div className={`h-4 w-${w} bg-muted animate-pulse rounded`}/></td>)}</tr>)}</tbody></table></div>
           ) : processingRuns.length === 0 ? (
             <div className="text-center py-12">
               <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

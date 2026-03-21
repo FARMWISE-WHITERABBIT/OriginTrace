@@ -7,13 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Package } from 'lucide-react';
 import type { CollectionLogic } from './use-collection-logic';
+import { OfflineSectionBadge } from '@/components/offline-indicator';
 
 interface Step4Props {
   logic: CollectionLogic;
 }
 
 export function Step4InventoryLog({ logic }: Step4Props) {
-  const { inventory, updateInventory, totalBags, totalWeight, batchNotes, setBatchNotes } = logic;
+  const { inventory, updateInventory, totalBags, totalWeight, batchNotes, setBatchNotes, isOnline } = logic;
 
   return (
     <Card>
@@ -21,6 +22,7 @@ export function Step4InventoryLog({ logic }: Step4Props) {
         <CardTitle className="text-lg flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" />
           Log Inventory
+          <OfflineSectionBadge isOnline={isOnline} />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
