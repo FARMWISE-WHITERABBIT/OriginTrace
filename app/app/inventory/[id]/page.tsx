@@ -442,6 +442,9 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
                 <div key={bag.id} className="flex items-center gap-1.5 p-2 rounded border border-border bg-muted/20 text-xs">
                   <Package className="h-3 w-3 text-muted-foreground shrink-0" />
                   <span className="font-mono truncate">{bag.serial}</span>
+                  {bag.weight_kg != null && (
+                    <span className="text-muted-foreground shrink-0">{Number(bag.weight_kg).toFixed(1)} kg</span>
+                  )}
                   {bag.grade && <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{bag.grade}</Badge>}
                 </div>
               ))}

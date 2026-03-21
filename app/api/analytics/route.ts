@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
           .eq('org_id', orgId),
         supabase
           .from('bags')
-          .select('id, status, is_compliant')
+          .select('id, status, weight_kg, grade, is_compliant')
           .eq('org_id', orgId),
       ]);
 
