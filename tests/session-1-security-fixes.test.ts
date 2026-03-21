@@ -190,10 +190,11 @@ describe('Project: package.json identity', () => {
     expect(pkg.default.name).toBe('origintrace');
   });
 
-  it('build script should point to scripts/build.ts', async () => {
+  it('build script should be next build for Vercel deployment', async () => {
     const pkg = await import('../package.json', { assert: { type: 'json' } });
-    expect(pkg.default.scripts.build).toContain('scripts/build.ts');
-    expect(pkg.default.scripts.build).not.toContain('script/build.ts');
+    expect(pkg.default.scripts.build).toContain('next build');
+    // Replit-specific wrapper preserved as build:replit
+    expect(pkg.default.scripts['build:replit']).toContain('scripts/build.ts');
   });
 });
 
