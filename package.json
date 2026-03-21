@@ -19,7 +19,8 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:wipe": "tsx scripts/seed-demo.ts --wipe",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --wipe && tsx scripts/seed-demo.ts",
-    "seed:locations": "tsx scripts/seed-locations.ts"
+    "seed:locations": "tsx scripts/seed-locations.ts",
+    "seed:reset-all": "bash scripts/reset-and-seed.sh"
   },
   "dependencies": {
     "@hubspot/api-client": "^12.0.0",
