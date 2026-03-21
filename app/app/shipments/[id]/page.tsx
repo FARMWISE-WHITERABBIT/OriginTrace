@@ -507,6 +507,7 @@ export default function ShipmentDetailPage() {
   const [readiness, setReadiness] = useState<ShipmentReadinessResult | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [uploadDocOpen, setUploadDocOpen] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<string>('');
 
   const handleRecalculate = async () => {
     if (!shipment) return;
@@ -807,7 +808,7 @@ export default function ShipmentDetailPage() {
 
       <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
 
-      {/* Supply Chain Visualisation */}
+      {/* Linear Supply Chain Traceability Timeline */}
       <Card data-testid="card-supply-chain-graph">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -815,151 +816,204 @@ export default function ShipmentDetailPage() {
             Supply Chain Traceability
           </CardTitle>
           <CardDescription>
-            End-to-end provenance chain — Farm → Batch → Processing → Finished Good → Shipment
+            End-to-end provenance — Farm → Batch → Processing → Finished Good → Shipment
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-0 pb-4">
-          <SupplyChainGraph shipmentId={shipmentId} />
+        <CardContent>
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Add shipment items to see the traceability chain.</p>
+          ) : (() => {
+            const batchItems = items.filter(i => i.item_type === 'batch');
+            const fgItems = items.filter(i => i.item_type === 'finished_good');
+            const totalFarms = items.reduce((s, i) => s + (i.farm_count || 0), 0);
+            const steps = [
+              { label: 'Farms', value: totalFarms || '—', sub: 'source farms', icon: MapPin, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/20', link: '/app/farms' },
+              { label: 'Batches', value: batchItems.length || '—', sub: 'collection batches', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/20', link: '/app/inventory' },
+              { label: 'Processing', value: fgItems.length > 0 ? '✓' : '—', sub: 'processing runs', icon: PackageCheck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20', link: '/app/processing' },
+              { label: 'Finished Good', value: fgItems.length || '—', sub: 'finished goods', icon: CircleCheckBig, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20', link: '/app/pedigree' },
+              { label: 'Shipment', value: '1', sub: shipment.status, icon: Ship, color: 'text-primary', bg: 'bg-primary/5', link: null },
+            ];
+            return (
+              <div className="flex items-start gap-0 overflow-x-auto pb-2">
+                {steps.map((step, i) => {
+                  const Icon = step.icon;
+                  const content = (
+                    <div className={`flex flex-col items-center text-center min-w-[90px] px-2 py-3 rounded-lg ${step.bg} ${step.link ? 'hover:opacity-80 cursor-pointer transition-opacity' : ''}`}>
+                      <div className={`h-9 w-9 rounded-full bg-background flex items-center justify-center mb-2 border`}>
+                        <Icon className={`h-4 w-4 ${step.color}`} />
+                      </div>
+                      <p className={`text-lg font-bold ${step.color}`}>{step.value}</p>
+                      <p className="text-xs font-medium mt-0.5">{step.label}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{step.sub}</p>
+                    </div>
+                  );
+                  return (
+                    <div key={step.label} className="flex items-center shrink-0">
+                      {step.link ? <Link href={step.link}>{content}</Link> : content}
+                      {i < steps.length - 1 && (
+                        <div className="flex items-center px-1 shrink-0">
+                          <div className="h-px w-6 bg-border" />
+                          <ChevronDown className="h-3 w-3 text-muted-foreground -rotate-90 -mx-1" />
+                          <div className="h-px w-6 bg-border" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
-      {readiness && readiness.risk_flags.length > 0 && (
-        <Card>
+      {/* Readiness Action Center — unified prioritised action list */}
+      {readiness && (readiness.risk_flags.length > 0 || readiness.remediation_items.length > 0 || readiness.dimensions.length > 0) && (
+        <Card data-testid="card-action-center">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              Risk Flags ({readiness.risk_flags.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {readiness.risk_flags.map((flag: RiskFlag, i: number) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 p-3 rounded-md ${
-                    flag.severity === 'critical' ? 'bg-red-50 dark:bg-red-950/20' :
-                    flag.severity === 'warning' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
-                    'bg-muted/50'
-                  }`}
-                  data-testid={`risk-flag-${i}`}
-                >
-                  {flag.severity === 'critical' ? (
-                    <XCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-                  ) : flag.severity === 'warning' ? (
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
-                  ) : (
-                    <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{flag.message}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{flag.category}</Badge>
-                      {flag.is_hard_fail && (
-                        <Badge variant="destructive" className="text-xs">Hard Fail</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {readiness && readiness.dimensions.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {readiness.dimensions.map((dim: ScoreDimension) => {
-            const DimIcon = DIMENSION_ICONS[dim.name] || FileText;
-            const isExpanded = expandedDimension === dim.name;
-            return (
-              <Card key={dim.name} data-testid={`card-dimension-${dim.name}`}>
-                <CardContent className="pt-4 pb-4">
-                  <div
-                    className="flex items-center justify-between gap-2 cursor-pointer"
-                    onClick={() => setExpandedDimension(isExpanded ? null : dim.name)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-                        <DimIcon className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Readiness Action Center
+                </CardTitle>
+                <CardDescription>What needs to happen before this shipment can go</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                {readiness.dimensions.map((dim: ScoreDimension) => {
+                  const DimIcon = DIMENSION_ICONS[dim.name] || FileText;
+                  return (
+                    <div key={dim.name} title={`${dim.name}: ${Math.round(dim.score)}/100`} className="flex flex-col items-center gap-0.5">
+                      <div className={`h-7 w-7 rounded-md flex items-center justify-center ${
+                        dim.score >= 75 ? 'bg-green-100 dark:bg-green-950/30' :
+                        dim.score >= 50 ? 'bg-yellow-100 dark:bg-yellow-950/30' :
+                        'bg-red-100 dark:bg-red-950/30'
+                      }`}>
+                        <DimIcon className={`h-3.5 w-3.5 ${
+                          dim.score >= 75 ? 'text-green-600' :
+                          dim.score >= 50 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`} />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{dim.name}</p>
-                        <p className="text-xs text-muted-foreground">{Math.round(dim.weight * 100)}% weight</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-lg font-bold ${
+                      <span className={`text-[10px] font-bold ${
                         dim.score >= 75 ? 'text-green-600' :
                         dim.score >= 50 ? 'text-yellow-600' :
                         'text-red-600'
-                      }`}>
-                        {Math.round(dim.score)}
-                      </span>
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      }`}>{Math.round(dim.score)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {/* Hard fails and critical flags first */}
+              {readiness.risk_flags
+                .filter((f: RiskFlag) => f.severity === 'critical' || f.is_hard_fail)
+                .map((flag: RiskFlag, i: number) => (
+                  <div key={`crit-${i}`} className="flex items-start gap-3 p-3 rounded-md bg-red-50 dark:bg-red-950/20" data-testid={`action-critical-${i}`}>
+                    <XCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-300">{flag.message}</p>
+                        {flag.is_hard_fail && <Badge variant="destructive" className="text-xs">Hard Fail</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 capitalize">{flag.category}</p>
                     </div>
                   </div>
-                  <Progress
-                    value={dim.score}
-                    className="h-1.5 mt-3"
-                  />
-                  {isExpanded && dim.details.length > 0 && (
-                    <div className="mt-3 space-y-1 border-t pt-3">
-                      {dim.details.map((detail: string, i: number) => (
-                        <p key={i} className="text-xs text-muted-foreground">{detail}</p>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {readiness && readiness.remediation_items.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">
-                Remediation Checklist ({readiness.remediation_items.length})
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowRemediation(!showRemediation)}
-                data-testid="button-toggle-remediation"
-              >
-                {showRemediation ? 'Hide' : 'Show'}
-              </Button>
-            </div>
-            <CardDescription>Actions to improve your shipment readiness score</CardDescription>
-          </CardHeader>
-          {showRemediation && (
-            <CardContent>
-              <div className="space-y-3">
-                {readiness.remediation_items.map((item: RemediationItem, i: number) => (
-                  <div key={i} className="flex items-start gap-3" data-testid={`remediation-item-${i}`}>
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      item.priority === 'urgent' ? 'bg-red-100 dark:bg-red-950/30' :
-                      item.priority === 'important' ? 'bg-yellow-100 dark:bg-yellow-950/30' :
-                      'bg-muted'
-                    }`}>
-                      <span className="text-xs font-bold">{i + 1}</span>
-                    </div>
-                    <div className="min-w-0">
+                ))}
+              {/* Urgent remediation items */}
+              {readiness.remediation_items
+                .filter((item: RemediationItem) => item.priority === 'urgent')
+                .map((item: RemediationItem, i: number) => (
+                  <div key={`urgent-${i}`} className="flex items-start gap-3 p-3 rounded-md bg-red-50 dark:bg-red-950/20" data-testid={`action-urgent-${i}`}>
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{item.title}</p>
-                        <Badge variant={item.priority === 'urgent' ? 'destructive' : 'outline'} className="text-xs">
-                          {item.priority}
-                        </Badge>
+                        <Badge variant="destructive" className="text-xs">Critical</Badge>
+                        {/* Inline upload button for missing document items */}
+                        {item.title.toLowerCase().includes('document') || item.title.toLowerCase().includes('certificate') ? (
+                          <Button size="sm" variant="outline" className="h-6 text-xs px-2 ml-auto shrink-0"
+                            onClick={() => {
+                              const docKey = Object.keys(DOC_LABELS).find(k =>
+                                item.title.toLowerCase().includes(k.replace(/_/g, ' ')) ||
+                                DOC_LABELS[k].toLowerCase().includes(item.title.toLowerCase().split(' ')[0])
+                              );
+                              setUploadDocType(docKey || '');
+                              setUploadDocOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />Upload
+                          </Button>
+                        ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
                     </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          )}
+              {/* Warning flags */}
+              {readiness.risk_flags
+                .filter((f: RiskFlag) => f.severity === 'warning' && !f.is_hard_fail)
+                .map((flag: RiskFlag, i: number) => (
+                  <div key={`warn-${i}`} className="flex items-start gap-3 p-3 rounded-md bg-yellow-50 dark:bg-yellow-950/20" data-testid={`action-warning-${i}`}>
+                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{flag.message}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 capitalize">{flag.category}</p>
+                    </div>
+                  </div>
+                ))}
+              {/* Important remediation items */}
+              {readiness.remediation_items
+                .filter((item: RemediationItem) => item.priority === 'important')
+                .map((item: RemediationItem, i: number) => (
+                  <div key={`imp-${i}`} className="flex items-start gap-3 p-3 rounded-md bg-yellow-50 dark:bg-yellow-950/20" data-testid={`action-important-${i}`}>
+                    <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <Badge variant="outline" className="text-xs">Important</Badge>
+                        {item.title.toLowerCase().includes('document') || item.title.toLowerCase().includes('certificate') ? (
+                          <Button size="sm" variant="outline" className="h-6 text-xs px-2 ml-auto shrink-0"
+                            onClick={() => {
+                              const docKey = Object.keys(DOC_LABELS).find(k =>
+                                item.title.toLowerCase().includes(k.replace(/_/g, ' ')) ||
+                                DOC_LABELS[k].toLowerCase().includes(item.title.toLowerCase().split(' ')[0])
+                              );
+                              setUploadDocType(docKey || '');
+                              setUploadDocOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />Upload
+                          </Button>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              {/* Advisory items */}
+              {readiness.remediation_items
+                .filter((item: RemediationItem) => item.priority !== 'urgent' && item.priority !== 'important')
+                .map((item: RemediationItem, i: number) => (
+                  <div key={`adv-${i}`} className="flex items-start gap-3 p-3 rounded-md bg-muted/50" data-testid={`action-advisory-${i}`}>
+                    <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{item.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              {/* All clear */}
+              {readiness.risk_flags.length === 0 && readiness.remediation_items.length === 0 && (
+                <div className="flex items-center gap-3 p-3 rounded-md bg-green-50 dark:bg-green-950/20">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                  <p className="text-sm font-medium text-green-800 dark:text-green-300">All checks passed — shipment is ready to go</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
         </Card>
       )}
 
@@ -995,7 +1049,7 @@ export default function ShipmentDetailPage() {
                 <CardTitle className="text-base">Export Documentation</CardTitle>
                 <CardDescription>Mark documents that are ready for this shipment</CardDescription>
               </div>
-              <Dialog open={uploadDocOpen} onOpenChange={setUploadDocOpen}>
+              <Dialog open={uploadDocOpen} onOpenChange={(open) => { setUploadDocOpen(open); if (!open) setUploadDocType(''); }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="shrink-0">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />Upload Document
@@ -1008,25 +1062,46 @@ export default function ShipmentDetailPage() {
                       Attach a compliance document to shipment {shipment?.shipment_code}
                     </DialogDescription>
                   </DialogHeader>
-                  <DocumentUpload
-                    onUploadComplete={async (result) => {
-                      if (shipment) {
-                        await fetch('/api/documents', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            title: result.file_name,
-                            file_url: result.url,
-                            linked_entity_type: 'shipment',
-                            linked_entity_id: shipment.id,
-                          }),
-                        });
-                        setUploadDocOpen(false);
-                        // Refresh shipment data to show new document
-                        fetchShipment();
-                      }
-                    }}
-                  />
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="upload-doc-type">Document Type <span className="text-destructive">*</span></Label>
+                      <Select value={uploadDocType} onValueChange={setUploadDocType}>
+                        <SelectTrigger id="upload-doc-type" data-testid="select-upload-doc-type">
+                          <SelectValue placeholder="Select document type…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(DOC_LABELS).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {uploadDocType && (
+                      <DocumentUpload
+                        onUploadComplete={async (result) => {
+                          if (shipment) {
+                            await fetch('/api/documents', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                title: result.file_name,
+                                file_url: result.url,
+                                document_type: uploadDocType,
+                                linked_entity_type: 'shipment',
+                                linked_entity_id: shipment.id,
+                              }),
+                            });
+                            setUploadDocOpen(false);
+                            setUploadDocType('');
+                            fetchShipment();
+                            // Trigger score recompute — new document may improve readiness
+                            handleRecalculate();
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>
