@@ -60,17 +60,25 @@ async function wipeDemoData() {
     'shipment_outcomes','shipment_items','documents','contract_shipments','shipments',
     'finished_goods','processing_run_batches','processing_runs','bags','batch_contributions',
     'collection_batches','farm_certifications','farmer_inputs','farmer_training',
-    'farmer_performance_ledger','farmer_accounts','yield_predictions','farms',
+    'farmer_performance_ledger','farmer_accounts','farms',
     'compliance_profiles','api_keys',
   ];
+  // Wipe farm_conflicts FIRST (FK references farms)
+  await db.from('farm_conflicts').delete().gt('id', 0);
+  ok('wiped farm_conflicts');
   for (const t of uuidTables) {
     const { error } = await db.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error?.message?.includes('schema cache') || error?.message?.includes('does not exist')) warn(`${t}: ${error!.message}`);
     else if (error) warn(`${t}: ${error.message}`);
     else ok(`wiped ${t}`);
   }
-  await db.from('farm_conflicts').delete().gt('id', 0);
-  ok('wiped farm_conflicts');
+  // Wipe optional tables that may not exist in all environments
+  for (const t of ['yield_predictions','pedigree_verification','cold_chain_logs','compliance_documents','shipment_outcomes']) {
+    const { error } = await db.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (!error || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+      if (!error) ok(`wiped ${t}`); else warn(`${t}: not in live DB (skip)`);
+    }
+  }
   for (const t of ['tender_bids','tenders','contracts','buyer_organizations']) {
     await db.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000');
   }
@@ -228,10 +236,9 @@ async function seed() {
   const cashewFarms = await ins('farms', cashewDefs.map(f => ({
     org_id:eId, farmer_name:f.name, phone:f.phone, community:f.community,
     area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
-    commodity:'cashew', state:'Kogi', lga:'Kabba-Bunu',
-    latitude:f.lat, longitude:f.lng,
+    commodity:'cashew',
     boundary:{ type:'Polygon', coordinates:[[[f.lng-.005,f.lat-.005],[f.lng+.005,f.lat-.005],[f.lng+.005,f.lat+.005],[f.lng-.005,f.lat+.005],[f.lng-.005,f.lat-.005]]] },
-    created_by:adminUserId, consent_given:true,
+    created_by:adminUserId,
     created_at:daysAgo(rnd(45,90)),
   })), '4 cashew farms — Kogi State');
   const [cF1,cF2,cF3,cF4] = cashewFarms;
@@ -247,10 +254,9 @@ async function seed() {
   const hibiscusFarms = await ins('farms', hibiscusDefs.map(f => ({
     org_id:eId, farmer_name:f.name, phone:f.phone, community:f.community,
     area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
-    commodity:'hibiscus', state:'Kano', lga:'Wudil',
-    latitude:f.lat, longitude:f.lng,
+    commodity:'hibiscus',
     boundary:{ type:'Polygon', coordinates:[[[f.lng-.004,f.lat-.004],[f.lng+.004,f.lat-.004],[f.lng+.004,f.lat+.004],[f.lng-.004,f.lat+.004],[f.lng-.004,f.lat-.004]]] },
-    created_by:adminUserId, consent_given:true,
+    created_by:adminUserId,
     created_at:daysAgo(rnd(20,50)),
   })), '3 hibiscus farms — Kano State');
   const [hF1,hF2,hF3] = hibiscusFarms;
