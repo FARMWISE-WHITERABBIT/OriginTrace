@@ -1277,3 +1277,10 @@ END $$;
 ALTER TABLE bags ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(12,2) DEFAULT 0;
 ALTER TABLE bags ADD COLUMN IF NOT EXISTS grade TEXT;
 ALTER TABLE bags ADD COLUMN IF NOT EXISTS is_compliant BOOLEAN DEFAULT true;
+
+-- Add dispatch columns to collection_batches (used by dispatch page)
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatched_at TIMESTAMPTZ;
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatched_by UUID REFERENCES auth.users(id);
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS dispatch_destination TEXT;
+ALTER TABLE collection_batches ADD COLUMN IF NOT EXISTS vehicle_reference TEXT;
