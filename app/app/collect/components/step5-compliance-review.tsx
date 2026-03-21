@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, CheckCircle, AlertTriangle } from 'lucide-react';
 import type { CollectionLogic } from './use-collection-logic';
+import { OfflineSectionBadge } from '@/components/offline-indicator';
 
 interface Step5Props {
   logic: CollectionLogic;

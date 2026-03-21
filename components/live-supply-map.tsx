@@ -87,10 +87,10 @@ function MapContent({ farms }: { farms: Farm[] }) {
             >
               <Popup>
                 <div className="text-sm p-1">
-                  <strong className="block text-slate-900">{farm.farmer_name}</strong>
-                  <span className="text-slate-600">{farm.community}</span>
+                  <strong className="block text-foreground">{farm.farmer_name}</strong>
+                  <span className="text-muted-foreground">{farm.community}</span>
                   {farm.area_hectares && (
-                    <span className="block text-slate-500">{farm.area_hectares.toFixed(2)} ha</span>
+                    <span className="block text-muted-foreground">{farm.area_hectares.toFixed(2)} ha</span>
                   )}
                   <span 
                     className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium"

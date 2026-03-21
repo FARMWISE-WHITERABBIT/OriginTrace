@@ -154,9 +154,18 @@ export default function FarmerRegistrationPage() {
   };
 
   const canSave = fullName.trim().length >= 2 && selectedState && selectedLGA && community.trim() && hasConsent;
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleSave = async () => {
-    if (!canSave) return;
+    // Validate fields inline before submitting
+    const errs: Record<string, string> = {};
+    if (!fullName.trim() || fullName.trim().length < 2) errs.fullName = 'Full name must be at least 2 characters';
+    if (!selectedState) errs.state = 'State is required';
+    if (!selectedLGA) errs.lga = 'LGA is required';
+    if (!community.trim()) errs.community = 'Community is required';
+    if (!hasConsent) errs.consent = 'Farmer consent is required';
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
     setIsSaving(true);
 
     try {
@@ -328,10 +337,13 @@ export default function FarmerRegistrationPage() {
             <Label>Full Name *</Label>
             <Input
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => { setFullName(e.target.value); if (fieldErrors.fullName) setFieldErrors(fe => ({ ...fe, fullName: '' })); }}
               placeholder="Enter farmer's full name"
+              className={fieldErrors.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}
+              aria-describedby={fieldErrors.fullName ? 'err-fullName' : undefined}
               data-testid="input-full-name"
             />
+            {fieldErrors.fullName && <p id="err-fullName" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.fullName}</p>}
           </div>
           <div className="space-y-2">
             <Label>Primary Commodity</Label>
@@ -389,28 +401,32 @@ export default function FarmerRegistrationPage() {
             ) : (
               <select
                 value={selectedState}
-                onChange={(e) => { setSelectedState(e.target.value); setSelectedLGA(''); setCommunity(''); setCommunityMode('select'); }}
-                className="w-full h-9 px-3 border rounded-md bg-background text-sm"
+                onChange={(e) => { setSelectedState(e.target.value); setSelectedLGA(''); setCommunity(''); setCommunityMode('select'); if (fieldErrors.state) setFieldErrors(fe => ({ ...fe, state: '' })); }}
+                className={`w-full h-9 px-3 border rounded-md bg-background text-sm ${fieldErrors.state ? 'border-destructive' : ''}`}
+                aria-describedby={fieldErrors.state ? 'err-state' : undefined}
                 data-testid="select-state"
               >
                 <option value="">Select State</option>
                 {states.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             )}
+            {fieldErrors.state && <p id="err-state" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.state}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>LGA *</Label>
             <select
               value={selectedLGA}
-              onChange={(e) => { setSelectedLGA(e.target.value); setCommunity(''); setCommunityMode('select'); }}
+              onChange={(e) => { setSelectedLGA(e.target.value); setCommunity(''); setCommunityMode('select'); if (fieldErrors.lga) setFieldErrors(fe => ({ ...fe, lga: '' })); }}
               disabled={!selectedState}
-              className="w-full h-9 px-3 border rounded-md bg-background text-sm disabled:opacity-50"
+              className={`w-full h-9 px-3 border rounded-md bg-background text-sm disabled:opacity-50 ${fieldErrors.lga ? 'border-destructive' : ''}`}
+              aria-describedby={fieldErrors.lga ? 'err-lga' : undefined}
               data-testid="select-lga"
             >
               <option value="">Select LGA</option>
               {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
+            {fieldErrors.lga && <p id="err-lga" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.lga}</p>}
           </div>
 
           <div className="space-y-2">
@@ -439,8 +455,10 @@ export default function FarmerRegistrationPage() {
               <div className="space-y-2">
                 <Input
                   value={community}
-                  onChange={(e) => setCommunity(e.target.value)}
+                  onChange={(e) => { setCommunity(e.target.value); if (fieldErrors.community) setFieldErrors(fe => ({ ...fe, community: '' })); }}
                   placeholder="Enter community name"
+                  className={fieldErrors.community ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  aria-describedby={fieldErrors.community ? 'err-community' : undefined}
                   data-testid="input-community"
                 />
                 {filteredVillages.length > 0 && (

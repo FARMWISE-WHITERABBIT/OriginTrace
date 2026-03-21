@@ -335,9 +335,7 @@ export default function BuyerTendersPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="border border-border rounded-xl p-4 bg-card space-y-3"><div className="flex justify-between items-center"><div className="h-4 w-40 bg-muted animate-pulse rounded"/><div className="h-5 w-16 bg-muted animate-pulse rounded-full"/></div><div className="h-3 w-56 bg-muted animate-pulse rounded"/><div className="h-3 w-32 bg-muted animate-pulse rounded"/></div>)}</div>
       ) : filteredTenders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -408,7 +406,10 @@ export default function BuyerTendersPage() {
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       </div>
                     ) : (bids[tender.id] || []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-bids">No bids received yet.</p>
+                      <div className="flex flex-col items-center py-6 text-center" data-testid="text-no-bids">
+                      <p className="font-medium text-sm">No bids yet</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Bids from exporters will appear here once submitted.</p>
+                    </div>
                     ) : (
                       <div className="space-y-3">
                         <h4 className="text-sm font-medium">Bid Comparison</h4>

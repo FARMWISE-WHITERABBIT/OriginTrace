@@ -181,7 +181,7 @@ export default function FarmsPage() {
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center h-48">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <div className="col-span-full space-y-3 p-4">{Array.from({length:4}).map((_,i)=><div key={i} className="h-24 bg-muted animate-pulse rounded-xl"/>)}</div>
                 </div>
               ) : filteredFarms.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">

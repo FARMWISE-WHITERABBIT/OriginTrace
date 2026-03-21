@@ -53,7 +53,7 @@ export default function ResolveBatchPage() {
     <TierGate feature="resolve" requiredTier="pro" featureLabel="Resolve">
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
       </div>
     }>
       <ResolveBatchContent />

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -363,6 +364,9 @@ function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = (ids: string[]) => setSelected(p => p.size === ids.length && ids.every(id => p.has(id)) ? new Set() : new Set(ids));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -620,9 +624,7 @@ function DocumentsPage() {
         </div>
 
         {isLoading || orgLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
         ) : filteredDocuments.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -638,12 +640,23 @@ function DocumentsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-3">
+            {/* Select-all bar */}
+            <div className="flex items-center gap-3 px-1">
+              <Checkbox
+                checked={filteredDocuments.length > 0 && filteredDocuments.every(d => selected.has(d.id))}
+                onCheckedChange={() => toggleAll(filteredDocuments.map(d => d.id))}
+                aria-label="Select all documents"
+              />
+              <span className="text-xs text-muted-foreground">{selected.size > 0 ? `${selected.size} selected` : `${filteredDocuments.length} document${filteredDocuments.length !== 1 ? 's' : ''}`}</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredDocuments.map(doc => (
-              <Card key={doc.id} data-testid={`card-document-${doc.id}`}>
+              <Card key={doc.id} data-testid={`card-document-${doc.id}`} className={selected.has(doc.id) ? 'ring-2 ring-primary/40' : ''}>
                 <CardContent className="pt-4 pb-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
+                      <Checkbox checked={selected.has(doc.id)} onCheckedChange={() => toggleSelect(doc.id)} aria-label={`Select ${doc.title}`} />
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="font-medium text-sm truncate" data-testid={`text-doc-title-${doc.id}`}>
                         {doc.title}
@@ -725,6 +738,21 @@ function DocumentsPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
+              <span className="text-sm font-medium text-muted-foreground">{selected.size} doc{selected.size !== 1 ? 's' : ''} selected</span>
+              <div className="w-px h-4 bg-border" />
+              <Button size="sm" variant="outline" onClick={() => {
+                const sel = filteredDocuments.filter(d => selected.has(d.id));
+                const csv = ['Title,Type,Status,Expiry'].concat(sel.map(d => [d.title, d.document_type||'', d.status||'', d.expiry_date||''].join(','))).join('\n');
+                const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'documents.csv' });
+                a.click();
+              }}>Export CSV</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            </div>
+          )}
           </div>
         )}
 

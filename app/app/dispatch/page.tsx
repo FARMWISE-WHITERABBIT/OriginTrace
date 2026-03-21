@@ -57,7 +57,7 @@ export default function DispatchPage() {
     <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-20 bg-muted animate-pulse rounded-xl"/>)}</div>
       </div>
     }>
       <DispatchContent />

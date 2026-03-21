@@ -6,10 +6,15 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Package, Loader2, MapPin, User, Scale,
   CheckCircle2, AlertTriangle, Clock, Factory, Truck,
-  FileText, Layers, Leaf, Activity,
+  FileText, Layers, Leaf, Activity, Pencil, Save, X,
 } from 'lucide-react';
 
 interface BatchDetail {
@@ -87,6 +92,27 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
 export default function BatchDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const { id } = use(paramsPromise);
   const router = useRouter();
+  const { profile } = useOrg();
+  const { toast } = useToast();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'aggregator';
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ grade: '', notes: '' });
+
+  const startEdit = () => { if (!batch) return; setEditForm({ grade: batch.grade || '', notes: batch.notes || '' }); setEditing(true); };
+  const cancelEdit = () => setEditing(false);
+  const saveEdit = async () => {
+    if (!batch) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/batches/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
+      if (!res.ok) throw new Error();
+      setBatch(b => b ? { ...b, ...editForm } : b);
+      setEditing(false);
+      toast({ title: 'Saved', description: 'Batch updated.' });
+    } catch { toast({ title: 'Error', description: 'Failed to save.', variant: 'destructive' }); }
+    finally { setSaving(false); }
+  };
 
   const [batch, setBatch] = useState<BatchDetail | null>(null);
   const [bags, setBags] = useState<Bag[]>([]);
@@ -218,28 +244,58 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
         {/* Batch Details */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className="h-4 w-4" />Batch Details
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />Batch Details
+              </CardTitle>
+              {isAdmin && !editing && (
+                <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={startEdit}>
+                  <Pencil className="h-3 w-3" />Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {[
-              { label: 'Batch Code',    value: batchCode },
-              { label: 'Commodity',     value: batch.commodity },
-              { label: 'Grade',         value: batch.grade },
-              { label: 'Yield Validated', value: batch.yield_validated
-                  ? <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Validated</span>
-                  : <span className="text-amber-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Pending</span> },
-              { label: 'Collected',     value: batch.collected_at ? new Date(batch.collected_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
-              { label: 'Created',       value: new Date(batch.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm">
-                <span className="text-muted-foreground">{label}</span>
-                <span className="font-medium">{value || '—'}</span>
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-grade">Grade</Label>
+                  <Input id="edit-grade" value={editForm.grade} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} placeholder="e.g. A, B, C" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Textarea id="edit-notes" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Optional notes about this batch" />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" onClick={saveEdit} disabled={saving} className="gap-1.5">
+                    {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={saving} className="gap-1.5">
+                    <X className="h-3 w-3" />Cancel
+                  </Button>
+                </div>
               </div>
-            ))}
-            {batch.notes && (
-              <p className="mt-3 text-xs text-muted-foreground italic p-3 bg-muted/40 rounded-lg">{batch.notes}</p>
+            ) : (
+              <>
+                {[
+                  { label: 'Batch Code',    value: batchCode },
+                  { label: 'Commodity',     value: batch.commodity },
+                  { label: 'Grade',         value: batch.grade },
+                  { label: 'Yield Validated', value: batch.yield_validated
+                      ? <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Validated</span>
+                      : <span className="text-amber-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Pending</span> },
+                  { label: 'Collected',     value: batch.collected_at ? new Date(batch.collected_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
+                  { label: 'Created',       value: new Date(batch.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium">{value || '—'}</span>
+                  </div>
+                ))}
+                {batch.notes && (
+                  <p className="mt-3 text-xs text-muted-foreground italic p-3 bg-muted/40 rounded-lg">{batch.notes}</p>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

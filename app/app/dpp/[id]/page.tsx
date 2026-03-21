@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useOrg } from '@/lib/contexts/org-context';
 import {
   ArrowLeft, Fingerprint, CheckCircle2, Clock, XCircle,
   Loader2, Copy, ExternalLink, Globe, Package, Factory,
@@ -96,9 +97,29 @@ export default function DPPDetailPage({ params: paramsPromise }: { params: Promi
   const { id } = use(paramsPromise);
   const router = useRouter();
   const { toast } = useToast();
+  const { profile } = useOrg();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'compliance_officer';
 
   const [dpp, setDpp] = useState<DPPDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const updateStatus = async (newStatus: string) => {
+    if (!dpp) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/dpp/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      setDpp(d => d ? { ...d, status: newStatus } : d);
+      toast({ title: 'Status updated', description: `Passport is now ${newStatus}.` });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
+    } finally { setUpdatingStatus(false); }
+  };
 
   useEffect(() => {
     fetch(`/api/dpp/${id}`)
@@ -168,6 +189,21 @@ export default function DPPDetailPage({ params: paramsPromise }: { params: Promi
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {isAdmin && dpp.status === 'draft' && (
+            <Button size="sm" variant="outline" onClick={() => updateStatus('active')} disabled={updatingStatus} className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20">
+              {updatingStatus ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Activate
+            </Button>
+          )}
+          {isAdmin && dpp.status === 'active' && (
+            <Button size="sm" variant="outline" onClick={() => updateStatus('revoked')} disabled={updatingStatus} className="gap-1.5 text-red-700 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800">
+              {updatingStatus ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}Revoke
+            </Button>
+          )}
+          {isAdmin && dpp.status === 'revoked' && (
+            <Button size="sm" variant="outline" onClick={() => updateStatus('draft')} disabled={updatingStatus} className="gap-1.5">
+              {updatingStatus ? <Loader2 className="h-3 w-3 animate-spin" /> : <Clock className="h-3 w-3" />}Revert to Draft
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={copyCode}>
             <Copy className="h-3.5 w-3.5 mr-1.5" />Copy Code
           </Button>

@@ -7,5 +7,5 @@ import { Loader2 } from 'lucide-react';
 export default function ComplianceRedirect() {
   const router = useRouter();
   useEffect(() => { router.replace('/app/farms'); }, [router]);
-  return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  return <div className="space-y-3 p-4">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>;
 }

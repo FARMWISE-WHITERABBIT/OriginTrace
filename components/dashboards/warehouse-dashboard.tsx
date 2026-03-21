@@ -63,7 +63,7 @@ export function WarehouseDashboard() {
 
   const inventoryCards = [
     { title: 'Total Bags', value: stats.totalBags, icon: Package, color: 'text-blue-600' },
-    { title: 'Unused', value: stats.unusedBags, icon: BoxIcon, color: 'text-gray-600' },
+    { title: 'Unused', value: stats.unusedBags, icon: BoxIcon, color: 'text-muted-foreground' },
     { title: 'Collected', value: stats.collectedBags, icon: Clock, color: 'text-orange-600' },
     { title: 'Processed', value: stats.processedBags, icon: Warehouse, color: 'text-green-600' },
   ];

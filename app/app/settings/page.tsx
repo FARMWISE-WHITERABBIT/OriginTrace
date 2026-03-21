@@ -573,7 +573,7 @@ function ComplianceProfilesSection() {
       </CardHeader>
       <CardContent>
         {cpLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
         ) : profiles.length === 0 ? (
           <div className="text-center py-10 border-2 border-dashed rounded-lg">
             <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-3" />

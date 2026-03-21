@@ -155,7 +155,7 @@ export default function ReportBuilderPage() {
 
       {isLoading || !data ? (
         <div className="flex items-center justify-center min-h-[300px]" data-testid="report-loading">
-          <Loader2 className="h-8 w-8 animate-spin text-[#2E7D6B]" />
+          <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
         </div>
       ) : (
         <ReportContent type={selectedReport} data={data} period={period} />
@@ -576,7 +576,13 @@ function BuyerIntelligenceReport({ data }: { data: any }) {
                 colors={['#EF4444', '#F59E0B', '#F97316', '#DC2626']}
               />
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">No risk flags recorded.</p>
+              <div className="flex flex-col items-center py-10 text-center">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mb-3">
+                <svg className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <p className="font-medium text-sm">No risk flags recorded</p>
+              <p className="text-xs text-muted-foreground mt-0.5">All compliance checks are passing for this period.</p>
+            </div>
             )}
           </CardContent>
         </Card>

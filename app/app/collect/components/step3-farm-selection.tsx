@@ -5,13 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { TreePine, AlertTriangle, CheckCircle } from 'lucide-react';
 import type { CollectionLogic } from './use-collection-logic';
+import { OfflineSectionBadge } from '@/components/offline-indicator';
 
 interface Step3Props {
   logic: CollectionLogic;
 }
 
 export function Step3FarmSelection({ logic }: Step3Props) {
-  const { contributors, getFarmsForFarmer, toggleFarmForContributor } = logic;
+  const { contributors, getFarmsForFarmer, toggleFarmForContributor, isOnline } = logic;
 
   return (
     <Card>
@@ -19,6 +20,7 @@ export function Step3FarmSelection({ logic }: Step3Props) {
         <CardTitle className="text-lg flex items-center gap-2">
           <TreePine className="h-5 w-5 text-primary" />
           Select Farms
+          <OfflineSectionBadge isOnline={isOnline} />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

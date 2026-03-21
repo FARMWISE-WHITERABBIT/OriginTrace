@@ -126,9 +126,7 @@ export default function DataVaultPage() {
   return (
     <TierGate feature="data_vault" requiredTier="enterprise" featureLabel="Data Vault">
     {isLoading ? (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
     ) : (
     <div className="p-6 space-y-6">
       <div>

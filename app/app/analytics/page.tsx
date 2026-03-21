@@ -59,7 +59,7 @@ function AnalyticsContent() {
   if (isLoading || !data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]" data-testid="analytics-loading">
-        <Loader2 className="h-8 w-8 animate-spin text-[#2E7D6B]" />
+        <div className="space-y-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({length:4}).map((_,i)=><div key={i} className="border border-border rounded-xl p-4 bg-card space-y-2"><div className="h-3 w-20 bg-muted animate-pulse rounded"/><div className="h-7 w-24 bg-muted animate-pulse rounded"/></div>)}</div><div className="border border-border rounded-xl p-6 bg-card"><div className="h-48 bg-muted animate-pulse rounded"/></div></div>
       </div>
     );
   }

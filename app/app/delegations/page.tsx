@@ -168,9 +168,7 @@ export default function DelegationsPage() {
   return (
     <TierGate feature="delegations" requiredTier="pro" featureLabel="Delegations">
     {isLoading ? (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <div className="rounded-md border border-border overflow-hidden"><table className="w-full"><thead className="border-b border-border bg-muted/30"><tr>{Array.from({length:5}).map((_,i)=><th key={i} className="px-4 py-3"><div className="h-3 w-16 bg-muted animate-pulse rounded"/></th>)}</tr></thead><tbody>{Array.from({length:5}).map((_,i)=><tr key={i} className="border-b border-border">{Array.from({length:5}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-muted animate-pulse rounded" style={{width:`${60+j*15}%`}}/></td>)}</tr>)}</tbody></table></div>
     ) : (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">

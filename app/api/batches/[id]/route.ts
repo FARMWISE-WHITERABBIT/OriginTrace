@@ -81,3 +81,22 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = createAdminClient();
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user || !profile?.org_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await request.json();
+    const allowed = ['grade', 'notes'];
+    const updates: Record<string, string> = {};
+    for (const key of allowed) { if (key in body) updates[key] = body[key]; }
+    const { error } = await supabase.from('collection_batches').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('org_id', profile.org_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true });
+  } catch { return NextResponse.json({ error: 'Internal server error' }, { status: 500 }); }
+}
