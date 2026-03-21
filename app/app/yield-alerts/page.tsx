@@ -15,8 +15,9 @@ import { useOrg } from '@/lib/contexts/org-context';
 import { TierGate } from '@/components/tier-gate';
 
 interface FlaggedBatch {
-  id: number;
-  farm_id: number;
+  id: string;
+  batch_code: string | null;
+  farm_id: string;
   total_weight: number;
   status: string;
   yield_flag_reason: string | null;
@@ -246,8 +247,8 @@ export default function YieldAlertsPage() {
                   const calc = calculateExpectedYield(batch);
                   return (
                     <TableRow key={batch.id} data-testid={`yield-batch-${batch.id}`}>
-                      <TableCell className="font-mono">#{batch.id}</TableCell>
-                      <TableCell className="font-medium">{batch.farms?.farmer_name || 'Unknown'}</TableCell>
+                      <TableCell className="font-mono text-xs">{batch.batch_code || batch.id.toString().slice(0, 8)}</TableCell>
+                      <TableCell className="font-medium">{batch.farms?.farmer_name || '—'}</TableCell>
                       <TableCell className="capitalize">{batch.farms?.commodity || '-'}</TableCell>
                       <TableCell className="text-right">{batch.farms?.area_hectares?.toFixed(2) || '-'} ha</TableCell>
                       <TableCell className="text-right">

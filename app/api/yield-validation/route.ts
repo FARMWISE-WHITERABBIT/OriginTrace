@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
 
     const { data: flaggedBatches } = await supabaseAdmin
       .from('collection_batches')
-      .select('id, batch_code, commodity, total_weight, yield_validated, yield_flag_reason, created_at')
+      .select('id, batch_code, farm_id, commodity, total_weight, yield_validated, yield_flag_reason, created_at, farms(id, farmer_name, area_hectares, commodity)')
       .eq('org_id', profile.org_id)
       .eq('yield_validated', false)
       .not('yield_flag_reason', 'is', null)
