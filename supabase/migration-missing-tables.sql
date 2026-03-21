@@ -1340,3 +1340,116 @@ DO $$ BEGIN
       FOR ALL USING (org_id = get_user_org_id());
   END IF;
 END $$;
+
+-- ============================================
+-- Missing tables: farmer_performance_ledger, payment_links, yield_predictions
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS farmer_performance_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  farmer_name TEXT NOT NULL,
+  community TEXT,
+  area_hectares NUMERIC,
+  commodity TEXT,
+  total_delivery_kg NUMERIC DEFAULT 0,
+  total_bag_count INTEGER DEFAULT 0,
+  total_batch_count INTEGER DEFAULT 0,
+  avg_quality_score NUMERIC DEFAULT 0,
+  avg_grade_score NUMERIC DEFAULT 0,
+  grade_a_percentage NUMERIC DEFAULT 0,
+  grade_b_percentage NUMERIC DEFAULT 0,
+  grade_c_percentage NUMERIC DEFAULT 0,
+  compliance_status TEXT DEFAULT 'pending' CHECK (compliance_status IN ('pending', 'verified', 'flagged')),
+  consent_collected BOOLEAN DEFAULT false,
+  has_consent BOOLEAN DEFAULT false,
+  gps_recorded BOOLEAN DEFAULT false,
+  deforestation_free BOOLEAN DEFAULT true,
+  total_payments_ngn NUMERIC DEFAULT 0,
+  payment_reliability INTEGER DEFAULT 100,
+  current_season TEXT,
+  last_delivery_date TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_farmer_ledger_org ON farmer_performance_ledger(org_id);
+ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='farmer_performance_ledger' AND policyname='org_access_farmer_performance_ledger') THEN
+    CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger FOR ALL USING (org_id = get_user_org_id());
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS yield_predictions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  commodity TEXT,
+  predicted_yield_kg NUMERIC(12,2),
+  actual_yield_kg NUMERIC(12,2),
+  variance_pct NUMERIC(8,2),
+  season TEXT,
+  alert_level TEXT CHECK (alert_level IN ('none','positive','warning','critical')),
+  alert_message TEXT,
+  prediction_date TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_yield_predictions_org ON yield_predictions(org_id);
+ALTER TABLE yield_predictions ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='yield_predictions' AND policyname='org_yield_predictions') THEN
+    CREATE POLICY "org_yield_predictions" ON yield_predictions FOR ALL USING (org_id = get_user_org_id());
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payment_links (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES auth.users(id),
+  tier TEXT NOT NULL CHECK (tier IN ('starter','basic','pro','enterprise')),
+  billing_period TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_period IN ('monthly','annual','custom')),
+  amount_ngn DECIMAL(12,2) NOT NULL,
+  paystack_reference TEXT UNIQUE,
+  paystack_link TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','paid','expired','cancelled')),
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
+  paid_at TIMESTAMPTZ,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_links_org ON payment_links(org_id);
+CREATE INDEX IF NOT EXISTS idx_payment_links_ref ON payment_links(paystack_reference);
+CREATE INDEX IF NOT EXISTS idx_payment_links_status ON payment_links(status);
+ALTER TABLE payment_links ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_links' AND policyname='payment_links_service_only') THEN
+    CREATE POLICY "payment_links_service_only" ON payment_links USING (false);
+  END IF;
+END $$;
+
+-- Subscription columns on organizations (idempotent)
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS grace_period_ends_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active'
+    CHECK (subscription_status IN ('active','grace_period','expired','cancelled'));
+
+-- Expand documents.document_type CHECK to include additional types used in the app
+-- Drop old constraint, add new one with full type list
+DO $$
+BEGIN
+  ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_document_type_check;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+
+ALTER TABLE documents ADD CONSTRAINT documents_document_type_check
+  CHECK (document_type IN (
+    'export_license', 'phytosanitary', 'fumigation', 'organic_cert', 'insurance',
+    'lab_result', 'customs_declaration', 'bill_of_lading', 'certificate_of_origin',
+    'quality_cert', 'gacc_registration', 'haccp_cert', 'iso_cert', 'dds',
+    'due_diligence_statement', 'packing_list', 'commercial_invoice', 'other'
+  ));

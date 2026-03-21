@@ -921,7 +921,8 @@ CREATE TABLE IF NOT EXISTS documents (
   document_type TEXT NOT NULL CHECK (document_type IN (
     'export_license', 'phytosanitary', 'fumigation', 'organic_cert', 'insurance',
     'lab_result', 'customs_declaration', 'bill_of_lading', 'certificate_of_origin',
-    'quality_cert', 'other'
+    'quality_cert', 'gacc_registration', 'haccp_cert', 'iso_cert', 'dds',
+    'due_diligence_statement', 'packing_list', 'commercial_invoice', 'other'
   )),
   file_url TEXT,
   file_name TEXT,

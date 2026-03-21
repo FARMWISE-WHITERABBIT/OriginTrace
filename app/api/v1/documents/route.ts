@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     let query = supabase
-      .from('compliance_documents')
-      .select('id, document_type, document_number, issuer, issued_date, expiry_date, status, file_url, created_at', { count: 'exact' })
+      .from('documents')
+      .select('id, title, document_type, issued_date, expiry_date, status, file_url, file_name, notes, linked_entity_type, linked_entity_id, created_at', { count: 'exact' })
       .eq('org_id', auth.orgId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
