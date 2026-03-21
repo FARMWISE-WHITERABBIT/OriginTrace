@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: batchData } = await supabase
       .from('collection_batches')
-      .select('id, batch_id, commodity, status, total_weight, bag_count, gps_lat, gps_lng, farm_id, org_id, created_at, synced_at')
+      .select('id, batch_code, commodity, status, total_weight, bag_count, farm_id, org_id, created_at, synced_at')
       .eq('batch_id', code)
       .limit(1)
       .single();
@@ -82,7 +82,7 @@ async function buildBagVerification(supabase: any, bag: any) {
   if (bag.collection_batch_id) {
     const { data: batch } = await supabase
       .from('collection_batches')
-      .select('id, batch_id, commodity, status, gps_lat, gps_lng, farm_id, created_at')
+      .select('id, batch_code, commodity, status, farm_id, created_at')
       .eq('id', bag.collection_batch_id)
       .single();
 

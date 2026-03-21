@@ -13,12 +13,12 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    // Core batch with farm info
+    // Core batch with farm info — guard against missing columns gracefully
     const { data: batch, error: batchErr } = await supabase
       .from('collection_batches')
       .select(`
         *,
-        farm:farms(id, farmer_name, phone, community, state, area_hectares, commodity, compliance_status)
+        farm:farms(id, farmer_name, phone, community, area_hectares, commodity, compliance_status)
       `)
       .eq('id', id)
       .eq('org_id', profile.org_id)
@@ -26,22 +26,29 @@ export async function GET(
 
     if (batchErr || !batch) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Bags in this batch
-    const { data: bags } = await supabase
+    // Bags in this batch — weight_kg and grade may not exist on older DBs
+    let bags: any[] = [];
+    const bagsResult = await supabase
       .from('bags')
       .select('id, serial, status, weight_kg, grade')
       .eq('collection_batch_id', id)
       .eq('org_id', profile.org_id)
       .order('serial', { ascending: true })
       .limit(200);
+    if (bagsResult.error?.message?.includes('weight_kg') || bagsResult.error?.message?.includes('grade')) {
+      const fallback = await supabase
+        .from('bags').select('id, serial, status')
+        .eq('collection_batch_id', id).eq('org_id', profile.org_id)
+        .order('serial', { ascending: true }).limit(200);
+      bags = fallback.data || [];
+    } else {
+      bags = bagsResult.data || [];
+    }
 
-    // Batch contributions (multi-farm batches)
+    // Batch contributions — only select columns that exist in live schema
     const { data: contributions } = await supabase
       .from('batch_contributions')
-      .select(`
-        farm_id, farmer_name, weight_kg, bag_count, grade,
-        compliance_status, community
-      `)
+      .select('farm_id, farmer_name, weight_kg, bag_count, compliance_status, notes')
       .eq('batch_id', id);
 
     // Processing run that used this batch

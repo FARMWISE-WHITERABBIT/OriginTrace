@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       supabase.from('farms').select('id, farmer_name, community, commodity, compliance_status')
         .eq('org_id', orgId).ilike('farmer_name', pattern).limit(5),
 
-      supabase.from('collection_batches').select('id, batch_code, batch_id, commodity, status, total_weight')
+      supabase.from('collection_batches').select('id, batch_code, commodity, status, total_weight')
         .eq('org_id', orgId).ilike('batch_code', pattern).limit(5),
 
       supabase.from('shipments').select('id, shipment_code, destination_country, status, readiness_score')
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       })),
       ...(batches.data || []).map((b: any) => ({
         type: 'batch', id: b.id,
-        title: b.batch_code || b.batch_id || b.id.slice(0, 8),
+        title: b.batch_code || b.id.slice(0, 8),
         subtitle: `${b.commodity || ''} · ${Number(b.total_weight || 0).toLocaleString()} kg`,
         badge: b.status,
         href: `/app/inventory/${b.id}`,

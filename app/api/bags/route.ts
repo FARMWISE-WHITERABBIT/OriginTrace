@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('bags')
-      .select('id, serial, status, collection_batch_id, weight_kg, grade, created_at, collection_batches(id, batch_id, farm_id, farms(farmer_name, community))')
+      .select('id, serial, status, collection_batch_id, weight_kg, grade, created_at, collection_batches(id, batch_code, farm_id, farms(farmer_name, community))')
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: false })
       .limit(500);
@@ -39,7 +39,19 @@ export async function GET(request: NextRequest) {
       query = query.eq('collection_batch_id', batchIdFilter);
     }
 
-    const { data: bags, error: bagsError } = await query;
+    let bags: any[] | null = null;
+    let bagsError: any = null;
+    ({ data: bags, error: bagsError } = await query);
+
+    // weight_kg and grade may not exist on older DB installs — retry without them
+    if (bagsError?.message?.includes('weight_kg') || bagsError?.message?.includes('grade')) {
+      ({ data: bags, error: bagsError } = await supabaseAdmin
+        .from('bags')
+        .select('id, serial, status, collection_batch_id, created_at, collection_batches(id, batch_code, farm_id, farms(farmer_name, community))')
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false })
+        .limit(500));
+    }
 
     if (bagsError) {
       console.error('Bags fetch error:', bagsError);
@@ -54,11 +66,11 @@ export async function GET(request: NextRequest) {
       serial: string;
       status: string;
       collection_batch_id: string | null;
-      weight_kg: number | null;
-      grade: string | null;
+      weight_kg?: number | null;
+      grade?: string | null;
       created_at: string;
       collection_batches: {
-        batch_id: string | null;
+        batch_code: string | null;
         farm_id: string | null;
         farms: { farmer_name: string | null; community: string | null } | null;
       }[] | null;
@@ -71,7 +83,7 @@ export async function GET(request: NextRequest) {
         serial: b.serial,
         status: b.status,
         collection_batch_id: b.collection_batch_id,
-        batch_id: batch?.batch_id ?? null,
+        batch_code: batch?.batch_code ?? null,
         weight_kg: b.weight_kg ?? null,
         grade: b.grade ?? null,
         farmer_name: batch?.farms?.farmer_name ?? null,

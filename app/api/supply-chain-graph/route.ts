@@ -248,7 +248,7 @@ async function addShipmentUpstream(supabase: any, orgId: string, shipmentId: str
 
   const { data: shipmentItems } = await supabase
     .from('shipment_items')
-    .select('id, batch_id, farm_id, weight_kg')
+    .select('id, collection_batch_id, farm_id, weight_kg')
     .eq('shipment_id', shipmentId);
 
   if (shipmentItems) {

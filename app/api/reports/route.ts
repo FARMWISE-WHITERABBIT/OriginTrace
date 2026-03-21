@@ -188,7 +188,7 @@ async function buildShipmentDDS(supabase: any, orgId: number, start: string, end
 
 async function buildSupplierAudit(supabase: any, orgId: number, start: string, end: string) {
   const [farmsRes, batchesRes] = await Promise.all([
-    supabase.from('farms').select('id, farmer_name, community, state, compliance_status, boundary_geo, area_hectares, commodity, created_at, updated_at').eq('org_id', orgId),
+    supabase.from('farms').select('id, farmer_name, community, compliance_status, boundary_geo, area_hectares, commodity, created_at, updated_at').eq('org_id', orgId),
     supabase.from('collection_batches').select('id, farm_id, total_weight, bag_count, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
   ]);
 
