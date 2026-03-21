@@ -305,7 +305,7 @@ export default function FarmerRegistrationPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-4">
+    <div className="max-w-2xl mx-auto space-y-4">
       <div>
         <h1 className="text-xl font-bold" data-testid="text-page-title">Register Farmer</h1>
         <p className="text-sm text-muted-foreground">Add a new farmer to your organization</p>

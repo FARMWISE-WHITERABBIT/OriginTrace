@@ -107,7 +107,7 @@ async function seed() {
   let eId: string;
   if (existingOrg) { eId = (existingOrg as any).id; ok('org exists'); }
   else {
-    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'pro', commodities: ['cocoa','ginger','sesame','turmeric'] });
+    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'pro', commodities: ['cocoa','ginger','cashew','hibiscus','sesame'] });
     eId = (org as any).id;
   }
   const [buyerOrg] = await ins('buyer_organizations', { name: 'NibsEurope GmbH', slug: 'demo-nibseurope', country: 'Germany', industry: 'Food & Beverage', contact_email: 'procurement@nibseurope-demo.com' });
@@ -216,6 +216,41 @@ async function seed() {
   })), '5 ginger farms — Southern Kaduna');
   const [gF1,gF2,gF3,gF4,gF5] = gingerFarms;
 
+  // 5b. Cashew Farms — Kogi State
+  section('Cashew Farms');
+  type CashewFarmDef = { name:string; phone:string; community:string; area:number; status:string; lat:number; lng:number; notes:string };
+  const cashewDefs: CashewFarmDef[] = [
+    { name:'Abubakar Suleiman', phone:'+2348055600001', community:'Kabba, Kogi',        area:3.8, status:'approved', lat:7.834, lng:6.072, notes:'Cooperative lead. 6-year cashew stands. Rainforest Alliance candidate.' },
+    { name:'Grace Oduola',      phone:'+2348055600002', community:'Lokoja, Kogi',        area:2.5, status:'approved', lat:7.802, lng:6.742, notes:'Family-run orchard. Manual harvest, sun-dried.' },
+    { name:'Ibrahim Yusuf',     phone:'+2348055600003', community:'Okene, Kogi',         area:4.1, status:'pending',  lat:7.548, lng:6.231, notes:'New member. Pending GIS verification.' },
+    { name:'Fatima Adeyemi',    phone:'+2348055600004', community:'Kabba, Kogi',         area:2.2, status:'approved', lat:7.845, lng:6.061, notes:'Premium raw cashew. High kernel outturn.' },
+  ];
+  const cashewFarms = await ins('farms', cashewDefs.map(f => ({
+    org_id:eId, farmer_name:f.name, phone_number:f.phone, community:f.community,
+    area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
+    commodity:'cashew', state:'Kogi', lga:'Kabba-Bunu',
+    latitude:f.lat, longitude:f.lng, created_by:adminUserId, consent_given:true,
+    created_at:daysAgo(rnd(45,90)),
+  })), '4 cashew farms — Kogi State');
+  const [cF1,cF2,cF3,cF4] = cashewFarms;
+
+  // 5c. Hibiscus Farms — Kano State
+  section('Hibiscus Farms');
+  type HibiscusFarmDef = { name:string; phone:string; community:string; area:number; status:string; lat:number; lng:number; notes:string };
+  const hibiscusDefs: HibiscusFarmDef[] = [
+    { name:'Musa Garba',        phone:'+2348066700001', community:'Wudil, Kano',         area:1.8, status:'approved', lat:11.797, lng:8.848, notes:'Organic hibiscus. EU export grade. No synthetic inputs.' },
+    { name:'Hauwa Usman',       phone:'+2348066700002', community:'Gaya, Kano',          area:2.3, status:'approved', lat:11.888, lng:9.013, notes:'Co-op member. 2nd season. Hand-picked calyces.' },
+    { name:'Yusuf Bala',        phone:'+2348066700003', community:'Kura, Kano',          area:1.5, status:'pending',  lat:11.749, lng:8.420, notes:'First season. Good crop density.' },
+  ];
+  const hibiscusFarms = await ins('farms', hibiscusDefs.map(f => ({
+    org_id:eId, farmer_name:f.name, phone_number:f.phone, community:f.community,
+    area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
+    commodity:'hibiscus', state:'Kano', lga:'Wudil',
+    latitude:f.lat, longitude:f.lng, created_by:adminUserId, consent_given:true,
+    created_at:daysAgo(rnd(20,50)),
+  })), '3 hibiscus farms — Kano State');
+  const [hF1,hF2,hF3] = hibiscusFarms;
+
   // 6. Cocoa Collection Batches (each linked to a specific farm via farm_id)
   section('Cocoa Collection Batches');
   type BatchDef = { farm:any; code:string; weight:number; bags:number; grade:string|null; validated:boolean; status:string; daysBack:number; flag?:string };
@@ -255,6 +290,35 @@ async function seed() {
     notes:'Southern Kaduna cooperative — WhiteRabbit Demo Co. 4 member farms. Fresh ginger ready for processing.',
     created_at:daysAgo(18),
   }, 'WRG-GNG-2026-001 ginger batch');
+
+  // 7b. Cashew Batches
+  section('Cashew Batches');
+  const cashewBatchBase = { org_id:eId, status:'completed', yield_validated:true, created_by:agentId };
+  const [cashewBatch1] = await ins('collection_batches', {
+    ...cashewBatchBase, farm_id:(cF1 as any).id,
+    batch_code:'WRK-CSH-2026-001', commodity:'cashew', grade:'Grade 1',
+    total_weight_kg:3200, total_bags:32, collected_at:daysAgo(22),
+    community:'Kabba, Kogi', state:'Kogi', lga:'Kabba-Bunu',
+    notes:'Premium W320 raw cashew. High kernel outturn. 4 cooperative farms aggregated.',
+  }, 'WRK-CSH-2026-001 cashew batch');
+  const [cashewBatch2] = await ins('collection_batches', {
+    ...cashewBatchBase, farm_id:(cF3 as any).id,
+    batch_code:'WRK-CSH-2026-002', commodity:'cashew', grade:'Grade 2',
+    total_weight_kg:1800, total_bags:18, collected_at:daysAgo(12),
+    community:'Okene, Kogi', state:'Kogi', lga:'Okene',
+    notes:'Mixed grade lot. Pending full GIS verification on 1 farm.',
+  }, 'WRK-CSH-2026-002 cashew batch');
+
+  // 7c. Hibiscus Batches
+  section('Hibiscus Batches');
+  const hibiscusBatchBase = { org_id:eId, status:'completed', yield_validated:true, created_by:agentId };
+  const [hibiscusBatch1] = await ins('collection_batches', {
+    ...hibiscusBatchBase, farm_id:(hF1 as any).id,
+    batch_code:'WRH-HIB-2026-001', commodity:'hibiscus', grade:'Grade 1',
+    total_weight_kg:1450, total_bags:29, collected_at:daysAgo(16),
+    community:'Wudil, Kano', state:'Kano', lga:'Wudil',
+    notes:'Organic dried hibiscus calyces. No synthetic inputs. EU export grade. Hand-sorted.',
+  }, 'WRH-HIB-2026-001 hibiscus batch');
 
   // 8. Bags — cocoa batches 1-6 (completed)
   section('Bags — Cocoa');
@@ -315,6 +379,15 @@ async function seed() {
     { farm:gF3,def:gingerDefs[2],commodity:'ginger', deliveries:950,  batches:1, bags:19,  gradeA:100, gradeB:0,   last:daysAgo(18) },
     { farm:gF4,def:gingerDefs[3],commodity:'ginger', deliveries:1170, batches:1, bags:23,  gradeA:100, gradeB:0,   last:daysAgo(18) },
     { farm:gF5,def:gingerDefs[4],commodity:'ginger', deliveries:0,    batches:0, bags:0,   gradeA:0,   gradeB:0,   last:null        },
+    // Cashew farmers
+    { farm:cF1,def:cashewDefs[0],commodity:'cashew', deliveries:3200, batches:1, bags:32,  gradeA:100, gradeB:0,   last:daysAgo(22) },
+    { farm:cF2,def:cashewDefs[1],commodity:'cashew', deliveries:1250, batches:1, bags:13,  gradeA:80,  gradeB:20,  last:daysAgo(22) },
+    { farm:cF3,def:cashewDefs[2],commodity:'cashew', deliveries:1800, batches:1, bags:18,  gradeA:60,  gradeB:40,  last:daysAgo(12) },
+    { farm:cF4,def:cashewDefs[3],commodity:'cashew', deliveries:980,  batches:1, bags:10,  gradeA:90,  gradeB:10,  last:daysAgo(22) },
+    // Hibiscus farmers
+    { farm:hF1,def:hibiscusDefs[0],commodity:'hibiscus', deliveries:1450, batches:1, bags:29, gradeA:100, gradeB:0, last:daysAgo(16) },
+    { farm:hF2,def:hibiscusDefs[1],commodity:'hibiscus', deliveries:920,  batches:1, bags:18, gradeA:90,  gradeB:10, last:daysAgo(16) },
+    { farm:hF3,def:hibiscusDefs[2],commodity:'hibiscus', deliveries:0,    batches:0, bags:0,  gradeA:0,   gradeB:0,  last:null        },
   ];
   await tryIns('farmer_performance_ledger', ledger.map(r => ({
     org_id:eId, farm_id:(r.farm as any).id, farmer_name:r.def.name,
@@ -326,7 +399,7 @@ async function seed() {
     compliance_status:r.def.status==='approved'?'verified':r.def.status==='rejected'?'flagged':'pending',
     consent_collected:r.def.status==='approved', has_consent:r.def.status==='approved',
     last_delivery_date:r.last, current_season:'2026',
-  })), '13 ledger rows');
+  })), '23 ledger rows');
 
   // 9b. Batch Contributions — links farmers → batches
   section('Batch Contributions');

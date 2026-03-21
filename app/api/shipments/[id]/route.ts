@@ -27,9 +27,10 @@ const shipmentPatchSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -50,7 +51,7 @@ export async function GET(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -339,9 +340,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -362,7 +364,7 @@ export async function PATCH(
     const { data: existingShipment, error: fetchError } = await supabase
       .from('shipments')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -399,7 +401,7 @@ export async function PATCH(
       const { error: updateError } = await supabase
         .from('shipments')
         .update(updateData)
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('org_id', profile.org_id);
 
       if (updateError) {
@@ -411,7 +413,7 @@ export async function PATCH(
     if (add_items && Array.isArray(add_items) && add_items.length > 0) {
       for (const addItem of add_items) {
         const itemInsert: Record<string, any> = {
-          shipment_id: params.id,
+          shipment_id: id,
           item_type: addItem.item_type,
         };
 
@@ -457,7 +459,7 @@ export async function PATCH(
         }
       }
 
-      await updateShipmentTotals(supabase, params.id, profile.org_id);
+      await updateShipmentTotals(supabase, id, profile.org_id);
     }
 
     if (remove_items && Array.isArray(remove_items) && remove_items.length > 0) {
@@ -465,19 +467,19 @@ export async function PATCH(
         .from('shipment_items')
         .delete()
         .in('id', remove_items)
-        .eq('shipment_id', params.id);
+        .eq('shipment_id', id);
 
       if (deleteError) {
         console.error('Error removing shipment items:', deleteError);
       }
 
-      await updateShipmentTotals(supabase, params.id, profile.org_id);
+      await updateShipmentTotals(supabase, id, profile.org_id);
     }
 
     const { data: updatedShipment, error: refetchError } = await supabase
       .from('shipments')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -489,7 +491,7 @@ export async function PATCH(
     const { data: currentItems } = await supabase
       .from('shipment_items')
       .select('*')
-      .eq('shipment_id', params.id);
+      .eq('shipment_id', id);
 
     let patchComplianceProfile: ComplianceProfile | undefined;
     if (updatedShipment.compliance_profile_id) {
@@ -533,17 +535,17 @@ export async function PATCH(
         remediation_items: readinessResult.remediation_items,
         score_breakdown: readinessResult.dimensions,
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id);
 
     dispatchWebhookEvent(String(profile.org_id), 'shipment.updated', {
-      shipment_id: params.id,
+      shipment_id: id,
       updated_fields: Object.keys(updateData),
       status: updatedShipment.status,
     });
 
     dispatchWebhookEvent(String(profile.org_id), 'shipment.scored', {
-      shipment_id: params.id,
+      shipment_id: id,
       readiness_score: Math.round(readinessResult.overall_score),
       decision: readinessResult.decision,
       risk_flags: readinessResult.risk_flags,

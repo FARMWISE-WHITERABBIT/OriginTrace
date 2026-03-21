@@ -207,7 +207,7 @@ export default function ExporterContractsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             {filteredContracts.map(contract => (
               <Card key={contract.id} data-testid={`card-contract-${contract.id}`}>
                 <CardContent className="py-4">

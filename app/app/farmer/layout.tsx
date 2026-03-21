@@ -29,7 +29,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex flex-col max-w-md mx-auto">
+    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <header className="bg-[#1F5F52] text-white px-4 py-3 flex items-center gap-2 sticky top-0 z-30">
         <Sprout className="h-5 w-5" />
         <h1 className="text-lg font-bold">OriginTrace</h1>
@@ -60,7 +60,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-background border-t border-border z-30">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-background border-t border-border z-30">
         <div className="flex justify-around">
           {tabs.map(tab => {
             const isActive = pathname === tab.href || (tab.href !== '/app/farmer' && pathname.startsWith(tab.href));

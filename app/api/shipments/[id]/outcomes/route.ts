@@ -4,9 +4,10 @@ import { shipmentOutcomeSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -27,7 +28,7 @@ export async function GET(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -38,7 +39,7 @@ export async function GET(
     const { data: outcomes, error } = await supabase
       .from('shipment_outcomes')
       .select('*')
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
       .order('outcome_date', { ascending: false });
 
@@ -57,9 +58,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -80,7 +82,7 @@ export async function POST(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -112,7 +114,7 @@ export async function POST(
     }
 
     const insertData: Record<string, any> = {
-      shipment_id: params.id,
+      shipment_id: id,
       org_id: profile.org_id,
       recorded_by: profile.id,
       outcome,
@@ -141,7 +143,7 @@ export async function POST(
       const { error: updateError } = await supabase
         .from('shipments')
         .update({ status: 'shipped' })
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('org_id', profile.org_id);
 
       if (updateError) {

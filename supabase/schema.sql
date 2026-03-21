@@ -1826,7 +1826,9 @@ VALUES
   ('00000000-0000-0000-0000-000000000007', NULL, 'Shea', 'shea', 'tree_crop', '1515.90', 'Vitellaria paradoxa', false, true),
   ('00000000-0000-0000-0000-000000000008', NULL, 'Sesame', 'sesame', 'seed_crop', '1207.40', 'Sesamum indicum', false, true),
   ('00000000-0000-0000-0000-000000000009', NULL, 'Ginger', 'ginger', 'root_crop', '0910.11', 'Zingiber officinale', false, true),
-  ('00000000-0000-0000-0000-000000000010', NULL, 'Plantain', 'plantain', 'tree_crop', '0803.90', 'Musa paradisiaca', false, true)
+  ('00000000-0000-0000-0000-000000000010', NULL, 'Plantain', 'plantain', 'tree_crop', '0803.90', 'Musa paradisiaca', false, true),
+  ('00000000-0000-0000-0000-000000000011', NULL, 'Hibiscus', 'hibiscus', 'flower_crop', '0604.20', 'Hibiscus sabdariffa', false, true),
+  ('00000000-0000-0000-0000-000000000012', NULL, 'Turmeric', 'turmeric', 'root_crop', '0910.30', 'Curcuma longa', false, true)
 ON CONFLICT (org_id, slug) DO NOTHING;
 
 -- ============================================

@@ -9,6 +9,48 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const { searchParams } = new URL(request.url);
+    const globalOnly = searchParams.get('global_only') === 'true';
+    const activeOnly = searchParams.get('active_only') !== 'false'; // default true
+
+    let query = supabase
+      .from('commodity_master')
+      .select('id, name, slug, category, hs_code, is_eudr_regulated, is_active, is_global, org_id')
+      .order('name');
+
+    if (globalOnly) {
+      query = query.is('org_id', null);
+    } else {
+      // Return global + org-specific commodities
+      query = query.or(`org_id.is.null,org_id.eq.${profile.org_id}`);
+    }
+
+    if (activeOnly) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data: commodities, error } = await query;
+
+    if (error) {
+      console.error('Commodities list error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ commodities: commodities || [] });
+  } catch (error) {
+    console.error('Commodities GET error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServiceClient();
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
     const body = await request.json();
     const { name, code, category, unit, is_global, grades, moisture_min, moisture_max, collection_metrics } = body;
     
@@ -26,7 +68,7 @@ export async function GET(request: NextRequest) {
       canCreateGlobal = !!adminCheck;
     }
     
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       name,
       code: code.toUpperCase().replace(/\s+/g, '_'),
       category: category || 'crop',
@@ -52,7 +94,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ commodity });
   } catch (error) {
-    console.error('Commodities API error:', error);
+    console.error('Commodities POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

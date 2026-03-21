@@ -17,7 +17,7 @@ export function CollectionSuccess({ logic }: CollectionSuccessProps) {
   } = logic;
 
   return (
-    <div className="max-w-lg mx-auto space-y-6 py-8">
+    <div className="max-w-xl mx-auto space-y-6 py-8">
       <div className="text-center space-y-3">
         <div className="inline-flex items-center justify-center rounded-full bg-green-100 dark:bg-green-950/30 p-4">
           <CheckCircle className="h-10 w-10 text-green-600" />

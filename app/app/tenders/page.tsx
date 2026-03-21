@@ -153,7 +153,7 @@ export default function ExporterTendersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 lg:grid-cols-2">
           {filteredTenders.map(tender => (
             <Card key={tender.id} data-testid={`card-tender-${tender.id}`}>
               <CardContent className="py-4">

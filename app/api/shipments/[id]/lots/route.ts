@@ -3,9 +3,10 @@ import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -26,7 +27,7 @@ export async function GET(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -37,7 +38,7 @@ export async function GET(
     const { data: lots, error } = await supabase
       .from('shipment_lots')
       .select('*')
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: true });
 
@@ -66,9 +67,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -89,7 +91,7 @@ export async function POST(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('id, shipment_code')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -104,7 +106,7 @@ export async function POST(
       const { count } = await supabase
         .from('shipment_lots')
         .select('id', { count: 'exact', head: true })
-        .eq('shipment_id', params.id)
+        .eq('shipment_id', id)
         .eq('org_id', profile.org_id);
 
       const index = (count || 0) + 1;
@@ -112,7 +114,7 @@ export async function POST(
     }
 
     const insertData: Record<string, any> = {
-      shipment_id: params.id,
+      shipment_id: id,
       org_id: profile.org_id,
       lot_code,
     };
@@ -141,9 +143,10 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -164,7 +167,7 @@ export async function PATCH(
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -183,7 +186,7 @@ export async function PATCH(
       .from('shipment_lots')
       .select('*')
       .eq('id', lot_id)
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
       .single();
 

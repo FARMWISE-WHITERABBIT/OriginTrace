@@ -205,10 +205,10 @@ function HybridFarmMappingContent() {
 
   const filteredFarms = farmSearch.trim()
     ? farms.filter(f =>
-        f.farmer_name.toLowerCase().includes(farmSearch.toLowerCase()) ||
-        f.community.toLowerCase().includes(farmSearch.toLowerCase())
-      ).slice(0, 15)
-    : farms.slice(0, 15);
+        (f.farmer_name || '').toLowerCase().includes(farmSearch.toLowerCase()) ||
+        (f.community || '').toLowerCase().includes(farmSearch.toLowerCase())
+      ).slice(0, 50)
+    : farms.slice(0, 50);
 
   const getCurrentLocation = useCallback(async () => {
     if (!navigator.geolocation) {

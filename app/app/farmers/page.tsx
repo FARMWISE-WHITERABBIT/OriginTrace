@@ -37,19 +37,32 @@ interface FarmerLedger {
 
 type SortKey = 'farmer_name' | 'total_delivery_kg' | 'total_batches' | 'avg_grade_score' | 'last_delivery_date' | 'area_hectares';
 
-const COMMODITY_COLORS: Record<string, string> = {
-  cocoa:   'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300',
-  cashew:  'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300',
-  sesame:  'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
-  beans:   'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300',
-  ginger:  'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300',
-};
+// Rotate through semantic color classes for unknown commodities
+const BADGE_COLORS = [
+  'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300',
+  'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300',
+  'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300',
+  'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300',
+  'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
+  'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300',
+  'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300',
+  'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300',
+];
+
+function getCommodityColor(commodity: string, colorMap: Record<string, string>): string {
+  if (colorMap[commodity.toLowerCase()]) return colorMap[commodity.toLowerCase()];
+  // Deterministic color based on hash of commodity name
+  let h = 0;
+  for (let i = 0; i < commodity.length; i++) h = (h * 31 + commodity.charCodeAt(i)) >>> 0;
+  return BADGE_COLORS[h % BADGE_COLORS.length];
+}
 
 export default function FarmersPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const toggleSelect = (id: number) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = (ids: number[]) => setSelected(p => p.size === ids.length && ids.every(id => p.has(id)) ? new Set() : new Set(ids));
+  const [commodityColorMap, setCommodityColorMap] = useState<Record<string, string>>({});
   const [farmers, setFarmers] = useState<FarmerLedger[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +70,22 @@ export default function FarmersPage() {
   const [sortKey, setSortKey] = useState<SortKey>('farmer_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  useEffect(() => { fetchFarmers(); }, []);
+  useEffect(() => {
+    fetchFarmers();
+    // Fetch commodities to build dynamic color map
+    fetch('/api/commodities')
+      .then(r => r.ok ? r.json() : { commodities: [] })
+      .then(d => {
+        const map: Record<string, string> = {};
+        (d.commodities || []).forEach((c: { code: string; name: string }, i: number) => {
+          const key = (c.name || c.code).toLowerCase();
+          map[key] = BADGE_COLORS[i % BADGE_COLORS.length];
+          map[c.code.toLowerCase()] = BADGE_COLORS[i % BADGE_COLORS.length];
+        });
+        setCommodityColorMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchFarmers = async () => {
     try {
@@ -336,7 +364,7 @@ export default function FarmersPage() {
                           <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{farmer.community || '–'}</TableCell>
                           <TableCell>
                             {farmer.commodity ? (
-                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${COMMODITY_COLORS[farmer.commodity] || 'bg-muted'}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${getCommodityColor(farmer.commodity, commodityColorMap)}`}>
                                 {farmer.commodity}
                               </span>
                             ) : <span className="text-muted-foreground text-sm">–</span>}
@@ -429,7 +457,7 @@ export default function FarmersPage() {
                         </div>
 
                         {farmer.commodity && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-block ${COMMODITY_COLORS[farmer.commodity] || 'bg-muted'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-block ${getCommodityColor(farmer.commodity, commodityColorMap)}`}>
                             {farmer.commodity}
                           </span>
                         )}

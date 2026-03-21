@@ -4,9 +4,10 @@ import { coldChainLogSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -27,7 +28,7 @@ export async function GET(
     const { data: logs, error } = await supabase
       .from('cold_chain_logs')
       .select('*')
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
       .order('recorded_at', { ascending: false });
 
@@ -58,9 +59,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
 
     const { user, profile } = await getAuthenticatedProfile(request);
@@ -121,7 +123,7 @@ export async function POST(
     }
 
     const insertData: Record<string, any> = {
-      shipment_id: params.id,
+      shipment_id: id,
       org_id: profile.org_id,
       recorded_by: profile.id,
       log_type,

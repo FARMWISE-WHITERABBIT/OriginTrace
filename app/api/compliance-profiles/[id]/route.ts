@@ -4,9 +4,10 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createAdminClient();
     const { user, profile } = await getAuthenticatedProfile(request);
 
@@ -18,7 +19,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const profileId = parseInt(params.id, 10);
+    const profileId = parseInt(id, 10);
     if (isNaN(profileId)) {
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }
@@ -55,9 +56,10 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createAdminClient();
     const { user, profile } = await getAuthenticatedProfile(request);
 
@@ -65,7 +67,7 @@ export async function GET(
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const profileId = parseInt(params.id, 10);
+    const profileId = parseInt(id, 10);
     if (isNaN(profileId)) {
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }

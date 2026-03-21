@@ -4,15 +4,16 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createAdminClient();
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    const farmId = params.id;
+    const farmId = id;
 
     // Core farm record
     const { data: farm, error: farmError } = await supabase
@@ -83,9 +84,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createAdminClient();
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -107,7 +109,7 @@ export async function PATCH(
     const { data: updated, error } = await supabase
       .from('farms')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .select()
       .single();
