@@ -88,8 +88,8 @@ export default function FarmsPage() {
 
   const filteredFarms = farms.filter(farm => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = farm.farmer_name.toLowerCase().includes(q) ||
-      farm.community.toLowerCase().includes(q) ||
+    const matchesSearch = (farm.farmer_name || '').toLowerCase().includes(q) ||
+      (farm.community || '').toLowerCase().includes(q) ||
       (farm.farmer_id?.toLowerCase().includes(q)) ||
       (farm.commodity?.toLowerCase().includes(q));
     const matchesStatus = statusFilter === 'all' || farm.compliance_status === statusFilter;

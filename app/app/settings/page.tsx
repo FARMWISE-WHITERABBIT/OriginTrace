@@ -674,12 +674,12 @@ function SettingsContent() {
         const commodityList = data.commodities || [];
         if (Array.isArray(commodityList)) {
           const mapped = commodityList.map((c: any) => ({
-            id: c.code?.toLowerCase() || c.name.toLowerCase().replace(/\s+/g, '_'),
+            id: c.slug || c.name.toLowerCase().replace(/\s+/g, '_'),
             name: c.name,
             grades: c.grades || [],
             unit: c.unit || 'kg',
             dbId: c.id,
-            isGlobal: c.is_global || false,
+            isGlobal: c.org_id === null || c.is_global || false,
           }));
           setAvailableCommodities(mapped);
           const orgSpecific = mapped.filter((c: any) => !c.isGlobal);

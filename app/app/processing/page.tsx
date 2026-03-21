@@ -50,13 +50,14 @@ interface CollectionBatch {
 }
 
 interface CommodityMaster {
-  id: number;
+  id: string;
   name: string;
-  code: string;
+  slug: string;
+  code?: string; // kept for backward compat
   category: string;
-  unit: string;
   is_active: boolean;
-  is_global: boolean;
+  org_id: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 export default function ProcessingPage() {
@@ -237,7 +238,7 @@ export default function ProcessingPage() {
   }
 
   function resetForm() {
-    const defaultCommodity = commodities.length > 0 ? commodities[0].code.toLowerCase() : '';
+    const defaultCommodity = commodities.length > 0 ? (commodities[0].slug || commodities[0].name || '').toLowerCase() : '';
     const defaultProductType = productTypes[defaultCommodity]?.[0]?.value || '';
     setNewRun({
       facility_name: '',
@@ -357,7 +358,7 @@ export default function ProcessingPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {commodities.map((c) => (
-                        <SelectItem key={c.id} value={c.code.toLowerCase()}>
+                        <SelectItem key={c.id} value={(c.slug || c.name || '').toLowerCase()}>
                           {c.name}
                         </SelectItem>
                       ))}

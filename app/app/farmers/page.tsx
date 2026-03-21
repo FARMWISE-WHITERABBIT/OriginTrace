@@ -77,10 +77,10 @@ export default function FarmersPage() {
       .then(r => r.ok ? r.json() : { commodities: [] })
       .then(d => {
         const map: Record<string, string> = {};
-        (d.commodities || []).forEach((c: { code: string; name: string }, i: number) => {
-          const key = (c.name || c.code).toLowerCase();
+        (d.commodities || []).forEach((c: { slug?: string; name: string }, i: number) => {
+          const key = (c.name || c.slug || '').toLowerCase();
           map[key] = BADGE_COLORS[i % BADGE_COLORS.length];
-          map[c.code.toLowerCase()] = BADGE_COLORS[i % BADGE_COLORS.length];
+          if (c.slug) map[c.slug.toLowerCase()] = BADGE_COLORS[i % BADGE_COLORS.length];
         });
         setCommodityColorMap(map);
       })

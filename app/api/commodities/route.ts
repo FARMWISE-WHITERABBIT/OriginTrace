@@ -68,17 +68,14 @@ export async function POST(request: NextRequest) {
       canCreateGlobal = !!adminCheck;
     }
     
+    const slug = (code || name).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const insertData: Record<string, unknown> = {
       name,
-      code: code.toUpperCase().replace(/\s+/g, '_'),
+      slug,
+      org_id: (canCreateGlobal && is_global) ? null : profile.org_id,
       category: category || 'crop',
-      unit: unit || 'kg',
-      is_global: canCreateGlobal && is_global,
-      created_by_org_id: profile.org_id,
-      grades: grades || [],
-      moisture_min: moisture_min ? parseFloat(moisture_min) : null,
-      moisture_max: moisture_max ? parseFloat(moisture_max) : null,
-      collection_metrics: collection_metrics || {}
+      is_active: true,
+      metadata: { unit: unit || 'kg', grades: grades || [], moisture_min, moisture_max, collection_metrics: collection_metrics || {} },
     };
     
     const { data: commodity, error } = await supabase
@@ -115,17 +112,21 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { name, category, unit, is_active, grades, moisture_min, moisture_max, collection_metrics, is_global } = body;
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
     if (category !== undefined) updates.category = category;
-    if (unit !== undefined) updates.unit = unit;
     if (is_active !== undefined) updates.is_active = is_active;
-    if (grades !== undefined) updates.grades = grades;
-    if (moisture_min !== undefined) updates.moisture_min = moisture_min ? parseFloat(moisture_min) : null;
-    if (moisture_max !== undefined) updates.moisture_max = moisture_max ? parseFloat(moisture_max) : null;
-    if (collection_metrics !== undefined) updates.collection_metrics = collection_metrics;
-    if (is_global !== undefined && isSystemAdmin) {
-      updates.is_global = is_global;
+    // Pack extended fields into metadata JSONB
+    if (unit !== undefined || grades !== undefined || moisture_min !== undefined || moisture_max !== undefined || collection_metrics !== undefined) {
+      // Fetch existing metadata first
+      const { data: existing } = await supabase.from('commodity_master').select('metadata').eq('id', id).single();
+      const meta = (existing?.metadata as Record<string, unknown>) || {};
+      if (unit !== undefined) meta.unit = unit;
+      if (grades !== undefined) meta.grades = grades;
+      if (moisture_min !== undefined) meta.moisture_min = moisture_min ? parseFloat(String(moisture_min)) : null;
+      if (moisture_max !== undefined) meta.moisture_max = moisture_max ? parseFloat(String(moisture_max)) : null;
+      if (collection_metrics !== undefined) meta.collection_metrics = collection_metrics;
+      updates.metadata = meta;
     }
     
     const { data: commodity, error } = await supabase

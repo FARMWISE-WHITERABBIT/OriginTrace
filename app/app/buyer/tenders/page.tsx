@@ -214,7 +214,7 @@ export default function BuyerTendersPage() {
   const filteredTenders = tenders.filter(t => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return t.title.toLowerCase().includes(q) || t.commodity.toLowerCase().includes(q);
+    return (t.title || '').toLowerCase().includes(q) || (t.commodity || '').toLowerCase().includes(q);
   });
 
   return (

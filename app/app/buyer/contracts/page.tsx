@@ -142,7 +142,7 @@ export default function BuyerContractsPage() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return c.contract_reference.toLowerCase().includes(q)
-      || c.commodity.toLowerCase().includes(q)
+      || (c.commodity || '').toLowerCase().includes(q)
       || c.exporter_org?.name?.toLowerCase().includes(q);
   });
 

@@ -123,7 +123,7 @@ export default function ExporterContractsPage() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return c.contract_reference.toLowerCase().includes(q)
-      || c.commodity.toLowerCase().includes(q)
+      || (c.commodity || '').toLowerCase().includes(q)
       || c.buyer_org?.name?.toLowerCase().includes(q);
   });
 
