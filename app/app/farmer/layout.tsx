@@ -48,7 +48,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
           </ul>
           <button
             onClick={dismissOnboarding}
-            className="bg-white text-[#1F5F52] px-4 py-2 rounded font-medium text-sm w-full"
+            className="bg-background text-primary px-4 py-2 rounded font-medium text-sm w-full border border-primary/30"
             data-testid="button-dismiss-onboarding"
           >
             Got it, let's go!
@@ -60,7 +60,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 z-30">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-background border-t border-border z-30">
         <div className="flex justify-around">
           {tabs.map(tab => {
             const isActive = pathname === tab.href || (tab.href !== '/app/farmer' && pathname.startsWith(tab.href));

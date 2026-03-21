@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = createAdminClient();
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
+
+    const body = await request.json();
+    const allowed = ['facility_name', 'facility_location', 'notes'];
+    const updates: Record<string, string> = {};
+    for (const key of allowed) {
+      if (key in body) updates[key] = body[key];
+    }
+
+    const { error } = await supabase
+      .from('processing_runs')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('org_id', profile.org_id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Sheet,
   SheetContent,
@@ -77,6 +78,19 @@ interface Bag {
 
 export default function InventoryPage() {
   const router = useRouter();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => setSelected(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  const toggleAll = (ids: string[]) => setSelected(prev =>
+    prev.size === ids.length && ids.every(id => prev.has(id))
+      ? new Set()
+      : new Set(ids)
+  );
   // ── Bags sub-tab state ──
   const [bags, setBags] = useState<Bag[]>([]);
   const [bagsLoading, setBagsLoading] = useState(false);
@@ -321,7 +335,7 @@ export default function InventoryPage() {
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search batches..."
+                placeholder="Search batches..." aria-label="Search batches"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -369,6 +383,13 @@ export default function InventoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={filteredBatches.length > 0 && filteredBatches.every(b => selected.has(b.id))}
+                        onCheckedChange={() => toggleAll(filteredBatches.map(b => b.id))}
+                        aria-label="Select all batches"
+                      />
+                    </TableHead>
                     <TableHead>Batch ID</TableHead>
                     <TableHead>Farmer</TableHead>
                     <TableHead className="hidden md:table-cell">Bags</TableHead>
@@ -379,12 +400,19 @@ export default function InventoryPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredBatches.map((batch) => (
-                    <TableRow 
+                    <TableRow
                       key={batch.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className={`cursor-pointer hover:bg-muted/50 ${selected.has(batch.id) ? 'bg-primary/5' : ''}`}
                       onClick={() => handleRowClick(batch)}
                       data-testid={`batch-row-${batch.id}`}
                     >
+                      <TableCell onClick={e => { e.stopPropagation(); toggleSelect(batch.id); }}>
+                        <Checkbox
+                          checked={selected.has(batch.id)}
+                          onCheckedChange={() => toggleSelect(batch.id)}
+                          aria-label={`Select batch ${batch.batch_id || batch.id.slice(0, 8)}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{batch.batch_id || batch.id.slice(0, 8)}</TableCell>
                       <TableCell>{batch.farm?.farmer_name}</TableCell>
                       <TableCell className="hidden md:table-cell">{batch.bag_count}</TableCell>
@@ -401,6 +429,49 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
+          <span className="text-sm font-medium text-muted-foreground">{selected.size} batch{selected.size !== 1 ? 'es' : ''} selected</span>
+          <div className="w-px h-4 bg-border" />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const ids = [...selected].join(',');
+              router.push(`/app/processing?batch_ids=${ids}`);
+            }}
+          >
+            Add to Processing Run
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const selectedBatches = filteredBatches.filter(b => selected.has(b.id));
+              const csv = ['Batch ID,Farmer,Weight,Status,Date',
+                ...selectedBatches.map(b => [
+                  b.batch_id || b.id.slice(0,8),
+                  b.farm?.farmer_name || '',
+                  b.total_weight,
+                  b.status,
+                  new Date(b.created_at).toLocaleDateString()
+                ].join(','))
+              ].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = 'batches.csv'; a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Export CSV
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       </TabsContent>
 

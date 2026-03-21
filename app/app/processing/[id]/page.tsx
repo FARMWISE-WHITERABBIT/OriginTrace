@@ -6,11 +6,16 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Factory, CheckCircle2, AlertTriangle, Package,
   Loader2, MapPin, Calendar, Scale, Boxes, ArrowRight,
-  QrCode, Layers,
+  QrCode, Layers, Pencil, X, Save,
 } from 'lucide-react';
 
 interface ProcessingRunDetail {
@@ -64,12 +69,44 @@ interface DPP {
 export default function ProcessingRunDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const { id } = use(paramsPromise);
   const router = useRouter();
+  const { profile } = useOrg();
+  const { toast } = useToast();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'aggregator' || profile?.role === 'compliance_officer';
 
   const [run, setRun] = useState<ProcessingRunDetail | null>(null);
   const [batches, setBatches] = useState<SourceBatch[]>([]);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [dpps, setDpps] = useState<DPP[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ facility_name: '', facility_location: '', notes: '' });
+
+  const startEdit = () => {
+    if (!run) return;
+    setEditForm({ facility_name: run.facility_name, facility_location: run.facility_location || '', notes: run.notes || '' });
+    setEditing(true);
+  };
+
+  const cancelEdit = () => setEditing(false);
+
+  const saveEdit = async () => {
+    if (!run) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/processing-runs/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setRun(r => r ? { ...r, ...editForm } : r);
+      setEditing(false);
+      toast({ title: 'Saved', description: 'Processing run updated.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save changes.', variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
 
   useEffect(() => {
     async function load() {
@@ -213,28 +250,62 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
         {/* Facility & Info */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Factory className="h-4 w-4" />Run Details
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Factory className="h-4 w-4" />Run Details
+              </CardTitle>
+              {isAdmin && !editing && (
+                <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={startEdit}>
+                  <Pencil className="h-3 w-3" />Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {[
-              { label: 'Facility',        value: run.facility_name },
-              { label: 'Location',        value: run.facility_location },
-              { label: 'Commodity',       value: run.commodity },
-              { label: 'Product Type',    value: run.product_type?.replace(/_/g, ' ') },
-              { label: 'Processed',       value: run.processed_at ? new Date(run.processed_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
-              { label: 'Created',         value: new Date(run.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm">
-                <span className="text-muted-foreground">{label}</span>
-                <span className="font-medium capitalize">{value || '—'}</span>
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-facility">Facility Name</Label>
+                  <Input id="edit-facility" value={editForm.facility_name} onChange={e => setEditForm(f => ({ ...f, facility_name: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-location">Location</Label>
+                  <Input id="edit-location" value={editForm.facility_location} onChange={e => setEditForm(f => ({ ...f, facility_location: e.target.value }))} placeholder="City, State" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Textarea id="edit-notes" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Optional notes about this run" />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" onClick={saveEdit} disabled={saving} className="gap-1.5">
+                    {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={saving} className="gap-1.5">
+                    <X className="h-3 w-3" />Cancel
+                  </Button>
+                </div>
               </div>
-            ))}
-            {run.notes && (
-              <div className="mt-3 p-3 rounded-lg bg-muted/40 text-sm text-muted-foreground italic">
-                {run.notes}
-              </div>
+            ) : (
+              <>
+                {[
+                  { label: 'Facility',     value: run.facility_name },
+                  { label: 'Location',     value: run.facility_location },
+                  { label: 'Commodity',    value: run.commodity },
+                  { label: 'Product Type', value: run.product_type?.replace(/_/g, ' ') },
+                  { label: 'Processed',    value: run.processed_at ? new Date(run.processed_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
+                  { label: 'Created',      value: new Date(run.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium capitalize">{value || '—'}</span>
+                  </div>
+                ))}
+                {run.notes && (
+                  <div className="mt-3 p-3 rounded-lg bg-muted/40 text-sm text-muted-foreground italic">
+                    {run.notes}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

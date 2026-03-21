@@ -119,7 +119,7 @@ export function Step2Contributors({ logic }: Step2Props) {
                   <div className="font-medium text-sm truncate">{c.farmer.farmer_name}</div>
                   <div className="text-xs text-muted-foreground">{c.farmer.community}</div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => removeContributor(i)} data-testid={`button-remove-contributor-${i}`}>
+                <Button variant="ghost" size="icon" onClick={() => removeContributor(i)} aria-label="Remove contributor" data-testid={`button-remove-contributor-${i}`}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>

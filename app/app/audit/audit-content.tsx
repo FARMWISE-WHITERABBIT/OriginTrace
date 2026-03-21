@@ -27,7 +27,7 @@ const ACTION_COLORS: Record<string, string> = {
   delete: 'bg-red-100 text-red-800',
   approve: 'bg-emerald-100 text-emerald-800',
   reject: 'bg-orange-100 text-orange-800',
-  login: 'bg-gray-100 text-gray-800',
+  login: 'bg-muted text-muted-foreground',
   impersonation_start: 'bg-purple-100 text-purple-800',
   impersonation_end: 'bg-purple-100 text-purple-800',
 };
@@ -36,7 +36,7 @@ function getActionColor(action: string): string {
   for (const [key, color] of Object.entries(ACTION_COLORS)) {
     if (action.toLowerCase().includes(key)) return color;
   }
-  return 'bg-gray-100 text-gray-700';
+  return 'bg-muted text-muted-foreground';
 }
 
 function formatAction(action: string): string {

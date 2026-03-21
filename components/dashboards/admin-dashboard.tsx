@@ -56,18 +56,18 @@ const COMPLIANCE_COLORS: Record<string, string> = {
   'Approved': '#16a34a',
   'Pending': '#f59e0b',
   'Rejected': '#dc2626',
-  'Not Reviewed': '#94a3b8',
+  'Not Reviewed': '#6b7280',
 };
 
 const DECISION_COLORS: Record<string, string> = {
   'Go': '#16a34a',
   'Conditional': '#f59e0b',
   'No Go': '#dc2626',
-  'Pending': '#94a3b8',
+  'Pending': '#6b7280',
 };
 
 const DOC_HEALTH_COLORS: Record<string, string> = {
-  'Valid': '#2E7D6B',
+  'Valid': '#16a34a',
   'Expiring Soon': '#f59e0b',
   'Expired': '#dc2626',
 };
@@ -307,7 +307,7 @@ export function AdminDashboard() {
                 xKey="date"
                 series={[
                   { dataKey: 'weight', label: 'Weight (kg)' },
-                  { dataKey: 'bags', label: 'Bags', color: '#6FB8A8' },
+                  { dataKey: 'bags', label: 'Bags', color: '#16a34a' },
                 ]}
                 height={280}
                 xTickFormatter={(val) => {
@@ -505,7 +505,7 @@ export function AdminDashboard() {
                 categoryKey="name"
                 height={280}
                 barLabel="Weight (kg)"
-                color="#2E7D6B"
+                color="#16a34a"
                 valueFormatter={(v) => `${v.toLocaleString()} kg`}
               />
             ) : (

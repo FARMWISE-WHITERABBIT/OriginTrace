@@ -365,7 +365,7 @@ function HybridFarmMappingContent() {
                   <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); setBoundaryAnalysis(null); setShowBoundaryDetails(false); }} data-testid="button-change-farmer">
+              <Button variant="ghost" size="icon" aria-label="Change farmer" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); setBoundaryAnalysis(null); setShowBoundaryDetails(false); }} data-testid="button-change-farmer">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -498,7 +498,7 @@ function HybridFarmMappingContent() {
                       {coordinates.map((c, i) => (
                         <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs font-mono">
                           <span>#{i + 1}: {c.lat.toFixed(5)}, {c.lng.toFixed(5)}</span>
-                          <Button variant="ghost" size="icon" onClick={() => removePoint(i)}>
+                          <Button variant="ghost" size="icon" aria-label="Remove point" onClick={() => removePoint(i)}>
                             <X className="h-3 w-3" />
                           </Button>
                         </div>

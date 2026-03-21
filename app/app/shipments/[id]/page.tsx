@@ -42,6 +42,7 @@ import {
   Truck,
   MapPin,
   CircleCheckBig,
+  FileDown,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -700,6 +701,10 @@ export default function ShipmentDetailPage() {
     );
   }
 
+  const exportPdf = () => {
+    window.open(`/api/shipments/${shipmentId}/export-pdf`, '_blank');
+  };
+
   const decision = DECISION_CONFIG[readiness?.decision || 'pending'] || DECISION_CONFIG.pending;
   const DecisionIcon = decision.icon;
   const score = readiness?.overall_score ?? 0;
@@ -726,6 +731,9 @@ export default function ShipmentDetailPage() {
             {shipment.buyer_company && ` - ${shipment.buyer_company}`}
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5 shrink-0">
+          <FileDown className="h-3.5 w-3.5" />Export PDF
+        </Button>
       </div>
 
       <Card className={`${decision.bgColor} border-0`}>

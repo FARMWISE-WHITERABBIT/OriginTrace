@@ -245,7 +245,7 @@ export default function FarmersPage() {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, community, commodity..."
+              placeholder="Search name, community, commodity..." aria-label="Search farmers"
               className="pl-9"
               data-testid="input-search-farmers"
             />

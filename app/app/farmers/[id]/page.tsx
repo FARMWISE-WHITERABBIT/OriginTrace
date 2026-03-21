@@ -17,7 +17,7 @@ import {
   Loader2, ArrowLeft, User, Phone, MapPin, Leaf, Package,
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
-  Sprout, ShieldCheck, Clock,
+  Sprout, ShieldCheck, Clock, Activity,
 } from 'lucide-react';
 
 interface FarmerData {
@@ -72,8 +72,24 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [activityEvents, setActivityEvents] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityFetched, setActivityFetched] = useState(false);
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
+
+  const fetchActivity = async (farmId: string) => {
+    if (activityFetched) return;
+    setActivityLoading(true);
+    try {
+      const res = await fetch(`/api/audit?resource_type=farm&resource_id=${farmId}&limit=30`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setActivityEvents(d.logs || d.events || []);
+      setActivityFetched(true);
+    } catch { /* ignore */ }
+    finally { setActivityLoading(false); }
+  };
 
   useEffect(() => {
     fetch(`/api/farmers/${id}`)
@@ -213,6 +229,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <Package className="h-3.5 w-3.5" />
             Batches
             {batches.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{batches.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger
+            value="activity"
+            className="flex items-center gap-1.5"
+            onClick={() => fetchActivity(farm.id)}
+          >
+            <Activity className="h-3.5 w-3.5" />Activity
           </TabsTrigger>
         </TabsList>
 
@@ -477,6 +500,72 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                       </div>
                     </Link>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Activity Tab ── */}
+        <TabsContent value="activity" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4" />Activity Timeline
+              </CardTitle>
+              <CardDescription>Audit trail of changes to this farmer record</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activityLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : activityEvents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Clock className="h-8 w-8 text-muted-foreground opacity-30 mb-3" />
+                  <p className="text-sm font-medium">No activity recorded yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Changes to this farmer profile will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {activityEvents.map((event: any, i: number) => {
+                    const isLast = i === activityEvents.length - 1;
+                    const action = event.action || event.event_type || 'updated';
+                    const actor = event.actor_email || event.actor_name || 'System';
+                    const ts = event.created_at;
+                    const label = action
+                      .replace(/_/g, ' ')
+                      .replace(/\b\w/g, (c: string) => c.toUpperCase());
+                    return (
+                      <div key={event.id || i} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 z-10">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          {!isLast && <div className="w-0.5 flex-1 bg-border mt-1 min-h-[20px]" />}
+                        </div>
+                        <div className={`pb-4 ${isLast ? '' : ''}`}>
+                          <p className="text-sm font-medium">{label}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                            <span>{actor}</span>
+                            {ts && (
+                              <>
+                                <span>·</span>
+                                <span>{new Date(ts).toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              </>
+                            )}
+                          </div>
+                          {event.metadata && Object.keys(event.metadata).length > 0 && (
+                            <div className="mt-1.5 text-xs text-muted-foreground bg-muted/40 rounded px-2 py-1 font-mono">
+                              {Object.entries(event.metadata).slice(0, 3).map(([k, v]) => (
+                                <span key={k} className="mr-2">{k}: {String(v)}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

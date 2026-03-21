@@ -241,13 +241,13 @@ export default function TraceabilityPage() {
                 <form onSubmit={handleSearch} className="flex gap-3">
                   <div className="flex-1">
                     {searchMode === 'serial' && (
-                      <Input value={searchSerial} onChange={e => setSearchSerial(e.target.value.toUpperCase())} placeholder="e.g. WR-BCH-001-042" className="font-mono" data-testid="input-trace-serial" />
+                      <Input value={searchSerial} onChange={e => setSearchSerial(e.target.value.toUpperCase())} placeholder="e.g. WR-BCH-001-042" className="font-mono" aria-label="Bag serial number" data-testid="input-trace-serial" />
                     )}
                     {searchMode === 'batch' && (
-                      <Input value={searchBatch} onChange={e => setSearchBatch(e.target.value)} placeholder="e.g. WR-BCH-001 or WRG-GNG" data-testid="input-trace-batch" />
+                      <Input value={searchBatch} onChange={e => setSearchBatch(e.target.value)} placeholder="e.g. WR-BCH-001 or WRG-GNG" aria-label="Batch code" data-testid="input-trace-batch" />
                     )}
                     {searchMode === 'farmer' && (
-                      <Input value={searchFarmer} onChange={e => setSearchFarmer(e.target.value)} placeholder="e.g. Yakubu or Adebayo" data-testid="input-trace-farmer" />
+                      <Input value={searchFarmer} onChange={e => setSearchFarmer(e.target.value)} placeholder="e.g. Yakubu or Adebayo" aria-label="Farmer name" data-testid="input-trace-farmer" />
                     )}
                   </div>
                   <Button type="submit" disabled={isSearching || !(searchMode === 'serial' ? searchSerial : searchMode === 'batch' ? searchBatch : searchFarmer).trim()} data-testid="button-search">

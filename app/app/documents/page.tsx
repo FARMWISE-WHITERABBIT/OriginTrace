@@ -667,6 +667,7 @@ function DocumentsPage() {
                         variant="ghost"
                         className="h-7 w-7"
                         onClick={() => openEdit(doc)}
+                        aria-label="Edit document"
                         data-testid={`button-edit-doc-${doc.id}`}
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -676,6 +677,7 @@ function DocumentsPage() {
                         variant="ghost"
                         className="h-7 w-7"
                         onClick={() => handleDelete(doc)}
+                        aria-label="Delete document"
                         data-testid={`button-delete-doc-${doc.id}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
