@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS collection_batches (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farm_id UUID NOT NULL REFERENCES farms(id),
   agent_id UUID NOT NULL REFERENCES profiles(id),
-  status TEXT DEFAULT 'collecting' CHECK (status IN ('collecting', 'completed', 'aggregated', 'shipped')),
+  status TEXT DEFAULT 'collecting' CHECK (status IN ('collecting', 'completed', 'aggregated', 'resolved', 'dispatched', 'shipped')),
   total_weight DECIMAL(10,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
   notes TEXT,

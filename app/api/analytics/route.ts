@@ -155,15 +155,10 @@ export async function GET(request: NextRequest) {
 
       let bagsRes: { data: any[] | null; error: any } = await supabase
         .from('bags')
-        .select('id, status, weight_kg, grade, is_compliant')
+        .select('id, status, is_compliant')
         .eq('org_id', orgId);
-      if (bagsRes.error) {
-        console.error('[analytics] bags query error (retrying with minimal columns):', bagsRes.error);
-        bagsRes = await supabase
-          .from('bags')
-          .select('id')
-          .eq('org_id', orgId);
-      }
+      // Note: bag volume is captured via collection_batches.total_weight and bag_count
+      // weight_kg and grade are intentionally excluded (column may be named 'weight' in older DBs)
       batches = batchesRes.data || [];
       prevBatches = prevBatchesRes.data || [];
       farms = farmsRes.data || [];

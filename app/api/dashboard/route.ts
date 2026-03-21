@@ -10,8 +10,6 @@ async function getAggregatorData(supabase: any, orgId: string) {
   const [
     batchesRes,
     collectingRes,
-    resolvedRes,
-    dispatchedRes,
     flaggedRes,
     todayWeightRes,
     weekWeightRes,
@@ -21,20 +19,33 @@ async function getAggregatorData(supabase: any, orgId: string) {
   ] = await Promise.all([
     supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
     supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'collecting'),
-    supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'resolved'),
-    supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'dispatched'),
     supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).not('yield_flag_reason', 'is', null),
     supabase.from('collection_batches').select('total_weight').eq('org_id', orgId).gte('created_at', todayStart),
     supabase.from('collection_batches').select('total_weight').eq('org_id', orgId).gte('created_at', weekStart),
     supabase.from('collection_batches').select('total_weight').eq('org_id', orgId).gte('created_at', monthStart),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('role', 'agent'),
-    supabase.from('collection_batches').select('total_weight').eq('org_id', orgId).eq('status', 'dispatched'),
+    supabase.from('collection_batches').select('total_weight').eq('org_id', orgId),
   ]);
+
+  // Guard resolved/dispatched counts — these use status values that may not exist in
+  // older DB installs (CHECK constraint only updated via migration). Return 0 on error.
+  let resolvedCount = 0;
+  let dispatchedCount = 0;
+  let totalWeight = 0;
+  try {
+    const [resolvedRes, dispatchedRes, allWeightDispatchedRes] = await Promise.all([
+      supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'resolved'),
+      supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'dispatched'),
+      supabase.from('collection_batches').select('total_weight').eq('org_id', orgId).eq('status', 'dispatched'),
+    ]);
+    resolvedCount = resolvedRes.count || 0;
+    dispatchedCount = dispatchedRes.count || 0;
+    totalWeight = allWeightDispatchedRes.data?.reduce((sum: number, b: any) => sum + Number(b.total_weight || 0), 0) || 0;
+  } catch { /* schema migration not yet applied — resolved/dispatched return 0 */ }
 
   const todayWeight = todayWeightRes.data?.reduce((sum: number, b: any) => sum + Number(b.total_weight || 0), 0) || 0;
   const weekWeight = weekWeightRes.data?.reduce((sum: number, b: any) => sum + Number(b.total_weight || 0), 0) || 0;
   const monthWeight = monthWeightRes.data?.reduce((sum: number, b: any) => sum + Number(b.total_weight || 0), 0) || 0;
-  const totalWeight = allWeightRes.data?.reduce((sum: number, b: any) => sum + Number(b.total_weight || 0), 0) || 0;
 
   const total = batchesRes.count || 0;
   const flagged = flaggedRes.count || 0;
@@ -43,8 +54,8 @@ async function getAggregatorData(supabase: any, orgId: string) {
   return {
     totalBatches: total,
     collectingBatches: collectingRes.count || 0,
-    resolvedBatches: resolvedRes.count || 0,
-    dispatchedBatches: dispatchedRes.count || 0,
+    resolvedBatches: resolvedCount,
+    dispatchedBatches: dispatchedCount,
     totalWeight,
     todayWeight,
     weekWeight,

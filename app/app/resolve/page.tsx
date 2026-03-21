@@ -243,7 +243,7 @@ function ResolveBatchContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/app/bags?batch=${batch.id}`}>
+        <Link href={`/app/inventory/${batch.id}`}>
           <Button variant="ghost" size="icon" aria-label="Back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -310,8 +310,8 @@ function ResolveBatchContent() {
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No bags to resolve. Add bags first.</p>
-                  <Link href={`/app/bags?batch=${batch.id}`} className="mt-4 inline-block">
-                    <Button variant="outline">Add Bags</Button>
+                  <Link href={`/app/collect?batch=${batch.id}`} className="mt-4 inline-block">
+                    <Button variant="outline">Add More Produce</Button>
                   </Link>
                 </div>
               ) : (

@@ -26,21 +26,41 @@ export async function GET(request: NextRequest) {
     const globalOnly = searchParams.get('global_only') === 'true';
     const activeOnly = searchParams.get('active_only') !== 'false';
 
-    let query = supabase.from('commodity_master').select('*').order('name');
-
-    if (globalOnly) {
-      query = (query as any).or('org_id.is.null,is_global.eq.true');
-    } else {
-      query = (query as any).or(
-        `org_id.is.null,is_global.eq.true,org_id.eq.${profile.org_id},created_by_org_id.eq.${profile.org_id}`
-      );
+    let commodities: Record<string, unknown>[] = [];
+    try {
+      // Try full filter (works once org_id column migration has run)
+      let query = supabase.from('commodity_master').select('*').order('name');
+      if (globalOnly) {
+        query = (query as any).or('org_id.is.null,is_global.eq.true');
+      } else {
+        query = (query as any).or(
+          `org_id.is.null,is_global.eq.true,org_id.eq.${profile.org_id},created_by_org_id.eq.${profile.org_id}`
+        );
+      }
+      if (activeOnly) query = query.eq('is_active', true);
+      const { data, error } = await query;
+      if (error) throw error;
+      commodities = data || [];
+    } catch {
+      // org_id column missing on live DB — fall back to is_global filter only
+      try {
+        let q = supabase.from('commodity_master').select('*').order('name');
+        if (activeOnly) q = q.eq('is_active', true);
+        const { data } = await (q as any).eq('is_global', true);
+        commodities = data || [];
+        // Also fetch org-specific commodities separately if not global-only
+        if (!globalOnly) {
+          const { data: orgData } = await supabase
+            .from('commodity_master').select('*').order('name')
+            .eq('created_by_org_id', profile.org_id);
+          commodities = [...commodities, ...(orgData || [])];
+        }
+      } catch (fallbackErr: any) {
+        console.warn('[commodities] fallback query also failed:', fallbackErr.message?.slice(0, 80));
+      }
     }
-    if (activeOnly) query = query.eq('is_active', true);
 
-    const { data: commodities, error } = await query;
-    if (error) { console.error('Commodities list error:', error); return NextResponse.json({ error: error.message }, { status: 500 }); }
-
-    return NextResponse.json({ commodities: (commodities || []).map(c => normalise(c as Record<string, unknown>)) });
+    return NextResponse.json({ commodities: commodities.map(c => normalise(c)) });
   } catch (error) { return NextResponse.json({ error: 'Internal server error' }, { status: 500 }); }
 }
 

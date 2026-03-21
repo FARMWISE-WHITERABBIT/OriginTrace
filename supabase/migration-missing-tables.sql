@@ -1227,3 +1227,53 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_colors JSONB DEFAULT NU
 -- ============================================
 -- DONE! All missing tables created.
 -- ============================================
+
+-- ============================================
+-- TASK #5 — Schema Migration Fixes (2026-03-21)
+-- ============================================
+
+-- 1. collection_batches.status — add 'resolved' and 'dispatched'
+--    DROP old constraint, ADD new one with all valid values (idempotent via DO block)
+DO $$
+BEGIN
+  -- Drop the old constraint if it exists (any name)
+  EXECUTE (
+    SELECT 'ALTER TABLE collection_batches DROP CONSTRAINT ' || quote_ident(conname)
+    FROM pg_constraint
+    WHERE conrelid = 'collection_batches'::regclass
+      AND contype = 'c'
+      AND conname LIKE '%status%'
+    LIMIT 1
+  );
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+
+ALTER TABLE collection_batches
+  ADD CONSTRAINT collection_batches_status_check
+  CHECK (status IN ('collecting', 'completed', 'aggregated', 'resolved', 'dispatched', 'shipped'));
+
+-- 2. commodity_master.org_id — add if missing (live DB has is_global/created_by_org_id schema)
+ALTER TABLE commodity_master ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Backfill: mark rows that have no created_by_org_id as global (org_id stays NULL)
+-- Rows with created_by_org_id get their org_id populated
+UPDATE commodity_master
+  SET org_id = created_by_org_id
+  WHERE org_id IS NULL AND created_by_org_id IS NOT NULL;
+
+-- 3. bags.weight_kg — add if missing (may be named 'weight' in older installs)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bags' AND column_name = 'weight_kg'
+  ) THEN
+    ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
+  END IF;
+END $$;
+ALTER TABLE bags ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE bags ADD COLUMN IF NOT EXISTS grade TEXT;
+ALTER TABLE bags ADD COLUMN IF NOT EXISTS is_compliant BOOLEAN DEFAULT true;

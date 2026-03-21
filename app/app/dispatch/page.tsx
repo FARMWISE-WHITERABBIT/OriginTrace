@@ -263,6 +263,11 @@ function DispatchContent() {
             Resolve Batch First
           </Button>
         </Link>
+        <Link href={`/app/inventory/${batch.id}`} className="ml-2">
+          <Button variant="outline">
+            View Batch Details
+          </Button>
+        </Link>
       </div>
     );
   }
