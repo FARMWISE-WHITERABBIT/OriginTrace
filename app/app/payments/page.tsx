@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { PaymentTableSkeleton } from '@/components/skeletons';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
 import { Card, CardContent } from '@/components/ui/card';
@@ -116,9 +117,17 @@ export default function PaymentsPage() {
 
   const selectFarmer=(f:FarmerOption)=>{setForm(prev=>({...prev,farm_id:f.id,payee_name:f.name}));setFarmerSearch('');};
 
+  const [formErrors,setFormErrors]=useState<{payee_name?:string;amount?:string;payment_method?:string}>({});
+
   const handleCreate=async()=>{
-    if(!form.payee_name||!form.amount||!form.payment_method){toast({title:'Missing fields',description:'Payee, amount, and method are required.',variant:'destructive'});return;}
-    const amount=parseFloat(form.amount);if(isNaN(amount)||amount<=0){toast({title:'Invalid amount',description:'Amount must be positive.',variant:'destructive'});return;}
+    const errs:{payee_name?:string;amount?:string;payment_method?:string}={};
+    if(!form.payee_name) errs.payee_name='Payee name is required';
+    if(!form.amount) errs.amount='Amount is required';
+    else if(isNaN(parseFloat(form.amount))||parseFloat(form.amount)<=0) errs.amount='Must be a positive number';
+    if(!form.payment_method) errs.payment_method='Payment method is required';
+    if(Object.keys(errs).length>0){setFormErrors(errs);return;}
+    setFormErrors({});
+    const amount=parseFloat(form.amount);
     setIsCreating(true);
     try{const r=await fetch('/api/payments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payee_name:form.payee_name,payee_type:form.payee_type,farm_id:form.farm_id||undefined,amount,currency:form.currency,payment_method:form.payment_method,reference_number:form.reference_number||undefined,linked_entity_type:form.linked_entity_type||undefined,linked_entity_id:form.linked_entity_id||undefined,payment_date:form.payment_date||undefined,notes:form.notes||undefined})});if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}toast({title:'Payment recorded',description:`${format(amount)} to ${form.payee_name}.`});setDialogOpen(false);setForm(mkForm());setLinkedEntities([]);fetchPayments();fetchSummary();}
     catch(err:any){toast({title:'Error',description:err.message,variant:'destructive'});}
@@ -170,7 +179,7 @@ export default function PaymentsPage() {
             </Dialog>
 
             {/* Record Payment */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={v=>{setDialogOpen(v);if(!v)setFormErrors({});}}>
               <DialogTrigger asChild><Button data-testid="button-record-payment"><Plus className="h-4 w-4 mr-2"/>Record Payment</Button></DialogTrigger>
               <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Record Payment</DialogTitle><DialogDescription>Record a payment linked to a farmer or supplier.</DialogDescription></DialogHeader>
@@ -210,12 +219,12 @@ export default function PaymentsPage() {
                       )}
                     </div>
                   ):(
-                    <div className="space-y-1.5"><Label htmlFor="payee_name">Payee Name</Label><Input id="payee_name" placeholder="Enter name" value={form.payee_name} onChange={e=>setForm(f=>({...f,payee_name:e.target.value}))} data-testid="input-payee-name"/></div>
+                    <div className="space-y-1.5"><Label htmlFor="payee_name">Payee Name</Label><Input id="payee_name" placeholder="Enter name" value={form.payee_name} onChange={e=>{setForm(f=>({...f,payee_name:e.target.value}));if(formErrors.payee_name)setFormErrors(fe=>({...fe,payee_name:undefined}));}} className={formErrors.payee_name?'border-destructive focus-visible:ring-destructive':''} data-testid="input-payee-name"/>{formErrors.payee_name&&<p className="text-xs text-destructive mt-1">{formErrors.payee_name}</p>}</div>
                   )}
 
                   {/* Amount + Currency */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label htmlFor="amount">Amount</Label><Input id="amount" type="number" step="0.01" min="0" placeholder="0.00" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} data-testid="input-amount"/></div>
+                    <div className="space-y-1.5"><Label htmlFor="amount">Amount</Label><Input id="amount" type="number" step="0.01" min="0" placeholder="0.00" value={form.amount} onChange={e=>{setForm(f=>({...f,amount:e.target.value}));if(formErrors.amount)setFormErrors(fe=>({...fe,amount:undefined}));}} className={formErrors.amount?'border-destructive focus-visible:ring-destructive':''} data-testid="input-amount"/>{formErrors.amount&&<p className="text-xs text-destructive mt-1">{formErrors.amount}</p>}</div>
                     <div className="space-y-1.5"><Label>Currency</Label>
                       <Select value={form.currency} onValueChange={v=>setForm(f=>({...f,currency:v as import('@/hooks/use-currency').SupportedCurrency}))}>
                         <SelectTrigger data-testid="select-currency-form"><SelectValue/></SelectTrigger>
@@ -227,10 +236,11 @@ export default function PaymentsPage() {
                   {/* Method + Date */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5"><Label>Payment Method</Label>
-                      <Select value={form.payment_method} onValueChange={v=>setForm(f=>({...f,payment_method:v}))}>
-                        <SelectTrigger data-testid="select-payment-method-form"><SelectValue/></SelectTrigger>
+                      <Select value={form.payment_method} onValueChange={v=>{setForm(f=>({...f,payment_method:v}));if(formErrors.payment_method)setFormErrors(fe=>({...fe,payment_method:undefined}));}}>
+                        <SelectTrigger className={formErrors.payment_method?'border-destructive':''} data-testid="select-payment-method-form"><SelectValue placeholder="Select method"/></SelectTrigger>
                         <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank_transfer">Bank Transfer</SelectItem><SelectItem value="mobile_money">Mobile Money</SelectItem><SelectItem value="cheque">Cheque</SelectItem></SelectContent>
                       </Select>
+                      {formErrors.payment_method&&<p className="text-xs text-destructive mt-1">{formErrors.payment_method}</p>}
                     </div>
                     <div className="space-y-1.5"><Label>Payment Date</Label><Input type="date" value={form.payment_date} onChange={e=>setForm(f=>({...f,payment_date:e.target.value}))} data-testid="input-payment-date"/></div>
                   </div>
@@ -282,7 +292,20 @@ export default function PaymentsPage() {
         </div>
 
         {/* Table */}
-        {isLoading||orgLoading?(<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>)
+        {isLoading||orgLoading?(
+          <Card><CardContent className="p-0"><div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  {['Date','Farmer / Payee','Type','Amount','Method','Reference','Linked To','Status'].map(h=>(
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <PaymentTableSkeleton rows={5} />
+            </table>
+          </div></CardContent></Card>
+        )
         :payments.length===0?(
           <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4"><Banknote className="h-7 w-7 text-muted-foreground"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
         ):(

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { StatCardSkeleton } from '@/components/skeletons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -260,7 +261,9 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stat-cards-row">
-        {statCards.map((stat) => (
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : statCards.map((stat) => (
           <Link key={stat.title} href={stat.href} className="group" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <Card className="h-full transition-shadow group-hover:shadow-md group-hover:border-primary/30">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">

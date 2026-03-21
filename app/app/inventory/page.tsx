@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { InventoryTableSkeleton } from '@/components/skeletons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -331,8 +332,17 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="rounded-md border border-border overflow-hidden">
+              <table className="w-full">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>
+                    {['Batch ID', 'Farmer', 'Bags', 'Weight', 'Status', 'Date'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <InventoryTableSkeleton rows={6} />
+              </table>
             </div>
           ) : filteredBatches.length === 0 ? (
             <div className="text-center py-12">

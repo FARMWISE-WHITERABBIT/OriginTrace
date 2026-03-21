@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FarmerTableSkeleton } from '@/components/skeletons';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,8 +129,28 @@ export default function FarmersPage() {
   return (
     <TierGate feature="farmers_list" requiredTier="starter" featureLabel="Farmers">
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="p-6 space-y-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Users className="h-6 w-6" />
+                Farmer Network
+              </h1>
+              <p className="text-muted-foreground text-sm mt-0.5">Performance ledger and delivery history</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  {['Farmer', 'Community', 'Commodity', 'Area (ha)', 'Deliveries (kg)', 'Batches', 'Grade', 'Last Delivery', 'Consent'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <FarmerTableSkeleton rows={8} />
+            </table>
+          </div>
         </div>
       ) : (
         <div className="p-6 space-y-6">

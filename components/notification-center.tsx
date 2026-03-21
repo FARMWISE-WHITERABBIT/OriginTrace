@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, CheckCheck, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Check, CheckCheck, Info, AlertTriangle, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -157,29 +158,55 @@ export function NotificationCenter() {
               {notifications.map((n) => {
                 const Icon = typeIcons[n.type] || Info;
                 const color = typeColors[n.type] || 'text-muted-foreground';
+                const ctaLabel = n.link
+                  ? n.link.includes('/documents') ? 'View Document'
+                  : n.link.includes('/shipments') ? 'View Shipment'
+                  : n.link.includes('/inventory') ? 'View Batch'
+                  : n.link.includes('/farmers') ? 'View Farmer'
+                  : n.link.includes('/analytics') ? 'View Analytics'
+                  : 'View →'
+                  : null;
                 return (
                   <div
                     key={n.id}
-                    onClick={() => handleClick(n)}
-                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover-elevate ${
+                    className={`flex items-start gap-3 px-4 py-3 transition-colors ${
                       !n.is_read ? 'bg-primary/5' : ''
                     }`}
                     data-testid={`notification-item-${n.id}`}
                   >
                     <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${color}`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${!n.is_read ? 'font-medium' : ''}`}>
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                        {n.message}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        {formatTimeAgo(n.created_at)}
-                      </p>
+                      <button
+                        onClick={() => handleClick(n)}
+                        className="w-full text-left focus:outline-none"
+                      >
+                        <p className={`text-sm ${!n.is_read ? 'font-medium' : ''}`}>
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                          {n.message}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">
+                          {formatTimeAgo(n.created_at)}
+                        </p>
+                      </button>
+                      {ctaLabel && n.link && (
+                        <Link
+                          href={n.link}
+                          onClick={() => { if (!n.is_read) markAsRead(n.id); setIsOpen(false); }}
+                          className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-1.5 hover:underline"
+                        >
+                          {ctaLabel} <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      )}
                     </div>
                     {!n.is_read && (
-                      <div className="h-2 w-2 bg-primary rounded-full mt-1.5 flex-shrink-0" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                        className="h-2 w-2 bg-primary rounded-full mt-1.5 flex-shrink-0 hover:bg-primary/70 transition-colors"
+                        aria-label="Mark as read"
+                        title="Mark as read"
+                      />
                     )}
                   </div>
                 );

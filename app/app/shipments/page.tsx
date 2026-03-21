@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ShipmentCardSkeleton } from '@/components/skeletons';
 import { useRouter } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -339,8 +340,8 @@ export default function ShipmentsPage() {
         </div>
 
         {isLoading || orgLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => <ShipmentCardSkeleton key={i} />)}
           </div>
         ) : filteredShipments.length === 0 ? (
           <Card>

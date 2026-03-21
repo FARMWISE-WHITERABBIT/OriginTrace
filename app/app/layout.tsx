@@ -15,10 +15,12 @@ import { CacheWarmer } from '@/components/cache-warmer';
 import { AutoSync } from '@/components/auto-sync';
 import { TenantThemeProvider } from '@/components/tenant-theme-provider';
 import { LocaleSwitcher } from '@/components/locale-switcher';
+import { RouteProgressBar } from '@/components/route-progress';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <RouteProgressBar />
       <div className="flex flex-col flex-1 overflow-hidden pb-16 lg:pb-0">
         <ImpersonationBanner />
         <header className="flex items-center justify-between gap-4 p-3 border-b bg-background">
