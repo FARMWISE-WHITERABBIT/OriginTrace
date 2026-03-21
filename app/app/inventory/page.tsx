@@ -49,7 +49,7 @@ import { StatusBadge } from '@/lib/status-badge';
 
 interface Batch {
   id: string;
-  batch_id: string;
+  batch_code: string | null;
   status: string;
   total_weight: number;
   bag_count: number;
@@ -67,8 +67,8 @@ interface Bag {
   id: string;
   serial: string;
   status: string;
-  collection_batch_id: string | null;
-  batch_id: string | null;
+  collection_batch_code: string | null;
+  batch_code: string | null;
   weight_kg: number | null;
   grade: string | null;
   farmer_name: string | null;
@@ -140,14 +140,14 @@ export default function InventoryPage() {
   const filteredBags = bags.filter(b => {
     const q = bagSearch.toLowerCase();
     return b.serial.toLowerCase().includes(q)
-      || (b.batch_id && b.batch_id.toLowerCase().includes(q))
+      || (b.batch_code && b.batch_code.toLowerCase().includes(q))
       || (b.farmer_name && b.farmer_name.toLowerCase().includes(q))
       || (b.community && b.community.toLowerCase().includes(q));
   });
 
   interface BatchContribution {
     id: string;
-    batch_id: string;
+    batch_code: string | null;
     farm_id: string;
     farmer_name: string | null;
     weight_kg: number;
@@ -241,7 +241,7 @@ export default function InventoryPage() {
 
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = 
-      batch.batch_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      batch.batch_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       batch.farm?.farmer_name?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
@@ -276,7 +276,7 @@ export default function InventoryPage() {
           size="sm"
           onClick={() => {
             const csvData = filteredBatches.map(b => ({
-              batchId: b.batch_id || b.id.slice(0, 8),
+              batchId: b.batch_code || b.id.slice(0, 8),
               farmerName: b.farm?.farmer_name || 'Unknown',
               community: b.farm?.community || 'Unknown',
               commodity: '',
@@ -350,7 +350,7 @@ export default function InventoryPage() {
               <table className="w-full">
                 <thead className="border-b border-border bg-muted/30">
                   <tr>
-                    {['Batch ID', 'Farmer', 'Bags', 'Weight', 'Status', 'Date'].map(h => (
+                    {['Batch Code', 'Farmer', 'Bags', 'Weight', 'Status', 'Date'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
                     ))}
                   </tr>
@@ -390,7 +390,7 @@ export default function InventoryPage() {
                         aria-label="Select all batches"
                       />
                     </TableHead>
-                    <TableHead>Batch ID</TableHead>
+                    <TableHead>Batch Code</TableHead>
                     <TableHead>Farmer</TableHead>
                     <TableHead className="hidden md:table-cell">Bags</TableHead>
                     <TableHead>Weight</TableHead>
@@ -410,10 +410,10 @@ export default function InventoryPage() {
                         <Checkbox
                           checked={selected.has(batch.id)}
                           onCheckedChange={() => toggleSelect(batch.id)}
-                          aria-label={`Select batch ${batch.batch_id || batch.id.slice(0, 8)}`}
+                          aria-label={`Select batch ${batch.batch_code || batch.id.slice(0, 8)}`}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{batch.batch_id || batch.id.slice(0, 8)}</TableCell>
+                      <TableCell className="font-medium font-mono text-xs">{batch.batch_code || batch.id.slice(0, 8)}</TableCell>
                       <TableCell>{batch.farm?.farmer_name}</TableCell>
                       <TableCell className="hidden md:table-cell">{batch.bag_count}</TableCell>
                       <TableCell>{batch.total_weight} kg</TableCell>
@@ -450,9 +450,9 @@ export default function InventoryPage() {
             variant="outline"
             onClick={() => {
               const selectedBatches = filteredBatches.filter(b => selected.has(b.id));
-              const csv = ['Batch ID,Farmer,Weight,Status,Date',
+              const csv = ['Batch Code,Farmer,Weight,Status,Date',
                 ...selectedBatches.map(b => [
-                  b.batch_id || b.id.slice(0,8),
+                  b.batch_code || b.id.slice(0,8),
                   b.farm?.farmer_name || '',
                   b.total_weight,
                   b.status,
@@ -552,7 +552,7 @@ export default function InventoryPage() {
                         <TableHead>Grade</TableHead>
                         <TableHead>Weight</TableHead>
                         <TableHead>Farmer</TableHead>
-                        <TableHead>Batch ID</TableHead>
+                        <TableHead>Batch Code</TableHead>
                         <TableHead>Created</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -564,7 +564,7 @@ export default function InventoryPage() {
                           <TableCell className="text-sm text-muted-foreground">{bag.grade || '—'}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{bag.weight_kg != null ? `${Number(bag.weight_kg).toLocaleString()} kg` : '—'}</TableCell>
                           <TableCell className="text-sm">{bag.farmer_name || <span className="text-muted-foreground">—</span>}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{bag.batch_id || '—'}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{bag.batch_code || '—'}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{new Date(bag.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}

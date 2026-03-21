@@ -133,8 +133,8 @@ export function NotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
+      <PopoverContent className="w-80 p-0 max-h-[520px] flex flex-col overflow-hidden" align="end">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
           <h3 className="font-semibold text-sm">Notifications</h3>
           {unreadCount > 0 && (
             <Button
@@ -149,7 +149,7 @@ export function NotificationCenter() {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-80">
+        <ScrollArea className="flex-1 min-h-0">
           {notifications.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               No notifications yet
