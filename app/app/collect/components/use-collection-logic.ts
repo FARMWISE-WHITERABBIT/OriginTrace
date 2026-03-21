@@ -36,7 +36,9 @@ export function useCollectionLogic() {
   const [selectedLGA, setSelectedLGA] = useState('');
   const [community, setCommunity] = useState('');
   const [commodity, setCommodity] = useState('');
+  const [grade, setGrade] = useState('');
   const [commodityOptions, setCommodityOptions] = useState<string[]>([]);
+  const [commodityMaster, setCommodityMaster] = useState<any[]>([]);
   const [batchId, setBatchId] = useState('');
   const [gpsLat, setGpsLat] = useState<number | null>(null);
   const [gpsLng, setGpsLng] = useState<number | null>(null);
@@ -104,6 +106,7 @@ export function useCollectionLogic() {
       const cached = await getCachedCommodities();
       if (cached && cached.length > 0) {
         setCommodityOptions(cached.map((c: any) => c.name));
+        setCommodityMaster(cached);
         hasCached = true;
       }
       if (isOnline) {
@@ -116,6 +119,7 @@ export function useCollectionLogic() {
             const commodities = data.commodities || data;
             if (Array.isArray(commodities) && commodities.length > 0) {
               setCommodityOptions(commodities.map((c: any) => c.name));
+              setCommodityMaster(commodities);
               await cacheCommodities(commodities);
               return;
             }
@@ -411,7 +415,7 @@ export function useCollectionLogic() {
         bags: inventory.flatMap(e => Array.from({ length: e.bag_count }, () => ({
           serial: '',
           weight: e.bag_count > 0 ? e.weight_kg / e.bag_count : 0,
-          grade: 'A' as const,
+          grade: (grade || 'A') as 'A' | 'B' | 'C',
           is_compliant: true
         }))),
         notes: batchNotes + (Object.keys(complianceAttestations).length > 0 ? '\n[Compliance: ' + Object.entries(complianceAttestations).filter(([,v]) => v).map(([k]) => k).join(', ') + ']' : ''),
@@ -439,7 +443,7 @@ export function useCollectionLogic() {
     } finally {
       setIsSaving(false);
     }
-  }, [inventory, batchId, commodity, selectedState, selectedLGA, community, gpsLat, gpsLng, batchNotes, complianceAttestations, isOnline, toast]);
+  }, [inventory, batchId, commodity, grade, selectedState, selectedLGA, community, gpsLat, gpsLng, batchNotes, complianceAttestations, isOnline, toast]);
 
   return {
     router,
@@ -458,6 +462,9 @@ export function useCollectionLogic() {
     community, setCommunity,
     commodity, setCommodity,
     commodityOptions,
+    commodityMaster,
+    grade,
+    setGrade,
     batchId,
     gpsLat,
     gpsLng,

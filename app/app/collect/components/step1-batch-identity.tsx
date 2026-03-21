@@ -17,8 +17,17 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
     locLoading, states, selectedState, setSelectedState,
     selectedLGA, setSelectedLGA, filteredLGAs,
     community, setCommunity, commodity, setCommodity,
-    commodityOptions, batchId, gpsLat, gpsLng, isOnline,
+    commodityOptions, commodityMaster, grade, setGrade,
+    batchId, gpsLat, gpsLng, isOnline,
   } = logic;
+
+  // Derive grade options from the selected commodity's master entry
+  const selectedCommodityObj = commodityMaster.find(
+    (cm: any) => (cm.name || '').toLowerCase() === commodity.toLowerCase()
+  );
+  const masterGrades: string[] = selectedCommodityObj?.grades && Array.isArray(selectedCommodityObj.grades) && selectedCommodityObj.grades.length > 0
+    ? selectedCommodityObj.grades
+    : ['Grade 1', 'Grade 2', 'Grade 3'];  // universal fallback
 
   return (
     <Card>
@@ -77,12 +86,26 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
             <Label>Commodity *</Label>
             <select
               value={commodity}
-              onChange={(e) => setCommodity(e.target.value)}
+              onChange={(e) => { setCommodity(e.target.value); setGrade(''); }}
               className="w-full h-12 px-3 border rounded-md bg-background text-base"
               data-testid="select-commodity"
             >
               <option value="">Select Commodity</option>
               {commodityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Grade</Label>
+            <select
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              disabled={!commodity}
+              className="w-full h-12 px-3 border rounded-md bg-background text-base disabled:opacity-50"
+              data-testid="select-grade"
+            >
+              <option value="">Select Grade (optional)</option>
+              {masterGrades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
         </div>

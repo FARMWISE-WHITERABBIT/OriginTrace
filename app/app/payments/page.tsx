@@ -68,6 +68,31 @@ export default function PaymentsPage() {
   const [isEditing,setIsEditing]=useState(false);
   const [editForm,setEditForm]=useState({amount:'',currency:'NGN',payment_method:'cash',reference_number:'',payment_date:'',notes:'',status:'completed'});
 
+  const openEdit=(p:Payment)=>{
+    setEditingPayment(p);
+    setEditForm({amount:String(p.amount),currency:p.currency,payment_method:p.payment_method,reference_number:p.reference_number||'',payment_date:p.payment_date?.split('T')[0]||'',notes:p.notes||'',status:p.status});
+    setEditDialogOpen(true);
+  };
+
+  const handleEdit=async()=>{
+    if(!editingPayment)return;
+    setIsEditing(true);
+    try{
+      const body:any={payment_method:editForm.payment_method,currency:editForm.currency,status:editForm.status};
+      if(editForm.amount)body.amount=parseFloat(editForm.amount);
+      body.reference_number=editForm.reference_number||null;
+      if(editForm.payment_date)body.payment_date=editForm.payment_date;
+      body.notes=editForm.notes||null;
+      const r=await fetch(`/api/payments/${editingPayment.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}
+      const {payment:updated}=await r.json();
+      setPayments(prev=>prev.map(p=>p.id===editingPayment.id?updated:p));
+      toast({title:'Payment updated'});
+      setEditDialogOpen(false);setEditingPayment(null);
+    }catch(e:any){toast({title:'Error',description:e.message,variant:'destructive'});}
+    finally{setIsEditing(false);}
+  };
+
   const fetchFarmers=useCallback(async()=>{
     setFarmersLoading(true);
     try{const r=await fetch('/api/farmers?limit=100');if(!r.ok)return;const d=await r.json();setFarmers((d.farmers||d||[]).map((f:any)=>({id:String(f.farm_id??f.id),name:f.farmer_name,community:f.community,commodity:f.commodity})));}
@@ -316,7 +341,7 @@ export default function PaymentsPage() {
           <>
             <Card><CardContent className="p-0"><div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Farmer / Payee</TableHead><TableHead className="hidden sm:table-cell">Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="hidden md:table-cell">Method</TableHead><TableHead className="hidden md:table-cell">Reference</TableHead><TableHead className="hidden md:table-cell">Linked To</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Farmer / Payee</TableHead><TableHead className="hidden sm:table-cell">Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="hidden md:table-cell">Method</TableHead><TableHead className="hidden md:table-cell">Reference</TableHead><TableHead className="hidden md:table-cell">Linked To</TableHead><TableHead>Status</TableHead><TableHead className="w-8"></TableHead></TableRow></TableHeader>
                 <TableBody>
                   {payments.map(p=>(
                     <TableRow key={p.id} data-testid={`row-payment-${p.id}`}>
@@ -328,6 +353,7 @@ export default function PaymentsPage() {
                       <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground" data-testid={`text-reference-${p.id}`}>{p.reference_number||'—'}</TableCell>
                       <TableCell className="hidden md:table-cell" data-testid={`text-linked-entity-${p.id}`}>{p.linked_entity_type?<Badge variant="outline" className="text-xs">{p.linked_entity_type==='collection_batch'?'Batch':'Contract'}</Badge>:'—'}</TableCell>
                       <TableCell><Badge variant={STATUS_VARIANTS[p.status]||'outline'} className="text-xs capitalize" data-testid={`badge-status-${p.id}`}>{p.status}</Badge></TableCell>
+                      <TableCell><Button size='icon' variant='ghost' className='h-6 w-6' onClick={()=>openEdit(p)} aria-label='Edit payment'><Pencil className='h-3 w-3'/></Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -344,6 +370,75 @@ export default function PaymentsPage() {
           </>
         )}
       </div>
+
+      {/* Payment Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={open=>{if(!open){setEditDialogOpen(false);setEditingPayment(null);}}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment</DialogTitle>
+            <DialogDescription>Update the payment record for <span className="font-medium">{editingPayment?.payee_name}</span></DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" step="0.01" value={editForm.amount} onChange={e=>setEditForm(f=>({...f,amount:e.target.value}))} placeholder="0.00"/>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Currency</Label>
+                <Select value={editForm.currency} onValueChange={v=>setEditForm(f=>({...f,currency:v}))}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>{SUPPORTED_CURRENCIES.map(c=><SelectItem key={c} value={c}>{CURRENCY_LABELS[c]||c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Method</Label>
+                <Select value={editForm.payment_method} onValueChange={v=>setEditForm(f=>({...f,payment_method:v}))}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={editForm.status} onValueChange={v=>setEditForm(f=>({...f,status:v}))}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="reversed">Reversed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Payment Date</Label>
+                <Input type="date" value={editForm.payment_date} onChange={e=>setEditForm(f=>({...f,payment_date:e.target.value}))}/>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Reference #</Label>
+                <Input value={editForm.reference_number} onChange={e=>setEditForm(f=>({...f,reference_number:e.target.value}))} placeholder="Optional"/>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder="Optional notes"/>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={()=>{setEditDialogOpen(false);setEditingPayment(null);}}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={isEditing}>{isEditing?<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Saving…</>:'Save Changes'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TierGate>
   );
 }
