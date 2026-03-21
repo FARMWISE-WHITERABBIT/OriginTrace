@@ -220,16 +220,18 @@ async function seed() {
   section('Cashew Farms');
   type CashewFarmDef = { name:string; phone:string; community:string; area:number; status:string; lat:number; lng:number; notes:string };
   const cashewDefs: CashewFarmDef[] = [
-    { name:'Abubakar Suleiman', phone:'+2348055600001', community:'Kabba, Kogi',        area:3.8, status:'approved', lat:7.834, lng:6.072, notes:'Cooperative lead. 6-year cashew stands. Rainforest Alliance candidate.' },
-    { name:'Grace Oduola',      phone:'+2348055600002', community:'Lokoja, Kogi',        area:2.5, status:'approved', lat:7.802, lng:6.742, notes:'Family-run orchard. Manual harvest, sun-dried.' },
-    { name:'Ibrahim Yusuf',     phone:'+2348055600003', community:'Okene, Kogi',         area:4.1, status:'pending',  lat:7.548, lng:6.231, notes:'New member. Pending GIS verification.' },
-    { name:'Fatima Adeyemi',    phone:'+2348055600004', community:'Kabba, Kogi',         area:2.2, status:'approved', lat:7.845, lng:6.061, notes:'Premium raw cashew. High kernel outturn.' },
+    { name:'Abubakar Suleiman', phone:'+2348055600001', community:'Kabba, Kogi',  area:3.8, status:'approved', lat:7.834, lng:6.072, notes:'Cooperative lead. 6-year cashew stands. Rainforest Alliance candidate.' },
+    { name:'Grace Oduola',      phone:'+2348055600002', community:'Lokoja, Kogi', area:2.5, status:'approved', lat:7.802, lng:6.742, notes:'Family-run orchard. Manual harvest, sun-dried.' },
+    { name:'Ibrahim Yusuf',     phone:'+2348055600003', community:'Okene, Kogi',  area:4.1, status:'pending',  lat:7.548, lng:6.231, notes:'New member. Pending GIS verification.' },
+    { name:'Fatima Adeyemi',    phone:'+2348055600004', community:'Kabba, Kogi',  area:2.2, status:'approved', lat:7.845, lng:6.061, notes:'Premium raw cashew. High kernel outturn.' },
   ];
   const cashewFarms = await ins('farms', cashewDefs.map(f => ({
-    org_id:eId, farmer_name:f.name, phone_number:f.phone, community:f.community,
+    org_id:eId, farmer_name:f.name, phone:f.phone, community:f.community,
     area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
     commodity:'cashew', state:'Kogi', lga:'Kabba-Bunu',
-    latitude:f.lat, longitude:f.lng, created_by:adminUserId, consent_given:true,
+    latitude:f.lat, longitude:f.lng,
+    boundary:{ type:'Polygon', coordinates:[[[f.lng-.005,f.lat-.005],[f.lng+.005,f.lat-.005],[f.lng+.005,f.lat+.005],[f.lng-.005,f.lat+.005],[f.lng-.005,f.lat-.005]]] },
+    created_by:adminUserId, consent_given:true,
     created_at:daysAgo(rnd(45,90)),
   })), '4 cashew farms — Kogi State');
   const [cF1,cF2,cF3,cF4] = cashewFarms;
@@ -238,15 +240,17 @@ async function seed() {
   section('Hibiscus Farms');
   type HibiscusFarmDef = { name:string; phone:string; community:string; area:number; status:string; lat:number; lng:number; notes:string };
   const hibiscusDefs: HibiscusFarmDef[] = [
-    { name:'Musa Garba',        phone:'+2348066700001', community:'Wudil, Kano',         area:1.8, status:'approved', lat:11.797, lng:8.848, notes:'Organic hibiscus. EU export grade. No synthetic inputs.' },
-    { name:'Hauwa Usman',       phone:'+2348066700002', community:'Gaya, Kano',          area:2.3, status:'approved', lat:11.888, lng:9.013, notes:'Co-op member. 2nd season. Hand-picked calyces.' },
-    { name:'Yusuf Bala',        phone:'+2348066700003', community:'Kura, Kano',          area:1.5, status:'pending',  lat:11.749, lng:8.420, notes:'First season. Good crop density.' },
+    { name:'Musa Garba',   phone:'+2348066700001', community:'Wudil, Kano', area:1.8, status:'approved', lat:11.797, lng:8.848, notes:'Organic hibiscus. EU export grade. No synthetic inputs.' },
+    { name:'Hauwa Usman',  phone:'+2348066700002', community:'Gaya, Kano',  area:2.3, status:'approved', lat:11.888, lng:9.013, notes:'Co-op member. 2nd season. Hand-picked calyces.' },
+    { name:'Yusuf Bala',   phone:'+2348066700003', community:'Kura, Kano',  area:1.5, status:'pending',  lat:11.749, lng:8.420, notes:'First season. Good crop density.' },
   ];
   const hibiscusFarms = await ins('farms', hibiscusDefs.map(f => ({
-    org_id:eId, farmer_name:f.name, phone_number:f.phone, community:f.community,
+    org_id:eId, farmer_name:f.name, phone:f.phone, community:f.community,
     area_hectares:f.area, compliance_status:f.status, compliance_notes:f.notes,
     commodity:'hibiscus', state:'Kano', lga:'Wudil',
-    latitude:f.lat, longitude:f.lng, created_by:adminUserId, consent_given:true,
+    latitude:f.lat, longitude:f.lng,
+    boundary:{ type:'Polygon', coordinates:[[[f.lng-.004,f.lat-.004],[f.lng+.004,f.lat-.004],[f.lng+.004,f.lat+.004],[f.lng-.004,f.lat+.004],[f.lng-.004,f.lat-.004]]] },
+    created_by:adminUserId, consent_given:true,
     created_at:daysAgo(rnd(20,50)),
   })), '3 hibiscus farms — Kano State');
   const [hF1,hF2,hF3] = hibiscusFarms;
@@ -293,30 +297,33 @@ async function seed() {
 
   // 7b. Cashew Batches
   section('Cashew Batches');
-  const cashewBatchBase = { org_id:eId, status:'completed', yield_validated:true, created_by:agentId };
+  const cashewBatchBase = { org_id:eId, status:'completed', yield_validated:true, agent_id:agentId, local_id:randomUUID() };
   const [cashewBatch1] = await ins('collection_batches', {
     ...cashewBatchBase, farm_id:(cF1 as any).id,
     batch_code:'WRK-CSH-2026-001', commodity:'cashew', grade:'Grade 1',
-    total_weight_kg:3200, total_bags:32, collected_at:daysAgo(22),
+    total_weight:3200, bag_count:32, collected_at:daysAgo(22),
     community:'Kabba, Kogi', state:'Kogi', lga:'Kabba-Bunu',
-    notes:'Premium W320 raw cashew. High kernel outturn. 4 cooperative farms aggregated.',
+    synced_at:daysAgo(22), created_at:daysAgo(22),
+    notes:'Premium W320 raw cashew. High kernel outturn. 4 cooperative farms.',
   }, 'WRK-CSH-2026-001 cashew batch');
   const [cashewBatch2] = await ins('collection_batches', {
     ...cashewBatchBase, farm_id:(cF3 as any).id,
     batch_code:'WRK-CSH-2026-002', commodity:'cashew', grade:'Grade 2',
-    total_weight_kg:1800, total_bags:18, collected_at:daysAgo(12),
+    total_weight:1800, bag_count:18, collected_at:daysAgo(12),
     community:'Okene, Kogi', state:'Kogi', lga:'Okene',
-    notes:'Mixed grade lot. Pending full GIS verification on 1 farm.',
+    synced_at:daysAgo(12), created_at:daysAgo(12),
+    notes:'Mixed grade lot. GIS verification on 1 farm pending.',
   }, 'WRK-CSH-2026-002 cashew batch');
 
   // 7c. Hibiscus Batches
   section('Hibiscus Batches');
-  const hibiscusBatchBase = { org_id:eId, status:'completed', yield_validated:true, created_by:agentId };
+  const hibiscusBatchBase = { org_id:eId, status:'completed', yield_validated:true, agent_id:agentId, local_id:randomUUID() };
   const [hibiscusBatch1] = await ins('collection_batches', {
     ...hibiscusBatchBase, farm_id:(hF1 as any).id,
     batch_code:'WRH-HIB-2026-001', commodity:'hibiscus', grade:'Grade 1',
-    total_weight_kg:1450, total_bags:29, collected_at:daysAgo(16),
+    total_weight:1450, bag_count:29, collected_at:daysAgo(16),
     community:'Wudil, Kano', state:'Kano', lga:'Wudil',
+    synced_at:daysAgo(16), created_at:daysAgo(16),
     notes:'Organic dried hibiscus calyces. No synthetic inputs. EU export grade. Hand-sorted.',
   }, 'WRH-HIB-2026-001 hibiscus batch');
 
@@ -360,6 +367,43 @@ async function seed() {
     });
     const { error } = await db.from('bags').insert(gRows);
     if (error) warn(`ginger bags: ${error.message.slice(0,80)}`); else ok('bags: 97 ginger bags');
+  }
+  // Cashew bags
+  if ('collection_batch_id' in bagProbe) {
+    const batchDefs = [
+      { batch: cashewBatch1, code: 'WRK-CSH-2026-001', count: 32, wt: 100, grade: 'A' },
+      { batch: cashewBatch2, code: 'WRK-CSH-2026-002', count: 18, wt: 100, grade: 'B' },
+    ];
+    for (const bd of batchDefs) {
+      const rows = Array.from({length:bd.count},(_,j) => {
+        const r: Record<string,any> = { org_id:eId };
+        if('serial'               in bagProbe) r.serial               = `${bd.code}-${String(j+1).padStart(3,'0')}`;
+        if('collection_batch_id'  in bagProbe) r.collection_batch_id  = (bd.batch as any).id;
+        if('status'               in bagProbe) r.status               = 'collected';
+        if('weight_kg'            in bagProbe) r.weight_kg            = bd.wt;
+        if('grade'                in bagProbe) r.grade                = bd.grade;
+        if('is_compliant'         in bagProbe) r.is_compliant         = bd.grade === 'A';
+        return r;
+      });
+      const { error } = await db.from('bags').insert(rows);
+      if (error) warn(`cashew bags ${bd.code}: ${error.message.slice(0,80)}`);
+      else ok(`bags: ${bd.count} for ${bd.code}`);
+    }
+  }
+  // Hibiscus bags
+  if ('collection_batch_id' in bagProbe) {
+    const rows = Array.from({length:29},(_,j) => {
+      const r: Record<string,any> = { org_id:eId };
+      if('serial'               in bagProbe) r.serial               = `WRH-HIB-2026-001-${String(j+1).padStart(3,'0')}`;
+      if('collection_batch_id'  in bagProbe) r.collection_batch_id  = (hibiscusBatch1 as any).id;
+      if('status'               in bagProbe) r.status               = 'collected';
+      if('weight_kg'            in bagProbe) r.weight_kg            = 50;
+      if('grade'                in bagProbe) r.grade                = 'A';
+      if('is_compliant'         in bagProbe) r.is_compliant         = true;
+      return r;
+    });
+    const { error } = await db.from('bags').insert(rows);
+    if (error) warn(`hibiscus bags: ${error.message.slice(0,80)}`); else ok('bags: 29 hibiscus bags');
   }
 
   // 9. Farmer Performance Ledger (powers /app/farmers)
@@ -462,6 +506,44 @@ async function seed() {
   }, 'WRG-RUN-001 dried split ginger');
   await ins('processing_run_batches', { processing_run_id:(gingerRun as any).id, collection_batch_id:(gingerBatch as any).id, weight_contribution_kg:4850 }, 'ginger run-batch link');
 
+  // 11b. Processing Run — Cashew
+  section('Processing Run — Cashew');
+  const [cashewRun] = await ins('processing_runs', {
+    org_id:eId, run_code:'WRK-RUN-001',
+    facility_name:'KogiNut Processing Ltd — Kabba', facility_location:'Kabba, Kogi State, Nigeria',
+    commodity:'cashew', input_weight_kg:5000, output_weight_kg:1750, recovery_rate:35.0,
+    mass_balance_valid:true, processed_at:daysAgo(18), created_by:adminUserId,
+    notes:'Grading, shelling, kernel extraction. W320 specification. Moisture <8%. AFEX fumigated.',
+  }, 'WRK-RUN-001 cashew processing');
+  await ins('processing_run_batches', [
+    { processing_run_id:(cashewRun as any).id, collection_batch_id:(cashewBatch1 as any).id, weight_contribution_kg:3200 },
+    { processing_run_id:(cashewRun as any).id, collection_batch_id:(cashewBatch2 as any).id, weight_contribution_kg:1800 },
+  ], '2 cashew run-batch links');
+
+  // 11c. Processing Run — Hibiscus
+  section('Processing Run — Hibiscus');
+  const [hibiscusRun] = await ins('processing_runs', {
+    org_id:eId, run_code:'WRH-RUN-001',
+    facility_name:'WhiteRabbit Processing — Lagos', facility_location:'Magodo GRA, Lagos, Nigeria',
+    commodity:'hibiscus', input_weight_kg:1450, output_weight_kg:1305, recovery_rate:90.0,
+    mass_balance_valid:true, processed_at:daysAgo(10), created_by:adminUserId,
+    notes:'Sorting, cleaning, moisture check (<12%). Packed in food-grade poly bags. No additives.',
+  }, 'WRH-RUN-001 hibiscus processing');
+  await ins('processing_run_batches', { processing_run_id:(hibiscusRun as any).id, collection_batch_id:(hibiscusBatch1 as any).id, weight_contribution_kg:1450 }, 'hibiscus run-batch link');
+
+  // 11d. Cashew batch contributions (cooperative)
+  await ins('batch_contributions', [
+    { batch_id:(cashewBatch1 as any).id, farm_id:(cF1 as any).id, farmer_name:cashewDefs[0].name, weight_kg:1400, bag_count:14, compliance_status:'verified', notes:'WRK-CSH-2026-001 — cooperative lead, primary contributor' },
+    { batch_id:(cashewBatch1 as any).id, farm_id:(cF2 as any).id, farmer_name:cashewDefs[1].name, weight_kg:900,  bag_count:9,  compliance_status:'verified', notes:'WRK-CSH-2026-001 — Lokoja contribution' },
+    { batch_id:(cashewBatch1 as any).id, farm_id:(cF4 as any).id, farmer_name:cashewDefs[3].name, weight_kg:900,  bag_count:9,  compliance_status:'verified', notes:'WRK-CSH-2026-001 — premium kernel lot' },
+    { batch_id:(cashewBatch2 as any).id, farm_id:(cF3 as any).id, farmer_name:cashewDefs[2].name, weight_kg:1800, bag_count:18, compliance_status:'pending',  notes:'WRK-CSH-2026-002 — sole contributor, GIS pending' },
+  ], '4 cashew batch contributions');
+  // Hibiscus batch contributions
+  await ins('batch_contributions', [
+    { batch_id:(hibiscusBatch1 as any).id, farm_id:(hF1 as any).id, farmer_name:hibiscusDefs[0].name, weight_kg:800,  bag_count:16, compliance_status:'verified', notes:'WRH-HIB-2026-001 — organic cooperative lead' },
+    { batch_id:(hibiscusBatch1 as any).id, farm_id:(hF2 as any).id, farmer_name:hibiscusDefs[1].name, weight_kg:650,  bag_count:13, compliance_status:'verified', notes:'WRH-HIB-2026-001 — Gaya contribution' },
+  ], '2 hibiscus batch contributions');
+
   // 12. Finished Goods
   section('Finished Goods');
   const fgB = { org_id:eId, created_by:adminUserId };
@@ -470,6 +552,8 @@ async function seed() {
   const [fg3] = await ins('finished_goods', { ...fgB, processing_run_id:(run3 as any).id, pedigree_code:'PED-WR-003', product_name:'Cocoa Beans — UK Batch (HOLD)',             product_type:'dried_beans', weight_kg:432,  batch_number:'FG-2026-003', lot_number:'LOT-UK-001',  production_date:dateStr(20), destination_country:'United Kingdom',        buyer_company:'BritishChoc Ltd',             pedigree_verified:false, verification_notes:'Mass balance invalid — under investigation.' }, 'FG3 UK');
   const [fg4] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-004', product_name:'Certified Cocoa Beans — UAE Grade',         product_type:'dried_beans', weight_kg:1200, batch_number:'FG-2026-004', lot_number:'LOT-UAE-001', production_date:dateStr(30), destination_country:'United Arab Emirates',  buyer_company:'GulfChocolate FZCO',          pedigree_verified:true }, 'FG4 UAE');
   const [gingerFG] = await ins('finished_goods', { ...fgB, processing_run_id:(gingerRun as any).id, pedigree_code:'PED-WRG-001', product_name:'Dried Split Ginger — China Export Grade', product_type:'spice', weight_kg:1165, batch_number:'FG-WRG-2026-001', lot_number:'LOT-CN-001', production_date:dateStr(12), destination_country:'China', buyer_company:'Tianjin Spice Imports Co. Ltd', pedigree_verified:true }, 'FG5 ginger China');
+  const [cashewFG] = await ins('finished_goods', { ...fgB, processing_run_id:(cashewRun as any).id, pedigree_code:'PED-WRK-001', product_name:'W320 Cashew Kernels — EU/UK Grade', product_type:'nut_kernel', weight_kg:1750, batch_number:'FG-WRK-2026-001', lot_number:'LOT-CSH-001', production_date:dateStr(18), destination_country:'United Kingdom', buyer_company:'British Nut Traders Ltd', pedigree_verified:true }, 'FG6 cashew UK');
+  const [hibiscusFG] = await ins('finished_goods', { ...fgB, processing_run_id:(hibiscusRun as any).id, pedigree_code:'PED-WRH-001', product_name:'Dried Hibiscus Calyces — Organic EU Grade', product_type:'dried_herb', weight_kg:1305, batch_number:'FG-WRH-2026-001', lot_number:'LOT-HIB-001', production_date:dateStr(10), destination_country:'Germany', buyer_company:'Kräuter & Co. GmbH', pedigree_verified:true }, 'FG7 hibiscus EU');
 
   // 13. Shipments
   section('Shipments');
@@ -478,17 +562,21 @@ async function seed() {
   const [ship2] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-002', status:'ready', destination_country:'United States',         destination_port:'New York',  commodity:'Cocoa Beans',       buyer_company:'CacaoAmerica LLC',            buyer_contact:'imports@cacaoamerica-demo.com',     target_regulations:['FSMA 204','Lacey Act'],           estimated_ship_date:dateStr(-21), compliance_profile_id:(fsmaProf as any).id,   readiness_score:68,   readiness_decision:'conditional', risk_flags:[{severity:'critical',category:'Documentation',message:'FDA Prior Notice not submitted. Required 8 hours before US port arrival.',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Bill of Lading not uploaded.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:88},{name:'Documentation Completeness',score:40},{name:'Chemical & Contamination Risk',score:95},{name:'Storage & Handling Controls',score:55},{name:'Regulatory Alignment',score:70}], notes:'Awaiting FDA Prior Notice.' }, 'SHP-002 US conditional');
   const [ship3] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-003', status:'draft', destination_country:'United Kingdom',        destination_port:'Tilbury',   commodity:'Cocoa Beans',       buyer_company:'BritishChoc Ltd',             buyer_contact:'ops@britishchoc-demo.com',          target_regulations:['UK Environment Act'],             estimated_ship_date:dateStr(-7),  compliance_profile_id:(ukProf as any).id,    readiness_score:28,   readiness_decision:'no_go',        risk_flags:[{severity:'critical',category:'Deforestation',message:'Farm in supply chain has active deforestation risk.',is_hard_fail:true},{severity:'critical',category:'Mass Balance',message:'Processing Run WR-RUN-003 invalid mass balance (60% recovery, min 75%).',is_hard_fail:true},{severity:'warning',category:'Documentation',message:'Due Diligence Statement missing.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:40},{name:'Documentation Completeness',score:20},{name:'Chemical & Contamination Risk',score:0},{name:'Storage & Handling Controls',score:35},{name:'Regulatory Alignment',score:50}], notes:'Blocked.' }, 'SHP-003 UK no-go');
   const [ship4] = await ins('shipments', { ...sB, shipment_code:'WR-SHP-2026-004', status:'draft', destination_country:'United Arab Emirates',  destination_port:'Jebel Ali', commodity:'Cocoa Beans',       buyer_company:'GulfChocolate FZCO',          buyer_contact:'trade@gulfchoc-demo.com',           target_regulations:['UAE Halal','ESMA'],              estimated_ship_date:dateStr(-30), compliance_profile_id:(uaeProf as any).id,   readiness_score:null, readiness_decision:'pending',      risk_flags:[],                                                                                                                                                                                                                                                                                                                                                                score_breakdown:[], notes:'Draft. Documents not yet uploaded.' }, 'SHP-004 UAE pending');
-  const [gingerShip] = await ins('shipments', { ...sB, shipment_code:'WRG-SHP-2026-001', status:'ready', destination_country:'China',          destination_port:'Tianjin',   commodity:'Dried Split Ginger', buyer_company:'Tianjin Spice Imports Co. Ltd', buyer_contact:'imports@tianjinspice-demo.com',   target_regulations:['China GACC','China Green Trade'], estimated_ship_date:dateStr(-5),  compliance_profile_id:(gaccProf as any).id,  readiness_score:82,   readiness_decision:'go',           risk_flags:[{severity:'warning',category:'Documentation',message:'MRL lab result issued 28 days ago — retest recommended before vessel loading.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:90},{name:'Documentation Completeness',score:75},{name:'Chemical & Contamination Risk',score:100},{name:'Storage & Handling Controls',score:88},{name:'Regulatory Alignment',score:80}], notes:'GACC number on packaging. Phytosanitary applied. Fumigation complete 4 days ago.' }, 'SHP-005 WRG ginger China go');
+  const [gingerShip] = await ins('shipments', { ...sB, shipment_code:'WRG-SHP-2026-001', status:'ready', destination_country:'China', destination_port:'Tianjin', commodity:'Dried Split Ginger', buyer_company:'Tianjin Spice Imports Co. Ltd', buyer_contact:'imports@tianjinspice-demo.com', target_regulations:['China GACC','China Green Trade'], estimated_ship_date:dateStr(-5), compliance_profile_id:(gaccProf as any).id, readiness_score:82, readiness_decision:'go', risk_flags:[{severity:'warning',category:'Documentation',message:'MRL lab result issued 28 days ago — retest recommended before vessel loading.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:90},{name:'Documentation Completeness',score:75},{name:'Chemical & Contamination Risk',score:100},{name:'Storage & Handling Controls',score:88},{name:'Regulatory Alignment',score:80}], notes:'GACC number on packaging. Phytosanitary applied. Fumigation complete 4 days ago.' }, 'SHP-005 WRG ginger China go');
+  const [cashewShip] = await ins('shipments', { ...sB, shipment_code:'WRK-SHP-2026-001', status:'ready', destination_country:'United Kingdom', destination_port:'Felixstowe', commodity:'W320 Cashew Kernels', buyer_company:'British Nut Traders Ltd', buyer_contact:'procurement@britishnut-demo.com', target_regulations:['UK Environment Act','UK Allergen Labelling'], estimated_ship_date:dateStr(-10), compliance_profile_id:(ukProf as any).id, readiness_score:87, readiness_decision:'go', risk_flags:[{severity:'warning',category:'Documentation',message:'Allergen declaration pending review by buyer.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:92},{name:'Documentation Completeness',score:82},{name:'Chemical & Contamination Risk',score:90},{name:'Storage & Handling Controls',score:88},{name:'Regulatory Alignment',score:84}], notes:'W320 kernel specification met. Moisture <8%. AFEX fumigation complete.' }, 'SHP-006 cashew UK go');
+  const [hibiscusShip] = await ins('shipments', { ...sB, shipment_code:'WRH-SHP-2026-001', status:'draft', destination_country:'Germany', destination_port:'Hamburg', commodity:'Dried Hibiscus Calyces', buyer_company:'Kräuter & Co. GmbH', buyer_contact:'einkauf@kraeuterco-demo.com', target_regulations:['EUDR','EU Organic Regulation 2018/848'], estimated_ship_date:dateStr(-7), compliance_profile_id:(eudrProf as any).id, readiness_score:74, readiness_decision:'conditional', risk_flags:[{severity:'warning',category:'Documentation',message:'EU Organic certificate not yet uploaded.',is_hard_fail:false},{severity:'warning',category:'Documentation',message:'Phytosanitary certificate pending NAFDAC issuance.',is_hard_fail:false}], score_breakdown:[{name:'Traceability Integrity',score:95},{name:'Documentation Completeness',score:55},{name:'Chemical & Contamination Risk',score:100},{name:'Storage & Handling Controls',score:82},{name:'Regulatory Alignment',score:75}], notes:'Organic certification in progress. Awaiting NAFDAC phytosanitary.' }, 'SHP-007 hibiscus Germany conditional');
 
   // 14. Shipment Items (links finished goods → shipments)
   section('Shipment Items');
   await ins('shipment_items', [
-    { shipment_id:(ship1 as any).id,      item_type:'finished_good', finished_good_id:(fg1 as any).id,      weight_kg:(fg1 as any).weight_kg      },
-    { shipment_id:(ship2 as any).id,      item_type:'finished_good', finished_good_id:(fg2 as any).id,      weight_kg:(fg2 as any).weight_kg      },
-    { shipment_id:(ship3 as any).id,      item_type:'finished_good', finished_good_id:(fg3 as any).id,      weight_kg:(fg3 as any).weight_kg      },
-    { shipment_id:(ship4 as any).id,      item_type:'finished_good', finished_good_id:(fg4 as any).id,      weight_kg:(fg4 as any).weight_kg      },
-    { shipment_id:(gingerShip as any).id, item_type:'finished_good', finished_good_id:(gingerFG as any).id, weight_kg:(gingerFG as any).weight_kg  },
-  ], '5 shipment items');
+    { shipment_id:(ship1 as any).id,       item_type:'finished_good', finished_good_id:(fg1 as any).id,       weight_kg:(fg1 as any).weight_kg      },
+    { shipment_id:(ship2 as any).id,       item_type:'finished_good', finished_good_id:(fg2 as any).id,       weight_kg:(fg2 as any).weight_kg      },
+    { shipment_id:(ship3 as any).id,       item_type:'finished_good', finished_good_id:(fg3 as any).id,       weight_kg:(fg3 as any).weight_kg      },
+    { shipment_id:(ship4 as any).id,       item_type:'finished_good', finished_good_id:(fg4 as any).id,       weight_kg:(fg4 as any).weight_kg      },
+    { shipment_id:(gingerShip as any).id,  item_type:'finished_good', finished_good_id:(gingerFG as any).id,  weight_kg:(gingerFG as any).weight_kg  },
+    { shipment_id:(cashewShip as any).id,  item_type:'finished_good', finished_good_id:(cashewFG as any).id,  weight_kg:(cashewFG as any).weight_kg  },
+    { shipment_id:(hibiscusShip as any).id,item_type:'finished_good', finished_good_id:(hibiscusFG as any).id,weight_kg:(hibiscusFG as any).weight_kg },
+  ], '7 shipment items');
 
   // 15. Digital Product Passports
   section('DPPs');
@@ -499,6 +587,11 @@ async function seed() {
     { org_id:eId, finished_good_id:(fg4 as any).id,      dpp_code:'DPP-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_beans', origin_country:'NG', sustainability_claims:{halal_certified:true,esma_compliant:true}, certifications:['Halal Certified','UAE ESMA'], processing_history:[{run_code:'WR-RUN-001',input_kg:2630,output_kg:2265,recovery_rate:86.1}], chain_of_custody:[{stage:'collection',actor:'WhiteRabbit Demo Co.',date:daysAgo(50)},{stage:'processing',actor:'WhiteRabbit Processing — Sagamu',date:daysAgo(35)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Certified Cocoa Beans — UAE Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(7), created_by:adminUserId },
     { org_id:eId, finished_good_id:(gingerFG as any).id,  dpp_code:'DPP-WRG-'+randomUUID().slice(0,8).toUpperCase(), product_category:'spice', origin_country:'NG', sustainability_claims:{gacc_registered:true,iso_22000_certified:true,haccp_certified:true,cooperative_sourced:true,gps_traced_farms:4}, certifications:['ISO 22000:2018','HACCP','GACC Registered','NAFDAC Approved'], processing_history:[{run_code:'WRG-RUN-001',input_kg:4850,output_kg:1165,recovery_rate:24.0,process:'Washed→Peeled→Split→Tray-dried 60°C/48hrs'}], chain_of_custody:[{stage:'farm collection',actor:'WhiteRabbit Cooperative — Southern Kaduna',date:daysAgo(18)},{stage:'processing',actor:'WhiteRabbit Processing — Lagos',date:daysAgo(12)},{stage:'export',actor:'WhiteRabbit Demo Co. Export Division',date:daysAgo(5)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,gacc_compliant:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Dried Split Ginger — China Export Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(4), created_by:adminUserId },
   ], '5 DPPs');
+
+  await ins('digital_product_passports', [
+    { org_id:eId, finished_good_id:(cashewFG as any).id, dpp_code:'DPP-WRK-'+randomUUID().slice(0,8).toUpperCase(), product_category:'nut_kernel', origin_country:'NG', sustainability_claims:{deforestation_free:true,cooperative_sourced:true,gps_traced_farms:3,rainforest_alliance_candidate:true}, certifications:['NAFDAC Approved','AFEX Fumigated'], processing_history:[{run_code:'WRK-RUN-001',input_kg:5000,output_kg:1750,recovery_rate:35.0,process:'Grading→Shelling→Kernel extraction→AFEX fumigation'}], chain_of_custody:[{stage:'farm collection',actor:'WhiteRabbit Cooperative — Kabba, Kogi',date:daysAgo(22)},{stage:'processing',actor:'KogiNut Processing Ltd',date:daysAgo(18)},{stage:'export',actor:'WhiteRabbit Demo Co.',date:daysAgo(10)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'W320 Cashew Kernels — EU/UK Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'active', issued_at:daysAgo(5), created_by:adminUserId },
+    { org_id:eId, finished_good_id:(hibiscusFG as any).id, dpp_code:'DPP-WRH-'+randomUUID().slice(0,8).toUpperCase(), product_category:'dried_herb', origin_country:'NG', sustainability_claims:{deforestation_free:true,organic_farming:true,no_synthetic_inputs:true,cooperative_sourced:true,gps_traced_farms:2}, certifications:['Organic Farming (In Certification)','NAFDAC Approved'], processing_history:[{run_code:'WRH-RUN-001',input_kg:1450,output_kg:1305,recovery_rate:90.0,process:'Sorting→Cleaning→Moisture check→Packing'}], chain_of_custody:[{stage:'farm collection',actor:'WhiteRabbit Cooperative — Wudil, Kano',date:daysAgo(16)},{stage:'processing',actor:'WhiteRabbit Processing — Lagos',date:daysAgo(10)},{stage:'export',actor:'WhiteRabbit Demo Co.',date:daysAgo(3)}], regulatory_compliance:{pedigree_verified:true,mass_balance_valid:true,eudr_compliant:true,dds_submitted:false}, machine_readable_data:{'@context':'https://schema.org','@type':'Product',name:'Dried Hibiscus Calyces — Organic EU Grade',countryOfOrigin:'Nigeria',producer:'WhiteRabbit Demo Co.'}, passport_version:1, status:'draft', issued_at:null, created_by:adminUserId },
+  ], '2 cashew+hibiscus DPPs');
 
   // 16. Documents
   section('Documents');
@@ -530,6 +623,17 @@ async function seed() {
     { org_id:eId, title:'Certificate of Origin — Ginger/China (NEPC)',    document_type:sd('certificate_of_origin'), status:'active',        linked_entity_type:'shipment',      linked_entity_id:(gingerShip as any).id, expiry_date:dateStr(-25),  file_url:'https://demo.origintrace.com/docs/whiterabbit/coo-ginger.pdf',   uploaded_by:adminUserId, notes:'Issued by NEPC. Origin: Kaduna State, Nigeria.' },
   ], '15 documents');
 
+  await ins('documents', [
+    // Cashew — UK shipment
+    { org_id:eId, title:'Phytosanitary Certificate — Cashew/UK',       document_type:sd('phytosanitary'),         status:'active',   linked_entity_type:'shipment', linked_entity_id:(cashewShip as any).id,  expiry_date:dateStr(-14), file_url:'https://demo.origintrace.com/docs/cashew/phyto-cashew.pdf',   uploaded_by:adminUserId, notes:'Issued by NAFDAC. Free from live pests.' },
+    { org_id:eId, title:'AFEX Fumigation Certificate — Cashew/UK',     document_type:sd('fumigation'),            status:'active',   linked_entity_type:'shipment', linked_entity_id:(cashewShip as any).id,  expiry_date:dateStr(-12), file_url:'https://demo.origintrace.com/docs/cashew/fumigation-cashew.pdf', uploaded_by:adminUserId, notes:'AFEX treatment. Phosphine 72hrs.' },
+    { org_id:eId, title:'Quality / Grade Certificate — W320 Cashew',   document_type:sd('quality_cert'),          status:'active',   linked_entity_type:'shipment', linked_entity_id:(cashewShip as any).id,  expiry_date:dateStr(-30), file_url:'https://demo.origintrace.com/docs/cashew/quality-cashew.pdf',  uploaded_by:adminUserId, notes:'Moisture 7.2%. Outturn 49 lbs/bag. W320 specification confirmed.' },
+    { org_id:eId, title:'Certificate of Origin — Cashew/UK (NEPC)',    document_type:sd('certificate_of_origin'), status:'active',   linked_entity_type:'shipment', linked_entity_id:(cashewShip as any).id,  expiry_date:dateStr(-20), file_url:'https://demo.origintrace.com/docs/cashew/coo-cashew.pdf',      uploaded_by:adminUserId, notes:'Issued by NEPC. Origin: Kogi State, Nigeria.' },
+    // Hibiscus — Germany shipment
+    { org_id:eId, title:'MRL Lab Result — Hibiscus Calyces (EU)',       document_type:sd('lab_result'),            status:'active',   linked_entity_type:'shipment', linked_entity_id:(hibiscusShip as any).id, expiry_date:dateStr(-30), file_url:'https://demo.origintrace.com/docs/hibiscus/mrl-hibiscus.pdf',   uploaded_by:adminUserId, notes:'No detectable residues. EU MRL compliant.' },
+    { org_id:eId, title:'Organic Certification (In Progress)',           document_type:sd('other'),                 status:'archived', linked_entity_type:'shipment', linked_entity_id:(hibiscusShip as any).id, expiry_date:null,         file_url:'https://demo.origintrace.com/docs/hibiscus/organic-cert-wip.pdf', uploaded_by:adminUserId, notes:'Application submitted to certifier. Awaiting audit visit.' },
+  ], '6 cashew+hibiscus documents');
+
   // 17. Contracts + Tenders
   section('Contracts');
   const [contract1] = await tryIns('contracts', { exporter_org_id:eId, buyer_org_id:bId, contract_reference:'WR-CON-2026-001', status:'active', commodity:'Cocoa Beans', quantity_mt:25, price_per_unit:3800, currency:'USD', quality_requirements:{min_grade:'Grade 1',max_moisture:7.5,min_fat:55}, required_certifications:['Rainforest Alliance'], delivery_deadline:dateStr(-120), destination_port:'Hamburg', compliance_profile_id:(eudrProf as any).id, notes:'Annual supply. Delivery in 5MT tranches.', created_by:adminUserId }, 'contract 1');
@@ -544,6 +648,65 @@ async function seed() {
   // 18. Farm Conflicts
   section('Farm Conflicts');
   await tryIns('farm_conflicts', { org_id:eId, farm_a_id:(fG as any).id, farm_b_id:(fH as any).id, overlap_ratio:0.037, status:'pending' }, 'overlap G↔H');
+  await tryIns('farm_conflicts', { org_id:eId, farm_a_id:(cF1 as any).id, farm_b_id:(cF4 as any).id, overlap_ratio:0.012, status:'resolved' }, 'overlap cashew C1↔C4 (resolved)');
+
+  // 18b. Payments (farmer payment records)
+  section('Payments');
+  const paymentsData = [
+    // Cocoa farmers
+    { farm_id:(fA as any).id, payee_name:cocoaDefs[0].name, amount:246000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(20), notes:'WR-BCH-001 + WR-BCH-007 — 861kg cocoa @ NGN 285/kg' },
+    { farm_id:(fB as any).id, payee_name:cocoaDefs[1].name, amount:607050, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(10), notes:'WR-BCH-002 + WR-BCH-010 — 2130kg @ NGN 285/kg' },
+    { farm_id:(fC as any).id, payee_name:cocoaDefs[2].name, amount:433200, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(8),  notes:'WR-BCH-003 + WR-BCH-011 — 1520kg @ NGN 285/kg' },
+    { farm_id:(fD as any).id, payee_name:cocoaDefs[3].name, amount:478800, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(6),  notes:'WR-BCH-004 + WR-BCH-012 — 1680kg @ NGN 285/kg' },
+    { farm_id:(fE as any).id, payee_name:cocoaDefs[4].name, amount:313500, currency:'NGN', payment_method:'cash',         status:'completed', payment_date:daysAgo(38), notes:'WR-BCH-005 — 1100kg @ NGN 285/kg' },
+    { farm_id:(fF as any).id, payee_name:cocoaDefs[5].name, amount:205200, currency:'NGN', payment_method:'cash',         status:'completed', payment_date:daysAgo(35), notes:'WR-BCH-006 — 720kg @ NGN 285/kg' },
+    { farm_id:(fG as any).id, payee_name:cocoaDefs[6].name, amount:0,      currency:'NGN', payment_method:'bank_transfer', status:'pending',   payment_date:null,        notes:'WR-BCH-008 — PENDING. Batch under deforestation quarantine.' },
+    // Ginger cooperative farmers
+    { farm_id:(gF1 as any).id, payee_name:gingerDefs[0].name, amount:290000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(14), notes:'WRG-GNG-2026-001 — 1450kg dried ginger @ NGN 200/kg' },
+    { farm_id:(gF2 as any).id, payee_name:gingerDefs[1].name, amount:256000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(14), notes:'WRG-GNG-2026-001 — 1280kg dried ginger @ NGN 200/kg' },
+    { farm_id:(gF3 as any).id, payee_name:gingerDefs[2].name, amount:190000, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(14), notes:'WRG-GNG-2026-001 — 950kg dried ginger @ NGN 200/kg' },
+    { farm_id:(gF4 as any).id, payee_name:gingerDefs[3].name, amount:234000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(14), notes:'WRG-GNG-2026-001 — 1170kg dried ginger @ NGN 200/kg' },
+    // Cashew cooperative farmers
+    { farm_id:(cF1 as any).id, payee_name:cashewDefs[0].name, amount:280000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(15), notes:'WRK-CSH-2026-001 — 1400kg raw cashew @ NGN 200/kg' },
+    { farm_id:(cF2 as any).id, payee_name:cashewDefs[1].name, amount:180000, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(15), notes:'WRK-CSH-2026-001 — 900kg raw cashew @ NGN 200/kg' },
+    { farm_id:(cF3 as any).id, payee_name:cashewDefs[2].name, amount:252000, currency:'NGN', payment_method:'bank_transfer', status:'pending',   payment_date:null,        notes:'WRK-CSH-2026-002 — awaiting GIS verification clearance' },
+    { farm_id:(cF4 as any).id, payee_name:cashewDefs[3].name, amount:180000, currency:'NGN', payment_method:'bank_transfer', status:'completed', payment_date:daysAgo(15), notes:'WRK-CSH-2026-001 — 900kg premium cashew @ NGN 200/kg' },
+    // Hibiscus farmers
+    { farm_id:(hF1 as any).id, payee_name:hibiscusDefs[0].name, amount:320000, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(10), notes:'WRH-HIB-2026-001 — 800kg dried hibiscus @ NGN 400/kg' },
+    { farm_id:(hF2 as any).id, payee_name:hibiscusDefs[1].name, amount:260000, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(10), notes:'WRH-HIB-2026-001 — 650kg dried hibiscus @ NGN 400/kg' },
+  ];
+  await tryIns('payments', paymentsData.map(p => ({
+    org_id:eId, farm_id:p.farm_id, payee_name:p.payee_name,
+    amount:p.amount, currency:p.currency, payment_method:p.payment_method,
+    status:p.status, payment_date:p.payment_date, notes:p.notes,
+    created_by:adminUserId,
+  })), `${paymentsData.length} payment records`);
+
+  // 18c. Yield Alerts
+  section('Yield Alerts');
+  await tryIns('yield_predictions', [
+    { org_id:eId, farm_id:(fA as any).id, commodity:'cocoa', predicted_yield_kg:900,  actual_yield_kg:861,  variance_pct:-4.3, season:'2026', alert_level:'none',     alert_message:null, prediction_date:daysAgo(60) },
+    { org_id:eId, farm_id:(fB as any).id, commodity:'cocoa', predicted_yield_kg:1400, actual_yield_kg:2130, variance_pct:52.1, season:'2026', alert_level:'positive',  alert_message:'Yield significantly above forecast. Verify collection data.', prediction_date:daysAgo(55) },
+    { org_id:eId, farm_id:(fC as any).id, commodity:'cocoa', predicted_yield_kg:800,  actual_yield_kg:1520, variance_pct:90.0, season:'2026', alert_level:'positive',  alert_message:'Exceptionally high yield — confirm no data error.', prediction_date:daysAgo(50) },
+    { org_id:eId, farm_id:(fG as any).id, commodity:'cocoa', predicted_yield_kg:2200, actual_yield_kg:1640, variance_pct:-25.5,season:'2026', alert_level:'warning',   alert_message:'Yield 25% below forecast. Possible impact from deforestation risk quarantine.', prediction_date:daysAgo(20) },
+    { org_id:eId, farm_id:(fH as any).id, commodity:'cocoa', predicted_yield_kg:600,  actual_yield_kg:200,  variance_pct:-66.7,season:'2026', alert_level:'critical',  alert_message:'Yield severely below forecast. Farm is new — expected low initial output.', prediction_date:daysAgo(10) },
+    { org_id:eId, farm_id:(gF5 as any).id,commodity:'ginger',predicted_yield_kg:440,  actual_yield_kg:0,    variance_pct:-100, season:'2026', alert_level:'critical',  alert_message:'No delivery recorded. Farmer enrolled but no collection this cycle.', prediction_date:daysAgo(18) },
+    { org_id:eId, farm_id:(cF3 as any).id,commodity:'cashew',predicted_yield_kg:2000, actual_yield_kg:1800, variance_pct:-10.0,season:'2026', alert_level:'warning',   alert_message:'GIS verification pending — cannot fully validate yield claim.', prediction_date:daysAgo(12) },
+  ], '7 yield alerts');
+
+  // 18d. Notifications
+  section('Notifications');
+  await tryIns('notifications', [
+    { org_id:eId, user_id:adminUserId, title:'Shipment Ready — WR-SHP-2026-001', message:'EU cocoa shipment scored 91/100. All compliance checks passed. Ready for vessel booking.', type:'shipment_ready', link:'/app/shipments', read:false, created_at:daysAgo(10) },
+    { org_id:eId, user_id:adminUserId, title:'Document Expiring — MRL Lab Result', message:'MRL pesticide residue lab result for ginger shipment expires in 3 days. Retest recommended.', type:'document_expiring', link:'/app/documents', read:false, created_at:daysAgo(2) },
+    { org_id:eId, user_id:adminUserId, title:'Deforestation Risk — Taiwo Olanrewaju', message:'Global Forest Watch detected 1.4ha forest loss within farm boundary. Batch WR-BCH-008 quarantined.', type:'compliance_alert', link:'/app/farms', read:false, created_at:daysAgo(15) },
+    { org_id:eId, user_id:adminUserId, title:'Yield Alert — Sola Akinwale', message:'No collection recorded for new farmer Sola Akinwale this season. Follow-up recommended.', type:'yield_alert', link:'/app/yield-alerts', read:true,  created_at:daysAgo(10) },
+    { org_id:eId, user_id:adminUserId, title:'Mass Balance Invalid — WR-RUN-003', message:'Processing run WR-RUN-003 failed mass balance check. 60% recovery below 75% minimum. UK shipment blocked.', type:'compliance_alert', link:'/app/processing', read:true,  created_at:daysAgo(20) },
+    { org_id:eId, user_id:adminUserId, title:'New Tender — NibsEurope GmbH', message:'Buyer NibsEurope GmbH posted a request for 20MT Grade 1 cocoa. Closes in 21 days.', type:'trade', link:'/app/tenders', read:true,  created_at:daysAgo(21) },
+    { org_id:eId, user_id:adminUserId, title:'Contract Signed — WR-CON-2026-001', message:'Annual cocoa supply contract (25MT, $3,800/MT) with NibsEurope GmbH is now active.', type:'contract', link:'/app/contracts', read:true,  created_at:daysAgo(30) },
+    { org_id:eId, user_id:adminUserId, title:'Cashew Shipment Conditional — WRK-SHP-2026-001', message:'Cashew UK shipment scored 87/100 but allergen declaration is pending buyer review.', type:'shipment_ready', link:'/app/shipments', read:false, created_at:daysAgo(5) },
+    { org_id:eId, user_id:agentId,     title:'Collection Synced', message:'12 offline batches synced successfully. All records uploaded to OriginTrace.', type:'sync', link:'/app/sync', read:true,  created_at:daysAgo(1) },
+  ], '9 notifications');
 
   // 19. Farmer Inputs (agricultural production records — GACC MRL + Rainforest Alliance)
   section('Farmer Inputs');
@@ -567,6 +730,17 @@ async function seed() {
     application_date:d.date, area_applied_hectares:d.area,
     notes:d.notes, recorded_by:adminUserId,
   })), `${inputDefs.length} input records`);
+
+  // Cashew and hibiscus inputs
+  await tryIns('farmer_inputs', [
+    { org_id:eId, farm_id:(cF1 as any).id, input_type:'fertilizer',        product_name:'Urea 46%',              quantity:60,  unit:'kg',     application_date:dateStr(70), area_applied_hectares:3.8, notes:'Pre-season fertilizer. Cashew establishment.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(cF1 as any).id, input_type:'organic_amendment', product_name:'Wood Ash',              quantity:100, unit:'kg',     application_date:dateStr(65), area_applied_hectares:3.8, notes:'Potassium supplement. Organic amendment for orchard.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(cF2 as any).id, input_type:'fertilizer',        product_name:'NPK 15-15-15',          quantity:40,  unit:'kg',     application_date:dateStr(72), area_applied_hectares:2.5, notes:'Top dressing for established trees.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(cF4 as any).id, input_type:'pesticide',         product_name:'Chlorpyrifos EC',       quantity:1.5, unit:'liters', application_date:dateStr(68), area_applied_hectares:2.2, notes:'Stem borer control. Compliant with CODEX MRL.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(hF1 as any).id, input_type:'organic_amendment', product_name:'Compost (Farm-made)',   quantity:300, unit:'kg',     application_date:dateStr(25), area_applied_hectares:1.8, notes:'No synthetic inputs — organic programme.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(hF2 as any).id, input_type:'organic_amendment', product_name:'Neem Cake',             quantity:80,  unit:'kg',     application_date:dateStr(22), area_applied_hectares:2.3, notes:'Soil conditioner. Organic pesticide alternative.', recorded_by:adminUserId },
+    { org_id:eId, farm_id:(hF2 as any).id, input_type:'fertilizer',        product_name:'CAN (Calcium Ammonium Nitrate)', quantity:35, unit:'kg', application_date:dateStr(20), area_applied_hectares:2.3, notes:'One-off application. Pending organic transition.', recorded_by:adminUserId },
+  ], '7 cashew+hibiscus input records');
 
   // 20. Farmer Training (compliance modules — Rainforest Alliance, EUDR, GACC awareness)
   section('Farmer Training');
@@ -597,6 +771,25 @@ async function seed() {
     status:d.status, score:d.score,
     completed_at:d.completedAt, assigned_by:adminUserId,
   })), `${trainingDefs.length} training records`);
+
+  await tryIns('farmer_training', [
+    // Cashew farmers
+    { org_id:eId, farm_id:(cF1 as any).id, module_name:'Good Agricultural Practices — Cashew 2026',  module_type:'gap',            status:'completed',   score:89, completed_at:daysAgo(40), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF1 as any).id, module_name:'Rainforest Alliance Candidate Induction',     module_type:'sustainability',  status:'completed',   score:92, completed_at:daysAgo(38), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF1 as any).id, module_name:'Child Labor Awareness & Prevention',           module_type:'child_labor',    status:'completed',   score:95, completed_at:daysAgo(37), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF2 as any).id, module_name:'Good Agricultural Practices — Cashew 2026',  module_type:'gap',            status:'completed',   score:82, completed_at:daysAgo(42), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF2 as any).id, module_name:'Health & Safety in the Field',                module_type:'safety',         status:'in_progress', score:null, completed_at:null, assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF3 as any).id, module_name:'Good Agricultural Practices — Cashew 2026',  module_type:'gap',            status:'not_started', score:null, completed_at:null, assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF4 as any).id, module_name:'Good Agricultural Practices — Cashew 2026',  module_type:'gap',            status:'completed',   score:86, completed_at:daysAgo(41), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(cF4 as any).id, module_name:'Pesticide Safety & MRL Compliance',           module_type:'safety',         status:'completed',   score:91, completed_at:daysAgo(39), assigned_by:adminUserId },
+    // Hibiscus farmers
+    { org_id:eId, farm_id:(hF1 as any).id, module_name:'Organic Farming Standards — EU Regulation',  module_type:'sustainability',  status:'completed',   score:94, completed_at:daysAgo(20), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(hF1 as any).id, module_name:'EUDR Deforestation Compliance Awareness',     module_type:'eudr_awareness', status:'completed',   score:88, completed_at:daysAgo(19), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(hF1 as any).id, module_name:'Good Agricultural Practices — Hibiscus 2026',module_type:'gap',            status:'completed',   score:90, completed_at:daysAgo(18), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(hF2 as any).id, module_name:'Organic Farming Standards — EU Regulation',  module_type:'sustainability',  status:'completed',   score:87, completed_at:daysAgo(22), assigned_by:adminUserId },
+    { org_id:eId, farm_id:(hF2 as any).id, module_name:'Good Agricultural Practices — Hibiscus 2026',module_type:'gap',            status:'in_progress', score:null, completed_at:null, assigned_by:adminUserId },
+    { org_id:eId, farm_id:(hF3 as any).id, module_name:'Good Agricultural Practices — Hibiscus 2026',module_type:'gap',            status:'not_started', score:null, completed_at:null, assigned_by:adminUserId },
+  ], '14 cashew+hibiscus training records');
 
   // ── Done ──────────────────────────────────────────────────────────────────
   section('✅  Seed complete!');
