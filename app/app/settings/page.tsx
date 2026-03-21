@@ -2161,7 +2161,7 @@ function SettingsContent() {
   );
 }
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[400px]">
@@ -2169,6 +2169,14 @@ export default function SettingsPage() {
       </div>
     }>
       <SettingsContent />
+    </Suspense>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <SettingsPageInner />
     </Suspense>
   );
 }

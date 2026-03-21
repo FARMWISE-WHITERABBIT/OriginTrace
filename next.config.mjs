@@ -96,7 +96,8 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(withPWA(nextConfig), {
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(withPWA(nextConfig), {
   org:     'whiterabbit-agro-limited',
   project: 'javascript-nextjs',
 
@@ -121,4 +122,5 @@ export default withSentryConfig(withPWA(nextConfig), {
       removeDebugLogging: true,
     },
   },
-});
+})
+  : withPWA(nextConfig);

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -29,7 +30,7 @@ const METHOD_LABELS:Record<string,string> = { cash:'Cash', bank_transfer:'Bank T
 const STATUS_VARIANTS:Record<string,'default'|'secondary'|'destructive'|'outline'> = { completed:'default', pending:'outline', failed:'destructive', reversed:'secondary' };
 function esc(v:string|number|null|undefined){const s=String(v??'');return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:`${s}`;}
 
-export default function PaymentsPage() {
+function PaymentsPageInner() {
   const { organization, isLoading:orgLoading } = useOrg();
   const { format, currency:orgCurrency } = useCurrency();
   const { toast } = useToast();
@@ -440,5 +441,13 @@ export default function PaymentsPage() {
         </DialogContent>
       </Dialog>
     </TierGate>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <PaymentsPageInner />
+    </Suspense>
   );
 }

@@ -76,7 +76,7 @@ const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, load
   </div>
 )});
 
-export default function HybridFarmMappingPage() {
+function HybridFarmMappingPageInner() {
   return (
     <TierGate feature="farm_mapping" requiredTier="starter" featureLabel="Farm Mapping">
       <Suspense fallback={
@@ -778,5 +778,13 @@ function HybridFarmMappingContent() {
         </>
       )}
     </div>
+  );
+}
+
+export default function HybridFarmMappingPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <HybridFarmMappingPageInner />
+    </Suspense>
   );
 }

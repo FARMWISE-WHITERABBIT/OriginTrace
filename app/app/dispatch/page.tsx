@@ -52,7 +52,7 @@ interface ContributionItem {
   complianceStatus: string;
 }
 
-export default function DispatchPage() {
+function DispatchPageInner() {
   return (
     <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
     <Suspense fallback={
@@ -445,5 +445,13 @@ function DispatchContent() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function DispatchPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <DispatchPageInner />
+    </Suspense>
   );
 }

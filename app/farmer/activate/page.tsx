@@ -194,7 +194,7 @@ function FarmerActivateContent() {
   );
 }
 
-export default function FarmerActivatePage() {
+function FarmerActivatePageInner() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-b from-[#F8FAF9] to-[#E8F0ED] flex items-center justify-center p-4">
@@ -206,6 +206,14 @@ export default function FarmerActivatePage() {
       </div>
     }>
       <FarmerActivateContent />
+    </Suspense>
+  );
+}
+
+export default function FarmerActivatePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <FarmerActivatePageInner />
     </Suspense>
   );
 }
