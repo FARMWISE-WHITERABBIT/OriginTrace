@@ -330,6 +330,20 @@ export async function GET(
 
     const readiness = computeShipmentReadiness(scoreInput);
 
+    // Auto-persist score if null or shipment is recent (within 7 days = stale demo data)
+    const isStale = !shipment.readiness_score ||
+      (new Date().getTime() - new Date(shipment.created_at).getTime() < 7 * 24 * 60 * 60 * 1000 &&
+       shipment.readiness_score !== Math.round(readiness.overall_score));
+    if (isStale) {
+      supabase.from('shipments').update({
+        readiness_score: Math.round(readiness.overall_score),
+        readiness_decision: readiness.decision,
+        risk_flags: readiness.risk_flags,
+        score_breakdown: readiness.dimensions,
+        updated_at: new Date().toISOString(),
+      }).eq('id', shipment.id).then(() => {/* fire-and-forget */});
+    }
+
     return NextResponse.json({ shipment, items: enrichedItems, readiness });
 
   } catch (error) {

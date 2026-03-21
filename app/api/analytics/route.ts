@@ -124,10 +124,11 @@ export async function GET(request: NextRequest) {
     let bags: any[] = [];
 
     try {
-      const [batchesRes, prevBatchesRes] = await Promise.all([
+      // Run all four independent queries in parallel — eliminates sequential round-trips
+      const [batchesRes, prevBatchesRes, farmsRes, bagsRes] = await Promise.all([
         supabase
           .from('collection_batches')
-          .select('id, created_at, total_weight, bag_count, status, agent_id, farm_id')
+          .select('id, created_at, total_weight, bag_count, status, agent_id, farm_id, commodity, grade')
           .eq('org_id', orgId)
           .gte('created_at', periodStart)
           .order('created_at', { ascending: true }),
@@ -137,28 +138,21 @@ export async function GET(request: NextRequest) {
           .eq('org_id', orgId)
           .gte('created_at', prevStart)
           .lt('created_at', periodStart),
-      ]);
-      if (batchesRes.error) console.error('[analytics] batches query error:', batchesRes.error);
-      if (prevBatchesRes.error) console.error('[analytics] prevBatches query error:', prevBatchesRes.error);
-
-      let farmsRes: { data: any[] | null; error: any } = await supabase
-        .from('farms')
-        .select('id, compliance_status, commodity, area_hectares, state_id, deforestation_check, boundary_geo')
-        .eq('org_id', orgId);
-      if (farmsRes.error) {
-        console.error('[analytics] farms query error (retrying with minimal columns):', farmsRes.error);
-        farmsRes = await supabase
+        supabase
           .from('farms')
-          .select('id, compliance_status')
-          .eq('org_id', orgId);
-      }
+          .select('id, compliance_status, commodity, area_hectares, deforestation_check')
+          .eq('org_id', orgId),
+        supabase
+          .from('bags')
+          .select('id, status, is_compliant')
+          .eq('org_id', orgId),
+      ]);
 
-      let bagsRes: { data: any[] | null; error: any } = await supabase
-        .from('bags')
-        .select('id, status, is_compliant')
-        .eq('org_id', orgId);
-      // Note: bag volume is captured via collection_batches.total_weight and bag_count
-      // weight_kg and grade are intentionally excluded (column may be named 'weight' in older DBs)
+      if (batchesRes.error) console.error('[analytics] batches:', batchesRes.error.message);
+      if (prevBatchesRes.error) console.error('[analytics] prevBatches:', prevBatchesRes.error.message);
+      if (farmsRes.error) console.error('[analytics] farms:', farmsRes.error.message);
+      if (bagsRes.error) console.error('[analytics] bags:', bagsRes.error.message);
+
       batches = batchesRes.data || [];
       prevBatches = prevBatchesRes.data || [];
       farms = farmsRes.data || [];
@@ -500,7 +494,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=30' },
+    });
   } catch (error) {
     console.error('[analytics] fatal error (auth/profile):', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

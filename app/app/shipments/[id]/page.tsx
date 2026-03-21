@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, notFound } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,11 +43,13 @@ import {
   MapPin,
   CircleCheckBig,
   FileDown,
+  RotateCw,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DocumentUpload } from '@/components/document-upload';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 import dynamic from 'next/dynamic';
 
@@ -502,6 +504,23 @@ export default function ShipmentDetailPage() {
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
   const [isRemovingItem, setIsRemovingItem] = useState(false);
   const [readiness, setReadiness] = useState<ShipmentReadinessResult | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const [uploadDocOpen, setUploadDocOpen] = useState(false);
+
+  const handleRecalculate = async () => {
+    if (!shipment) return;
+    setRecalculating(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipment.id}/recalculate`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.readiness) setReadiness(data.readiness);
+      else toast({ title: 'Recalculation failed', variant: 'destructive' });
+    } catch {
+      toast({ title: 'Recalculation failed', variant: 'destructive' });
+    } finally {
+      setRecalculating(false);
+    }
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedDimension, setExpandedDimension] = useState<string | null>(null);
@@ -704,15 +723,14 @@ export default function ShipmentDetailPage() {
     );
   }
 
+  if (!shipment && !isLoading) {
+    notFound();
+    return null;
+  }
+
+  // TypeScript narrowing — notFound() throws but TS doesn't know that
   if (!shipment) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p className="text-muted-foreground">Shipment not found</p>
-        <Button variant="outline" onClick={() => router.push('/app/shipments')} data-testid="button-back-to-list">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Shipments
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   const exportPdf = () => {
@@ -770,6 +788,17 @@ export default function ShipmentDetailPage() {
               <p className="text-4xl font-bold" data-testid="text-overall-score">{score}</p>
               <p className="text-xs text-muted-foreground">Overall Score</p>
               <Progress value={score} className="w-32 mt-2 h-2" />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 text-xs text-muted-foreground h-7 px-2"
+                onClick={handleRecalculate}
+                disabled={recalculating}
+                aria-label="Recalculate readiness score"
+              >
+                <RotateCw className={`h-3 w-3 mr-1 ${recalculating ? 'animate-spin' : ''}`} />
+                {recalculating ? 'Recalculating…' : 'Recalculate'}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -965,11 +994,40 @@ export default function ShipmentDetailPage() {
                 <CardTitle className="text-base">Export Documentation</CardTitle>
                 <CardDescription>Mark documents that are ready for this shipment</CardDescription>
               </div>
-              <Link href={`/app/documents?entity_type=shipment&entity_id=${shipment.id}&shipment_code=${encodeURIComponent(shipment.shipment_code)}`}>
-                <Button size="sm" variant="outline" className="shrink-0">
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />Upload Document
-                </Button>
-              </Link>
+              <Dialog open={uploadDocOpen} onOpenChange={setUploadDocOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="shrink-0">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Upload Document
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Upload Document</DialogTitle>
+                    <DialogDescription>
+                      Attach a compliance document to shipment {shipment?.shipment_code}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DocumentUpload
+                    onUploadComplete={async (result) => {
+                      if (shipment) {
+                        await fetch('/api/documents', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            title: result.file_name,
+                            file_url: result.url,
+                            linked_entity_type: 'shipment',
+                            linked_entity_id: shipment.id,
+                          }),
+                        });
+                        setUploadDocOpen(false);
+                        // Refresh shipment data to show new document
+                        fetchShipment();
+                      }
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           </CardHeader>
           <CardContent>

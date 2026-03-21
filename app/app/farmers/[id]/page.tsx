@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import { notFound } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
@@ -139,7 +140,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     );
   }
 
-  if (!data) return null;
+  if (!data) { notFound(); return null; }
 
   const { farm, ledger, batches, inputs, training, files } = data;
   const statusCfg = COMPLIANCE_STATUS_CONFIG[farm.compliance_status] || COMPLIANCE_STATUS_CONFIG.pending;

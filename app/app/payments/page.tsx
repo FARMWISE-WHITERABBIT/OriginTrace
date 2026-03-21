@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
 import { downloadCSV } from '@/lib/export/csv-export';
-import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2 } from 'lucide-react';
+import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil } from 'lucide-react';
 
 interface Payment { id:string; payee_name:string; payee_type:string; farm_id?:string|null; amount:number; currency:string; payment_method:string; reference_number:string|null; linked_entity_type:string|null; linked_entity_id:string|null; payment_date:string; status:string; notes:string|null; created_at:string; }
 interface FarmerOption { id:string; name:string; community?:string; commodity?:string; }
@@ -63,6 +63,10 @@ export default function PaymentsPage() {
   const [disburseForm,setDisburseForm]=useState({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:''});
   const mkForm=useCallback(()=>({payee_type:'farmer',farm_id:'',payee_name:'',amount:'',currency:orgCurrency,payment_method:'cash',reference_number:'',linked_entity_type:'',linked_entity_id:'',payment_date:new Date().toISOString().split('T')[0],notes:''}),[orgCurrency]);
   const [form,setForm]=useState(mkForm);
+  const [editingPayment,setEditingPayment]=useState<Payment|null>(null);
+  const [editDialogOpen,setEditDialogOpen]=useState(false);
+  const [isEditing,setIsEditing]=useState(false);
+  const [editForm,setEditForm]=useState({amount:'',currency:'NGN',payment_method:'cash',reference_number:'',payment_date:'',notes:'',status:'completed'});
 
   const fetchFarmers=useCallback(async()=>{
     setFarmersLoading(true);

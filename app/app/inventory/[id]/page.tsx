@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -155,7 +156,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
   );
-  if (!batch) return null;
+  if (!batch) { notFound(); return null; }
 
   const batchCode = batch.batch_code || batch.batch_id || batch.id.slice(0, 8);
   const statusCfg = STATUS_CONFIG[batch.status] || STATUS_CONFIG.collecting;
