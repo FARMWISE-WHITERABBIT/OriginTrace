@@ -156,7 +156,7 @@ async function buildBatchGraph(supabase: any, orgId: string, batchId: string, gr
   const { data: runBatches } = await supabase
     .from('processing_run_batches')
     .select('processing_run_id, weight_contribution_kg, processing_runs(id, run_code, facility_name, commodity, input_weight_kg, output_weight_kg, recovery_rate, processed_at)')
-    .eq('collection_batch_id', parseInt(batchId));
+    .eq('collection_batch_id', batchId);
 
   if (runBatches) {
     for (const rb of runBatches) {
@@ -248,22 +248,13 @@ async function addShipmentUpstream(supabase: any, orgId: string, shipmentId: str
 
   const { data: shipmentItems } = await supabase
     .from('shipment_items')
-    .select('id, collection_batch_id, farm_id, weight_kg')
+    .select('id, batch_id, weight_kg')
     .eq('shipment_id', shipmentId);
 
   if (shipmentItems) {
     for (const si of shipmentItems) {
       if (si.batch_id) {
         await addBatchUpstream(supabase, String(si.batch_id), shipNodeId, graph);
-      } else if (si.farm_id) {
-        const farmNodeId = `farm-${si.farm_id}`;
-        if (!graph.hasNode(farmNodeId)) {
-          const { data: farm } = await supabase.from('farms').select('id, farmer_name, community').eq('id', si.farm_id).single();
-          if (farm) {
-            graph.addNode({ id: farmNodeId, type: 'farm', label: farm.farmer_name, metadata: { community: farm.community } });
-          }
-        }
-        graph.addEdge({ source: farmNodeId, target: shipNodeId, label: `${si.weight_kg || 0} kg` });
       }
     }
   }
@@ -397,7 +388,7 @@ async function buildFullGraph(supabase: any, orgId: string, graph: GraphBuilder)
         }
       }
 
-      const { data: shipmentItems } = await supabase.from('shipment_items').select('batch_id, farm_id').eq('shipment_id', s.id);
+      const { data: shipmentItems } = await supabase.from('shipment_items').select('batch_id').eq('shipment_id', s.id);
       if (shipmentItems) {
         for (const si of shipmentItems) {
           if (si.batch_id) {
