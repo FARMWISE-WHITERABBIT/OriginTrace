@@ -682,10 +682,17 @@ async function seed() {
     { farm_id:(hF2 as any).id, payee_name:hibiscusDefs[1].name, amount:260000, currency:'NGN', payment_method:'mobile_money',  status:'completed', payment_date:daysAgo(10), notes:'WRH-HIB-2026-001 — 650kg dried hibiscus @ NGN 400/kg' },
   ];
   await tryIns('payments', paymentsData.map(p => ({
-    org_id:eId, farm_id:p.farm_id, payee_name:p.payee_name,
-    amount:p.amount, currency:p.currency, payment_method:p.payment_method,
-    status:p.status, payment_date:p.payment_date, notes:p.notes,
-    created_by:adminUserId,
+    org_id:eId,
+    payee_type:'farmer',
+    payee_id:p.farm_id,
+    payee_name:p.payee_name,
+    amount:p.amount,
+    currency:p.currency,
+    payment_method:p.payment_method,
+    status:p.status,
+    payment_date:p.payment_date ? p.payment_date.slice(0,10) : new Date().toISOString().slice(0,10),
+    notes:p.notes,
+    recorded_by:adminUserId,
   })), `${paymentsData.length} payment records`);
 
   // 18c. Yield Alerts
@@ -703,15 +710,15 @@ async function seed() {
   // 18d. Notifications
   section('Notifications');
   await tryIns('notifications', [
-    { org_id:eId, user_id:adminUserId, title:'Shipment Ready — WR-SHP-2026-001', message:'EU cocoa shipment scored 91/100. All compliance checks passed. Ready for vessel booking.', type:'shipment_ready', link:'/app/shipments', read:false, created_at:daysAgo(10) },
-    { org_id:eId, user_id:adminUserId, title:'Document Expiring — MRL Lab Result', message:'MRL pesticide residue lab result for ginger shipment expires in 3 days. Retest recommended.', type:'document_expiring', link:'/app/documents', read:false, created_at:daysAgo(2) },
-    { org_id:eId, user_id:adminUserId, title:'Deforestation Risk — Taiwo Olanrewaju', message:'Global Forest Watch detected 1.4ha forest loss within farm boundary. Batch WR-BCH-008 quarantined.', type:'compliance_alert', link:'/app/farms', read:false, created_at:daysAgo(15) },
-    { org_id:eId, user_id:adminUserId, title:'Yield Alert — Sola Akinwale', message:'No collection recorded for new farmer Sola Akinwale this season. Follow-up recommended.', type:'yield_alert', link:'/app/yield-alerts', read:true,  created_at:daysAgo(10) },
-    { org_id:eId, user_id:adminUserId, title:'Mass Balance Invalid — WR-RUN-003', message:'Processing run WR-RUN-003 failed mass balance check. 60% recovery below 75% minimum. UK shipment blocked.', type:'compliance_alert', link:'/app/processing', read:true,  created_at:daysAgo(20) },
-    { org_id:eId, user_id:adminUserId, title:'New Tender — NibsEurope GmbH', message:'Buyer NibsEurope GmbH posted a request for 20MT Grade 1 cocoa. Closes in 21 days.', type:'trade', link:'/app/tenders', read:true,  created_at:daysAgo(21) },
-    { org_id:eId, user_id:adminUserId, title:'Contract Signed — WR-CON-2026-001', message:'Annual cocoa supply contract (25MT, $3,800/MT) with NibsEurope GmbH is now active.', type:'contract', link:'/app/contracts', read:true,  created_at:daysAgo(30) },
-    { org_id:eId, user_id:adminUserId, title:'Cashew Shipment Conditional — WRK-SHP-2026-001', message:'Cashew UK shipment scored 87/100 but allergen declaration is pending buyer review.', type:'shipment_ready', link:'/app/shipments', read:false, created_at:daysAgo(5) },
-    { org_id:eId, user_id:agentId,     title:'Collection Synced', message:'12 offline batches synced successfully. All records uploaded to OriginTrace.', type:'sync', link:'/app/sync', read:true,  created_at:daysAgo(1) },
+    { org_id:eId, user_id:adminUserId, title:'Shipment Ready — WR-SHP-2026-001', message:'EU cocoa shipment scored 91/100. All compliance checks passed. Ready for vessel booking.', type:'shipment_ready', link:'/app/shipments', is_read:false, created_at:daysAgo(10) },
+    { org_id:eId, user_id:adminUserId, title:'Document Expiring — MRL Lab Result', message:'MRL pesticide residue lab result for ginger shipment expires in 3 days. Retest recommended.', type:'document_expiring', link:'/app/documents', is_read:false, created_at:daysAgo(2) },
+    { org_id:eId, user_id:adminUserId, title:'Deforestation Risk — Taiwo Olanrewaju', message:'Global Forest Watch detected 1.4ha forest loss within farm boundary. Batch WR-BCH-008 quarantined.', type:'compliance_alert', link:'/app/farms', is_read:false, created_at:daysAgo(15) },
+    { org_id:eId, user_id:adminUserId, title:'Yield Alert — Sola Akinwale', message:'No collection recorded for new farmer Sola Akinwale this season. Follow-up recommended.', type:'yield_alert', link:'/app/yield-alerts', is_read:true,  created_at:daysAgo(10) },
+    { org_id:eId, user_id:adminUserId, title:'Mass Balance Invalid — WR-RUN-003', message:'Processing run WR-RUN-003 failed mass balance check. 60% recovery below 75% minimum. UK shipment blocked.', type:'compliance_alert', link:'/app/processing', is_read:true,  created_at:daysAgo(20) },
+    { org_id:eId, user_id:adminUserId, title:'New Tender — NibsEurope GmbH', message:'Buyer NibsEurope GmbH posted a request for 20MT Grade 1 cocoa. Closes in 21 days.', type:'trade', link:'/app/tenders', is_read:true,  created_at:daysAgo(21) },
+    { org_id:eId, user_id:adminUserId, title:'Contract Signed — WR-CON-2026-001', message:'Annual cocoa supply contract (25MT, $3,800/MT) with NibsEurope GmbH is now active.', type:'contract', link:'/app/contracts', is_read:true,  created_at:daysAgo(30) },
+    { org_id:eId, user_id:adminUserId, title:'Cashew Shipment Conditional — WRK-SHP-2026-001', message:'Cashew UK shipment scored 87/100 but allergen declaration is pending buyer review.', type:'shipment_ready', link:'/app/shipments', is_read:false, created_at:daysAgo(5) },
+    { org_id:eId, user_id:adminUserId, title:'Collection Synced', message:'12 offline batches synced successfully. All records uploaded to OriginTrace.', type:'sync', link:'/app/sync', is_read:true,  created_at:daysAgo(1) },
   ], '9 notifications');
 
   // 19. Farmer Inputs (agricultural production records — GACC MRL + Rainforest Alliance)
