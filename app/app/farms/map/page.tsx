@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,7 @@ function HybridFarmMappingContent() {
   const [isLocating, setIsLocating] = useState(false);
   const [isCheckingGPS, setIsCheckingGPS] = useState(false);
   const [gpsSpoofWarning, setGpsSpoofWarning] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -133,7 +134,13 @@ function HybridFarmMappingContent() {
         setFarms(sorted);
         if (farmIdParam) {
           const found = sorted.find(f => String(f.id) === farmIdParam);
-          if (found) setSelectedFarm(found);
+          if (found) {
+            setSelectedFarm(found);
+            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+            if (ring && ring.length > 1) {
+              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+            }
+          }
         }
       } catch {
         setFarmsLoadError(true);
@@ -143,6 +150,19 @@ function HybridFarmMappingContent() {
     }
     loadFarms();
   }, [farmIdParam]);
+
+  // Silently acquire GPS on mount so the satellite map centers on the user's actual location
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+      },
+      () => {}, // silent fail — permission denied or unavailable
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
 
   useEffect(() => {
     if (selectedFarm?.deforestation_check) {
@@ -236,6 +256,7 @@ function HybridFarmMappingContent() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
         setIsLocating(false);
         toast({ title: 'Location acquired', description: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` });
       },
@@ -282,6 +303,17 @@ function HybridFarmMappingContent() {
   const handleSatellitePoints = (points: Coordinates[]) => {
     setCoordinates(points);
   };
+
+  // Satellite map center: prefer existing farm boundary centroid, then GPS, then fallback
+  const mapCenter = useMemo((): Coordinates => {
+    const ring = selectedFarm?.boundary?.coordinates?.[0] as [number, number][] | undefined;
+    if (ring && ring.length > 1) {
+      const avgLat = ring.reduce((s, c) => s + c[1], 0) / ring.length;
+      const avgLng = ring.reduce((s, c) => s + c[0], 0) / ring.length;
+      return { lat: avgLat, lng: avgLng };
+    }
+    return currentLocation || { lat: 7.4, lng: 3.9 };
+  }, [selectedFarm, currentLocation]);
 
   const areaHectares = calculateArea(coordinates);
 
@@ -400,7 +432,18 @@ function HybridFarmMappingContent() {
                     filteredFarms.map(f => (
                       <button
                         key={f.id}
-                        onClick={() => { setSelectedFarm(f); setShowFarmPicker(false); setFarmSearch(''); }}
+                        onClick={() => {
+                          setSelectedFarm(f);
+                          setShowFarmPicker(false);
+                          setFarmSearch('');
+                          // Pre-populate boundary points so user can edit rather than re-draw
+                          const ring = f.boundary?.coordinates?.[0] as [number, number][] | undefined;
+                          if (ring && ring.length > 1) {
+                            setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+                          } else {
+                            setCoordinates([]);
+                          }
+                        }}
                         className="w-full text-left p-3 flex items-center justify-between gap-2 hover-elevate"
                         data-testid={`farm-pick-${f.id}`}
                       >
@@ -466,6 +509,9 @@ function HybridFarmMappingContent() {
                   <div className="p-3 bg-muted/50 rounded-lg flex items-center gap-2 text-sm">
                     <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="font-mono text-xs">{currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}</span>
+                    {gpsAccuracy !== null && (
+                      <span className="text-xs text-muted-foreground ml-auto">±{gpsAccuracy}m</span>
+                    )}
                   </div>
                 )}
 
@@ -538,8 +584,24 @@ function HybridFarmMappingContent() {
                 <SatelliteMap
                   coordinates={coordinates}
                   onPointsChange={handleSatellitePoints}
-                  center={currentLocation || { lat: 7.4, lng: 3.9 }}
+                  center={mapCenter}
                   satelliteEnabled={!!(organization?.feature_flags as Record<string, boolean> | undefined)?.satellite_overlays}
+                  onLocateMe={() => {
+                    if (!navigator.geolocation) return;
+                    setIsLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                        setGpsAccuracy(Math.round(pos.coords.accuracy));
+                        setIsLocating(false);
+                      },
+                      () => {
+                        setIsLocating(false);
+                        toast({ title: 'Could not get location', variant: 'destructive' });
+                      },
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                  }}
                 />
 
                 {coordinates.length > 0 && (

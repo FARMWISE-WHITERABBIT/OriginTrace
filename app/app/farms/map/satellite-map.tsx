@@ -12,6 +12,7 @@ import {
   Move,
   Crosshair,
   Layers,
+  LocateFixed,
 } from 'lucide-react';
 
 interface Coordinates {
@@ -31,6 +32,7 @@ interface SatelliteMapProps {
   onPointsChange: (points: Coordinates[]) => void;
   center: Coordinates;
   satelliteEnabled?: boolean;
+  onLocateMe?: () => void;
 }
 
 const TILE_SIZE = 256;
@@ -56,7 +58,7 @@ function tileYToLat(y: number, zoom: number) {
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
 }
 
-export default function SatelliteMap({ coordinates, onPointsChange, center, satelliteEnabled = true }: SatelliteMapProps) {
+export default function SatelliteMap({ coordinates, onPointsChange, center, satelliteEnabled = true, onLocateMe }: SatelliteMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(16);
@@ -66,6 +68,7 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   const [drawMode, setDrawMode] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
   const [tileLayer, setTileLayer] = useState<TileLayer>(satelliteEnabled ? 'satellite' : 'street');
+  const [tileErrorCount, setTileErrorCount] = useState(0);
   const tileCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const drawMapRef = useRef<() => void>(() => {});
 
@@ -94,7 +97,11 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => { drawMapRef.current(); };
-    img.onerror = () => { tileCache.current.delete(key); };
+    img.onerror = () => {
+      tileCache.current.delete(key);
+      setTileErrorCount(c => c + 1);
+      drawMapRef.current();
+    };
     img.src = TILE_URLS[tileLayer]
       .replace('{z}', String(z))
       .replace('{x}', String(tileX))
@@ -217,6 +224,12 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   useEffect(() => {
     drawMapRef.current = drawMap;
   }, [drawMap]);
+
+  // Clear tile cache when switching layers so fresh tiles are fetched
+  useEffect(() => {
+    tileCache.current.clear();
+    setTileErrorCount(0);
+  }, [tileLayer]);
 
   useEffect(() => {
     drawMap();
@@ -348,6 +361,11 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
           <Button variant="outline" size="icon" onClick={zoomIn} aria-label="Zoom in" data-testid="button-zoom-in">
             <ZoomIn className="h-4 w-4" />
           </Button>
+          {onLocateMe && (
+            <Button variant="outline" size="icon" onClick={onLocateMe} aria-label="Locate me" data-testid="button-locate-me">
+              <LocateFixed className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"
@@ -395,6 +413,19 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
         {coordinates.length > 0 && coordinates.length < 3 && (
           <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-xs text-muted-foreground">
             {3 - coordinates.length} more point{3 - coordinates.length > 1 ? 's' : ''} needed
+          </div>
+        )}
+        {tileLayer === 'satellite' && tileErrorCount > 4 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-lg">
+            <div className="text-center p-4 space-y-2">
+              <p className="text-sm font-medium">Satellite imagery unavailable</p>
+              <p className="text-xs text-muted-foreground">Check your internet connection</p>
+              <Button size="sm" variant="outline" onClick={() => {
+                tileCache.current.clear();
+                setTileErrorCount(0);
+                drawMapRef.current();
+              }}>Retry</Button>
+            </div>
           </div>
         )}
       </div>
