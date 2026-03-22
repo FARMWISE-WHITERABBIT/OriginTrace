@@ -259,7 +259,7 @@ export default function FarmsPage() {
                   ) : filteredFarms.map(farm => (
                     <button
                       key={farm.id}
-                      className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors ${selectedFarm?.id === farm.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}
+                      className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors"
                       onClick={() => setSelectedFarm(farm)}
                       data-testid={`farm-list-row-${farm.id}`}
                     >
