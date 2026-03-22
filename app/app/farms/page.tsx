@@ -37,6 +37,7 @@ const FarmPolygonMap = dynamic(() => import('@/components/farm-polygon-map'), {
 
 interface Farm extends FarmMapFarm {
   farmer_id: string | null;
+  phone: string | null;
   compliance_notes: string | null;
   legality_doc_url: string | null;
   boundary_analysis?: {
