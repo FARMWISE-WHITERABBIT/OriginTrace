@@ -343,16 +343,16 @@ export default function BuyerOrgsPage() {
                 <div><span className="text-muted-foreground">Admin email:</span> {createResult.admin.email}</div>
               </div>
               {!createResult.emailSent && createResult.temporaryPassword && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
-                  <div className="flex items-center gap-2 text-amber-700 text-sm font-medium">
+                <div className="rounded-md border border-amber-800/50 bg-amber-900/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-300 text-sm font-medium">
                     <AlertCircle className="h-4 w-4" />
                     Email not sent — copy this temporary password
                   </div>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-white border px-2 py-1 text-sm font-mono" data-testid="text-temp-password">
+                    <code className="flex-1 rounded bg-slate-800 border border-slate-700 px-2 py-1 text-sm font-mono text-slate-200" data-testid="text-temp-password">
                       {createResult.temporaryPassword}
                     </code>
-                    <Button size="sm" variant="outline" onClick={() => copyPassword(createResult.temporaryPassword!)} data-testid="button-copy-password">
+                    <Button size="sm" variant="outline" onClick={() => copyPassword(createResult.temporaryPassword ?? '')} data-testid="button-copy-password">
                       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>

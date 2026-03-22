@@ -1,27 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Search, Building2, Users, Eye, Weight, CheckCircle2,
@@ -29,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+
+// ─── types ────────────────────────────────────────────────────────────────────
 
 interface Organization {
   id: number;
@@ -49,12 +37,14 @@ interface Organization {
   approved_farms: number;
 }
 
-const TIER_ORDER = ['starter', 'basic', 'pro', 'enterprise'];
+// ─── constants (defined outside component — no crash risk) ────────────────────
+
+const TIER_ORDER = ['starter', 'basic', 'pro', 'enterprise'] as const;
 
 const TIER_STYLES: Record<string, { label: string; badge: string }> = {
-  starter: { label: 'Starter', badge: 'bg-slate-700 text-slate-300 border-slate-600' },
-  basic:   { label: 'Basic',   badge: 'bg-blue-900/60 text-blue-300 border-blue-700' },
-  pro:     { label: 'Pro',     badge: 'bg-purple-900/60 text-purple-300 border-purple-700' },
+  starter:    { label: 'Starter',    badge: 'bg-slate-700 text-slate-300 border-slate-600' },
+  basic:      { label: 'Basic',      badge: 'bg-blue-900/60 text-blue-300 border-blue-700' },
+  pro:        { label: 'Pro',        badge: 'bg-purple-900/60 text-purple-300 border-purple-700' },
   enterprise: { label: 'Enterprise', badge: 'bg-amber-900/60 text-amber-300 border-amber-700' },
 };
 
@@ -65,6 +55,19 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: 'bg-slate-700 text-slate-400 border-slate-600',
 };
 
+// Safe helpers — no `!` assertions, always fall back
+function tierStyle(tier: string | null | undefined) {
+  return TIER_STYLES[tier ?? ''] ?? TIER_STYLES.starter;
+}
+function statusStyle(status: string | null | undefined) {
+  return STATUS_STYLES[status ?? ''] ?? STATUS_STYLES.active;
+}
+function tierIndex(tier: string | null | undefined) {
+  return TIER_ORDER.indexOf((tier ?? 'starter') as typeof TIER_ORDER[number]);
+}
+
+// ─── component ────────────────────────────────────────────────────────────────
+
 export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,58 +76,49 @@ export default function OrganizationsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [impersonating, setImpersonating] = useState<number | null>(null);
 
-  // Create org dialog
+  // Create org
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{
-    success: boolean;
-    orgName?: string;
-    adminEmail?: string;
-    emailSent?: boolean;
-    tempPassword?: string;
+    success: boolean; orgName?: string; adminEmail?: string;
+    emailSent?: boolean; tempPassword?: string;
   } | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
   const [newOrg, setNewOrg] = useState({
-    orgName: '',
-    adminName: '',
-    adminEmail: '',
-    commodities: '',
-    subscriptionStatus: 'starter',
+    orgName: '', adminName: '', adminEmail: '', commodities: '', subscriptionStatus: 'starter',
   });
 
-  // Upgrade tier dialog
+  // Upgrade tier
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<Organization | null>(null);
-  const [newTier, setNewTier] = useState('');
+  const [newTier, setNewTier] = useState<string>('starter');
   const [isUpgrading, setIsUpgrading] = useState(false);
 
-  // Status toggle dialog
+  // Status
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<Organization | null>(null);
-  const [newStatus, setNewStatus] = useState('');
+  const [newStatus, setNewStatus] = useState<string>('active');
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
 
   const { toast } = useToast();
-  const router = useRouter();
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
+  useEffect(() => { fetchOrganizations(); }, []);
 
   async function fetchOrganizations() {
     try {
-      const response = await fetch('/api/superadmin?resource=organizations');
-      if (response.ok) {
-        const data = await response.json();
-        setOrganizations(data.organizations || []);
+      const res = await fetch('/api/superadmin?resource=organizations');
+      if (res.ok) {
+        const data = await res.json();
+        setOrganizations(data.organizations ?? []);
       }
-    } catch (error) {
-      console.error('Failed to fetch organizations:', error);
+    } catch (err) {
+      console.error('Failed to fetch organizations:', err);
     } finally {
       setIsLoading(false);
     }
   }
 
+  // Impersonation: use window.location for full reload so OrgContext re-reads cookie
   async function handleImpersonate(org: Organization) {
     setImpersonating(org.id);
     try {
@@ -135,29 +129,29 @@ export default function OrganizationsPage() {
       });
       if (res.ok) {
         toast({ title: 'Impersonation Started', description: `Now viewing as ${org.name}.` });
-        router.push('/app');
+        // Full page reload — OrgContext must re-initialize from the new cookie
+        window.location.href = '/app';
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to start impersonation');
       }
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to access organization dashboard.', variant: 'destructive' });
-    } finally {
       setImpersonating(null);
     }
   }
 
   function openUpgradeDialog(org: Organization) {
     setUpgradeTarget(org);
-    setNewTier(org.subscription_tier || 'starter');
+    setNewTier(org.subscription_tier ?? 'starter');
     setUpgradeDialogOpen(true);
   }
 
   async function handleUpgradeTier() {
-    if (!upgradeTarget || !newTier) return;
+    if (!upgradeTarget) return;
     setIsUpgrading(true);
     try {
-      const response = await fetch('/api/superadmin', {
+      const res = await fetch('/api/superadmin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,17 +161,17 @@ export default function OrganizationsPage() {
           current_tier: upgradeTarget.subscription_tier,
         }),
       });
-
-      if (response.ok) {
-        toast({ title: 'Tier updated', description: `${upgradeTarget.name} is now on the ${newTier} plan.` });
+      if (res.ok) {
+        toast({ title: 'Tier updated', description: `${upgradeTarget.name} is now on ${newTier}.` });
         setUpgradeDialogOpen(false);
+        setUpgradeTarget(null);
         fetchOrganizations();
       } else {
-        const data = await response.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to update tier');
       }
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Failed to update tier.', variant: 'destructive' });
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setIsUpgrading(false);
     }
@@ -185,15 +179,15 @@ export default function OrganizationsPage() {
 
   function openStatusDialog(org: Organization) {
     setStatusTarget(org);
-    setNewStatus(org.subscription_status || 'active');
+    setNewStatus(org.subscription_status ?? 'active');
     setStatusDialogOpen(true);
   }
 
   async function handleStatusUpdate() {
-    if (!statusTarget || !newStatus) return;
+    if (!statusTarget) return;
     setIsStatusUpdating(true);
     try {
-      const response = await fetch('/api/superadmin', {
+      const res = await fetch('/api/superadmin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,17 +197,17 @@ export default function OrganizationsPage() {
           current_status: statusTarget.subscription_status,
         }),
       });
-
-      if (response.ok) {
-        toast({ title: 'Status updated', description: `${statusTarget.name} status set to ${newStatus}.` });
+      if (res.ok) {
+        toast({ title: 'Status updated', description: `${statusTarget.name} → ${newStatus}` });
         setStatusDialogOpen(false);
+        setStatusTarget(null);
         fetchOrganizations();
       } else {
-        const data = await response.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to update status');
       }
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Failed to update status.', variant: 'destructive' });
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setIsStatusUpdating(false);
     }
@@ -227,7 +221,7 @@ export default function OrganizationsPage() {
     setIsCreating(true);
     setCreateResult(null);
     try {
-      const response = await fetch('/api/superadmin/create-org', {
+      const res = await fetch('/api/superadmin/create-org', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -238,31 +232,16 @@ export default function OrganizationsPage() {
           subscriptionStatus: newOrg.subscriptionStatus,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
         toast({ title: 'Error', description: data.error || 'Failed to create organization', variant: 'destructive' });
         return;
       }
-
-      setCreateResult({
-        success: true,
-        orgName: newOrg.orgName,
-        adminEmail: newOrg.adminEmail,
-        emailSent: data.emailSent,
-        tempPassword: data.temporaryPassword,
-      });
-
+      setCreateResult({ success: true, orgName: newOrg.orgName, adminEmail: newOrg.adminEmail, emailSent: data.emailSent, tempPassword: data.temporaryPassword });
       fetchOrganizations();
-
-      if (data.emailSent) {
-        toast({ title: 'Organization Created', description: `Welcome email sent to ${newOrg.adminEmail}` });
-      } else {
-        toast({ title: 'Organization Created', description: 'Email could not be sent. Temporary password shown below.', variant: 'destructive' });
-      }
+      toast({ title: 'Organization Created', description: data.emailSent ? `Email sent to ${newOrg.adminEmail}` : 'Check temporary password below.' });
     } catch {
-      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Unexpected error.', variant: 'destructive' });
     } finally {
       setIsCreating(false);
     }
@@ -277,8 +256,10 @@ export default function OrganizationsPage() {
 
   const filteredOrgs = organizations.filter(org =>
     org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (org.slug && org.slug.toLowerCase().includes(searchQuery.toLowerCase()))
+    (org.slug ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // ─── loading screen ──────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -288,11 +269,11 @@ export default function OrganizationsPage() {
     );
   }
 
-  const tierInfo = (tier: string) => TIER_STYLES[tier] || TIER_STYLES.starter;
-  const currentTierIndex = (org: Organization) => TIER_ORDER.indexOf(org.subscription_tier || 'starter');
+  // ─── main render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white" data-testid="text-page-title">Tenants</h1>
@@ -311,9 +292,9 @@ export default function OrganizationsPage() {
       {/* Summary strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: organizations.length, color: 'text-white' },
-          { label: 'Active', value: organizations.filter(o => o.subscription_status === 'active').length, color: 'text-green-400' },
-          { label: 'Trial', value: organizations.filter(o => o.subscription_status === 'trial').length, color: 'text-cyan-400' },
+          { label: 'Total',     value: organizations.length, color: 'text-white' },
+          { label: 'Active',    value: organizations.filter(o => o.subscription_status === 'active').length,    color: 'text-green-400' },
+          { label: 'Trial',     value: organizations.filter(o => o.subscription_status === 'trial').length,     color: 'text-cyan-400' },
           { label: 'Suspended', value: organizations.filter(o => o.subscription_status === 'suspended').length, color: 'text-red-400' },
         ].map(s => (
           <div key={s.label} className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-3">
@@ -323,6 +304,7 @@ export default function OrganizationsPage() {
         ))}
       </div>
 
+      {/* Table */}
       <Card className="bg-slate-900 border-slate-700">
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -335,7 +317,7 @@ export default function OrganizationsPage() {
               <Input
                 placeholder="Search organizations..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-9 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                 data-testid="input-search-orgs"
               />
@@ -358,9 +340,12 @@ export default function OrganizationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrgs.map((org) => {
-                  const tier = tierInfo(org.subscription_tier);
-                  const statusStyle = STATUS_STYLES[org.subscription_status] || STATUS_STYLES.active;
+                {filteredOrgs.map(org => {
+                  const ts = tierStyle(org.subscription_tier);
+                  const ss = statusStyle(org.subscription_status);
+                  const compPct = org.farm_count > 0
+                    ? `${Math.round(((org.approved_farms ?? 0) / org.farm_count) * 100)}%`
+                    : '—';
                   return (
                     <TableRow key={org.id} className="border-slate-700 hover:bg-slate-800/40" data-testid={`row-org-${org.id}`}>
                       <TableCell>
@@ -375,97 +360,57 @@ export default function OrganizationsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-xs font-medium capitalize ${tier.badge}`}>
-                          {tier.label}
-                        </Badge>
+                        <Badge variant="outline" className={`text-xs font-medium capitalize ${ts.badge}`}>{ts.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-xs capitalize ${statusStyle}`}>
+                        <Badge variant="outline" className={`text-xs capitalize ${ss}`}>
                           {org.subscription_status || 'active'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-slate-300">
                           <Users className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="text-sm">{org.agent_count || 0}</span>
+                          <span className="text-sm">{org.agent_count ?? 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-slate-300">
                           <Weight className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="text-sm">{(org.total_tonnage || 0).toFixed(1)} t</span>
+                          <span className="text-sm">{((org.total_tonnage ?? 0)).toFixed(1)} t</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-slate-300">
                           <CheckCircle2 className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="text-sm">
-                            {org.farm_count > 0
-                              ? `${Math.round((org.approved_farms || 0) / org.farm_count * 100)}%`
-                              : '—'}
-                          </span>
+                          <span className="text-sm">{compPct}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-slate-400 text-sm">
-                        {new Date(org.created_at).toLocaleDateString('en-GB')}
+                        {org.created_at ? new Date(org.created_at).toLocaleDateString('en-GB') : '—'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          {/* View details */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700"
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700"
                             onClick={() => { setSelectedOrg(org); setDetailDialogOpen(true); }}
-                            title="View details"
-                            data-testid={`button-view-org-${org.id}`}
-                          >
+                            title="View details" data-testid={`button-view-org-${org.id}`}>
                             <Eye className="h-4 w-4" />
                           </Button>
-
-                          {/* Access dashboard */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10"
-                            onClick={() => handleImpersonate(org)}
-                            disabled={impersonating === org.id}
-                            title="Access dashboard"
-                            data-testid={`button-access-org-${org.id}`}
-                          >
-                            {impersonating === org.id
-                              ? <Loader2 className="h-4 w-4 animate-spin" />
-                              : <LogIn className="h-4 w-4" />}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10"
+                            onClick={() => handleImpersonate(org)} disabled={impersonating === org.id}
+                            title="Access dashboard" data-testid={`button-access-org-${org.id}`}>
+                            {impersonating === org.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                           </Button>
-
-                          {/* Upgrade tier */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
-                            onClick={() => openUpgradeDialog(org)}
-                            title="Change subscription tier"
-                            data-testid={`button-upgrade-org-${org.id}`}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+                            onClick={() => openUpgradeDialog(org)} title="Change subscription tier"
+                            data-testid={`button-upgrade-org-${org.id}`}>
                             <Crown className="h-4 w-4" />
                           </Button>
-
-                          {/* Toggle status */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 ${
-                              org.subscription_status === 'suspended'
-                                ? 'text-slate-400 hover:text-green-400 hover:bg-green-500/10'
-                                : 'text-slate-400 hover:text-red-400 hover:bg-red-500/10'
-                            }`}
+                          <Button variant="ghost" size="icon"
+                            className={`h-8 w-8 ${org.subscription_status === 'suspended' ? 'text-slate-400 hover:text-green-400 hover:bg-green-500/10' : 'text-slate-400 hover:text-red-400 hover:bg-red-500/10'}`}
                             onClick={() => openStatusDialog(org)}
                             title={org.subscription_status === 'suspended' ? 'Reactivate org' : 'Manage status'}
-                            data-testid={`button-status-org-${org.id}`}
-                          >
-                            {org.subscription_status === 'suspended'
-                              ? <PlayCircle className="h-4 w-4" />
-                              : <Ban className="h-4 w-4" />}
+                            data-testid={`button-status-org-${org.id}`}>
+                            {org.subscription_status === 'suspended' ? <PlayCircle className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
                           </Button>
                         </div>
                       </TableCell>
@@ -475,7 +420,7 @@ export default function OrganizationsPage() {
                 {filteredOrgs.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                      No organizations found matching &ldquo;{searchQuery}&rdquo;
+                      {searchQuery ? `No organizations matching "${searchQuery}"` : 'No organizations found'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -485,11 +430,11 @@ export default function OrganizationsPage() {
         </CardContent>
       </Card>
 
-      {/* Detail dialog */}
-      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+      {/* ── Detail dialog ── */}
+      <Dialog open={detailDialogOpen} onOpenChange={open => { setDetailDialogOpen(open); if (!open) setSelectedOrg(null); }}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">{selectedOrg?.name}</DialogTitle>
+            <DialogTitle className="text-white">{selectedOrg?.name ?? 'Organization'}</DialogTitle>
             <DialogDescription className="text-slate-400">Organization details and metrics</DialogDescription>
           </DialogHeader>
           {selectedOrg && (
@@ -501,34 +446,33 @@ export default function OrganizationsPage() {
                 </div>
                 <div>
                   <p className="text-slate-500 mb-0.5">Created</p>
-                  <p className="text-slate-200">{new Date(selectedOrg.created_at).toLocaleDateString('en-GB')}</p>
+                  <p className="text-slate-200">{selectedOrg.created_at ? new Date(selectedOrg.created_at).toLocaleDateString('en-GB') : '—'}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 mb-1">Tier</p>
-                  <Badge variant="outline" className={`capitalize ${tierInfo(selectedOrg.subscription_tier).badge}`}>
-                    {tierInfo(selectedOrg.subscription_tier).label}
+                  <Badge variant="outline" className={`capitalize ${tierStyle(selectedOrg.subscription_tier).badge}`}>
+                    {tierStyle(selectedOrg.subscription_tier).label}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-slate-500 mb-1">Status</p>
-                  <Badge variant="outline" className={`capitalize ${STATUS_STYLES[selectedOrg.subscription_status] || STATUS_STYLES.active}`}>
+                  <Badge variant="outline" className={`capitalize ${statusStyle(selectedOrg.subscription_status)}`}>
                     {selectedOrg.subscription_status || 'active'}
                   </Badge>
                 </div>
                 <div className="col-span-2">
                   <p className="text-slate-500 mb-0.5">Commodities</p>
                   <p className="text-slate-200">
-                    {selectedOrg.commodity_types?.join(', ') || selectedOrg.commodities?.join(', ') || 'None'}
+                    {(selectedOrg.commodity_types ?? selectedOrg.commodities ?? []).join(', ') || 'None'}
                   </p>
                 </div>
               </div>
-
               <div className="grid grid-cols-4 gap-3 pt-4 border-t border-slate-700">
                 {[
-                  { label: 'Users', value: selectedOrg.user_count },
-                  { label: 'Agents', value: selectedOrg.agent_count },
-                  { label: 'Farms', value: selectedOrg.farm_count },
-                  { label: 'Bags', value: selectedOrg.bag_count },
+                  { label: 'Users',  value: selectedOrg.user_count  ?? 0 },
+                  { label: 'Agents', value: selectedOrg.agent_count ?? 0 },
+                  { label: 'Farms',  value: selectedOrg.farm_count  ?? 0 },
+                  { label: 'Bags',   value: selectedOrg.bag_count   ?? 0 },
                 ].map(m => (
                   <div key={m.label} className="text-center p-3 rounded-lg bg-slate-800 border border-slate-700">
                     <div className="text-xl font-bold text-white">{m.value}</div>
@@ -536,36 +480,21 @@ export default function OrganizationsPage() {
                   </div>
                 ))}
               </div>
-
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="border-amber-700 text-amber-400 hover:bg-amber-500/10"
-                  onClick={() => {
-                    setDetailDialogOpen(false);
-                    openUpgradeDialog(selectedOrg);
-                  }}
-                >
-                  <Crown className="h-4 w-4 mr-2" />
-                  Change Tier
+                <Button variant="outline" className="border-amber-700 text-amber-400 hover:bg-amber-500/10"
+                  onClick={() => { setDetailDialogOpen(false); openUpgradeDialog(selectedOrg); }}>
+                  <Crown className="h-4 w-4 mr-2" />Change Tier
                 </Button>
-                <Link
-                  href={`/superadmin/billing?org_id=${selectedOrg.id}`}
+                <Link href={`/superadmin/billing?org_id=${selectedOrg.id}`}
                   className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-600 text-slate-300 hover:bg-slate-800 px-4 py-2 text-sm font-medium transition-colors"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Payment Link
+                  onClick={() => setDetailDialogOpen(false)}>
+                  <CreditCard className="h-4 w-4" />Payment Link
                 </Link>
               </div>
-
-              <Button
-                className="w-full bg-cyan-600 hover:bg-cyan-700"
+              <Button className="w-full bg-cyan-600 hover:bg-cyan-700"
                 onClick={() => { setDetailDialogOpen(false); handleImpersonate(selectedOrg); }}
-                disabled={impersonating === selectedOrg.id}
-              >
-                {impersonating === selectedOrg.id
-                  ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  : <LogIn className="h-4 w-4 mr-2" />}
+                disabled={impersonating === selectedOrg.id}>
+                {impersonating === selectedOrg.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                 Access Dashboard as Admin
               </Button>
             </div>
@@ -573,25 +502,23 @@ export default function OrganizationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Upgrade Tier dialog */}
-      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+      {/* ── Upgrade Tier dialog ── */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={open => { setUpgradeDialogOpen(open); if (!open) setUpgradeTarget(null); }}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-400" />
-              Change Subscription Tier
+              <Crown className="h-5 w-5 text-amber-400" />Change Subscription Tier
             </DialogTitle>
             <DialogDescription className="text-slate-400">
-              Instantly changes the plan for <span className="text-slate-200 font-medium">{upgradeTarget?.name}</span>.
-              This does not generate a payment link.
+              Instantly changes the plan for <span className="text-slate-200 font-medium">{upgradeTarget?.name ?? '…'}</span>.
+              Does not generate a payment link.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-2">
             <div>
               <p className="text-xs text-slate-500 mb-1">Current tier</p>
-              <Badge variant="outline" className={`capitalize ${tierInfo(upgradeTarget?.subscription_tier || 'starter').badge}`}>
-                {tierInfo(upgradeTarget?.subscription_tier || 'starter').label}
+              <Badge variant="outline" className={`capitalize ${tierStyle(upgradeTarget?.subscription_tier).badge}`}>
+                {tierStyle(upgradeTarget?.subscription_tier).label}
               </Badge>
             </div>
             <div className="space-y-1.5">
@@ -601,41 +528,33 @@ export default function OrganizationsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-600">
-                  {TIER_ORDER.map(t => (
-                    <SelectItem
-                      key={t}
-                      value={t}
-                      className={`capitalize ${t === (upgradeTarget?.subscription_tier || 'starter') ? 'opacity-50' : ''}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {TIER_STYLES[t].label}
-                        {currentTierIndex(upgradeTarget!) < TIER_ORDER.indexOf(t) && (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {TIER_ORDER.map(t => {
+                    const currentIdx = tierIndex(upgradeTarget?.subscription_tier);
+                    const thisIdx    = TIER_ORDER.indexOf(t);
+                    return (
+                      <SelectItem key={t} value={t}
+                        className={`capitalize ${t === (upgradeTarget?.subscription_tier ?? 'starter') ? 'opacity-50' : ''}`}>
+                        <span className="flex items-center gap-2">
+                          {TIER_STYLES[t].label}
+                          {currentIdx < thisIdx && <ArrowUpRight className="h-3 w-3 text-green-400" />}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
-
-            {newTier !== (upgradeTarget?.subscription_tier || 'starter') && (
+            {newTier !== (upgradeTarget?.subscription_tier ?? 'starter') && (
               <div className="rounded-lg bg-amber-950/30 border border-amber-800/50 p-3 text-xs text-amber-300">
-                This will immediately change the org&apos;s feature access. Use Billing to generate a payment link if payment is required.
+                This will immediately change feature access. Use Billing to generate a payment link if payment is required.
               </div>
             )}
           </div>
-
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="text-slate-400" onClick={() => setUpgradeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpgradeTier}
-              disabled={isUpgrading || newTier === (upgradeTarget?.subscription_tier || 'starter')}
-              className="bg-amber-600 hover:bg-amber-700"
-              data-testid="button-confirm-upgrade"
-            >
+            <Button variant="ghost" className="text-slate-400" onClick={() => setUpgradeDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpgradeTier}
+              disabled={isUpgrading || newTier === (upgradeTarget?.subscription_tier ?? 'starter')}
+              className="bg-amber-600 hover:bg-amber-700" data-testid="button-confirm-upgrade">
               {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Crown className="h-4 w-4 mr-2" />}
               Confirm Change
             </Button>
@@ -643,20 +562,19 @@ export default function OrganizationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Status dialog */}
-      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+      {/* ── Status dialog ── */}
+      <Dialog open={statusDialogOpen} onOpenChange={open => { setStatusDialogOpen(open); if (!open) setStatusTarget(null); }}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-white">Manage Organization Status</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Update the billing/access status for <span className="text-slate-200 font-medium">{statusTarget?.name}</span>.
+              Update status for <span className="text-slate-200 font-medium">{statusTarget?.name ?? '…'}</span>.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-2">
             <div>
               <p className="text-xs text-slate-500 mb-1">Current status</p>
-              <Badge variant="outline" className={`capitalize ${STATUS_STYLES[statusTarget?.subscription_status || 'active'] || STATUS_STYLES.active}`}>
+              <Badge variant="outline" className={`capitalize ${statusStyle(statusTarget?.subscription_status)}`}>
                 {statusTarget?.subscription_status || 'active'}
               </Badge>
             </div>
@@ -680,17 +598,12 @@ export default function OrganizationsPage() {
               </div>
             )}
           </div>
-
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="text-slate-400" onClick={() => setStatusDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleStatusUpdate}
-              disabled={isStatusUpdating || newStatus === (statusTarget?.subscription_status || 'active')}
+            <Button variant="ghost" className="text-slate-400" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleStatusUpdate}
+              disabled={isStatusUpdating || newStatus === (statusTarget?.subscription_status ?? 'active')}
               className={newStatus === 'suspended' ? 'bg-red-700 hover:bg-red-800' : 'bg-[#2E7D6B] hover:bg-[#1F5F52]'}
-              data-testid="button-confirm-status"
-            >
+              data-testid="button-confirm-status">
               {isStatusUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Update Status
             </Button>
@@ -698,8 +611,8 @@ export default function OrganizationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Org dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={(open) => { if (!open) resetCreateDialog(); else setCreateDialogOpen(true); }}>
+      {/* ── Create Org dialog ── */}
+      <Dialog open={createDialogOpen} onOpenChange={open => { if (!open) resetCreateDialog(); }}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white">
@@ -708,7 +621,7 @@ export default function OrganizationsPage() {
             <DialogDescription className="text-slate-400">
               {createResult?.success
                 ? 'The organization and admin account have been set up.'
-                : 'Set up a new organization and its admin account. The admin will receive login credentials via email.'}
+                : 'Set up a new organization and admin account.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -717,134 +630,69 @@ export default function OrganizationsPage() {
               <div className="rounded-lg bg-green-950/30 border border-green-800/50 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-green-400">
                   <Check className="h-5 w-5" />
-                  <span className="font-medium">{createResult.orgName} created successfully</span>
+                  <span className="font-medium">{createResult.orgName} created</span>
                 </div>
                 <p className="text-sm text-green-500">Admin: {createResult.adminEmail}</p>
               </div>
-
               {createResult.emailSent ? (
                 <div className="rounded-lg bg-blue-950/30 border border-blue-800/50 p-4">
                   <div className="flex items-center gap-2 text-blue-400">
                     <Mail className="h-4 w-4" />
                     <span className="text-sm font-medium">Welcome email sent successfully</span>
                   </div>
-                  <p className="text-xs text-blue-500 mt-1">Login details sent to {createResult.adminEmail}</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="rounded-lg bg-amber-950/30 border border-amber-800/50 p-4">
-                    <p className="text-sm text-amber-300 font-medium">Email failed. Share these credentials manually:</p>
-                  </div>
-                  {createResult.tempPassword && (
-                    <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                          <p className="text-xs text-slate-500">Email</p>
-                          <p className="text-sm font-medium" data-testid="text-created-email">{createResult.adminEmail}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-500">Temporary Password</p>
-                          <p className="text-sm font-mono font-medium text-cyan-300" data-testid="text-temp-password">{createResult.tempPassword}</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-slate-600 text-slate-300"
-                          data-testid="button-copy-password"
-                          onClick={() => {
-                            navigator.clipboard.writeText(createResult.tempPassword!);
-                            setCopiedPassword(true);
-                            setTimeout(() => setCopiedPassword(false), 2000);
-                          }}
-                        >
-                          {copiedPassword ? <Check className="h-3 w-3 mr-1 text-green-400" /> : <Copy className="h-3 w-3 mr-1" />}
-                          {copiedPassword ? 'Copied' : 'Copy'}
-                        </Button>
-                      </div>
+              ) : createResult.tempPassword ? (
+                <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 space-y-3">
+                  <p className="text-sm text-amber-300 font-medium">Email failed — share manually:</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500">Email</p>
+                      <p className="text-sm font-medium text-slate-200">{createResult.adminEmail}</p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs text-slate-500">Temporary Password</p>
+                      <p className="text-sm font-mono text-cyan-300">{createResult.tempPassword}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="border-slate-600 text-slate-300"
+                      onClick={() => { navigator.clipboard.writeText(createResult.tempPassword!); setCopiedPassword(true); setTimeout(() => setCopiedPassword(false), 2000); }}>
+                      {copiedPassword ? <Check className="h-3 w-3 mr-1 text-green-400" /> : <Copy className="h-3 w-3 mr-1" />}
+                      {copiedPassword ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
                 </div>
-              )}
-
-              <Button onClick={resetCreateDialog} className="w-full bg-[#2E7D6B] hover:bg-[#1F5F52]" data-testid="button-close-create-result">
-                Done
-              </Button>
+              ) : null}
+              <Button onClick={resetCreateDialog} className="w-full bg-[#2E7D6B] hover:bg-[#1F5F52]">Done</Button>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-org-name" className="text-slate-300">Organization Name *</Label>
-                <Input
-                  id="create-org-name"
-                  data-testid="input-create-org-name"
-                  placeholder="e.g. Sunshine Cocoa Exports"
-                  value={newOrg.orgName}
-                  onChange={(e) => setNewOrg(prev => ({ ...prev, orgName: e.target.value }))}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-admin-name" className="text-slate-300">Admin Full Name *</Label>
-                <Input
-                  id="create-admin-name"
-                  data-testid="input-create-admin-name"
-                  placeholder="e.g. Adebayo Ogundimu"
-                  value={newOrg.adminName}
-                  onChange={(e) => setNewOrg(prev => ({ ...prev, adminName: e.target.value }))}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-admin-email" className="text-slate-300">Admin Email *</Label>
-                <Input
-                  id="create-admin-email"
-                  data-testid="input-create-admin-email"
-                  type="email"
-                  placeholder="e.g. admin@sunshinecocoa.com"
-                  value={newOrg.adminEmail}
-                  onChange={(e) => setNewOrg(prev => ({ ...prev, adminEmail: e.target.value }))}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-commodities" className="text-slate-300">Commodities (comma-separated)</Label>
-                <Input
-                  id="create-commodities"
-                  data-testid="input-create-commodities"
-                  placeholder="e.g. Cocoa, Cashew"
-                  value={newOrg.commodities}
-                  onChange={(e) => setNewOrg(prev => ({ ...prev, commodities: e.target.value }))}
-                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
-                />
-              </div>
+              {[
+                { id: 'name', label: 'Organization Name *', placeholder: 'e.g. Sunshine Cocoa Exports', key: 'orgName' as const },
+                { id: 'admin-name', label: 'Admin Full Name *', placeholder: 'e.g. Adebayo Ogundimu', key: 'adminName' as const },
+                { id: 'admin-email', label: 'Admin Email *', placeholder: 'admin@example.com', key: 'adminEmail' as const },
+                { id: 'commodities', label: 'Commodities (comma-separated)', placeholder: 'e.g. Cocoa, Cashew', key: 'commodities' as const },
+              ].map(f => (
+                <div key={f.id} className="space-y-2">
+                  <Label className="text-slate-300">{f.label}</Label>
+                  <Input placeholder={f.placeholder} value={newOrg[f.key]}
+                    onChange={e => setNewOrg(p => ({ ...p, [f.key]: e.target.value }))}
+                    className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500" />
+                </div>
+              ))}
               <div className="space-y-2">
                 <Label className="text-slate-300">Starting Tier</Label>
-                <Select
-                  value={newOrg.subscriptionStatus}
-                  onValueChange={(value) => setNewOrg(prev => ({ ...prev, subscriptionStatus: value }))}
-                >
-                  <SelectTrigger data-testid="select-create-status" className="bg-slate-800 border-slate-600 text-white">
+                <Select value={newOrg.subscriptionStatus} onValueChange={v => setNewOrg(p => ({ ...p, subscriptionStatus: v }))}>
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-600">
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    {TIER_ORDER.map(t => <SelectItem key={t} value={t} className="capitalize">{TIER_STYLES[t].label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                onClick={handleCreateOrg}
+              <Button onClick={handleCreateOrg}
                 disabled={isCreating || !newOrg.orgName.trim() || !newOrg.adminName.trim() || !newOrg.adminEmail.trim()}
-                className="w-full bg-[#2E7D6B] hover:bg-[#1F5F52]"
-                data-testid="button-submit-create-org"
-              >
-                {isCreating ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating...</>
-                ) : (
-                  <><Building2 className="h-4 w-4 mr-2" />Create Organization & Send Email</>
-                )}
+                className="w-full bg-[#2E7D6B] hover:bg-[#1F5F52]">
+                {isCreating ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating…</> : <><Building2 className="h-4 w-4 mr-2" />Create Organization & Send Email</>}
               </Button>
             </div>
           )}
