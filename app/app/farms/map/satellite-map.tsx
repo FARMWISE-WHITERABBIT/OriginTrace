@@ -87,18 +87,19 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   const loadTile = useCallback((tileX: number, tileY: number, z: number): HTMLImageElement | null => {
     const key = `${tileLayer}/${z}/${tileX}/${tileY}`;
     if (tileCache.current.has(key)) {
-      return tileCache.current.get(key) || null;
+      const cached = tileCache.current.get(key)!;
+      if (cached.complete && cached.naturalWidth > 0) return cached;
+      return null;
     }
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    img.onload = () => { drawMapRef.current(); };
+    img.onerror = () => { tileCache.current.delete(key); };
     img.src = TILE_URLS[tileLayer]
       .replace('{z}', String(z))
       .replace('{x}', String(tileX))
       .replace('{y}', String(tileY));
-    img.onload = () => {
-      tileCache.current.set(key, img);
-      drawMapRef.current();
-    };
+    tileCache.current.set(key, img);
     return null;
   }, [tileLayer]);
 
