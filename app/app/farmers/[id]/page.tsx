@@ -83,8 +83,6 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const [kycFile, setKycFile] = useState<File | null>(null);
   const [savingKyc, setSavingKyc] = useState(false);
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activityFetched, setActivityFetched] = useState(false);
 
   // Inputs management
   const [inputSheetOpen, setInputSheetOpen] = useState(false);
@@ -116,25 +114,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
 
-  const fetchActivity = async (farmId: string) => {
-    if (activityFetched) return;
-    setActivityLoading(true);
-    try {
-      const res = await fetch(`/api/audit?resource_type=farm&resource_id=${farmId}&limit=30`);
-      if (!res.ok) return;
-      const d = await res.json();
-      setActivityEvents(d.logs || d.events || []);
-      setActivityFetched(true);
-    } catch { /* ignore */ }
-    finally { setActivityLoading(false); }
-  };
-
   useEffect(() => {
     fetch(`/api/farmers/${id}`)
       .then(r => r.json())
       .then(d => {
         if (d.error) { router.push('/app/farmers'); return; }
         setData(d);
+        setActivityEvents(d.activity || []);
         setIdentityForm({ farmer_name: d.farm.farmer_name, farmer_id: d.farm.farmer_id || '', phone: d.farm.phone || '', commodity: d.farm.commodity || '' });
         setLocationForm({ community: d.farm.community || '', area_hectares: d.farm.area_hectares || '' });
         setComplianceForm({ compliance_status: d.farm.compliance_status || 'pending', compliance_notes: d.farm.compliance_notes || '' });
@@ -351,12 +337,9 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             Batches
             {batches.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{batches.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger
-            value="activity"
-            className="flex items-center gap-1.5"
-            onClick={() => fetchActivity(farm.id)}
-          >
+          <TabsTrigger value="activity" className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" />Activity
+            {activityEvents.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{activityEvents.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
@@ -755,11 +738,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
               <CardDescription>Audit trail of changes to this farmer record</CardDescription>
             </CardHeader>
             <CardContent>
-              {activityLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : activityEvents.length === 0 ? (
+              {activityEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <Clock className="h-8 w-8 text-muted-foreground opacity-30 mb-3" />
                   <p className="text-sm font-medium">No activity recorded yet</p>

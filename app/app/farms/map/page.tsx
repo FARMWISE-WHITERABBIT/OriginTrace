@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOnlineStatus } from '@/components/online-status';
 import { detectMockLocation } from '@/lib/validation/yield-validation';
@@ -93,9 +92,8 @@ function HybridFarmMappingPageInner() {
 function HybridFarmMappingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organization, profile, isLoading: orgLoading } = useOrg();
+  const { isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
-  const supabase = createClient();
   const isOnline = useOnlineStatus();
 
   const [mode, setMode] = useState<'gps' | 'satellite'>('gps');
@@ -123,22 +121,27 @@ function HybridFarmMappingContent() {
 
   useEffect(() => {
     async function loadFarms() {
-      if (!organization || !supabase) { setFarmsLoading(false); return; }
+      setFarmsLoading(true);
       try {
-        const { data } = await supabase
-          .from('farms')
-          .select('id, farmer_name, community, boundary, area_hectares, deforestation_check, boundary_analysis')
-          .eq('org_id', organization.id)
-          .order('farmer_name');
-        setFarms(data || []);
-        if (farmIdParam && data) {
-          const found = data.find((f: any) => String(f.id) === farmIdParam);
+        const res = await fetch('/api/farms?limit=1000');
+        if (!res.ok) throw new Error('Failed to load farms');
+        const json = await res.json();
+        const sorted: Farm[] = (json.farms || []).sort((a: Farm, b: Farm) =>
+          (a.farmer_name || '').localeCompare(b.farmer_name || '')
+        );
+        setFarms(sorted);
+        if (farmIdParam) {
+          const found = sorted.find(f => String(f.id) === farmIdParam);
           if (found) setSelectedFarm(found);
         }
-      } catch {} finally { setFarmsLoading(false); }
+      } catch {
+        // silent — user sees empty list
+      } finally {
+        setFarmsLoading(false);
+      }
     }
     loadFarms();
-  }, [organization, supabase, farmIdParam]);
+  }, [farmIdParam]);
 
   useEffect(() => {
     if (selectedFarm?.deforestation_check) {
@@ -289,25 +292,25 @@ function HybridFarmMappingContent() {
     };
 
     try {
-      if (isOnline && supabase) {
-        const { error } = await supabase
-          .from('farms')
-          .update({
-            boundary,
-            area_hectares: areaHectares,
-          })
-          .eq('id', selectedFarm.id);
-
-        if (error) throw error;
+      if (isOnline) {
+        const res = await fetch(`/api/farmers/${selectedFarm.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boundary, area_hectares: areaHectares }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || 'Failed to save boundary');
+        }
         toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
         await runBoundaryAnalysis(selectedFarm.id, boundary);
       } else {
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
       }
       setIsSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error);
-      toast({ title: 'Error', description: 'Failed to save boundary.', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to save boundary.', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
