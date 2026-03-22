@@ -13,12 +13,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2, ArrowLeft, User, Phone, MapPin, Leaf, Package,
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
-  Sprout, ShieldCheck, Clock, Activity,
+  Sprout, ShieldCheck, Clock, Activity, Plus, Trash2, IdCard,
 } from 'lucide-react';
 
 interface FarmerData {
@@ -77,6 +79,34 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
 
+  // Inputs management
+  const [inputSheetOpen, setInputSheetOpen] = useState(false);
+  const [editingInput, setEditingInput] = useState<any | null>(null);
+  const [deletingInputId, setDeletingInputId] = useState<string | null>(null);
+  const [savingInput, setSavingInput] = useState(false);
+  const [inputForm, setInputForm] = useState({
+    input_type: 'fertilizer',
+    product_name: '',
+    quantity: '',
+    unit: 'kg',
+    application_date: new Date().toISOString().split('T')[0],
+    area_applied_hectares: '',
+    notes: '',
+  });
+
+  // Training management
+  const [trainingSheetOpen, setTrainingSheetOpen] = useState(false);
+  const [editingTraining, setEditingTraining] = useState<any | null>(null);
+  const [deletingTrainingId, setDeletingTrainingId] = useState<string | null>(null);
+  const [savingTraining, setSavingTraining] = useState(false);
+  const [trainingForm, setTrainingForm] = useState({
+    module_name: '',
+    module_type: 'gap',
+    status: 'not_started',
+    score: '',
+    completed_at: '',
+  });
+
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
 
   const fetchActivity = async (farmId: string) => {
@@ -100,6 +130,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
         setData(d);
         setEditForm({
           farmer_name:       d.farm.farmer_name,
+          farmer_id:         d.farm.farmer_id || '',
           phone:             d.farm.phone || '',
           community:         d.farm.community || '',
           area_hectares:     d.farm.area_hectares || '',
@@ -130,6 +161,88 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     } finally {
       setSaving(false);
     }
+  }
+
+  function openAddInput() {
+    setEditingInput(null);
+    setInputForm({ input_type: 'fertilizer', product_name: '', quantity: '', unit: 'kg', application_date: new Date().toISOString().split('T')[0], area_applied_hectares: '', notes: '' });
+    setInputSheetOpen(true);
+  }
+  function openEditInput(input: any) {
+    setEditingInput(input);
+    setInputForm({ input_type: input.input_type, product_name: input.product_name || '', quantity: input.quantity ?? '', unit: input.unit || 'kg', application_date: input.application_date || '', area_applied_hectares: input.area_applied_hectares ?? '', notes: input.notes || '' });
+    setInputSheetOpen(true);
+  }
+  async function saveInput() {
+    if (!data) return;
+    setSavingInput(true);
+    const body = { ...inputForm, quantity: inputForm.quantity ? parseFloat(String(inputForm.quantity)) : undefined, area_applied_hectares: inputForm.area_applied_hectares ? parseFloat(String(inputForm.area_applied_hectares)) : undefined };
+    try {
+      const url = `/api/farmers/${id}/inputs`;
+      const method = editingInput ? 'PATCH' : 'POST';
+      const payload = editingInput ? { ...body, id: editingInput.id } : body;
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      const saved = json.input;
+      setData(prev => prev ? { ...prev, inputs: editingInput ? prev.inputs.map(i => i.id === saved.id ? saved : i) : [saved, ...prev.inputs] } : prev);
+      setInputSheetOpen(false);
+      toast({ title: editingInput ? 'Input updated' : 'Input added' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setSavingInput(false); }
+  }
+  async function deleteInput(inputId: string) {
+    setDeletingInputId(inputId);
+    try {
+      const res = await fetch(`/api/farmers/${id}/inputs?input_id=${inputId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setData(prev => prev ? { ...prev, inputs: prev.inputs.filter(i => i.id !== inputId) } : prev);
+      toast({ title: 'Input removed' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setDeletingInputId(null); }
+  }
+
+  function openAddTraining() {
+    setEditingTraining(null);
+    setTrainingForm({ module_name: '', module_type: 'gap', status: 'not_started', score: '', completed_at: '' });
+    setTrainingSheetOpen(true);
+  }
+  function openEditTraining(t: any) {
+    setEditingTraining(t);
+    setTrainingForm({ module_name: t.module_name, module_type: t.module_type, status: t.status, score: t.score ?? '', completed_at: t.completed_at ? t.completed_at.split('T')[0] : '' });
+    setTrainingSheetOpen(true);
+  }
+  async function saveTraining() {
+    if (!data) return;
+    setSavingTraining(true);
+    const body = { ...trainingForm, score: trainingForm.score !== '' ? parseFloat(String(trainingForm.score)) : undefined };
+    try {
+      const url = `/api/farmers/${id}/training`;
+      const method = editingTraining ? 'PATCH' : 'POST';
+      const payload = editingTraining ? { ...body, id: editingTraining.id } : body;
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      const saved = json.record;
+      setData(prev => prev ? { ...prev, training: editingTraining ? prev.training.map(t => t.id === saved.id ? saved : t) : [saved, ...prev.training] } : prev);
+      setTrainingSheetOpen(false);
+      toast({ title: editingTraining ? 'Training updated' : 'Training record added' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setSavingTraining(false); }
+  }
+  async function deleteTraining(trainingId: string) {
+    setDeletingTrainingId(trainingId);
+    try {
+      const res = await fetch(`/api/farmers/${id}/training?training_id=${trainingId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setData(prev => prev ? { ...prev, training: prev.training.filter(t => t.id !== trainingId) } : prev);
+      toast({ title: 'Training record removed' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setDeletingTrainingId(null); }
   }
 
   if (loading) {
@@ -257,6 +370,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                       <Input value={editForm.farmer_name} onChange={e => setEditForm(p => ({ ...p, farmer_name: e.target.value }))} className="mt-1" />
                     </div>
                     <div>
+                      <Label className="text-xs">Farmer ID</Label>
+                      <Input value={editForm.farmer_id} onChange={e => setEditForm(p => ({ ...p, farmer_id: e.target.value }))} placeholder="e.g. FRM-202401-A3B2C" className="mt-1 font-mono" />
+                      <p className="text-xs text-muted-foreground mt-0.5">Auto-generated on registration. Edit only if correcting an import.</p>
+                    </div>
+                    <div>
                       <Label className="text-xs">Phone Number</Label>
                       <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="+234..." className="mt-1" />
                     </div>
@@ -268,8 +386,8 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                 ) : (
                   <div>
                     <InfoRow label="Full Name"     value={farm.farmer_name} />
+                    <InfoRow label="Farmer ID"     value={<span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{farm.farmer_id || '—'}</span>} />
                     <InfoRow label="Phone"         value={farm.phone} />
-                    <InfoRow label="Farmer ID"     value={farm.farmer_id} />
                     <InfoRow label="Commodity"     value={farm.commodity} />
                     <InfoRow label="Consent"       value={
                       farm.consent_timestamp
@@ -369,17 +487,25 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
         <TabsContent value="inputs" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Sprout className="h-4 w-4" />Agricultural Inputs</CardTitle>
-              <CardDescription>Fertilizers, pesticides, herbicides, seeds, and organic amendments applied to this farm. Required for Rainforest Alliance, EUDR, and GACC compliance records.</CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2"><Sprout className="h-4 w-4" />Agricultural Inputs</CardTitle>
+                  <CardDescription className="mt-1">Fertilizers, pesticides, herbicides, seeds, and organic amendments. Required for Rainforest Alliance, EUDR, and GACC compliance records.</CardDescription>
+                </div>
+                {canEdit && (
+                  <Button size="sm" variant="outline" onClick={openAddInput} className="shrink-0">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Input
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {inputs.length === 0 ? (
                 <div className="text-center py-10">
                   <FlaskConical className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-30" />
                   <p className="font-medium text-sm">No input records yet</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Record fertilizers, pesticides, and other inputs used on this farm. These records are required for GACC MRL compliance and Rainforest Alliance audits.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">Record fertilizers, pesticides, and other inputs. Required for GACC MRL compliance and Rainforest Alliance audits.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={openAddInput}><Plus className="h-3.5 w-3.5 mr-1.5" />Add First Input</Button>}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -398,11 +524,19 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                           {input.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{input.notes}</p>}
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {input.application_date ? new Date(input.application_date).toLocaleDateString() : '—'}
                         </p>
+                        {canEdit && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditInput(input)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteInput(input.id)} disabled={deletingInputId === input.id}>
+                              {deletingInputId === input.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -416,17 +550,25 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
         <TabsContent value="training" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-4 w-4" />Training Records</CardTitle>
-              <CardDescription>Compliance and sustainability training modules. Required for Rainforest Alliance certification and EUDR due diligence records.</CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-4 w-4" />Training Records</CardTitle>
+                  <CardDescription className="mt-1">Compliance and sustainability training modules. Required for Rainforest Alliance certification and EUDR due diligence records.</CardDescription>
+                </div>
+                {canEdit && (
+                  <Button size="sm" variant="outline" onClick={openAddTraining} className="shrink-0">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Training
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {training.length === 0 ? (
                 <div className="text-center py-10">
                   <BookOpen className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-30" />
                   <p className="font-medium text-sm">No training records yet</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Record GAP training, child labor awareness, sustainability modules, and EUDR awareness sessions. These are required for Rainforest Alliance and major buyer audits.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">Record GAP, child labor awareness, sustainability modules, and EUDR awareness sessions. Required for Rainforest Alliance and major buyer audits.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={openAddTraining}><Plus className="h-3.5 w-3.5 mr-1.5" />Add First Training</Button>}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -442,12 +584,20 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                           {t.score != null && <p className="text-xs text-muted-foreground">Score: {t.score}%</p>}
                         </div>
                       </div>
-                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                        <Badge variant={t.status === 'completed' ? 'default' : 'secondary'} className={t.status === 'completed' ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-200' : ''}>
-                          {t.status === 'completed' ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Not Started'}
-                        </Badge>
-                        {t.completed_at && (
-                          <p className="text-xs text-muted-foreground">{new Date(t.completed_at).toLocaleDateString()}</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={t.status === 'completed' ? 'default' : 'secondary'} className={t.status === 'completed' ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-200' : ''}>
+                            {t.status === 'completed' ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Not Started'}
+                          </Badge>
+                          {t.completed_at && <p className="text-xs text-muted-foreground">{new Date(t.completed_at).toLocaleDateString()}</p>}
+                        </div>
+                        {canEdit && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditTraining(t)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteTraining(t.id)} disabled={deletingTrainingId === t.id}>
+                              {deletingTrainingId === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -462,15 +612,27 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
         <TabsContent value="batches" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" />Collection Batches</CardTitle>
-              <CardDescription>All produce collected from this farm, linked for full supply chain traceability.</CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" />Collection Batches</CardTitle>
+                  <CardDescription className="mt-1">All produce collected from this farm, linked for full supply chain traceability.</CardDescription>
+                </div>
+                {canEdit && (
+                  <Link href={`/app/collect?farm_id=${id}`}>
+                    <Button size="sm" variant="outline" className="shrink-0">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />New Collection
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {batches.length === 0 ? (
                 <div className="text-center py-10">
                   <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-30" />
                   <p className="font-medium text-sm">No collection batches yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Batches will appear here once produce is collected from this farm.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Record produce collected from this farmer using Smart Collect.</p>
+                  {canEdit && <Link href={`/app/collect?farm_id=${id}`}><Button size="sm" variant="outline" className="mt-4"><Plus className="h-3.5 w-3.5 mr-1.5" />Start Collection</Button></Link>}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -573,6 +735,115 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Add / Edit Input Sheet ── */}
+      <Sheet open={inputSheetOpen} onOpenChange={open => { if (!open) setInputSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{editingInput ? 'Edit Input Record' : 'Add Agricultural Input'}</SheetTitle>
+            <SheetDescription>Record fertilizers, pesticides, seeds, or other inputs applied to this farm.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <Label className="text-xs">Input Type</Label>
+              <Select value={inputForm.input_type} onValueChange={v => setInputForm(p => ({ ...p, input_type: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(INPUT_TYPE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Product Name</Label>
+              <Input value={inputForm.product_name} onChange={e => setInputForm(p => ({ ...p, product_name: e.target.value }))} placeholder="e.g. NPK 15-15-15" className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Quantity</Label>
+                <Input type="number" step="0.01" value={inputForm.quantity} onChange={e => setInputForm(p => ({ ...p, quantity: e.target.value }))} placeholder="0.00" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Unit</Label>
+                <Select value={inputForm.unit} onValueChange={v => setInputForm(p => ({ ...p, unit: v }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="liters">Liters</SelectItem>
+                    <SelectItem value="bags">Bags</SelectItem>
+                    <SelectItem value="units">Units</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Application Date</Label>
+              <Input type="date" value={inputForm.application_date} onChange={e => setInputForm(p => ({ ...p, application_date: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Area Applied (ha)</Label>
+              <Input type="number" step="0.01" value={inputForm.area_applied_hectares} onChange={e => setInputForm(p => ({ ...p, area_applied_hectares: e.target.value }))} placeholder="Optional" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={inputForm.notes} onChange={e => setInputForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes" rows={2} className="mt-1 text-sm" />
+            </div>
+            <Button className="w-full" onClick={saveInput} disabled={savingInput}>
+              {savingInput ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {editingInput ? 'Save Changes' : 'Add Input Record'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Add / Edit Training Sheet ── */}
+      <Sheet open={trainingSheetOpen} onOpenChange={open => { if (!open) setTrainingSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{editingTraining ? 'Edit Training Record' : 'Add Training Record'}</SheetTitle>
+            <SheetDescription>Record compliance and sustainability training completed by this farmer.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <Label className="text-xs">Module Name</Label>
+              <Input value={trainingForm.module_name} onChange={e => setTrainingForm(p => ({ ...p, module_name: e.target.value }))} placeholder="e.g. GAP Training Session 1" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Module Type</Label>
+              <Select value={trainingForm.module_type} onValueChange={v => setTrainingForm(p => ({ ...p, module_type: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MODULE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={trainingForm.status} onValueChange={v => setTrainingForm(p => ({ ...p, status: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Score (%)</Label>
+                <Input type="number" min="0" max="100" value={trainingForm.score} onChange={e => setTrainingForm(p => ({ ...p, score: e.target.value }))} placeholder="Optional" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Completion Date</Label>
+                <Input type="date" value={trainingForm.completed_at} onChange={e => setTrainingForm(p => ({ ...p, completed_at: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+            <Button className="w-full" onClick={saveTraining} disabled={savingTraining || !trainingForm.module_name}>
+              {savingTraining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {editingTraining ? 'Save Changes' : 'Add Training Record'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
