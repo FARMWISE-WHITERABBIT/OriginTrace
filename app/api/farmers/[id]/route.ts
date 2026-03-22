@@ -62,10 +62,10 @@ export async function GET(
     // KYC / compliance files
     const { data: files } = await supabase
       .from('compliance_files')
-      .select('id, file_type, file_name, file_path, created_at')
+      .select('id, file_type, file_url, verification_status, created_at')
       .eq('farm_id', farmId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(20);
 
     return NextResponse.json({
       farm,
@@ -99,7 +99,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const allowed = ['farmer_name', 'phone', 'farmer_id', 'community', 'area_hectares', 'compliance_status', 'compliance_notes', 'commodity'];
+    const allowed = ['farmer_name', 'phone', 'farmer_id', 'community', 'area_hectares', 'compliance_status', 'compliance_notes', 'commodity', 'consent_timestamp', 'consent_signature'];
     const updates: Record<string, any> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
