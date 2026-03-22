@@ -21,6 +21,7 @@ import {
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
   Sprout, ShieldCheck, Clock, Activity, Plus, Trash2, IdCard,
+  Upload, ExternalLink,
 } from 'lucide-react';
 
 interface FarmerData {
@@ -72,9 +73,15 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   const [data, setData] = useState<FarmerData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [editingCard, setEditingCard] = useState<'identity' | 'location' | 'compliance' | null>(null);
+  const [savingCard, setSavingCard] = useState(false);
+  const [identityForm, setIdentityForm] = useState<Record<string, any>>({});
+  const [locationForm, setLocationForm] = useState<Record<string, any>>({});
+  const [complianceForm, setComplianceForm] = useState<Record<string, any>>({});
+  const [kycSheetOpen, setKycSheetOpen] = useState(false);
+  const [kycFileType, setKycFileType] = useState('photo');
+  const [kycFile, setKycFile] = useState<File | null>(null);
+  const [savingKyc, setSavingKyc] = useState(false);
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
@@ -128,38 +135,56 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       .then(d => {
         if (d.error) { router.push('/app/farmers'); return; }
         setData(d);
-        setEditForm({
-          farmer_name:       d.farm.farmer_name,
-          farmer_id:         d.farm.farmer_id || '',
-          phone:             d.farm.phone || '',
-          community:         d.farm.community || '',
-          area_hectares:     d.farm.area_hectares || '',
-          commodity:         d.farm.commodity || '',
-          compliance_status: d.farm.compliance_status || 'pending',
-          compliance_notes:  d.farm.compliance_notes || '',
-        });
+        setIdentityForm({ farmer_name: d.farm.farmer_name, farmer_id: d.farm.farmer_id || '', phone: d.farm.phone || '', commodity: d.farm.commodity || '' });
+        setLocationForm({ community: d.farm.community || '', area_hectares: d.farm.area_hectares || '' });
+        setComplianceForm({ compliance_status: d.farm.compliance_status || 'pending', compliance_notes: d.farm.compliance_notes || '' });
       })
       .catch(() => router.push('/app/farmers'))
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  async function handleSave() {
-    setSaving(true);
+  async function handleSaveCard(card: 'identity' | 'location' | 'compliance') {
+    setSavingCard(true);
+    const formData = card === 'identity' ? identityForm : card === 'location' ? locationForm : complianceForm;
     try {
       const res = await fetch(`/api/farmers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(formData),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Save failed');
       setData(prev => prev ? { ...prev, farm: json.farm } : prev);
-      setEditing(false);
-      toast({ title: 'Farmer profile updated' });
+      if (card === 'identity') setIdentityForm({ farmer_name: json.farm.farmer_name, farmer_id: json.farm.farmer_id || '', phone: json.farm.phone || '', commodity: json.farm.commodity || '' });
+      else if (card === 'location') setLocationForm({ community: json.farm.community || '', area_hectares: json.farm.area_hectares || '' });
+      else setComplianceForm({ compliance_status: json.farm.compliance_status || 'pending', compliance_notes: json.farm.compliance_notes || '' });
+      setEditingCard(null);
+      toast({ title: 'Saved' });
     } catch (err: any) {
       toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
     } finally {
-      setSaving(false);
+      setSavingCard(false);
+    }
+  }
+
+  async function handleKycUpload() {
+    if (!kycFile) return;
+    setSavingKyc(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', kycFile);
+      fd.append('file_type', kycFileType);
+      const res = await fetch(`/api/farmers/${id}/files`, { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Upload failed');
+      setData(prev => prev ? { ...prev, files: [json.file, ...prev.files] } : prev);
+      setKycSheetOpen(false);
+      setKycFile(null);
+      toast({ title: 'Document uploaded' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingKyc(false);
     }
   }
 
@@ -284,24 +309,6 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <StatusIcon className="h-3 w-3 mr-1" />
             {statusCfg.label}
           </Badge>
-          {canEdit && !editing && (
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)} data-testid="button-edit-farmer">
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Edit
-            </Button>
-          )}
-          {editing && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={saving}>
-                <X className="h-3.5 w-3.5 mr-1.5" />
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving} data-testid="button-save-farmer">
-                {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                Save
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
@@ -360,31 +367,49 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             {/* Identity */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Identity</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Identity</CardTitle>
+                  {canEdit && editingCard !== 'identity' && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('identity')} data-testid="button-edit-farmer">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {editing ? (
+                {editingCard === 'identity' ? (
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">Full Name</Label>
-                      <Input value={editForm.farmer_name} onChange={e => setEditForm(p => ({ ...p, farmer_name: e.target.value }))} className="mt-1" />
+                      <Input value={identityForm.farmer_name} onChange={e => setIdentityForm(p => ({ ...p, farmer_name: e.target.value }))} className="mt-1" />
                     </div>
                     <div>
                       <Label className="text-xs">Farmer ID</Label>
-                      <Input value={editForm.farmer_id} onChange={e => setEditForm(p => ({ ...p, farmer_id: e.target.value }))} placeholder="e.g. FRM-202401-A3B2C" className="mt-1 font-mono" />
+                      <Input value={identityForm.farmer_id} onChange={e => setIdentityForm(p => ({ ...p, farmer_id: e.target.value }))} placeholder="e.g. FRM-202401-A3B2C" className="mt-1 font-mono" />
                       <p className="text-xs text-muted-foreground mt-0.5">Auto-generated on registration. Edit only if correcting an import.</p>
                     </div>
                     <div>
                       <Label className="text-xs">Phone Number</Label>
-                      <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="+234..." className="mt-1" />
+                      <Input value={identityForm.phone} onChange={e => setIdentityForm(p => ({ ...p, phone: e.target.value }))} placeholder="+234..." className="mt-1" />
                     </div>
                     <div>
                       <Label className="text-xs">Commodity</Label>
-                      <Input value={editForm.commodity} onChange={e => setEditForm(p => ({ ...p, commodity: e.target.value }))} placeholder="e.g. ginger, cocoa" className="mt-1" />
+                      <Input value={identityForm.commodity} onChange={e => setIdentityForm(p => ({ ...p, commodity: e.target.value }))} placeholder="e.g. ginger, cocoa" className="mt-1" />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={() => handleSaveCard('identity')} disabled={savingCard} data-testid="button-save-farmer">
+                        {savingCard ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingCard(null)} disabled={savingCard}><X className="h-3.5 w-3.5 mr-1.5" />Cancel</Button>
                     </div>
                   </div>
                 ) : (
                   <div>
+                    {farm.photo_url && (
+                      <div className="flex justify-center mb-4">
+                        <img src={farm.photo_url} alt={farm.farmer_name} className="h-20 w-20 rounded-full object-cover border-2 border-border" />
+                      </div>
+                    )}
                     <InfoRow label="Full Name"     value={farm.farmer_name} />
                     <InfoRow label="Farmer ID"     value={<span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{farm.farmer_id || '—'}</span>} />
                     <InfoRow label="Phone"         value={farm.phone} />
@@ -394,6 +419,14 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                         ? <span className="flex items-center gap-1 text-green-600 dark:text-green-400"><CheckCircle2 className="h-3.5 w-3.5" />Captured {new Date(farm.consent_timestamp).toLocaleDateString()}</span>
                         : <span className="flex items-center gap-1 text-amber-600"><AlertCircle className="h-3.5 w-3.5" />Not recorded</span>
                     } />
+                    {farm.consent_signature && (
+                      <div className="mt-3">
+                        <p className="text-xs text-muted-foreground mb-1.5">Consent Signature</p>
+                        <div className="rounded-md border border-border bg-white p-2 inline-block">
+                          <img src={farm.consent_signature} alt="Consent signature" className="h-16 w-auto max-w-full" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -402,18 +435,31 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             {/* Location */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />Location & Farm</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />Location & Farm</CardTitle>
+                  {canEdit && editingCard !== 'location' && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('location')}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {editing ? (
+                {editingCard === 'location' ? (
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">Community / Village</Label>
-                      <Input value={editForm.community} onChange={e => setEditForm(p => ({ ...p, community: e.target.value }))} className="mt-1" />
+                      <Input value={locationForm.community} onChange={e => setLocationForm(p => ({ ...p, community: e.target.value }))} className="mt-1" />
                     </div>
                     <div>
                       <Label className="text-xs">Farm Area (hectares)</Label>
-                      <Input type="number" step="0.01" value={editForm.area_hectares} onChange={e => setEditForm(p => ({ ...p, area_hectares: e.target.value }))} className="mt-1" />
+                      <Input type="number" step="0.01" value={locationForm.area_hectares} onChange={e => setLocationForm(p => ({ ...p, area_hectares: e.target.value }))} className="mt-1" />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={() => handleSaveCard('location')} disabled={savingCard}>
+                        {savingCard ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingCard(null)} disabled={savingCard}><X className="h-3.5 w-3.5 mr-1.5" />Cancel</Button>
                     </div>
                   </div>
                 ) : (
@@ -430,14 +476,21 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             {/* Compliance status */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Compliance Status</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Compliance Status</CardTitle>
+                  {canEdit && editingCard !== 'compliance' && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('compliance')}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {editing ? (
+                {editingCard === 'compliance' ? (
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">Status</Label>
-                      <Select value={editForm.compliance_status} onValueChange={v => setEditForm(p => ({ ...p, compliance_status: v }))}>
+                      <Select value={complianceForm.compliance_status} onValueChange={v => setComplianceForm(p => ({ ...p, compliance_status: v }))}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="approved">Approved</SelectItem>
@@ -448,7 +501,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                     </div>
                     <div>
                       <Label className="text-xs">Notes</Label>
-                      <Textarea value={editForm.compliance_notes} onChange={e => setEditForm(p => ({ ...p, compliance_notes: e.target.value }))} className="mt-1 text-sm" rows={3} />
+                      <Textarea value={complianceForm.compliance_notes} onChange={e => setComplianceForm(p => ({ ...p, compliance_notes: e.target.value }))} className="mt-1 text-sm" rows={3} />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={() => handleSaveCard('compliance')} disabled={savingCard}>
+                        {savingCard ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingCard(null)} disabled={savingCard}><X className="h-3.5 w-3.5 mr-1.5" />Cancel</Button>
                     </div>
                   </div>
                 ) : (
@@ -463,19 +522,36 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             {/* KYC documents */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />KYC Documents</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />KYC Documents</CardTitle>
+                  {canEdit && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setKycFile(null); setKycFileType('photo'); setKycSheetOpen(true); }}>
+                      <Upload className="h-3 w-3 mr-1" />Upload
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {files.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">No documents uploaded yet.</p>
                 ) : (
                   <div className="space-y-2">
-                    {files.map((f: any) => (
-                      <div key={f.id} className="flex items-center justify-between text-sm">
-                        <span className="capitalize text-muted-foreground">{f.file_type?.replace('_', ' ')}</span>
-                        <span className="text-xs text-muted-foreground">{f.file_name}</span>
-                      </div>
-                    ))}
+                    {files.map((f: any) => {
+                      const verColor = f.verification_status === 'verified' ? 'bg-green-500/10 text-green-700 dark:text-green-400' : f.verification_status === 'rejected' ? 'bg-red-500/10 text-red-700 dark:text-red-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400';
+                      return (
+                        <div key={f.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-border last:border-0">
+                          <span className="text-sm capitalize">{f.file_type?.replace(/_/g, ' ')}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className={`text-xs ${verColor}`}>{f.verification_status || 'pending'}</Badge>
+                            {f.file_url && (
+                              <a href={f.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                                View<ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -790,6 +866,45 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <Button className="w-full" onClick={saveInput} disabled={savingInput}>
               {savingInput ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               {editingInput ? 'Save Changes' : 'Add Input Record'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── KYC Upload Sheet ── */}
+      <Sheet open={kycSheetOpen} onOpenChange={open => { if (!open) setKycSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Upload KYC Document</SheetTitle>
+            <SheetDescription>Upload or replace a compliance document for this farmer. Admin/aggregator only.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <Label className="text-xs">Document Type</Label>
+              <Select value={kycFileType} onValueChange={setKycFileType}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="photo">Farmer Photo</SelectItem>
+                  <SelectItem value="id_document">ID Document</SelectItem>
+                  <SelectItem value="consent_form">Consent Form</SelectItem>
+                  <SelectItem value="certificate">Certificate</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">File</Label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="mt-1 block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                onChange={e => setKycFile(e.target.files?.[0] ?? null)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Max 5 MB. Images or PDF.</p>
+            </div>
+            <Button className="w-full" onClick={handleKycUpload} disabled={savingKyc || !kycFile}>
+              {savingKyc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+              Upload Document
             </Button>
           </div>
         </SheetContent>
