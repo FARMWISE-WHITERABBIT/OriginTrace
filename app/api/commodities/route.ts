@@ -9,7 +9,7 @@
  *    before rejecting with 404 so they are never incorrectly blocked.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient, getAuthenticatedUser } from '@/lib/api-auth';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
 function normalise(c: Record<string, unknown>) {
   return {
@@ -22,7 +22,7 @@ function normalise(c: Record<string, unknown>) {
 /** Resolve who the caller is.  Returns { userId, orgId, isSysAdmin } or null on auth failure. */
 async function resolveAuth(request: NextRequest) {
   const supabase = createServiceClient();
-  const user = await getAuthenticatedUser(request);
+  const { user, profile } = await getAuthenticatedProfile(request);
   if (!user) return null;
 
   // 1. Check system_admins first — these users may have no profiles row
@@ -34,11 +34,6 @@ async function resolveAuth(request: NextRequest) {
   if (adminRow) return { userId: user.id, orgId: null as number | null, isSysAdmin: true };
 
   // 2. Regular users need a profile with an org
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, org_id')
-    .eq('user_id', user.id)
-    .single();
   if (!profile) return { userId: user.id, orgId: null, isSysAdmin: false, noProfile: true };
   if (!profile.org_id) return { userId: user.id, orgId: null, isSysAdmin: false, noOrg: true };
 
