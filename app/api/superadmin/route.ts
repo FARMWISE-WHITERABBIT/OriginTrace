@@ -452,7 +452,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        await logSuperadminAction(supabase, {
+        await logSuperadminAction({
           superadminId: user.id,
           action: subscription_tier ? 'update_org_tier' : 'update_org_status',
           targetType: 'organization',
