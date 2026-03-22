@@ -10,7 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 
 interface Notification {
@@ -133,7 +132,7 @@ export function NotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 max-h-[520px] flex flex-col overflow-hidden" align="end">
+      <PopoverContent className="w-80 p-0 flex flex-col" align="end">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
           <h3 className="font-semibold text-sm">Notifications</h3>
           {unreadCount > 0 && (
@@ -149,7 +148,7 @@ export function NotificationCenter() {
             </Button>
           )}
         </div>
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="overflow-y-auto max-h-[420px]">
           {notifications.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               No notifications yet
@@ -214,7 +213,7 @@ export function NotificationCenter() {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );

@@ -63,6 +63,17 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(16);
   const [mapCenter, setMapCenter] = useState(center);
+  const prevCenterRef = useRef(center);
+
+  // Sync the center prop to internal state when parent pushes a new location
+  // (e.g. after Locate Me or GPS acquisition). Only re-center when the value
+  // actually changes so manual panning isn't disrupted by re-renders.
+  useEffect(() => {
+    if (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng) {
+      prevCenterRef.current = center;
+      setMapCenter(center);
+    }
+  }, [center]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [drawMode, setDrawMode] = useState(true);
