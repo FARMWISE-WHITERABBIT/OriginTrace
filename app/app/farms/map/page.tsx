@@ -92,7 +92,7 @@ function HybridFarmMappingPageInner() {
 function HybridFarmMappingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoading: orgLoading } = useOrg();
+  const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
 
@@ -107,6 +107,7 @@ function HybridFarmMappingContent() {
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
+  const [farmsLoadError, setFarmsLoadError] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [farmSearch, setFarmSearch] = useState('');
   const [showFarmPicker, setShowFarmPicker] = useState(false);
@@ -135,7 +136,7 @@ function HybridFarmMappingContent() {
           if (found) setSelectedFarm(found);
         }
       } catch {
-        // silent — user sees empty list
+        setFarmsLoadError(true);
       } finally {
         setFarmsLoading(false);
       }
@@ -262,17 +263,19 @@ function HybridFarmMappingContent() {
     setCurrentLocation(null);
   };
 
+  // Spherical excess formula (same as boundary-analysis.ts and PostGIS ST_Area)
   const calculateArea = (coords: Coordinates[]): number => {
     if (coords.length < 3) return 0;
+    const R = 6371000; // Earth radius in metres
+    const toRad = (d: number) => (d * Math.PI) / 180;
     let area = 0;
     const n = coords.length;
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      area += coords[i].lng * coords[j].lat;
-      area -= coords[j].lng * coords[i].lat;
+      area += toRad(coords[j].lng - coords[i].lng) *
+        (2 + Math.sin(toRad(coords[i].lat)) + Math.sin(toRad(coords[j].lat)));
     }
-    area = Math.abs(area) / 2;
-    const hectares = area * 111.32 * 111.32 * 100;
+    const hectares = Math.abs((area * R * R) / 2) / 10000;
     return Math.round(hectares * 100) / 100;
   };
 
@@ -389,8 +392,10 @@ function HybridFarmMappingContent() {
                 <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
                   {farmsLoading ? (
                     <div className="p-3 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Loading...</span></div>
+                  ) : farmsLoadError ? (
+                    <div className="p-3 text-sm text-destructive text-center">Failed to load farmers. Please refresh.</div>
                   ) : filteredFarms.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">No farms found</div>
+                    <div className="p-3 text-sm text-muted-foreground text-center">{farmSearch ? 'No farmers match your search' : 'No registered farmers yet'}</div>
                   ) : (
                     filteredFarms.map(f => (
                       <button

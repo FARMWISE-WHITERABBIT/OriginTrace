@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { useOrg } from '@/lib/contexts/org-context';
 import { Loader2, MapPin } from 'lucide-react';
 
 interface Farm {
@@ -32,7 +30,6 @@ function latToTileY(lat: number, z: number) {
 
 export default function FarmMapOverview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { organization } = useOrg();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(7);
@@ -42,17 +39,18 @@ export default function FarmMapOverview() {
   const router = useRouter();
   const tileCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const isDragging = useRef(false);
+  // Track whether the pointer actually moved during a mousedown so we can
+  // distinguish a click (navigate) from a drag (pan).
+  const didDrag = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, lat: 7.5, lng: 4.5 });
 
   useEffect(() => {
-    if (!organization?.id) return;
-    const supabase = createClient();
-    supabase!
-      .from('farms')
-      .select('id, farmer_name, community, commodity, compliance_status, area_hectares, boundary')
-      .eq('org_id', organization.id)
-      .then(({ data }) => {
-        const withBoundary = (data || []).filter((f: any) => f.boundary?.coordinates?.length > 0) as Farm[];
+    async function loadFarms() {
+      try {
+        const res = await fetch('/api/farms?limit=1000');
+        if (!res.ok) throw new Error();
+        const json = await res.json();
+        const withBoundary = (json.farms || []).filter((f: any) => f.boundary?.coordinates?.length > 0) as Farm[];
         setFarms(withBoundary);
         if (withBoundary.length > 0) {
           const lats = withBoundary.flatMap(f => f.boundary!.coordinates[0].map((p: number[]) => p[1]));
@@ -61,9 +59,12 @@ export default function FarmMapOverview() {
           const span = Math.max(Math.max(...lats) - Math.min(...lats), Math.max(...lngs) - Math.min(...lngs));
           setZoom(span > 10 ? 5 : span > 5 ? 6 : span > 2 ? 7 : span > 1 ? 8 : 9);
         }
+      } catch { /* show empty state */ } finally {
         setLoading(false);
-      });
-  }, [organization?.id]);
+      }
+    }
+    loadFarms();
+  }, []);
 
   const getTile = useCallback((z: number, x: number, y: number): HTMLImageElement | null => {
     const key = `${z}/${x}/${y}`;
@@ -147,6 +148,7 @@ export default function FarmMapOverview() {
     if (isDragging.current) {
       const dx = e.clientX - dragStart.current.x;
       const dy = e.clientY - dragStart.current.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didDrag.current = true;
       const scale = TILE_SIZE * 2 ** zoom;
       setCenter({ lat: Math.max(-85, Math.min(85, dragStart.current.lat + (dy / scale) * 360)), lng: dragStart.current.lng - (dx / scale) * 360 });
       return;
@@ -191,11 +193,11 @@ export default function FarmMapOverview() {
           ref={canvasRef} width={800} height={400}
           className={`w-full ${hoveredFarm ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`} style={{ height: '400px' }}
           onMouseMove={handleMouseMove}
-          onMouseDown={e => { isDragging.current = true; dragStart.current = { x: e.clientX, y: e.clientY, lat: center.lat, lng: center.lng }; }}
+          onMouseDown={e => { isDragging.current = true; didDrag.current = false; dragStart.current = { x: e.clientX, y: e.clientY, lat: center.lat, lng: center.lng }; }}
           onMouseUp={() => { isDragging.current = false; }}
-          onMouseLeave={() => { isDragging.current = false; setHoveredFarm(null); setTooltip(null); }}
+          onMouseLeave={() => { isDragging.current = false; didDrag.current = false; setHoveredFarm(null); setTooltip(null); }}
           onWheel={e => { e.preventDefault(); setZoom(z => Math.max(5, Math.min(14, z + (e.deltaY < 0 ? 1 : -1)))); }}
-          onClick={() => { if (hoveredFarm && !isDragging.current) { router.push(`/app/farms/map?farm_id=${hoveredFarm.id}`); } }}
+          onClick={() => { if (hoveredFarm && !didDrag.current) { router.push(`/app/farms/map?farm_id=${hoveredFarm.id}`); } }}
         />
         <div className="absolute top-3 right-3 flex flex-col gap-1">
           {['+', '−'].map((label, i) => (
@@ -207,7 +209,7 @@ export default function FarmMapOverview() {
         </div>
         {hoveredFarm && tooltip && (
           <div className="absolute pointer-events-none bg-background/95 border rounded-lg shadow-lg p-3 text-xs max-w-[200px]"
-            style={{ left: Math.min(tooltip.x + 12, 580), top: Math.max(tooltip.y - 60, 8) }}>
+            style={{ left: Math.min(tooltip.x + 12, (canvasRef.current?.clientWidth ?? 800) - 220), top: Math.max(tooltip.y - 60, 8) }}>
             <p className="font-semibold">{hoveredFarm.farmer_name}</p>
             {hoveredFarm.community && <p className="text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" />{hoveredFarm.community}</p>}
             <div className="flex gap-2 mt-1.5 flex-wrap">

@@ -70,10 +70,18 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   const drawMapRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setCanvasSize({ width: Math.floor(rect.width), height: 400 });
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    // Set initial size immediately if layout is already known
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0) setCanvasSize({ width: Math.floor(rect.width), height: 400 });
+    // Keep canvas dimensions in sync with the container as the layout shifts
+    const observer = new ResizeObserver(entries => {
+      const w = Math.floor(entries[0].contentRect.width);
+      if (w > 0) setCanvasSize(prev => prev.width === w ? prev : { ...prev, width: w });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   const loadTile = useCallback((tileX: number, tileY: number, z: number): HTMLImageElement | null => {
