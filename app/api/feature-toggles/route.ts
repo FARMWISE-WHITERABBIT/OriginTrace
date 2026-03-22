@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const { data: organizations, error } = await supabaseAdmin
       .from('organizations')
-      .select('id, name, settings')
+      .select('id, name, subscription_tier, settings')
       .order('name');
 
     if (error) {
@@ -62,10 +62,12 @@ export async function GET(request: NextRequest) {
 
     const orgsWithDetails = (organizations || []).map((org: any) => {
       const tierData = extractTierFromSettings(org.settings);
+      // Top-level column is the authoritative source; fall back to settings JSONB
       return {
         id: org.id,
         name: org.name,
         ...tierData,
+        subscription_tier: org.subscription_tier || tierData.subscription_tier || 'starter',
       };
     });
 
@@ -164,16 +166,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (agent_seat_limit !== undefined) {
-      if (typeof agent_seat_limit !== 'number' || (agent_seat_limit < -1 && agent_seat_limit !== -1)) {
-        return NextResponse.json({ error: 'Invalid agent seat limit' }, { status: 400 });
-      }
       settingsUpdate.agent_seat_limit = agent_seat_limit;
     }
 
     if (monthly_collection_limit !== undefined) {
-      if (typeof monthly_collection_limit !== 'number' || (monthly_collection_limit < -1 && monthly_collection_limit !== -1)) {
-        return NextResponse.json({ error: 'Invalid monthly collection limit' }, { status: 400 });
-      }
       settingsUpdate.monthly_collection_limit = monthly_collection_limit;
     }
 

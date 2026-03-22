@@ -28,8 +28,6 @@ import {
   LogIn, Plus, Mail, Copy, Check, Crown, Ban, PlayCircle, ArrowUpRight, CreditCard
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useOrg } from '@/lib/contexts/org-context';
-import { StatusBadge } from '@/lib/status-badge';
 import Link from 'next/link';
 
 interface Organization {
@@ -108,7 +106,6 @@ export default function OrganizationsPage() {
 
   const { toast } = useToast();
   const router = useRouter();
-  const { startImpersonation } = useOrg();
 
   useEffect(() => {
     fetchOrganizations();
@@ -131,15 +128,20 @@ export default function OrganizationsPage() {
   async function handleImpersonate(org: Organization) {
     setImpersonating(org.id);
     try {
-      const success = await startImpersonation(org.id);
-      if (success) {
+      const res = await fetch('/api/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', org_id: org.id }),
+      });
+      if (res.ok) {
         toast({ title: 'Impersonation Started', description: `Now viewing as ${org.name}.` });
         router.push('/app');
       } else {
-        throw new Error('Failed to start impersonation');
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to start impersonation');
       }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to access organization dashboard.', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to access organization dashboard.', variant: 'destructive' });
     } finally {
       setImpersonating(null);
     }

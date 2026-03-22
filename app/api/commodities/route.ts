@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    // Allow system admins (no org_id) to view all commodities
+    const isSysAdmin = !profile.org_id
+      ? !!(await supabase.from('system_admins').select('id').eq('user_id', user.id).single()).data
+      : false;
+    if (!profile.org_id && !isSysAdmin) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const globalOnly = searchParams.get('global_only') === 'true';
@@ -70,14 +74,18 @@ export async function POST(request: NextRequest) {
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    // System admins (no org_id) can create global commodities
+    const isSysAdmin = !profile.org_id
+      ? !!(await supabase.from('system_admins').select('id').eq('user_id', user.id).single()).data
+      : false;
+    if (!profile.org_id && !isSysAdmin) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const body = await request.json();
     const { name, code, category, unit, is_global, grades, moisture_min, moisture_max, collection_metrics } = body;
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
 
-    let canCreateGlobal = false;
-    if (is_global) {
+    let canCreateGlobal = isSysAdmin;
+    if (!canCreateGlobal && is_global) {
       const { data: adminCheck } = await supabase.from('system_admins').select('id').eq('user_id', user.id).single();
       canCreateGlobal = !!adminCheck;
     }
@@ -105,7 +113,10 @@ export async function PATCH(request: NextRequest) {
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const isSysAdmin = !profile.org_id
+      ? !!(await supabase.from('system_admins').select('id').eq('user_id', user.id).single()).data
+      : false;
+    if (!profile.org_id && !isSysAdmin) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -135,7 +146,10 @@ export async function DELETE(request: NextRequest) {
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const isSysAdmin = !profile.org_id
+      ? !!(await supabase.from('system_admins').select('id').eq('user_id', user.id).single()).data
+      : false;
+    if (!profile.org_id && !isSysAdmin) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
