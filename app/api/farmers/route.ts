@@ -31,19 +31,48 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ farmers: paged, pagination: { page, limit, total } });
     }
 
-    const { data: farmers, error, count } = await supabaseAdmin
+    // Fallback 1: farmer_performance_ledger static table (pre-seeded data)
+    const { data: ledgerFarmers, error: ledgerError, count: ledgerCount } = await supabaseAdmin
       .from('farmer_performance_ledger')
       .select('*', { count: 'exact' })
       .eq('org_id', profile.org_id)
       .order('total_delivery_kg', { ascending: false })
       .range(from, to);
 
-    if (error) {
-      console.error('Farmers query error:', error);
+    if (!ledgerError && ledgerFarmers && ledgerFarmers.length > 0) {
+      return NextResponse.json({ farmers: ledgerFarmers, pagination: { page, limit, total: ledgerCount ?? 0 } });
+    }
+
+    // Fallback 2: query farms table directly so newly registered farmers always appear
+    const { data: farms, error: farmsError, count: farmsCount } = await supabaseAdmin
+      .from('farms')
+      .select('id, farmer_name, org_id, community, area_hectares, commodity, consent_timestamp, compliance_status', { count: 'exact' })
+      .eq('org_id', profile.org_id)
+      .order('farmer_name', { ascending: true })
+      .range(from, to);
+
+    if (farmsError) {
+      console.error('Farmers query error:', farmsError);
       return NextResponse.json({ farmers: [], pagination: { page, limit, total: 0 } });
     }
 
-    return NextResponse.json({ farmers: farmers || [], pagination: { page, limit, total: count ?? 0 } });
+    const farmers = (farms || []).map((f: any) => ({
+      farm_id: f.id,
+      farmer_name: f.farmer_name,
+      org_id: f.org_id,
+      community: f.community,
+      area_hectares: f.area_hectares,
+      commodity: f.commodity,
+      total_delivery_kg: 0,
+      total_batches: 0,
+      total_bags: 0,
+      avg_grade_score: null,
+      last_delivery_date: null,
+      delivery_frequency: 'low' as const,
+      has_consent: !!f.consent_timestamp,
+    }));
+
+    return NextResponse.json({ farmers, pagination: { page, limit, total: farmsCount ?? 0 } });
     
   } catch (error) {
     console.error('Farmers API error:', error);
