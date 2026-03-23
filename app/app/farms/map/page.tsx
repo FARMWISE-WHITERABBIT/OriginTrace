@@ -99,6 +99,7 @@ function HybridFarmMappingContent() {
   const [mode, setMode] = useState<'gps' | 'satellite'>('gps');
   const [coordinates, setCoordinates] = useState<Coordinates[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null);
+  const [locateOverride, setLocateOverride] = useState<Coordinates | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isCheckingGPS, setIsCheckingGPS] = useState(false);
   const [gpsSpoofWarning, setGpsSpoofWarning] = useState(false);
@@ -304,8 +305,9 @@ function HybridFarmMappingContent() {
     setCoordinates(points);
   };
 
-  // Satellite map center: prefer existing farm boundary centroid, then GPS, then fallback
+  // Satellite map center: Locate Me override > farm boundary centroid > GPS > fallback
   const mapCenter = useMemo((): Coordinates => {
+    if (locateOverride) return locateOverride;
     const ring = selectedFarm?.boundary?.coordinates?.[0] as [number, number][] | undefined;
     if (ring && ring.length > 1) {
       const avgLat = ring.reduce((s, c) => s + c[1], 0) / ring.length;
@@ -313,7 +315,7 @@ function HybridFarmMappingContent() {
       return { lat: avgLat, lng: avgLng };
     }
     return currentLocation || { lat: 7.4, lng: 3.9 };
-  }, [selectedFarm, currentLocation]);
+  }, [selectedFarm, currentLocation, locateOverride]);
 
   const areaHectares = calculateArea(coordinates);
 
@@ -434,6 +436,7 @@ function HybridFarmMappingContent() {
                         key={f.id}
                         onClick={() => {
                           setSelectedFarm(f);
+                          setLocateOverride(null);
                           setShowFarmPicker(false);
                           setFarmSearch('');
                           // Pre-populate boundary points so user can edit rather than re-draw
@@ -591,7 +594,9 @@ function HybridFarmMappingContent() {
                     setIsLocating(true);
                     navigator.geolocation.getCurrentPosition(
                       (pos) => {
-                        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setCurrentLocation(loc);
+                        setLocateOverride(loc);
                         setGpsAccuracy(Math.round(pos.coords.accuracy));
                         setIsLocating(false);
                       },

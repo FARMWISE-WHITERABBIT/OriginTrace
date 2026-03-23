@@ -63,6 +63,7 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(16);
   const [mapCenter, setMapCenter] = useState(center);
+  const mapCenterRef = useRef(center);
   const prevCenterRef = useRef(center);
 
   // Sync the center prop to internal state when parent pushes a new location
@@ -71,11 +72,12 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
   useEffect(() => {
     if (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng) {
       prevCenterRef.current = center;
+      mapCenterRef.current = center;
       setMapCenter(center);
     }
   }, [center]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [drawMode, setDrawMode] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
   const [tileLayer, setTileLayer] = useState<TileLayer>(satelliteEnabled ? 'satellite' : 'street');
@@ -259,53 +261,55 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (drawMode) return;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
     setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
   }, [drawMode]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    const centerTileX = lngToTileX(mapCenter.lng, zoom);
-    const centerTileY = latToTileY(mapCenter.lat, zoom);
-    const newTileX = centerTileX - dx / TILE_SIZE;
-    const newTileY = centerTileY - dy / TILE_SIZE;
-    setMapCenter({
-      lng: tileXToLng(newTileX, zoom),
-      lat: tileYToLat(newTileY, zoom),
-    });
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, [isDragging, dragStart, mapCenter, zoom]);
+    if (!isDragging || !dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    const centerTileX = lngToTileX(mapCenterRef.current.lng, zoom);
+    const centerTileY = latToTileY(mapCenterRef.current.lat, zoom);
+    const newCenter = {
+      lng: tileXToLng(centerTileX - dx / TILE_SIZE, zoom),
+      lat: tileYToLat(centerTileY - dy / TILE_SIZE, zoom),
+    };
+    mapCenterRef.current = newCenter;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    setMapCenter(newCenter);
+    drawMapRef.current();
+  }, [isDragging, zoom]);
 
   const handleMouseUp = useCallback(() => {
+    dragStartRef.current = null;
     setIsDragging(false);
-    setDragStart(null);
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     if (drawMode) return;
     const touch = e.touches[0];
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
     setIsDragging(true);
-    setDragStart({ x: touch.clientX, y: touch.clientY });
   }, [drawMode]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
+    if (!isDragging || !dragStartRef.current) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const dx = touch.clientX - dragStart.x;
-    const dy = touch.clientY - dragStart.y;
-    const centerTileX = lngToTileX(mapCenter.lng, zoom);
-    const centerTileY = latToTileY(mapCenter.lat, zoom);
-    const newTileX = centerTileX - dx / TILE_SIZE;
-    const newTileY = centerTileY - dy / TILE_SIZE;
-    setMapCenter({
-      lng: tileXToLng(newTileX, zoom),
-      lat: tileYToLat(newTileY, zoom),
-    });
-    setDragStart({ x: touch.clientX, y: touch.clientY });
-  }, [isDragging, dragStart, mapCenter, zoom]);
+    const dx = touch.clientX - dragStartRef.current.x;
+    const dy = touch.clientY - dragStartRef.current.y;
+    const centerTileX = lngToTileX(mapCenterRef.current.lng, zoom);
+    const centerTileY = latToTileY(mapCenterRef.current.lat, zoom);
+    const newCenter = {
+      lng: tileXToLng(centerTileX - dx / TILE_SIZE, zoom),
+      lat: tileYToLat(centerTileY - dy / TILE_SIZE, zoom),
+    };
+    mapCenterRef.current = newCenter;
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setMapCenter(newCenter);
+    drawMapRef.current();
+  }, [isDragging, zoom]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     if (drawMode && !isDragging) {
@@ -318,8 +322,8 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
       const coord = pixelToLngLat(x, y);
       onPointsChange([...coordinates, coord]);
     }
+    dragStartRef.current = null;
     setIsDragging(false);
-    setDragStart(null);
   }, [drawMode, isDragging, pixelToLngLat, coordinates, onPointsChange]);
 
   const undoLastPoint = () => {
