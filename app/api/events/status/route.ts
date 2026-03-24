@@ -8,11 +8,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getAdminClient();
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from('events')
     .select('registration_open, registration_closes_at')
     .eq('slug', slug)
     .single();
+
+  const data = rawData as { registration_open: boolean; registration_closes_at: string | null } | null;
 
   if (error || !data) {
     // Default open if event not found — avoids blocking legacy registrations

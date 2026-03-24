@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const { registrationId } = parsed.data;
   const supabase = getAdminClient();
 
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from('event_registrations')
     .update({ checked_in: true, checked_in_at: new Date().toISOString() })
     .eq('id', registrationId)
@@ -43,15 +43,19 @@ export async function POST(request: NextRequest) {
     .select('id, full_name, checked_in_at')
     .single();
 
+  const data = rawData as { id: string; full_name: string | null; checked_in_at: string | null } | null;
+
   if (error) {
     // PGRST116 = no rows matched (already checked in or not found)
     if (error.code === 'PGRST116') {
       // Check if it exists and is already checked in
-      const { data: existing } = await supabase
+      const { data: rawExisting } = await supabase
         .from('event_registrations')
         .select('id, full_name, checked_in, checked_in_at')
         .eq('id', registrationId)
         .single();
+
+      const existing = rawExisting as { id: string; full_name: string | null; checked_in: boolean | null; checked_in_at: string | null } | null;
 
       if (existing?.checked_in) {
         return NextResponse.json(

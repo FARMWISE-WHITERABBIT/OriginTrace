@@ -45,7 +45,7 @@ async function getUpcomingEvents(): Promise<Event[]> {
       console.error('[events page] fetch error:', error);
       return [];
     }
-    return data ?? [];
+    return (data ?? []) as Event[];
   } catch {
     return [];
   }

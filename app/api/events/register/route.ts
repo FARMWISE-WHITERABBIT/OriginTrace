@@ -41,11 +41,13 @@ export async function POST(request: NextRequest) {
   const supabase = getAdminClient();
 
   // Check registration window from events table
-  const { data: eventRow } = await supabase
+  const { data: rawEventRow } = await supabase
     .from('events')
     .select('registration_open, registration_closes_at')
     .eq('slug', EVENT_SLUG)
     .single();
+
+  const eventRow = rawEventRow as { registration_open: boolean; registration_closes_at: string | null } | null;
 
   if (eventRow) {
     const now = new Date();

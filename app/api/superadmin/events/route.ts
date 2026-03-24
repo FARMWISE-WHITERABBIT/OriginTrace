@@ -56,7 +56,7 @@ export async function GET() {
 
   const supabase = getAdminClient();
 
-  const { data: events, error } = await supabase
+  const { data: rawEvents, error } = await supabase
     .from('events')
     .select('*')
     .order('date', { ascending: false });
@@ -65,8 +65,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 
+  const events = rawEvents as Array<Record<string, unknown>> | null;
+
   // Attach registration counts
-  const slugs = (events ?? []).map(e => e.slug);
+  const slugs = (events ?? []).map(e => e.slug as string);
   const counts: Record<string, number> = {};
 
   if (slugs.length > 0) {
@@ -75,14 +77,14 @@ export async function GET() {
       .select('event_slug')
       .in('event_slug', slugs);
 
-    (regData ?? []).forEach(r => {
+    (regData as Array<{ event_slug: string }> ?? []).forEach(r => {
       counts[r.event_slug] = (counts[r.event_slug] ?? 0) + 1;
     });
   }
 
   const enriched = (events ?? []).map(e => ({
     ...e,
-    registration_count: counts[e.slug] ?? 0,
+    registration_count: counts[e.slug as string] ?? 0,
   }));
 
   return NextResponse.json({ events: enriched });
