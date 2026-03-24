@@ -11,12 +11,15 @@ import { z } from 'zod';
 const EVENT_SLUG = 'yexdep-2026';
 
 const registrationSchema = z.object({
-  fullName:     z.string().min(2).max(120),
-  email:        z.string().email(),
-  phone:        z.string().min(7).max(20),
-  organization: z.string().min(1).max(200),
-  role:         z.string().min(1).max(150),
-  state:        z.string().min(1).max(100),
+  fullName:           z.string().min(2).max(120),
+  email:              z.string().email(),
+  phone:              z.string().min(7).max(20),
+  organization:       z.string().min(1).max(200),
+  role:               z.string().min(1).max(150),
+  state:              z.string().min(1).max(100),
+  currentlyExporting: z.enum(['yes', 'no']),
+  exportProducts:     z.string().min(1).max(300),
+  nepcRegistered:     z.enum(['yes', 'no']),
 });
 
 export async function POST(request: NextRequest) {
@@ -35,18 +38,47 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { fullName, email, phone, organization, role, state } = parsed.data;
   const supabase = getAdminClient();
+
+  // Check registration window from events table
+  const { data: eventRow } = await supabase
+    .from('events')
+    .select('registration_open, registration_closes_at')
+    .eq('slug', EVENT_SLUG)
+    .single();
+
+  if (eventRow) {
+    const now = new Date();
+    const closedByFlag = !eventRow.registration_open;
+    const closedByTime = eventRow.registration_closes_at
+      ? now > new Date(eventRow.registration_closes_at)
+      : false;
+
+    if (closedByFlag || closedByTime) {
+      return NextResponse.json(
+        { error: 'Registration for this event is now closed.' },
+        { status: 410 }
+      );
+    }
+  }
+
+  const {
+    fullName, email, phone, organization, role, state,
+    currentlyExporting, exportProducts, nepcRegistered,
+  } = parsed.data;
 
   // Insert registration — unique constraint on (email, event_slug) prevents duplicates
   const { error: insertError } = await supabase.from('event_registrations').insert({
-    event_slug:   EVENT_SLUG,
-    full_name:    fullName,
-    email:        email.toLowerCase(),
+    event_slug:          EVENT_SLUG,
+    full_name:           fullName,
+    email:               email.toLowerCase(),
     phone,
     organization,
     role,
     state,
+    currently_exporting: currentlyExporting === 'yes',
+    export_products:     exportProducts,
+    nepc_registered:     nepcRegistered === 'yes',
   });
 
   if (insertError) {
@@ -60,15 +92,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });
   }
 
-  // Get total count for admin notification
+  // Total count for admin notification
   const { count } = await supabase
     .from('event_registrations')
     .select('id', { count: 'exact', head: true })
     .eq('event_slug', EVENT_SLUG);
 
-  const registrationData = { fullName, email, phone, organization, role, state };
+  const registrationData = {
+    fullName, email, phone, organization, role, state,
+    currentlyExporting, exportProducts, nepcRegistered,
+  };
 
-  // Build email promises
+  // Send emails (non-blocking)
   const emailPromises: Promise<{ success: boolean; error?: string }>[] = [
     sendEmail({
       to: email,
@@ -84,7 +119,6 @@ export async function POST(request: NextRequest) {
         to: adminEmail,
         subject: `New YEXDEP Registration: ${fullName} (${organization})`,
         html: buildAdminNotificationEmail(registrationData, count ?? 0),
-        // Reply-to set to registrant so admin can respond directly
         replyTo: email,
       })
     );
@@ -92,7 +126,6 @@ export async function POST(request: NextRequest) {
     console.warn('[events/register] EVENTS_ADMIN_EMAIL not set — skipping admin notification');
   }
 
-  // Send all emails and log outcomes (non-blocking — never fail the registration)
   const results = await Promise.allSettled(emailPromises);
   results.forEach((result, i) => {
     const label = i === 0 ? `registrant (${email})` : `admin (${adminEmail})`;

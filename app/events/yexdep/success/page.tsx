@@ -99,7 +99,7 @@ export default function SuccessPage() {
         {/* Footer */}
         <div className="mt-8 text-center space-y-1">
           <p className="text-white/40 text-xs">
-            Hosted by OriginTrace in partnership with the Nigerian Export Promotion Council
+            Hosted by Nigerian Export Promotion Council in partnership with OriginTrace
           </p>
           <p className="text-white/25 text-xs">
             <Link href="/events" className="hover:text-white/50 transition-colors">

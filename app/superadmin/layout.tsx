@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  Building2, 
-  Users, 
-  BarChart3, 
-  Settings, 
+import {
+  Building2,
+  Users,
+  BarChart3,
+  Settings,
   RefreshCw,
   LogOut,
   Menu,
@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Wheat,
   Handshake,
-  CreditCard
+  CreditCard,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -107,6 +108,7 @@ export default function SuperadminLayout({
     { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
     { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
     { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
+    { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
     { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
     { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
     { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },

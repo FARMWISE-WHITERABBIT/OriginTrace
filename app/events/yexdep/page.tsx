@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Calendar, Clock, MapPin, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, MapPin, ArrowLeft, AlertCircle } from 'lucide-react';
 
 const NIGERIAN_STATES = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
@@ -22,6 +22,32 @@ interface FormData {
   organization: string;
   role: string;
   state: string;
+  currentlyExporting: string;   // 'yes' | 'no' | ''
+  exportProducts: string;
+  nepcRegistered: string;       // 'yes' | 'no' | ''
+}
+
+interface EventStatus {
+  registrationOpen: boolean;
+  loaded: boolean;
+}
+
+function ClosedBanner() {
+  return (
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 text-center">
+      <AlertCircle className="h-10 w-10 text-amber-300 mx-auto mb-4" />
+      <h2 className="text-white text-xl font-bold mb-2">Registration is now closed</h2>
+      <p className="text-white/70 text-sm leading-relaxed">
+        The registration window for YEXDEP 2026 has ended. We look forward to seeing you at future events.
+      </p>
+      <Link
+        href="/events"
+        className="inline-block mt-6 text-sm text-white/60 hover:text-white transition-colors"
+      >
+        ← View all events
+      </Link>
+    </div>
+  );
 }
 
 export default function YexdepRegistrationPage() {
@@ -33,11 +59,23 @@ export default function YexdepRegistrationPage() {
     organization: '',
     role: '',
     state: '',
+    currentlyExporting: '',
+    exportProducts: '',
+    nepcRegistered: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventStatus, setEventStatus] = useState<EventStatus>({ registrationOpen: true, loaded: false });
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  // Check if registration is still open
+  useEffect(() => {
+    fetch('/api/events/status?slug=yexdep-2026')
+      .then(r => r.json())
+      .then(data => setEventStatus({ registrationOpen: data.registrationOpen ?? true, loaded: true }))
+      .catch(() => setEventStatus({ registrationOpen: true, loaded: true }));
+  }, []);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setError(null);
   }
@@ -57,6 +95,10 @@ export default function YexdepRegistrationPage() {
       const json = await res.json();
 
       if (!res.ok) {
+        if (res.status === 410) {
+          setEventStatus({ registrationOpen: false, loaded: true });
+          return;
+        }
         setError(json.error ?? 'Something went wrong. Please try again.');
         return;
       }
@@ -69,10 +111,12 @@ export default function YexdepRegistrationPage() {
     }
   }
 
+  const isExporting = form.currentlyExporting === 'yes';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A2E25] via-[#1F5F52] to-[#2E7D6B] flex flex-col">
 
-      {/* ── Top nav bar ── */}
+      {/* Top nav */}
       <header className="px-6 py-4 flex items-center justify-between">
         <Link
           href="/events"
@@ -87,9 +131,8 @@ export default function YexdepRegistrationPage() {
       <main className="flex-1 flex items-start justify-center px-4 py-6 pb-16">
         <div className="w-full max-w-lg">
 
-          {/* ── Dual-brand logos ── */}
+          {/* Dual-brand logos */}
           <div className="flex items-center justify-center gap-5 mb-8">
-            {/* OriginTrace */}
             <Image
               src="/images/logo-white.png"
               alt="OriginTrace"
@@ -98,11 +141,7 @@ export default function YexdepRegistrationPage() {
               style={{ width: 'auto', height: '30px' }}
               priority
             />
-
-            {/* Separator */}
             <span className="text-white/30 text-2xl font-light select-none">×</span>
-
-            {/* NEPC — save the logo to /public/images/nepc-logo.png */}
             <Image
               src="/images/nepc-logo.png"
               alt="Nigerian Export Promotion Council"
@@ -113,7 +152,7 @@ export default function YexdepRegistrationPage() {
             />
           </div>
 
-          {/* ── Hero card ── */}
+          {/* Hero card */}
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6 text-center">
             <p className="text-emerald-300 text-xs font-semibold tracking-widest uppercase mb-2">
               Youth Export Development Programme
@@ -135,128 +174,186 @@ export default function YexdepRegistrationPage() {
             </div>
           </div>
 
-          {/* ── Registration form ── */}
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100">
-              <h2 className="text-slate-900 font-semibold text-lg">Register to Attend</h2>
-              <p className="text-slate-500 text-sm mt-0.5">All fields are required · Free entry</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-
-              {/* Full Name */}
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
-                  Full Name
-                </label>
-                <input
-                  id="fullName" name="fullName" type="text" required
-                  placeholder="e.g. Amara Okafor"
-                  value={form.fullName} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
-                />
+          {/* Closed banner or form */}
+          {eventStatus.loaded && !eventStatus.registrationOpen ? (
+            <ClosedBanner />
+          ) : (
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100">
+                <h2 className="text-slate-900 font-semibold text-lg">Register to Attend</h2>
+                <p className="text-slate-500 text-sm mt-0.5">All fields are required · Free entry</p>
               </div>
 
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  id="email" name="email" type="email" required
-                  placeholder="you@example.com"
-                  value={form.email} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
-                />
-              </div>
+              <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
 
-              {/* Phone */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  id="phone" name="phone" type="tel" required
-                  placeholder="e.g. 08012345678"
-                  value={form.phone} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
-                />
-              </div>
-
-              {/* Organisation */}
-              <div>
-                <label htmlFor="organization" className="block text-sm font-medium text-slate-700 mb-1">
-                  Organisation / Company
-                </label>
-                <input
-                  id="organization" name="organization" type="text" required
-                  placeholder="e.g. ABC Agro Exports Ltd"
-                  value={form.organization} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
-                />
-              </div>
-
-              {/* Role */}
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">
-                  Role / Job Title
-                </label>
-                <input
-                  id="role" name="role" type="text" required
-                  placeholder="e.g. Export Manager"
-                  value={form.role} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
-                />
-              </div>
-
-              {/* State */}
-              <div>
-                <label htmlFor="state" className="block text-sm font-medium text-slate-700 mb-1">
-                  State
-                </label>
-                <select
-                  id="state" name="state" required
-                  value={form.state} onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition bg-white"
-                >
-                  <option value="" disabled>Select your state</option>
-                  {NIGERIAN_STATES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {error}
+                {/* Full Name */}
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                  <input
+                    id="fullName" name="fullName" type="text" required
+                    placeholder="e.g. Amara Okafor"
+                    value={form.fullName} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
                 </div>
-              )}
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-[#1F5F52] hover:bg-[#174D42] text-white font-semibold py-3 px-6 rounded-xl text-sm transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
-              >
-                {submitting ? 'Registering…' : 'Register Now →'}
-              </button>
-            </form>
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                  <input
+                    id="email" name="email" type="email" required
+                    placeholder="you@example.com"
+                    value={form.email} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
+                </div>
 
-            <div className="px-6 pb-5 text-center">
-              <p className="text-xs text-slate-400">
-                A confirmation email will be sent to you. For enquiries:{' '}
-                <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] hover:underline">
-                  info@origintrace.trade
-                </a>
-              </p>
+                {/* Phone */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    id="phone" name="phone" type="tel" required
+                    placeholder="e.g. 08012345678"
+                    value={form.phone} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
+                </div>
+
+                {/* Organisation */}
+                <div>
+                  <label htmlFor="organization" className="block text-sm font-medium text-slate-700 mb-1">Organisation / Company</label>
+                  <input
+                    id="organization" name="organization" type="text" required
+                    placeholder="e.g. ABC Agro Exports Ltd"
+                    value={form.organization} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">Role / Job Title</label>
+                  <input
+                    id="role" name="role" type="text" required
+                    placeholder="e.g. Export Manager"
+                    value={form.role} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
+                </div>
+
+                {/* State */}
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-slate-700 mb-1">State</label>
+                  <select
+                    id="state" name="state" required
+                    value={form.state} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition bg-white"
+                  >
+                    <option value="" disabled>Select your state</option>
+                    {NIGERIAN_STATES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Export Profile</p>
+                </div>
+
+                {/* Currently exporting? */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Are you currently exporting?
+                  </label>
+                  <div className="flex gap-4">
+                    {['yes', 'no'].map(val => (
+                      <label key={val} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="currentlyExporting"
+                          value={val}
+                          checked={form.currentlyExporting === val}
+                          onChange={handleChange}
+                          required
+                          className="accent-[#1F5F52]"
+                        />
+                        <span className="text-sm text-slate-700 capitalize">{val}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* What are you exporting / want to export */}
+                <div>
+                  <label htmlFor="exportProducts" className="block text-sm font-medium text-slate-700 mb-1">
+                    {isExporting
+                      ? 'What are you currently exporting?'
+                      : 'What would you like to export?'}
+                  </label>
+                  <input
+                    id="exportProducts" name="exportProducts" type="text" required
+                    placeholder={isExporting ? 'e.g. Cashew nuts, Cocoa beans' : 'e.g. Shea butter, Leather goods'}
+                    value={form.exportProducts} onChange={handleChange}
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
+                  />
+                </div>
+
+                {/* Registered with NEPC? */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Are you registered with NEPC?
+                  </label>
+                  <div className="flex gap-4">
+                    {['yes', 'no'].map(val => (
+                      <label key={val} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="nepcRegistered"
+                          value={val}
+                          checked={form.nepcRegistered === val}
+                          onChange={handleChange}
+                          required
+                          className="accent-[#1F5F52]"
+                        />
+                        <span className="text-sm text-slate-700 capitalize">{val}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#1F5F52] hover:bg-[#174D42] text-white font-semibold py-3 px-6 rounded-xl text-sm transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                >
+                  {submitting ? 'Registering…' : 'Register Now →'}
+                </button>
+              </form>
+
+              <div className="px-6 pb-5 text-center">
+                <p className="text-xs text-slate-400">
+                  A confirmation email will be sent to you. For enquiries:{' '}
+                  <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] hover:underline">
+                    info@origintrace.trade
+                  </a>
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* ── Footer ── */}
+          {/* Footer */}
           <div className="mt-8 text-center space-y-1">
             <p className="text-white/40 text-xs">
-              Hosted by OriginTrace in partnership with the Nigerian Export Promotion Council
+              Hosted by Nigerian Export Promotion Council in partnership with OriginTrace
             </p>
             <p className="text-white/25 text-xs">
               <Link href="/events" className="hover:text-white/50 transition-colors">

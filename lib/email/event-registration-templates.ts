@@ -5,6 +5,15 @@ export interface RegistrationData {
   organization: string;
   role: string;
   state: string;
+  currentlyExporting?: string;   // 'yes' | 'no'
+  exportProducts?: string;
+  nepcRegistered?: string;       // 'yes' | 'no'
+}
+
+function yesNo(val: string | undefined): string {
+  if (val === 'yes') return 'Yes';
+  if (val === 'no') return 'No';
+  return '—';
 }
 
 export function buildRegistrantConfirmationEmail(data: RegistrationData): string {
@@ -24,7 +33,7 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData): string
           <!-- Header -->
           <tr>
             <td style="background-color:#1F5F52;padding:32px 40px;text-align:center;">
-              <p style="margin:0 0 4px;color:#A7D9CC;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">OriginTrace × NEPC</p>
+              <p style="margin:0 0 4px;color:#A7D9CC;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nigerian Export Promotion Council × OriginTrace</p>
               <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Youth Export Development Programme</h1>
               <p style="margin:8px 0 0;color:#6FB8A8;font-size:13px;">YEXDEP 2026</p>
             </td>
@@ -81,7 +90,7 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData): string
                     <p style="margin:0 0 12px;color:#065F46;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Your Registration</p>
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding:3px 0;color:#6B7280;font-size:13px;width:110px;">Name</td>
+                        <td style="padding:3px 0;color:#6B7280;font-size:13px;width:160px;">Name</td>
                         <td style="padding:3px 0;color:#111827;font-size:13px;">${data.fullName}</td>
                       </tr>
                       <tr>
@@ -96,6 +105,16 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData): string
                         <td style="padding:3px 0;color:#6B7280;font-size:13px;">State</td>
                         <td style="padding:3px 0;color:#111827;font-size:13px;">${data.state}</td>
                       </tr>
+                      ${data.exportProducts ? `
+                      <tr>
+                        <td style="padding:3px 0;color:#6B7280;font-size:13px;">Export Products</td>
+                        <td style="padding:3px 0;color:#111827;font-size:13px;">${data.exportProducts}</td>
+                      </tr>` : ''}
+                      ${data.nepcRegistered ? `
+                      <tr>
+                        <td style="padding:3px 0;color:#6B7280;font-size:13px;">NEPC Registered</td>
+                        <td style="padding:3px 0;color:#111827;font-size:13px;">${yesNo(data.nepcRegistered)}</td>
+                      </tr>` : ''}
                     </table>
                   </td>
                 </tr>
@@ -111,7 +130,7 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData): string
           <tr>
             <td style="background-color:#F8FAFC;padding:20px 40px;text-align:center;border-top:1px solid #E5E7EB;">
               <p style="margin:0;color:#9CA3AF;font-size:12px;">
-                OriginTrace × NEPC &nbsp;·&nbsp; events.origintrace.trade
+                Hosted by Nigerian Export Promotion Council in partnership with OriginTrace
               </p>
             </td>
           </tr>
@@ -161,7 +180,7 @@ export function buildAdminNotificationEmail(data: RegistrationData, totalCount: 
             <td style="padding:28px 32px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;">
                 <tr style="background-color:#F9FAFB;">
-                  <td style="padding:10px 16px;color:#6B7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;width:130px;">Field</td>
+                  <td style="padding:10px 16px;color:#6B7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;width:160px;">Field</td>
                   <td style="padding:10px 16px;color:#6B7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Value</td>
                 </tr>
                 <tr style="border-top:1px solid #F3F4F6;">
@@ -189,6 +208,18 @@ export function buildAdminNotificationEmail(data: RegistrationData, totalCount: 
                   <td style="padding:10px 16px;color:#111827;font-size:13px;">${data.state}</td>
                 </tr>
                 <tr style="border-top:1px solid #F3F4F6;">
+                  <td style="padding:10px 16px;color:#6B7280;font-size:13px;">Currently Exporting</td>
+                  <td style="padding:10px 16px;color:#111827;font-size:13px;">${yesNo(data.currentlyExporting)}</td>
+                </tr>
+                <tr style="border-top:1px solid #F3F4F6;background-color:#F9FAFB;">
+                  <td style="padding:10px 16px;color:#6B7280;font-size:13px;">Export Products</td>
+                  <td style="padding:10px 16px;color:#111827;font-size:13px;">${data.exportProducts ?? '—'}</td>
+                </tr>
+                <tr style="border-top:1px solid #F3F4F6;">
+                  <td style="padding:10px 16px;color:#6B7280;font-size:13px;">NEPC Registered</td>
+                  <td style="padding:10px 16px;color:#111827;font-size:13px;">${yesNo(data.nepcRegistered)}</td>
+                </tr>
+                <tr style="border-top:1px solid #F3F4F6;background-color:#F9FAFB;">
                   <td style="padding:10px 16px;color:#6B7280;font-size:13px;">Registered At</td>
                   <td style="padding:10px 16px;color:#111827;font-size:13px;">${registeredAt} (WAT)</td>
                 </tr>
@@ -199,7 +230,9 @@ export function buildAdminNotificationEmail(data: RegistrationData, totalCount: 
           <!-- Footer -->
           <tr>
             <td style="background-color:#F8FAFC;padding:16px 32px;border-top:1px solid #E5E7EB;text-align:center;">
-              <p style="margin:0;color:#9CA3AF;font-size:12px;">OriginTrace Events System &nbsp;·&nbsp; events.origintrace.trade</p>
+              <p style="margin:0;color:#9CA3AF;font-size:12px;">
+                Hosted by Nigerian Export Promotion Council in partnership with OriginTrace
+              </p>
             </td>
           </tr>
 
