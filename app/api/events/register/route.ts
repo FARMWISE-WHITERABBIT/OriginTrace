@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { sendEmail, FROM_ADDRESS } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import {
   buildRegistrantConfirmationEmail,
   buildAdminNotificationEmail,
 } from '@/lib/email/event-registration-templates';
+import { env } from '@/lib/env';
 import { z } from 'zod';
 
 const EVENT_SLUG = 'yexdep-2026';
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
   const { fullName, email, phone, organization, role, state } = parsed.data;
   const supabase = getAdminClient();
 
-  // Insert registration (unique constraint on email+event_slug prevents duplicates)
+  // Insert registration — unique constraint on (email, event_slug) prevents duplicates
   const { error: insertError } = await supabase.from('event_registrations').insert({
     event_slug:   EVENT_SLUG,
     full_name:    fullName,
@@ -50,7 +51,6 @@ export async function POST(request: NextRequest) {
 
   if (insertError) {
     if (insertError.code === '23505') {
-      // Unique violation — already registered
       return NextResponse.json(
         { error: 'This email address is already registered for this event.' },
         { status: 409 }
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
   const registrationData = { fullName, email, phone, organization, role, state };
 
-  // Send emails (non-blocking — don't fail registration on email error)
-  const emailPromises: Promise<unknown>[] = [
+  // Build email promises
+  const emailPromises: Promise<{ success: boolean; error?: string }>[] = [
     sendEmail({
       to: email,
       subject: 'Registration Confirmed – YEXDEP 2026 | OriginTrace × NEPC',
@@ -77,19 +77,35 @@ export async function POST(request: NextRequest) {
     }),
   ];
 
-  const adminEmail = process.env.EVENTS_ADMIN_EMAIL;
+  const adminEmail = env.EVENTS_ADMIN_EMAIL;
   if (adminEmail) {
     emailPromises.push(
       sendEmail({
         to: adminEmail,
         subject: `New YEXDEP Registration: ${fullName} (${organization})`,
         html: buildAdminNotificationEmail(registrationData, count ?? 0),
-        replyTo: FROM_ADDRESS,
+        // Reply-to set to registrant so admin can respond directly
+        replyTo: email,
       })
     );
+  } else {
+    console.warn('[events/register] EVENTS_ADMIN_EMAIL not set — skipping admin notification');
   }
 
-  await Promise.allSettled(emailPromises);
+  // Send all emails and log outcomes (non-blocking — never fail the registration)
+  const results = await Promise.allSettled(emailPromises);
+  results.forEach((result, i) => {
+    const label = i === 0 ? `registrant (${email})` : `admin (${adminEmail})`;
+    if (result.status === 'fulfilled') {
+      if (result.value.success) {
+        console.log(`[events/register] Email sent to ${label}`);
+      } else {
+        console.error(`[events/register] Email failed for ${label}:`, result.value.error);
+      }
+    } else {
+      console.error(`[events/register] Email promise rejected for ${label}:`, result.reason);
+    }
+  });
 
   return NextResponse.json({ success: true }, { status: 201 });
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import { CheckCircle, Calendar, MapPin, Lightbulb } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Registration Confirmed – YEXDEP 2026',
@@ -7,63 +9,105 @@ export const metadata: Metadata = {
 
 export default function SuccessPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0D3D32] via-[#1F5F52] to-[#2E7D6B] flex items-center justify-center px-4">
-      <div className="w-full max-w-md text-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#0A2E25] via-[#1F5F52] to-[#2E7D6B] flex flex-col items-center justify-center px-4 py-16">
+
+      {/* Dual-brand logos */}
+      <div className="flex items-center justify-center gap-5 mb-10">
+        <Image
+          src="/images/logo-white.png"
+          alt="OriginTrace"
+          width={120}
+          height={32}
+          style={{ width: 'auto', height: '26px' }}
+          priority
+        />
+        <span className="text-white/30 text-xl font-light select-none">×</span>
+        <Image
+          src="/images/nepc-logo.png"
+          alt="Nigerian Export Promotion Council"
+          width={130}
+          height={36}
+          style={{ width: 'auto', height: '32px', filter: 'brightness(0) invert(1)' }}
+          priority
+        />
+      </div>
+
+      <div className="w-full max-w-md">
 
         {/* Success icon */}
-        <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-white/15 flex items-center justify-center">
-          <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+        <div className="flex justify-center mb-6">
+          <div className="h-20 w-20 rounded-full bg-white/15 flex items-center justify-center">
+            <CheckCircle className="h-10 w-10 text-white" strokeWidth={1.5} />
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl px-8 py-10">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re Registered!</h1>
-          <p className="text-gray-500 text-sm mb-6">
-            Thank you for registering for YEXDEP 2026. A confirmation email with full event details has been sent to your inbox.
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-2xl px-8 py-10">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2 text-center">
+            You&apos;re Registered!
+          </h1>
+          <p className="text-slate-500 text-sm mb-6 text-center leading-relaxed">
+            Thank you for registering for YEXDEP 2026. A confirmation email with full
+            event details has been sent to your inbox.
           </p>
 
-          {/* Event reminder box */}
-          <div className="bg-[#F0FDF9] border border-[#A7F3D0] rounded-xl p-5 mb-6 text-left space-y-2.5">
-            <p className="text-[#065F46] text-xs font-semibold uppercase tracking-wider mb-1">Event Details</p>
+          {/* Event details box */}
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 mb-6 space-y-3">
+            <p className="text-emerald-700 text-xs font-semibold uppercase tracking-wider">
+              Event Details
+            </p>
             <div className="flex items-start gap-2.5">
-              <span className="text-[#1F5F52] mt-0.5">📅</span>
+              <Calendar className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-800">Wednesday, 25th March 2026</p>
-                <p className="text-xs text-gray-500">9:00 AM prompt</p>
+                <p className="text-sm font-medium text-slate-800">Wednesday, 25 March 2026</p>
+                <p className="text-xs text-slate-500">9:00 AM prompt</p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
-              <span className="text-[#1F5F52] mt-0.5">📍</span>
+              <MapPin className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-800">NEPC Enugu Regional Office</p>
-                <p className="text-xs text-gray-500">Agric Bank Building, Upper Presidential Road, Independence Layout, Enugu</p>
+                <p className="text-sm font-medium text-slate-800">NEPC Enugu Regional Office</p>
+                <p className="text-xs text-slate-500">
+                  Agric Bank Building, Upper Presidential Road, Independence Layout, Enugu
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
-              <span className="text-[#1F5F52] mt-0.5">💡</span>
-              <p className="text-sm text-gray-700 italic">&ldquo;From Passion to Port: Unlocking Youth Export Potential&rdquo;</p>
+              <Lightbulb className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
+              <p className="text-sm text-slate-600 italic">
+                &ldquo;From Passion to Port: Unlocking Youth Export Potential&rdquo;
+              </p>
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 mb-5">
-            Please check your spam folder if you don&apos;t see the confirmation email. For enquiries:{' '}
-            <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] underline">
+          <p className="text-xs text-slate-400 mb-6 text-center leading-relaxed">
+            Please check your spam folder if you don&apos;t see the confirmation email.
+            For enquiries:{' '}
+            <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] hover:underline">
               info@origintrace.trade
             </a>
           </p>
 
           <Link
             href="/events/yexdep"
-            className="text-sm text-[#1F5F52] hover:underline font-medium"
+            className="block text-center text-sm text-[#1F5F52] hover:underline font-medium"
           >
             ← Register another attendee
           </Link>
         </div>
 
-        <p className="text-white/40 text-xs mt-6">
-          Hosted by OriginTrace & NEPC · events.origintrace.trade
-        </p>
+        {/* Footer */}
+        <div className="mt-8 text-center space-y-1">
+          <p className="text-white/40 text-xs">
+            Hosted by OriginTrace in partnership with the Nigerian Export Promotion Council
+          </p>
+          <p className="text-white/25 text-xs">
+            <Link href="/events" className="hover:text-white/50 transition-colors">
+              ← Back to all events
+            </Link>
+          </p>
+        </div>
+
       </div>
     </div>
   );
