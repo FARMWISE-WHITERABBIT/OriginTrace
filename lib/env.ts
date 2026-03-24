@@ -35,6 +35,10 @@ const envSchema = z.object({
   AI_INTEGRATIONS_OPENAI_API_KEY:  z.string().optional(),
   AI_INTEGRATIONS_OPENAI_BASE_URL: z.string().url().optional(),
 
+  // Events
+  EVENTS_ADMIN_KEY:   z.string().optional(),
+  EVENTS_ADMIN_EMAIL: z.string().email().optional(),
+
 });
 
 type Env = z.infer<typeof envSchema>;
