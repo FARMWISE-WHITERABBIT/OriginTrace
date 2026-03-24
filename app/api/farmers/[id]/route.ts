@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { logAuditEvent, getClientIp } from '@/lib/audit';
 
 export async function GET(
   request: NextRequest,
@@ -62,10 +63,19 @@ export async function GET(
     // KYC / compliance files
     const { data: files } = await supabase
       .from('compliance_files')
-      .select('id, file_type, file_name, file_path, created_at')
+      .select('id, file_type, file_url, verification_status, created_at')
       .eq('farm_id', farmId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(20);
+
+    // Activity events for this specific farm
+    const { data: activity } = await supabase
+      .from('audit_events')
+      .select('id, action, actor_email, metadata, created_at')
+      .eq('resource_id', farmId)
+      .eq('org_id', profile.org_id)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     return NextResponse.json({
       farm,
@@ -74,6 +84,7 @@ export async function GET(
       inputs: inputs ?? [],
       training: training ?? [],
       files: files ?? [],
+      activity: activity ?? [],
     });
 
   } catch (err: any) {
@@ -99,7 +110,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const allowed = ['farmer_name', 'phone', 'community', 'area_hectares', 'compliance_status', 'compliance_notes', 'commodity'];
+    const allowed = ['farmer_name', 'phone', 'farmer_id', 'community', 'area_hectares', 'compliance_status', 'compliance_notes', 'commodity', 'consent_timestamp', 'consent_signature', 'boundary'];
     const updates: Record<string, any> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
@@ -115,6 +126,20 @@ export async function PATCH(
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Determine the action label for the audit log
+    const action = 'boundary' in updates ? 'farm.boundary_saved' : 'farm.updated';
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: profile.user_id,
+      actorEmail: user.email,
+      action,
+      resourceType: 'farm',
+      resourceId: id,
+      metadata: { fields: Object.keys(updates).filter(k => k !== 'updated_at') },
+      ipAddress: getClientIp(request),
+    });
+
     return NextResponse.json({ farm: updated });
 
   } catch (err: any) {

@@ -229,8 +229,14 @@ export function analyzeBoundaryAuthenticity(
   commodity?: string
 ): BoundaryAnalysisResult {
   const ring = boundary.coordinates[0];
-  const coords: Coord[] = ring
-    .slice(0, -1)
+  // GeoJSON requires the ring to be closed (last point === first point).
+  // Strip the duplicate closing point if present; if the ring is not closed
+  // (malformed input) keep all points so no vertex is silently discarded.
+  const isClosedRing =
+    ring.length > 1 &&
+    ring[0][0] === ring[ring.length - 1][0] &&
+    ring[0][1] === ring[ring.length - 1][1];
+  const coords: Coord[] = (isClosedRing ? ring.slice(0, -1) : ring)
     .map(([lng, lat]) => ({ lng, lat }));
 
   if (coords.length < 3) {

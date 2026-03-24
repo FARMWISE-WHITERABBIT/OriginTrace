@@ -414,23 +414,54 @@ export async function POST(request: NextRequest) {
         if (!org_id) {
           return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
         }
-        
-        const { subscription_status } = body;
-        if (!subscription_status) {
-          return NextResponse.json({ error: 'Subscription status required' }, { status: 400 });
+
+        const { subscription_tier, subscription_status } = body;
+
+        if (!subscription_tier && !subscription_status) {
+          return NextResponse.json({ error: 'subscription_tier or subscription_status required' }, { status: 400 });
         }
-        
+
+        const updatePayload: Record<string, string> = {};
+        if (subscription_tier) {
+          const validTiers = ['starter', 'basic', 'pro', 'enterprise'];
+          if (!validTiers.includes(subscription_tier)) {
+            return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 });
+          }
+          updatePayload.subscription_tier = subscription_tier;
+        }
+        if (subscription_status) {
+          const validStatuses = ['active', 'trial', 'suspended', 'cancelled'];
+          if (!validStatuses.includes(subscription_status)) {
+            return NextResponse.json({ error: 'Invalid subscription status' }, { status: 400 });
+          }
+          updatePayload.subscription_status = subscription_status;
+        }
+
+        const beforeState: Record<string, any> = {};
+        if (subscription_tier) beforeState.subscription_tier = body.current_tier;
+        if (subscription_status) beforeState.subscription_status = body.current_status;
+
         const { data: org, error } = await supabase
           .from('organizations')
-          .update({ subscription_status })
+          .update(updatePayload)
           .eq('id', org_id)
           .select()
           .single();
-        
+
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
         }
-        
+
+        await logSuperadminAction({
+          superadminId: user.id,
+          action: subscription_tier ? 'update_org_tier' : 'update_org_status',
+          targetType: 'organization',
+          targetId: String(org_id),
+          beforeState,
+          afterState: updatePayload,
+          request,
+        });
+
         return NextResponse.json({ organization: org, success: true });
       }
       

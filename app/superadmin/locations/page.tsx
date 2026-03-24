@@ -238,8 +238,8 @@ export default function LocationsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Building className="h-6 w-6 text-green-600" />
+              <div className="p-3 bg-green-900/30 rounded-lg">
+                <Building className="h-6 w-6 text-green-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{states.length}</div>
@@ -251,8 +251,8 @@ export default function LocationsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <MapPin className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-blue-900/30 rounded-lg">
+                <MapPin className="h-6 w-6 text-blue-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{lgas.length}</div>
@@ -264,8 +264,8 @@ export default function LocationsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Globe className="h-6 w-6 text-purple-600" />
+              <div className="p-3 bg-purple-900/30 rounded-lg">
+                <Globe className="h-6 w-6 text-purple-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold">37</div>

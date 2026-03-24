@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,30 +11,34 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Loader2, Search, MapPin, User, Phone, Calendar, Ruler,
   FileCheck, ShieldCheck, ShieldAlert, AlertTriangle, Map,
-  Check, X, Clock, FileText, ExternalLink,
+  Check, X, Clock, FileText, ExternalLink, LayoutList, Globe,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
 import { TierGate } from '@/components/tier-gate';
+import type { FarmMapFarm } from '@/components/farm-polygon-map';
 
-interface Farm {
-  id: string;
-  farmer_name: string;
+const FarmPolygonMap = dynamic(() => import('@/components/farm-polygon-map'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-muted/20">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  ),
+});
+
+interface Farm extends FarmMapFarm {
   farmer_id: string | null;
   phone: string | null;
-  community: string;
-  commodity: string | null;
-  compliance_status: string;
   compliance_notes: string | null;
-  area_hectares: number | null;
-  boundary: any;
   legality_doc_url: string | null;
   boundary_analysis?: {
     confidence_score: number;
@@ -62,6 +66,7 @@ export default function FarmsPage() {
   const [reviewFarm, setReviewFarm] = useState<Farm | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const { organization, profile, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const router = useRouter();
@@ -118,202 +123,392 @@ export default function FarmsPage() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Farm Polygons</h1>
-          <p className="text-muted-foreground">GPS boundaries, compliance status, and farmer registry</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {pendingCount > 0 && isReviewer && (
-            <Badge variant="destructive" className="gap-1 shrink-0">
-              <Clock className="h-3 w-3" />
-              {pendingCount} pending review
-            </Badge>
-          )}
-          <Link href="/app/farms/map">
-            <Button variant="outline" size="sm">
-              <Map className="h-4 w-4 mr-2" />
-              Map Tool
-            </Button>
-          </Link>
-        </div>
+  // Shared farm detail panel used in both sidebar and sheet
+  const FarmDetailContent = ({ farm }: { farm: Farm }) => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <StatusBadge domain="farm" status={farm.compliance_status} />
+        <Button variant="outline" size="sm"
+          onClick={() => router.push(`/app/farms/map?farm_id=${farm.id}`)}>
+          <Map className="h-3.5 w-3.5 mr-1" />Map Tool
+        </Button>
       </div>
-
-      <Tabs defaultValue={pendingCount > 0 && isReviewer ? 'pending' : 'all'}>
-        <TabsList>
-          <TabsTrigger value="all">All Farms ({farms.length})</TabsTrigger>
-          {isReviewer && (
-            <TabsTrigger value="pending">
-              Pending Review
-              {pendingCount > 0 && (
-                <span className="ml-2 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 min-w-[1.25rem] text-center">{pendingCount}</span>
-              )}
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        {/* ── ALL FARMS ── */}
-        <TabsContent value="all" className="mt-4 space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[12rem]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search farmer, community, commodity…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-farms"
-              />
+      <div className="space-y-1.5">
+        {([
+          { icon: MapPin, label: 'Community', value: farm.community },
+          { icon: FileCheck, label: 'Farmer ID', value: farm.farmer_id },
+          { icon: Phone, label: 'Phone', value: farm.phone },
+          { icon: Ruler, label: 'Area', value: farm.area_hectares ? `${farm.area_hectares.toFixed(2)} ha` : null },
+          { icon: Calendar, label: 'Registered', value: new Date(farm.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+        ] as const).filter(r => r.value).map(row => (
+          <div key={row.label} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/50 text-sm">
+            <row.icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-muted-foreground text-xs">{row.label}: </span>
+              <span className="text-xs">{row.value}</span>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44" data-testid="select-status-filter">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTERS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          </div>
+        ))}
+        {farm.boundary && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/50 text-xs">
+            <MapPin className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
+            <span className="text-muted-foreground">Boundary: </span>
+            <span>{farm.boundary.coordinates?.[0]?.length ?? 0} points</span>
+          </div>
+        )}
+        {farm.boundary_analysis && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 text-xs">
+            {farm.boundary_analysis.confidence_level === 'high'
+              ? <ShieldCheck className="h-3.5 w-3.5 text-green-600 shrink-0" />
+              : farm.boundary_analysis.confidence_level === 'medium'
+              ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              : <ShieldAlert className="h-3.5 w-3.5 text-red-600 shrink-0" />}
+            <span className="text-muted-foreground">Confidence:</span>
+            <span className="font-medium">{farm.boundary_analysis.confidence_score}/100</span>
+            <span className="capitalize text-muted-foreground">({farm.boundary_analysis.confidence_level})</span>
+          </div>
+        )}
+        {farm.legality_doc_url && (
+          <a href={farm.legality_doc_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 text-xs text-primary hover:underline">
+            <FileText className="h-3.5 w-3.5" />Legality Document<ExternalLink className="h-3 w-3 ml-auto" />
+          </a>
+        )}
+        {farm.compliance_notes && (
+          <div className="px-3 py-2 rounded-lg bg-muted/50 text-xs">
+            <p className="text-muted-foreground mb-0.5">Review notes</p>
+            <p>{farm.compliance_notes}</p>
+          </div>
+        )}
+      </div>
+      {isReviewer && farm.compliance_status === 'pending' && (
+        <Button className="w-full" size="sm"
+          onClick={() => { setReviewFarm(farm); setReviewNotes(''); setSheetOpen(false); }}>
+          Review This Farm
+        </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* ── MAP VIEW ── */}
+      {viewMode === 'map' && (
+        <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b bg-background shrink-0 flex-wrap">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold tracking-tight" data-testid="text-page-title">Farm Polygons</h1>
+              <Badge variant="outline" className="text-xs">{farms.length} farms</Badge>
+              {pendingCount > 0 && isReviewer && (
+                <Badge variant="destructive" className="gap-1 text-xs">
+                  <Clock className="h-3 w-3" />{pendingCount} pending
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/app/farms/map">
+                <Button variant="outline" size="sm">
+                  <Map className="h-4 w-4 mr-1.5" />Mapping Tool
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={() => setViewMode('list')}>
+                <LayoutList className="h-4 w-4 mr-1.5" />List View
+              </Button>
+            </div>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-48">
-                  <div className="col-span-full space-y-3 p-4">{Array.from({length:4}).map((_,i)=><div key={i} className="h-24 bg-muted animate-pulse rounded-xl"/>)}</div>
+          {/* Map + sidebar split */}
+          <div className="flex flex-1 min-h-0">
+            {/* Sidebar */}
+            <div className="w-72 shrink-0 border-r flex flex-col bg-background overflow-hidden hidden md:flex">
+              {/* Search + filter */}
+              <div className="p-3 space-y-2 border-b shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search farms…"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                    data-testid="input-search-farms"
+                  />
                 </div>
-              ) : filteredFarms.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <MapPin className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  <p className="font-medium">{searchQuery || statusFilter !== 'all' ? 'No farms match your filters' : 'No farms registered yet'}</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Farmer</TableHead>
-                        <TableHead>Community</TableHead>
-                        <TableHead>Commodity</TableHead>
-                        <TableHead>Area (ha)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Boundary</TableHead>
-                        <TableHead>Registered</TableHead>
-                        <TableHead className="w-16" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredFarms.map(farm => (
-                        <TableRow
-                          key={farm.id}
-                          data-testid={`farm-row-${farm.id}`}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => { setSelectedFarm(farm); setSheetOpen(true); }}
-                        >
-                          <TableCell className="font-medium">{farm.farmer_name}</TableCell>
-                          <TableCell className="text-muted-foreground">{farm.community}</TableCell>
-                          <TableCell>
-                            {farm.commodity
-                              ? <span className="capitalize text-sm">{farm.commodity}</span>
-                              : <span className="text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell>{farm.area_hectares?.toFixed(2) ?? '—'}</TableCell>
-                          <TableCell><StatusBadge domain="farm" status={farm.compliance_status} /></TableCell>
-                          <TableCell>
-                            {farm.boundary
-                              ? <span className="text-xs text-green-600 flex items-center gap-1"><MapPin className="h-3 w-3" />Mapped</span>
-                              : <span className="text-xs text-muted-foreground">Not mapped</span>}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {new Date(farm.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell onClick={e => e.stopPropagation()}>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Open in map"
-                                onClick={() => router.push(`/app/farms/map?farm_id=${farm.id}`)}>
-                                <Map className="h-3.5 w-3.5" />
-                              </Button>
-                              {isReviewer && farm.compliance_status === 'pending' && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" title="Review"
-                                  onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
-                                  data-testid={`button-review-${farm.id}`}>
-                                  <Clock className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 text-xs" data-testid="select-status-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTERS.map(f => <SelectItem key={f.value} value={f.value} className="text-xs">{f.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* ── PENDING REVIEW ── */}
-        {isReviewer && (
-          <TabsContent value="pending" className="mt-4">
-            <TierGate feature="compliance_review" requiredTier="pro" featureLabel="Compliance Review">
-              {farms.filter(f => f.compliance_status === 'pending').length === 0 ? (
-                <Card>
-                  <CardContent className="py-16 text-center">
-                    <Check className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                    <h3 className="text-lg font-semibold">All caught up</h3>
-                    <p className="text-muted-foreground mt-1">No farms are awaiting compliance review.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {farms.filter(f => f.compliance_status === 'pending').map(farm => (
-                    <Card key={farm.id} className="hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <CardTitle className="text-base">{farm.farmer_name}</CardTitle>
-                            <CardDescription className="flex items-center gap-1 mt-0.5 text-xs">
-                              <MapPin className="h-3 w-3" />{farm.community}
-                            </CardDescription>
-                          </div>
-                          <Badge variant="secondary" className="shrink-0 text-xs">
-                            <Clock className="h-3 w-3 mr-1" />Pending
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-1.5 pt-0">
-                        {farm.commodity && <p className="text-sm capitalize"><span className="text-muted-foreground">Crop:</span> {farm.commodity}</p>}
-                        {farm.area_hectares && <p className="text-sm"><span className="text-muted-foreground">Area:</span> {farm.area_hectares.toFixed(2)} ha</p>}
-                        {farm.phone && <p className="text-sm flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" />{farm.phone}</p>}
-                        <div className="flex items-center gap-3 pt-1 text-xs">
-                          {farm.boundary
-                            ? <span className="text-green-600 flex items-center gap-1"><Check className="h-3 w-3" />Boundary mapped</span>
-                            : <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />No boundary</span>}
-                          {farm.legality_doc_url && (
-                            <a href={farm.legality_doc_url} target="_blank" rel="noopener noreferrer"
-                              className="text-primary flex items-center gap-1">
-                              <FileText className="h-3 w-3" />Doc
-                            </a>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Registered {new Date(farm.created_at).toLocaleDateString()}</p>
-                        <Button className="w-full mt-2" size="sm"
-                          onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
-                          data-testid={`button-review-${farm.id}`}>
-                          Review Farm
-                        </Button>
-                      </CardContent>
-                    </Card>
+              {/* Farm list */}
+              {!selectedFarm ? (
+                <div className="flex-1 overflow-y-auto divide-y">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredFarms.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-muted-foreground px-4">
+                      <MapPin className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      {searchQuery || statusFilter !== 'all' ? 'No farms match filters' : 'No farms yet'}
+                    </div>
+                  ) : filteredFarms.map(farm => (
+                    <button
+                      key={farm.id}
+                      className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedFarm(farm)}
+                      data-testid={`farm-list-row-${farm.id}`}
+                    >
+                      <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{
+                        backgroundColor: farm.compliance_status === 'approved' ? '#16a34a' : farm.compliance_status === 'rejected' ? '#dc2626' : '#f59e0b'
+                      }} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{farm.farmer_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{farm.community}{farm.area_hectares ? ` · ${farm.area_hectares.toFixed(1)}ha` : ''}</p>
+                        {!farm.boundary && <p className="text-[10px] text-amber-500 mt-0.5">No boundary</p>}
+                      </div>
+                      {farm.compliance_status === 'pending' && isReviewer && (
+                        <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-1" />
+                      )}
+                    </button>
                   ))}
                 </div>
+              ) : (
+                /* Selected farm detail */
+                <div className="flex-1 overflow-y-auto">
+                  <div className="p-3 border-b flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedFarm(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      ← All farms
+                    </button>
+                  </div>
+                  <div className="p-3 space-y-1 border-b">
+                    <p className="font-semibold text-sm">{selectedFarm.farmer_name}</p>
+                    {selectedFarm.commodity && <p className="text-xs text-muted-foreground capitalize">{selectedFarm.commodity}</p>}
+                  </div>
+                  <div className="p-3">
+                    <FarmDetailContent farm={selectedFarm} />
+                  </div>
+                </div>
               )}
-            </TierGate>
-          </TabsContent>
-        )}
-      </Tabs>
+            </div>
 
-      {/* ── DETAIL SHEET ── */}
+            {/* Map canvas */}
+            <FarmPolygonMap
+              farms={filteredFarms}
+              selectedFarmId={selectedFarm?.id}
+              onSelectFarm={(farm) => setSelectedFarm(farm as Farm | null)}
+              loading={isLoading}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── LIST VIEW ── */}
+      {viewMode === 'list' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Farm Polygons</h1>
+              <p className="text-muted-foreground">GPS boundaries, compliance status, and farmer registry</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {pendingCount > 0 && isReviewer && (
+                <Badge variant="destructive" className="gap-1 shrink-0">
+                  <Clock className="h-3 w-3" />{pendingCount} pending review
+                </Badge>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setViewMode('map')}>
+                <Globe className="h-4 w-4 mr-2" />Map View
+              </Button>
+              <Link href="/app/farms/map">
+                <Button variant="outline" size="sm">
+                  <Map className="h-4 w-4 mr-2" />Map Tool
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <Tabs defaultValue={pendingCount > 0 && isReviewer ? 'pending' : 'all'}>
+            <TabsList>
+              <TabsTrigger value="all">All Farms ({farms.length})</TabsTrigger>
+              {isReviewer && (
+                <TabsTrigger value="pending">
+                  Pending Review
+                  {pendingCount > 0 && (
+                    <span className="ml-2 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 min-w-[1.25rem] text-center">{pendingCount}</span>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            {/* ── ALL FARMS tab ── */}
+            <TabsContent value="all" className="mt-4 space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-[12rem]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search farmer, community, commodity…"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search-farms"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-44" data-testid="select-status-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTERS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Card>
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center h-48">
+                      <div className="col-span-full space-y-3 p-4">{Array.from({length:4}).map((_,i)=><div key={i} className="h-24 bg-muted animate-pulse rounded-xl"/>)}</div>
+                    </div>
+                  ) : filteredFarms.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <MapPin className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                      <p className="font-medium">{searchQuery || statusFilter !== 'all' ? 'No farms match your filters' : 'No farms registered yet'}</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Farmer</TableHead>
+                            <TableHead>Community</TableHead>
+                            <TableHead>Commodity</TableHead>
+                            <TableHead>Area (ha)</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Boundary</TableHead>
+                            <TableHead>Registered</TableHead>
+                            <TableHead className="w-16" />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredFarms.map(farm => (
+                            <TableRow
+                              key={farm.id}
+                              data-testid={`farm-row-${farm.id}`}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => { setSelectedFarm(farm); setSheetOpen(true); }}
+                            >
+                              <TableCell className="font-medium">{farm.farmer_name}</TableCell>
+                              <TableCell className="text-muted-foreground">{farm.community}</TableCell>
+                              <TableCell>
+                                {farm.commodity
+                                  ? <span className="capitalize text-sm">{farm.commodity}</span>
+                                  : <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell>{farm.area_hectares?.toFixed(2) ?? '—'}</TableCell>
+                              <TableCell><StatusBadge domain="farm" status={farm.compliance_status} /></TableCell>
+                              <TableCell>
+                                {farm.boundary
+                                  ? <span className="text-xs text-green-600 flex items-center gap-1"><MapPin className="h-3 w-3" />Mapped</span>
+                                  : <span className="text-xs text-muted-foreground">Not mapped</span>}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {new Date(farm.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell onClick={e => e.stopPropagation()}>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Open in map"
+                                    onClick={() => router.push(`/app/farms/map?farm_id=${farm.id}`)}>
+                                    <Map className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {isReviewer && farm.compliance_status === 'pending' && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" title="Review"
+                                      onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
+                                      data-testid={`button-review-${farm.id}`}>
+                                      <Clock className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ── PENDING REVIEW tab ── */}
+            {isReviewer && (
+              <TabsContent value="pending" className="mt-4">
+                <TierGate feature="compliance_review" requiredTier="pro" featureLabel="Compliance Review">
+                  {farms.filter(f => f.compliance_status === 'pending').length === 0 ? (
+                    <Card>
+                      <CardContent className="py-16 text-center">
+                        <Check className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                        <h3 className="text-lg font-semibold">All caught up</h3>
+                        <p className="text-muted-foreground mt-1">No farms are awaiting compliance review.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {farms.filter(f => f.compliance_status === 'pending').map(farm => (
+                        <Card key={farm.id} className="hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-sm">{farm.farmer_name}</p>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                  <MapPin className="h-3 w-3" />{farm.community}
+                                </p>
+                              </div>
+                              <Badge variant="secondary" className="shrink-0 text-xs">
+                                <Clock className="h-3 w-3 mr-1" />Pending
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              {farm.commodity && <p className="capitalize"><span className="text-muted-foreground">Crop:</span> {farm.commodity}</p>}
+                              {farm.area_hectares && <p><span className="text-muted-foreground">Area:</span> {farm.area_hectares.toFixed(2)} ha</p>}
+                              {farm.phone && <p className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" />{farm.phone}</p>}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs">
+                              {farm.boundary
+                                ? <span className="text-green-600 flex items-center gap-1"><Check className="h-3 w-3" />Boundary</span>
+                                : <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />No boundary</span>}
+                              {farm.legality_doc_url && (
+                                <a href={farm.legality_doc_url} target="_blank" rel="noopener noreferrer"
+                                  className="text-primary flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />Doc
+                                </a>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Registered {new Date(farm.created_at).toLocaleDateString()}</p>
+                            <Button className="w-full" size="sm"
+                              onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
+                              data-testid={`button-review-${farm.id}`}>
+                              Review Farm
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TierGate>
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+      )}
+
+      {/* ── DETAIL SHEET (list view) ── */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="overflow-y-auto w-full sm:max-w-lg">
           {selectedFarm && (
@@ -322,91 +517,8 @@ export default function FarmsPage() {
                 <SheetTitle className="flex items-center gap-2"><User className="h-5 w-5" />{selectedFarm.farmer_name}</SheetTitle>
                 <SheetDescription>Farm details and compliance status</SheetDescription>
               </SheetHeader>
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center justify-between">
-                  <StatusBadge domain="farm" status={selectedFarm.compliance_status} />
-                  <Button variant="outline" size="sm"
-                    onClick={() => { setSheetOpen(false); router.push(`/app/farms/map?farm_id=${selectedFarm.id}`); }}>
-                    <Map className="h-4 w-4 mr-1.5" />Open in Map
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {([
-                    { icon: MapPin, label: 'Community', value: selectedFarm.community },
-                    { icon: FileCheck, label: 'Farmer ID (NIN)', value: selectedFarm.farmer_id },
-                    { icon: Phone, label: 'Phone', value: selectedFarm.phone },
-                    { icon: Ruler, label: 'Farm Area', value: selectedFarm.area_hectares ? `${selectedFarm.area_hectares.toFixed(2)} hectares` : null },
-                    { icon: Calendar, label: 'Registered', value: new Date(selectedFarm.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) },
-                  ] as const).filter(r => r.value).map(row => (
-                    <div key={row.label} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <row.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">{row.label}</p>
-                        <p className="text-sm">{row.value}</p>
-                      </div>
-                    </div>
-                  ))}
-
-                  {selectedFarm.boundary && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Farm Boundary</p>
-                        <p className="text-sm">{selectedFarm.boundary.coordinates?.[0]?.length ?? 0} points recorded</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedFarm.boundary_analysis && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          {selectedFarm.boundary_analysis.confidence_level === 'high' ? (
-                            <ShieldCheck className="h-4 w-4 text-green-600" />
-                          ) : selectedFarm.boundary_analysis.confidence_level === 'medium' ? (
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          ) : (
-                            <ShieldAlert className="h-4 w-4 text-red-600" />
-                          )}
-                          <p className="text-xs font-medium text-muted-foreground">Boundary Confidence</p>
-                        </div>
-                        <Badge
-                          className={selectedFarm.boundary_analysis.confidence_level === 'high' ? 'bg-green-600 text-white' : selectedFarm.boundary_analysis.confidence_level === 'medium' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}
-                          data-testid="badge-farm-boundary-confidence"
-                        >
-                          {selectedFarm.boundary_analysis.confidence_score}/100
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {selectedFarm.boundary_analysis.confidence_level} confidence — analyzed {new Date(selectedFarm.boundary_analysis.analyzed_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedFarm.legality_doc_url && (
-                    <a href={selectedFarm.legality_doc_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-primary hover:underline">
-                      <FileText className="h-4 w-4" />View Legality Document<ExternalLink className="h-3 w-3 ml-auto" />
-                    </a>
-                  )}
-
-                  {selectedFarm.compliance_notes && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Review Notes</p>
-                      <p className="text-sm">{selectedFarm.compliance_notes}</p>
-                    </div>
-                  )}
-                </div>
-
-                {isReviewer && selectedFarm.compliance_status === 'pending' && (
-                  <div className="pt-4 border-t">
-                    <Button className="w-full"
-                      onClick={() => { setSheetOpen(false); setReviewFarm(selectedFarm); setReviewNotes(''); }}>
-                      Review This Farm
-                    </Button>
-                  </div>
-                )}
+              <div className="mt-6">
+                <FarmDetailContent farm={selectedFarm} />
               </div>
             </>
           )}
@@ -462,6 +574,6 @@ export default function FarmsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

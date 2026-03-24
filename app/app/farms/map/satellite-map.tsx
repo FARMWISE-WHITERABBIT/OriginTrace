@@ -12,6 +12,7 @@ import {
   Move,
   Crosshair,
   Layers,
+  LocateFixed,
 } from 'lucide-react';
 
 interface Coordinates {
@@ -31,6 +32,7 @@ interface SatelliteMapProps {
   onPointsChange: (points: Coordinates[]) => void;
   center: Coordinates;
   satelliteEnabled?: boolean;
+  onLocateMe?: () => void;
 }
 
 const TILE_SIZE = 256;
@@ -56,41 +58,68 @@ function tileYToLat(y: number, zoom: number) {
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
 }
 
-export default function SatelliteMap({ coordinates, onPointsChange, center, satelliteEnabled = true }: SatelliteMapProps) {
+export default function SatelliteMap({ coordinates, onPointsChange, center, satelliteEnabled = true, onLocateMe }: SatelliteMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(16);
   const [mapCenter, setMapCenter] = useState(center);
+  const mapCenterRef = useRef(center);
+  const prevCenterRef = useRef(center);
+
+  // Sync the center prop to internal state when parent pushes a new location
+  // (e.g. after Locate Me or GPS acquisition). Only re-center when the value
+  // actually changes so manual panning isn't disrupted by re-renders.
+  useEffect(() => {
+    if (prevCenterRef.current.lat !== center.lat || prevCenterRef.current.lng !== center.lng) {
+      prevCenterRef.current = center;
+      mapCenterRef.current = center;
+      setMapCenter(center);
+    }
+  }, [center]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [drawMode, setDrawMode] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
   const [tileLayer, setTileLayer] = useState<TileLayer>(satelliteEnabled ? 'satellite' : 'street');
+  const [tileErrorCount, setTileErrorCount] = useState(0);
   const tileCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const drawMapRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setCanvasSize({ width: Math.floor(rect.width), height: 400 });
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    // Set initial size immediately if layout is already known
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0) setCanvasSize({ width: Math.floor(rect.width), height: 400 });
+    // Keep canvas dimensions in sync with the container as the layout shifts
+    const observer = new ResizeObserver(entries => {
+      const w = Math.floor(entries[0].contentRect.width);
+      if (w > 0) setCanvasSize(prev => prev.width === w ? prev : { ...prev, width: w });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   const loadTile = useCallback((tileX: number, tileY: number, z: number): HTMLImageElement | null => {
     const key = `${tileLayer}/${z}/${tileX}/${tileY}`;
     if (tileCache.current.has(key)) {
-      return tileCache.current.get(key) || null;
+      const cached = tileCache.current.get(key)!;
+      if (cached.complete && cached.naturalWidth > 0) return cached;
+      return null;
     }
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    img.onload = () => { drawMapRef.current(); };
+    img.onerror = () => {
+      tileCache.current.delete(key);
+      setTileErrorCount(c => c + 1);
+      drawMapRef.current();
+    };
     img.src = TILE_URLS[tileLayer]
       .replace('{z}', String(z))
       .replace('{x}', String(tileX))
       .replace('{y}', String(tileY));
-    img.onload = () => {
-      tileCache.current.set(key, img);
-      drawMapRef.current();
-    };
+    tileCache.current.set(key, img);
     return null;
   }, [tileLayer]);
 
@@ -209,6 +238,12 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
     drawMapRef.current = drawMap;
   }, [drawMap]);
 
+  // Clear tile cache when switching layers so fresh tiles are fetched
+  useEffect(() => {
+    tileCache.current.clear();
+    setTileErrorCount(0);
+  }, [tileLayer]);
+
   useEffect(() => {
     drawMap();
   }, [drawMap]);
@@ -226,53 +261,55 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (drawMode) return;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
     setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
   }, [drawMode]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    const centerTileX = lngToTileX(mapCenter.lng, zoom);
-    const centerTileY = latToTileY(mapCenter.lat, zoom);
-    const newTileX = centerTileX - dx / TILE_SIZE;
-    const newTileY = centerTileY - dy / TILE_SIZE;
-    setMapCenter({
-      lng: tileXToLng(newTileX, zoom),
-      lat: tileYToLat(newTileY, zoom),
-    });
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, [isDragging, dragStart, mapCenter, zoom]);
+    if (!isDragging || !dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    const centerTileX = lngToTileX(mapCenterRef.current.lng, zoom);
+    const centerTileY = latToTileY(mapCenterRef.current.lat, zoom);
+    const newCenter = {
+      lng: tileXToLng(centerTileX - dx / TILE_SIZE, zoom),
+      lat: tileYToLat(centerTileY - dy / TILE_SIZE, zoom),
+    };
+    mapCenterRef.current = newCenter;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    setMapCenter(newCenter);
+    drawMapRef.current();
+  }, [isDragging, zoom]);
 
   const handleMouseUp = useCallback(() => {
+    dragStartRef.current = null;
     setIsDragging(false);
-    setDragStart(null);
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     if (drawMode) return;
     const touch = e.touches[0];
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
     setIsDragging(true);
-    setDragStart({ x: touch.clientX, y: touch.clientY });
   }, [drawMode]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
+    if (!isDragging || !dragStartRef.current) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const dx = touch.clientX - dragStart.x;
-    const dy = touch.clientY - dragStart.y;
-    const centerTileX = lngToTileX(mapCenter.lng, zoom);
-    const centerTileY = latToTileY(mapCenter.lat, zoom);
-    const newTileX = centerTileX - dx / TILE_SIZE;
-    const newTileY = centerTileY - dy / TILE_SIZE;
-    setMapCenter({
-      lng: tileXToLng(newTileX, zoom),
-      lat: tileYToLat(newTileY, zoom),
-    });
-    setDragStart({ x: touch.clientX, y: touch.clientY });
-  }, [isDragging, dragStart, mapCenter, zoom]);
+    const dx = touch.clientX - dragStartRef.current.x;
+    const dy = touch.clientY - dragStartRef.current.y;
+    const centerTileX = lngToTileX(mapCenterRef.current.lng, zoom);
+    const centerTileY = latToTileY(mapCenterRef.current.lat, zoom);
+    const newCenter = {
+      lng: tileXToLng(centerTileX - dx / TILE_SIZE, zoom),
+      lat: tileYToLat(centerTileY - dy / TILE_SIZE, zoom),
+    };
+    mapCenterRef.current = newCenter;
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setMapCenter(newCenter);
+    drawMapRef.current();
+  }, [isDragging, zoom]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     if (drawMode && !isDragging) {
@@ -285,8 +322,8 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
       const coord = pixelToLngLat(x, y);
       onPointsChange([...coordinates, coord]);
     }
+    dragStartRef.current = null;
     setIsDragging(false);
-    setDragStart(null);
   }, [drawMode, isDragging, pixelToLngLat, coordinates, onPointsChange]);
 
   const undoLastPoint = () => {
@@ -339,6 +376,11 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
           <Button variant="outline" size="icon" onClick={zoomIn} aria-label="Zoom in" data-testid="button-zoom-in">
             <ZoomIn className="h-4 w-4" />
           </Button>
+          {onLocateMe && (
+            <Button variant="outline" size="icon" onClick={onLocateMe} aria-label="Locate me" data-testid="button-locate-me">
+              <LocateFixed className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"
@@ -386,6 +428,19 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
         {coordinates.length > 0 && coordinates.length < 3 && (
           <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-xs text-muted-foreground">
             {3 - coordinates.length} more point{3 - coordinates.length > 1 ? 's' : ''} needed
+          </div>
+        )}
+        {tileLayer === 'satellite' && tileErrorCount > 4 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-lg">
+            <div className="text-center p-4 space-y-2">
+              <p className="text-sm font-medium">Satellite imagery unavailable</p>
+              <p className="text-xs text-muted-foreground">Check your internet connection</p>
+              <Button size="sm" variant="outline" onClick={() => {
+                tileCache.current.clear();
+                setTileErrorCount(0);
+                drawMapRef.current();
+              }}>Retry</Button>
+            </div>
           </div>
         )}
       </div>

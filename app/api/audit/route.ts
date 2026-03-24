@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const url = request.nextUrl;
     const action = url.searchParams.get('action');
     const resourceType = url.searchParams.get('resource_type');
+    const resourceId = url.searchParams.get('resource_id');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const search = url.searchParams.get('search');
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (action) query = query.eq('action', action);
     if (resourceType) query = query.eq('resource_type', resourceType);
+    if (resourceId) query = query.eq('resource_id', resourceId);
     if (dateFrom) query = query.gte('created_at', dateFrom);
     if (dateTo) query = query.lte('created_at', dateTo);
     if (search) query = query.or(`action.ilike.%${search}%,resource_type.ilike.%${search}%,actor_email.ilike.%${search}%`);
