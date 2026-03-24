@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface Registration {
@@ -17,6 +17,14 @@ interface Registration {
 }
 
 export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-400 text-sm">Loading…</p></div>}>
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+function AdminPageContent() {
   const searchParams = useSearchParams();
   const adminKey = searchParams.get('key') ?? '';
 
