@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get('slug') ?? 'yexdep-2026';
   const supabase = getAdminClient();
 
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from('event_registrations')
     .select(
       'full_name, email, phone, organization, role, state, ' +
@@ -25,6 +25,21 @@ export async function GET(request: NextRequest) {
     )
     .eq('event_slug', slug)
     .order('registered_at', { ascending: true });
+
+  const data = rawData as Array<{
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    organization: string | null;
+    role: string | null;
+    state: string | null;
+    currently_exporting: boolean | null;
+    export_products: string | null;
+    nepc_registered: boolean | null;
+    registered_at: string | null;
+    checked_in: boolean | null;
+    checked_in_at: string | null;
+  }> | null;
 
   if (error) {
     console.error('[events/export] DB error:', error);
