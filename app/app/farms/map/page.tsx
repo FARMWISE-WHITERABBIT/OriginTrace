@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOnlineStatus } from '@/components/online-status';
 import { detectMockLocation } from '@/lib/validation/yield-validation';
@@ -93,22 +92,24 @@ function HybridFarmMappingPageInner() {
 function HybridFarmMappingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organization, profile, isLoading: orgLoading } = useOrg();
+  const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
-  const supabase = createClient();
   const isOnline = useOnlineStatus();
 
   const [mode, setMode] = useState<'gps' | 'satellite'>('gps');
   const [coordinates, setCoordinates] = useState<Coordinates[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null);
+  const [locateOverride, setLocateOverride] = useState<Coordinates | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isCheckingGPS, setIsCheckingGPS] = useState(false);
   const [gpsSpoofWarning, setGpsSpoofWarning] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
+  const [farmsLoadError, setFarmsLoadError] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [farmSearch, setFarmSearch] = useState('');
   const [showFarmPicker, setShowFarmPicker] = useState(false);
@@ -123,22 +124,46 @@ function HybridFarmMappingContent() {
 
   useEffect(() => {
     async function loadFarms() {
-      if (!organization || !supabase) { setFarmsLoading(false); return; }
+      setFarmsLoading(true);
       try {
-        const { data } = await supabase
-          .from('farms')
-          .select('id, farmer_name, community, boundary, area_hectares, deforestation_check, boundary_analysis')
-          .eq('org_id', organization.id)
-          .order('farmer_name');
-        setFarms(data || []);
-        if (farmIdParam && data) {
-          const found = data.find((f: any) => String(f.id) === farmIdParam);
-          if (found) setSelectedFarm(found);
+        const res = await fetch('/api/farms?limit=1000');
+        if (!res.ok) throw new Error('Failed to load farms');
+        const json = await res.json();
+        const sorted: Farm[] = (json.farms || []).sort((a: Farm, b: Farm) =>
+          (a.farmer_name || '').localeCompare(b.farmer_name || '')
+        );
+        setFarms(sorted);
+        if (farmIdParam) {
+          const found = sorted.find(f => String(f.id) === farmIdParam);
+          if (found) {
+            setSelectedFarm(found);
+            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+            if (ring && ring.length > 1) {
+              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+            }
+          }
         }
-      } catch {} finally { setFarmsLoading(false); }
+      } catch {
+        setFarmsLoadError(true);
+      } finally {
+        setFarmsLoading(false);
+      }
     }
     loadFarms();
-  }, [organization, supabase, farmIdParam]);
+  }, [farmIdParam]);
+
+  // Silently acquire GPS on mount so the satellite map centers on the user's actual location
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+      },
+      () => {}, // silent fail — permission denied or unavailable
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
 
   useEffect(() => {
     if (selectedFarm?.deforestation_check) {
@@ -232,6 +257,7 @@ function HybridFarmMappingContent() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
         setIsLocating(false);
         toast({ title: 'Location acquired', description: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` });
       },
@@ -259,23 +285,37 @@ function HybridFarmMappingContent() {
     setCurrentLocation(null);
   };
 
+  // Spherical excess formula (same as boundary-analysis.ts and PostGIS ST_Area)
   const calculateArea = (coords: Coordinates[]): number => {
     if (coords.length < 3) return 0;
+    const R = 6371000; // Earth radius in metres
+    const toRad = (d: number) => (d * Math.PI) / 180;
     let area = 0;
     const n = coords.length;
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      area += coords[i].lng * coords[j].lat;
-      area -= coords[j].lng * coords[i].lat;
+      area += toRad(coords[j].lng - coords[i].lng) *
+        (2 + Math.sin(toRad(coords[i].lat)) + Math.sin(toRad(coords[j].lat)));
     }
-    area = Math.abs(area) / 2;
-    const hectares = area * 111.32 * 111.32 * 100;
+    const hectares = Math.abs((area * R * R) / 2) / 10000;
     return Math.round(hectares * 100) / 100;
   };
 
   const handleSatellitePoints = (points: Coordinates[]) => {
     setCoordinates(points);
   };
+
+  // Satellite map center: Locate Me override > farm boundary centroid > GPS > fallback
+  const mapCenter = useMemo((): Coordinates => {
+    if (locateOverride) return locateOverride;
+    const ring = selectedFarm?.boundary?.coordinates?.[0] as [number, number][] | undefined;
+    if (ring && ring.length > 1) {
+      const avgLat = ring.reduce((s, c) => s + c[1], 0) / ring.length;
+      const avgLng = ring.reduce((s, c) => s + c[0], 0) / ring.length;
+      return { lat: avgLat, lng: avgLng };
+    }
+    return currentLocation || { lat: 7.4, lng: 3.9 };
+  }, [selectedFarm, currentLocation, locateOverride]);
 
   const areaHectares = calculateArea(coordinates);
 
@@ -289,25 +329,25 @@ function HybridFarmMappingContent() {
     };
 
     try {
-      if (isOnline && supabase) {
-        const { error } = await supabase
-          .from('farms')
-          .update({
-            boundary,
-            area_hectares: areaHectares,
-          })
-          .eq('id', selectedFarm.id);
-
-        if (error) throw error;
+      if (isOnline) {
+        const res = await fetch(`/api/farmers/${selectedFarm.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boundary, area_hectares: areaHectares }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || 'Failed to save boundary');
+        }
         toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
         await runBoundaryAnalysis(selectedFarm.id, boundary);
       } else {
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
       }
       setIsSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error);
-      toast({ title: 'Error', description: 'Failed to save boundary.', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to save boundary.', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -386,13 +426,27 @@ function HybridFarmMappingContent() {
                 <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
                   {farmsLoading ? (
                     <div className="p-3 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Loading...</span></div>
+                  ) : farmsLoadError ? (
+                    <div className="p-3 text-sm text-destructive text-center">Failed to load farmers. Please refresh.</div>
                   ) : filteredFarms.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">No farms found</div>
+                    <div className="p-3 text-sm text-muted-foreground text-center">{farmSearch ? 'No farmers match your search' : 'No registered farmers yet'}</div>
                   ) : (
                     filteredFarms.map(f => (
                       <button
                         key={f.id}
-                        onClick={() => { setSelectedFarm(f); setShowFarmPicker(false); setFarmSearch(''); }}
+                        onClick={() => {
+                          setSelectedFarm(f);
+                          setLocateOverride(null);
+                          setShowFarmPicker(false);
+                          setFarmSearch('');
+                          // Pre-populate boundary points so user can edit rather than re-draw
+                          const ring = f.boundary?.coordinates?.[0] as [number, number][] | undefined;
+                          if (ring && ring.length > 1) {
+                            setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+                          } else {
+                            setCoordinates([]);
+                          }
+                        }}
                         className="w-full text-left p-3 flex items-center justify-between gap-2 hover-elevate"
                         data-testid={`farm-pick-${f.id}`}
                       >
@@ -458,6 +512,9 @@ function HybridFarmMappingContent() {
                   <div className="p-3 bg-muted/50 rounded-lg flex items-center gap-2 text-sm">
                     <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="font-mono text-xs">{currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}</span>
+                    {gpsAccuracy !== null && (
+                      <span className="text-xs text-muted-foreground ml-auto">±{gpsAccuracy}m</span>
+                    )}
                   </div>
                 )}
 
@@ -530,8 +587,26 @@ function HybridFarmMappingContent() {
                 <SatelliteMap
                   coordinates={coordinates}
                   onPointsChange={handleSatellitePoints}
-                  center={currentLocation || { lat: 7.4, lng: 3.9 }}
+                  center={mapCenter}
                   satelliteEnabled={!!(organization?.feature_flags as Record<string, boolean> | undefined)?.satellite_overlays}
+                  onLocateMe={() => {
+                    if (!navigator.geolocation) return;
+                    setIsLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setCurrentLocation(loc);
+                        setLocateOverride(loc);
+                        setGpsAccuracy(Math.round(pos.coords.accuracy));
+                        setIsLocating(false);
+                      },
+                      () => {
+                        setIsLocating(false);
+                        toast({ title: 'Could not get location', variant: 'destructive' });
+                      },
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                  }}
                 />
 
                 {coordinates.length > 0 && (

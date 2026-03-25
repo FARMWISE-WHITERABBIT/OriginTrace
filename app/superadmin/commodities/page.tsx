@@ -45,6 +45,8 @@ const CATEGORIES = [
 const UNITS = [
   { value: 'kg', label: 'Kilograms (kg)' },
   { value: 'ton', label: 'Metric Tons' },
+  { value: 'litres', label: 'Litres (L)' },
+  { value: 'ml', label: 'Millilitres (mL)' },
   { value: 'bag', label: 'Bags' },
   { value: 'pieces', label: 'Pieces' },
 ];
@@ -141,10 +143,10 @@ export default function CommoditiesPage() {
 
   async function toggleActive(commodity: Commodity) {
     try {
-      const res = await fetch('/api/commodities', {
+      const res = await fetch(`/api/commodities?id=${commodity.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: commodity.id, is_active: !commodity.is_active })
+        body: JSON.stringify({ is_active: !commodity.is_active })
       });
 
       if (res.ok) {
@@ -168,11 +170,10 @@ export default function CommoditiesPage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/commodities', {
+      const res = await fetch(`/api/commodities?id=${editCommodity.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: editCommodity.id,
           name: editCommodity.name,
           category: editCommodity.category,
           unit: editCommodity.unit,

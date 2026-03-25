@@ -191,11 +191,13 @@ export const documentPatchSchema = documentCreateSchema.partial();
 // Feature toggles (superadmin)
 // ---------------------------------------------------------------------------
 export const featureToggleSchema = z.object({
-  org_id:                    uuidSchema,
-  subscription_tier:         z.enum(['starter', 'basic', 'pro', 'enterprise']),
+  // org_id can be a UUID string or a plain integer (superadmin pages use integer IDs)
+  org_id:                    z.union([z.string().uuid('Invalid UUID'), z.number().int().positive()]),
+  subscription_tier:         z.enum(['starter', 'basic', 'pro', 'enterprise']).optional(),
   feature_flags:             z.record(z.boolean()).optional(),
-  agent_seat_limit:          z.number().int().min(0).optional(),
-  monthly_collection_limit:  z.number().int().min(0).optional(),
+  // Allow -1 for unlimited
+  agent_seat_limit:          z.number().int().min(-1).optional(),
+  monthly_collection_limit:  z.number().int().min(-1).optional(),
 });
 
 // ---------------------------------------------------------------------------

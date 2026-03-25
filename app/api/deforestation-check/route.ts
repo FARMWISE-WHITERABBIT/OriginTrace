@@ -112,7 +112,15 @@ async function queryGFWApi(polygon: any): Promise<DeforestationResult | null> {
       };
     }
 
-    return null;
+    // Empty result = GFW has no deforestation alerts for this polygon = clean area
+    return {
+      deforestation_free: true,
+      forest_loss_hectares: 0,
+      forest_loss_percentage: 0,
+      analysis_date: new Date().toISOString(),
+      data_source: 'Global Forest Watch (GFW)',
+      risk_level: 'low' as const,
+    };
   } catch (error) {
     console.error('GFW API error:', error);
     return null;

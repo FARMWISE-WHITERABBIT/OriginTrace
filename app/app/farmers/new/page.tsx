@@ -183,18 +183,11 @@ export default function FarmerRegistrationPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             farmer_name: fullName.trim(),
-            phone_number: phone || null,
+            phone: phone || null,
             commodity: commodity || null,
             community: community || selectedLGA || selectedState,
-            state: selectedState,
-            lga: selectedLGA || null,
-            compliance_status: 'pending',
-            kyc_status: computeKycStatus(),
-            consent_data: consentData ? {
-              has_consent: consentData.hasConsent,
-              signature: consentData.signature,
-              timestamp: consentData.timestamp,
-            } : null,
+            consent_timestamp: consentData?.timestamp ?? null,
+            consent_signature: consentData?.signature ?? null,
           }),
         });
         if (!farmRes.ok) {

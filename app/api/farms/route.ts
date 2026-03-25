@@ -18,6 +18,9 @@ const farmCreateSchema = z.object({
   }).nullable().optional(),
   area_hectares: z.number().positive().nullable().optional(),
   legality_doc_url: z.string().url().nullable().optional(),
+  consent_timestamp: z.string().optional().nullable(),
+  consent_signature: z.string().optional().nullable(),
+  commodity: z.string().optional().nullable(),
 });
 
 const farmPatchSchema = z.object({
@@ -119,7 +122,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { farmer_name, farmer_id, phone, community, boundary, area_hectares, legality_doc_url } = parsed.data;
+    const { farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+
+    // Auto-generate a farmer ID if not explicitly provided
+    let farmer_id = parsed.data.farmer_id;
+    if (!farmer_id) {
+      const d = new Date();
+      const yr = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const suffix = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+      farmer_id = `FRM-${yr}${mo}-${suffix}`;
+    }
 
     const { data: org } = await supabaseAdmin
       .from('organizations')
@@ -155,12 +168,15 @@ export async function POST(request: NextRequest) {
       .insert({
         org_id: profile.org_id,
         farmer_name,
-        farmer_id: farmer_id || null,
+        farmer_id: farmer_id,
         phone: phone || null,
         community,
+        commodity: commodity || null,
         boundary: boundary || null,
         area_hectares: area_hectares || null,
         legality_doc_url: legality_doc_url || null,
+        consent_timestamp: consent_timestamp || null,
+        consent_signature: consent_signature || null,
         created_by: profile.user_id,
         compliance_status: 'pending',
       })
