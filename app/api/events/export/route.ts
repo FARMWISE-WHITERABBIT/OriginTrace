@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     .eq('event_slug', slug)
     .order('registered_at', { ascending: true });
 
-  const data = rawData as Array<{
+  const data = rawData as unknown as Array<{
     full_name: string | null;
     email: string | null;
     phone: string | null;

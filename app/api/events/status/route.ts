@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     .eq('slug', slug)
     .single();
 
-  const data = rawData as { registration_open: boolean; registration_closes_at: string | null } | null;
+  const data = rawData as unknown as { registration_open: boolean; registration_closes_at: string | null } | null;
 
   if (error || !data) {
     // Default open if event not found — avoids blocking legacy registrations

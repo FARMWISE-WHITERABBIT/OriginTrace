@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     .select('id, full_name, checked_in_at')
     .single();
 
-  const data = rawData as { id: string; full_name: string | null; checked_in_at: string | null } | null;
+  const data = rawData as unknown as { id: string; full_name: string | null; checked_in_at: string | null } | null;
 
   if (error) {
     // PGRST116 = no rows matched (already checked in or not found)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         .eq('id', registrationId)
         .single();
 
-      const existing = rawExisting as { id: string; full_name: string | null; checked_in: boolean | null; checked_in_at: string | null } | null;
+      const existing = rawExisting as unknown as { id: string; full_name: string | null; checked_in: boolean | null; checked_in_at: string | null } | null;
 
       if (existing?.checked_in) {
         return NextResponse.json(

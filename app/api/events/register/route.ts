@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     .eq('slug', EVENT_SLUG)
     .single();
 
-  const eventRow = rawEventRow as { registration_open: boolean; registration_closes_at: string | null } | null;
+  const eventRow = rawEventRow as unknown as { registration_open: boolean; registration_closes_at: string | null } | null;
 
   if (eventRow) {
     const now = new Date();

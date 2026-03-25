@@ -65,7 +65,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 
-  const events = rawEvents as Array<Record<string, unknown>> | null;
+  const events = rawEvents as unknown as Array<Record<string, unknown>> | null;
 
   // Attach registration counts
   const slugs = (events ?? []).map(e => e.slug as string);
@@ -77,7 +77,7 @@ export async function GET() {
       .select('event_slug')
       .in('event_slug', slugs);
 
-    (regData as Array<{ event_slug: string }> ?? []).forEach(r => {
+    (regData as unknown as Array<{ event_slug: string }> ?? []).forEach(r => {
       counts[r.event_slug] = (counts[r.event_slug] ?? 0) + 1;
     });
   }
