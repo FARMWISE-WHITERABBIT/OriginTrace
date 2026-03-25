@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -20,6 +20,7 @@ import {
   Wheat,
   Handshake,
   CreditCard,
+  CalendarDays,
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
       { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
+      { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
     ],
   },
   {

@@ -1,25 +1,29 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip session update for the marketing root — avoids slow Supabase call for crawlers
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
   return await updateSession(request);
 }
 
 export const config = {
   matcher: [
     /*
-     * Run middleware ONLY on routes that need auth/session handling.
-     * Explicitly exclude all marketing/public pages so Googlebot never triggers
-     * the Supabase updateSession() call — a slow/failing call returns 5xx to
-     * the crawler and blocks indexing.
+     * Run middleware on all app/auth/api routes that need session handling.
      *
-     * Excluded (bypass middleware entirely):
+     * Excluded:
      *   Static/infra : _next, monitoring, favicon, robots.txt, sitemap.xml, assets
-     *   Marketing    : /, /solutions, /pedigree, /processors, /demo, /api-docs
+     *   Marketing    : /solutions, /pedigree, /processors, /demo, /api-docs
      *                  /compliance(/*), /industries(/*), /legal(/*)
      *                  /blog(/*) — all blog posts
      *   Public tools : /verify(/*)
      */
-    '/((?!$|monitoring|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|api-docs|compliance|industries|legal|verify|blog).*)',
+    '/((?!monitoring|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|api-docs|compliance|industries|legal|verify|blog|events).*)',
   ],
 };

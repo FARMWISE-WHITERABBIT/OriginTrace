@@ -71,6 +71,7 @@ export function MarketingFooter() {
           <div>
             <h4 className="text-sm font-semibold mb-4 text-slate-900 dark:text-white">Company</h4>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
+              <li><Link href="/events" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-events">Events</Link></li>
               <li><Link href="/demo" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-demo">Request Demo</Link></li>
               <li><Link href="/auth/login" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-signin">Sign In</Link></li>
               <li><Link href="/auth/buyer-register" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="footer-link-buyer">Buyer Portal</Link></li>
