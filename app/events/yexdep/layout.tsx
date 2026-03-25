@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'YEXDEP 2026 – Youth Export Development Programme',
@@ -13,6 +14,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function YexdepLayout({ children }: { children: React.ReactNode }) {
+export default function YexdepLayout({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }

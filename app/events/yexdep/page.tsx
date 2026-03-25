@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ const NIGERIAN_STATES = [
   'Taraba', 'Yobe', 'Zamfara',
 ];
 
-interface FormData {
+interface RegistrationForm {
   fullName: string;
   email: string;
   phone: string;
@@ -52,7 +52,7 @@ function ClosedBanner() {
 
 export default function YexdepRegistrationPage() {
   const router = useRouter();
-  const [form, setForm] = useState<FormData>({
+  const [form, setForm] = useState<RegistrationForm>({
     fullName: '',
     email: '',
     phone: '',

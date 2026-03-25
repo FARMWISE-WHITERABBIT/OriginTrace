@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,7 @@ import {
   Download, ToggleLeft, ToggleRight, ExternalLink, RefreshCw,
 } from 'lucide-react';
 
-interface Event {
+interface EventItem {
   id: string;
   slug: string;
   title: string;
@@ -62,12 +62,12 @@ const EMPTY_FORM = {
 type FormState = typeof EMPTY_FORM;
 
 export default function SuperadminEventsPage() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function SuperadminEventsPage() {
     setCreateSheetOpen(true);
   }
 
-  function openEdit(event: Event) {
+  function openEdit(event: EventItem) {
     setSelectedEvent(event);
     setForm({
       slug: event.slug,
@@ -171,7 +171,8 @@ export default function SuperadminEventsPage() {
       const res = await fetch('/api/superadmin/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: selectedEvent.slug, ...buildPayload(form) }),
+        const { slug: _slug, ...updateFields } = buildPayload(form);
+        body: JSON.stringify({ slug: selectedEvent.slug, ...updateFields }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -186,7 +187,7 @@ export default function SuperadminEventsPage() {
     }
   }
 
-  async function handleToggleRegistration(event: Event) {
+  async function handleToggleRegistration(event: EventItem) {
     const res = await fetch('/api/superadmin/events', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -243,7 +244,7 @@ export default function SuperadminEventsPage() {
     }
   }
 
-  function isOpen(event: Event): boolean {
+  function isOpen(event: EventItem): boolean {
     if (!event.registration_open) return false;
     if (event.registration_closes_at && new Date() > new Date(event.registration_closes_at)) return false;
     return true;
