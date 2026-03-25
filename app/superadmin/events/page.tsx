@@ -168,10 +168,10 @@ export default function SuperadminEventsPage() {
     if (!selectedEvent) return;
     setSaving(true);
     try {
+      const { slug: _slug, ...updateFields } = buildPayload(form);
       const res = await fetch('/api/superadmin/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        const { slug: _slug, ...updateFields } = buildPayload(form);
         body: JSON.stringify({ slug: selectedEvent.slug, ...updateFields }),
       });
       const data = await res.json();
