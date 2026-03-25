@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   CalendarDays, Plus, Loader2, Pencil, Trash2, Users,
   Download, ToggleLeft, ToggleRight, ExternalLink, RefreshCw,
+  UserCheck, Search, CheckCircle2,
 } from 'lucide-react';
 
 interface EventItem {
@@ -40,6 +41,19 @@ interface EventItem {
   registration_closes_at: string | null;
   created_at: string;
   registration_count: number;
+}
+
+interface Registration {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  organization: string;
+  role: string;
+  state: string;
+  registered_at: string;
+  checked_in: boolean;
+  checked_in_at: string | null;
 }
 
 const EMPTY_FORM = {
@@ -72,6 +86,15 @@ export default function SuperadminEventsPage() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+
+  // Check-in sheet state
+  const [checkinSheetOpen, setCheckinSheetOpen] = useState(false);
+  const [checkinEvent, setCheckinEvent] = useState<EventItem | null>(null);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [regLoading, setRegLoading] = useState(false);
+  const [checkinSearch, setCheckinSearch] = useState('');
+  const [checkingIn, setCheckingIn] = useState<string | null>(null);
+
   const { toast } = useToast();
 
   async function fetchEvents() {
@@ -89,6 +112,59 @@ export default function SuperadminEventsPage() {
   }
 
   useEffect(() => { fetchEvents(); }, []);
+
+  async function fetchRegistrations(slug: string) {
+    setRegLoading(true);
+    try {
+      const res = await fetch(`/api/superadmin/events/checkin?slug=${encodeURIComponent(slug)}`);
+      if (!res.ok) throw new Error('Failed to load registrations');
+      const data = await res.json();
+      setRegistrations(data.registrations ?? []);
+    } catch {
+      toast({ title: 'Error', description: 'Failed to load registrations', variant: 'destructive' });
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
+  function openCheckin(event: EventItem) {
+    setCheckinEvent(event);
+    setRegistrations([]);
+    setCheckinSearch('');
+    setCheckinSheetOpen(true);
+    fetchRegistrations(event.slug);
+  }
+
+  async function handleCheckin(id: string, fullName: string) {
+    setCheckingIn(id);
+    try {
+      const res = await fetch('/api/superadmin/events/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: id }),
+      });
+      const json = await res.json();
+
+      if (res.status === 409) {
+        toast({ title: `${fullName} already checked in`, variant: 'destructive' });
+        setRegistrations(prev =>
+          prev.map(r => r.id === id ? { ...r, checked_in: true, checked_in_at: json.checkedInAt } : r)
+        );
+        return;
+      }
+      if (!res.ok) {
+        toast({ title: 'Check-in failed', description: json.error, variant: 'destructive' });
+        return;
+      }
+
+      setRegistrations(prev =>
+        prev.map(r => r.id === id ? { ...r, checked_in: true, checked_in_at: json.checkedInAt } : r)
+      );
+      toast({ title: `${fullName} checked in`, description: 'Attendance recorded.' });
+    } finally {
+      setCheckingIn(null);
+    }
+  }
 
   function handleFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -249,6 +325,18 @@ export default function SuperadminEventsPage() {
     if (event.registration_closes_at && new Date() > new Date(event.registration_closes_at)) return false;
     return true;
   }
+
+  const filteredRegistrations = checkinSearch
+    ? registrations.filter(r => {
+        const q = checkinSearch.toLowerCase();
+        return r.full_name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
+      })
+    : registrations;
+
+  const checkedInCount = registrations.filter(r => r.checked_in).length;
+  const checkinPct = registrations.length > 0
+    ? Math.round((checkedInCount / registrations.length) * 100)
+    : 0;
 
   const EventForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
     <div className="space-y-4 mt-4">
@@ -473,6 +561,16 @@ export default function SuperadminEventsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
+                        {/* Check-in */}
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => openCheckin(event)}
+                          title="Check-in attendees"
+                          className="text-slate-400 hover:text-cyan-400 h-8 w-8 p-0"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+
                         {/* Toggle registration */}
                         <Button
                           variant="ghost" size="sm"
@@ -500,7 +598,7 @@ export default function SuperadminEventsPage() {
 
                         {/* View public page */}
                         <a
-                          href={`/events/${event.slug.replace('-2026', '').replace('-2027', '').replace(/-\d{4}$/, '')}`}
+                          href={`/events/${event.slug.replace(/-\d{4}$/, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="View public page"
@@ -537,6 +635,134 @@ export default function SuperadminEventsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Check-in sheet */}
+      <Sheet open={checkinSheetOpen} onOpenChange={setCheckinSheetOpen}>
+        <SheetContent className="bg-slate-900 border-slate-700 text-white w-full sm:max-w-lg flex flex-col p-0">
+          {/* Fixed header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-700 shrink-0">
+            <SheetHeader className="mb-3">
+              <SheetTitle className="text-white flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-cyan-400" />
+                Check-in
+              </SheetTitle>
+              {checkinEvent && (
+                <SheetDescription className="text-slate-400 text-sm">
+                  {checkinEvent.short_title ?? checkinEvent.title} · {new Date(checkinEvent.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </SheetDescription>
+              )}
+            </SheetHeader>
+
+            {/* Stats */}
+            {!regLoading && registrations.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">
+                    <span className="text-white font-semibold">{checkedInCount}</span> of{' '}
+                    <span className="text-white font-semibold">{registrations.length}</span> checked in
+                  </span>
+                  <span className="text-cyan-400 font-semibold">{checkinPct}%</span>
+                </div>
+                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-cyan-500 rounded-full transition-all duration-300"
+                    style={{ width: `${checkinPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Input
+                placeholder="Search by name or email…"
+                value={checkinSearch}
+                onChange={e => setCheckinSearch(e.target.value)}
+                className="pl-9 bg-slate-800 border-slate-600 text-white placeholder-slate-500"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Scrollable list */}
+          <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
+            {regLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+              </div>
+            ) : filteredRegistrations.length === 0 ? (
+              <div className="text-center py-16 text-slate-500 text-sm">
+                {checkinSearch ? `No results for "${checkinSearch}"` : 'No registrations yet'}
+              </div>
+            ) : (
+              filteredRegistrations.map(r => (
+                <div
+                  key={r.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    r.checked_in
+                      ? 'bg-green-500/5 border-green-500/20'
+                      : 'bg-slate-800/50 border-slate-700 hover:bg-slate-800'
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    r.checked_in ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-300'
+                  }`}>
+                    {r.full_name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{r.full_name}</p>
+                    <p className="text-slate-400 text-xs truncate">{r.email}</p>
+                    <p className="text-slate-500 text-xs">{r.organization} · {r.state}</p>
+                    {r.checked_in && r.checked_in_at && (
+                      <p className="text-green-400 text-xs mt-0.5">
+                        ✓{' '}
+                        {new Date(r.checked_in_at).toLocaleTimeString('en-NG', {
+                          timeZone: 'Africa/Lagos',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action */}
+                  <div className="shrink-0">
+                    {r.checked_in ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => handleCheckin(r.id, r.full_name)}
+                        disabled={checkingIn === r.id}
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white h-7 px-3 text-xs"
+                      >
+                        {checkingIn === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Check in'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer refresh */}
+          {!regLoading && registrations.length > 0 && (
+            <div className="px-6 py-3 border-t border-slate-700 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => checkinEvent && fetchRegistrations(checkinEvent.slug)}
+                className="text-slate-400 hover:text-white w-full gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Refresh list
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Create sheet */}
       <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
