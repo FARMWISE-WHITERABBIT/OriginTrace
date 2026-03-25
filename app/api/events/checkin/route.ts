@@ -69,5 +69,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Check-in failed. Please try again.' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, fullName: data.full_name, checkedInAt: data.checked_in_at });
+  return NextResponse.json({ success: true, fullName: data?.full_name, checkedInAt: data?.checked_in_at });
 }
