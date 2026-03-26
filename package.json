@@ -19,6 +19,9 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:wipe": "tsx scripts/seed-demo.ts --wipe",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --wipe && tsx scripts/seed-demo.ts",
+    "seed:gacon": "tsx scripts/seed-gacon.ts",
+    "seed:gacon:wipe": "tsx scripts/seed-gacon.ts --wipe",
+    "seed:gacon:reset": "tsx scripts/seed-gacon.ts --wipe && tsx scripts/seed-gacon.ts",
     "seed:locations": "tsx scripts/seed-locations.ts",
     "seed:reset-all": "bash scripts/reset-and-seed.sh",
     "build:replit": "tsx scripts/build.ts"
