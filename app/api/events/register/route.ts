@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     const label = i === 0 ? `registrant (${email})` : `admin (${adminEmail})`;
     if (result.status === 'fulfilled') {
       if (result.value.success) {
-        console.log(`[events/register] Email sent to ${label}`);
+        console.info(`[events/register] Email sent to ${label}`);
       } else {
         console.error(`[events/register] Email failed for ${label}:`, result.value.error);
       }
