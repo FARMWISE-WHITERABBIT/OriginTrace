@@ -235,10 +235,9 @@ async function seed() {
   // 7. Batch contributions (multi-farm cooperative)
   section('Batch Contributions');
   await tryIns('batch_contributions', [
-    { batch_id:(gingerBatch as any).id, farm_id:(kF1 as any).id, org_id:orgId, weight_kg:1050, bag_count:21, grade:'Grade 1', contributed_at:daysAgo(25) },
-    { batch_id:(gingerBatch as any).id, farm_id:(kF2 as any).id, org_id:orgId, weight_kg:1280, bag_count:26, grade:'Grade 1', contributed_at:daysAgo(25) },
-    { batch_id:(gingerBatch as any).id, farm_id:(kF3 as any).id, org_id:orgId, weight_kg:870,  bag_count:17, grade:'Grade 1', contributed_at:daysAgo(25) },
-    // kF3 = Musa Danladi (pending farm) — still delivered; delivery logged separately from approval status
+    { batch_id:(gingerBatch as any).id, farm_id:(kF1 as any).id, farmer_name:'Abubakar Sule',  weight_kg:1050, bag_count:21, compliance_status:'verified', notes:'GCN-GNG-2026-001 — GACON cooperative contributor' },
+    { batch_id:(gingerBatch as any).id, farm_id:(kF2 as any).id, farmer_name:'Hadiza Ibrahim', weight_kg:1280, bag_count:26, compliance_status:'verified', notes:'GCN-GNG-2026-001 — GACON cooperative contributor' },
+    { batch_id:(gingerBatch as any).id, farm_id:(kF3 as any).id, farmer_name:'Musa Danladi',   weight_kg:870,  bag_count:17, compliance_status:'pending',  notes:'GCN-GNG-2026-001 — GACON cooperative contributor (boundary verification pending)' },
   ], '3 ginger farm contributions');
 
   // 8. Bags
@@ -246,11 +245,11 @@ async function seed() {
   const bagRows = Array.from({ length: 64 }, (_, i) => ({
     org_id: orgId,
     collection_batch_id: (gingerBatch as any).id,
-    bag_number: `GCN-GNG-001-${String(i+1).padStart(3,'0')}`,
-    weight: 50,
-    grade: 'Grade 1',
+    serial: `GCN-GNG-001-${String(i+1).padStart(3,'0')}`,
+    status: 'collected',
+    weight_kg: 50,
+    grade: 'A',
     is_compliant: true,
-    farm_id: i < 21 ? (kF1 as any).id : i < 47 ? (kF2 as any).id : (kF3 as any).id,
   }));
   await tryIns('bags', bagRows, '64 ginger bags');
 
@@ -259,17 +258,15 @@ async function seed() {
   const [gingerRun] = await ins('processing_runs', {
     org_id: orgId,
     run_code: 'GCN-RUN-001',
-    run_type: 'sorting_grading',
     commodity: 'ginger',
     input_weight_kg: 3200,
     output_weight_kg: 780,
-    recovery_pct: 24.4,
-    status: 'completed',
-    operator_id: adminUserId,
+    recovery_rate: 24.4,
+    mass_balance_valid: true,
     facility_name: 'GACON Kachia Processing Centre',
+    facility_location: 'Kachia, Kaduna State, Nigeria',
     notes: 'Cleaned, peeled, split, and dried. 24.4% recovery to export-grade dried split ginger.',
-    started_at: daysAgo(20),
-    completed_at: daysAgo(18),
+    processed_at: daysAgo(18),
     created_by: adminUserId,
   }, 'GCN-RUN-001');
 
