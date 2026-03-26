@@ -16,11 +16,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_events_org_created
 CREATE INDEX IF NOT EXISTS idx_notifications_org_read
   ON notifications(org_id, is_read, created_at DESC);
 
--- Batch contributions weight/bag aggregation per batch
--- Query pattern: SELECT SUM(weight_kg), SUM(bag_count) FROM batch_contributions WHERE org_id = $1
-CREATE INDEX IF NOT EXISTS idx_batch_contributions_org
-  ON batch_contributions(org_id);
-
 -- Shipments filtered by org + status (shipments list page)
 -- Query pattern: SELECT ... FROM shipments WHERE org_id = $1 AND status = $2
 CREATE INDEX IF NOT EXISTS idx_shipments_org_status
