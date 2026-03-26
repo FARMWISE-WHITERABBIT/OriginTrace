@@ -131,7 +131,7 @@ async function seed() {
   section('Users');
   const PASS = 'Demo1234!';
   const getOrCreateUser = async (email: string, role: string) => {
-    const { data: listRes } = await db.auth.admin.listUsers() as any;
+    const { data: listRes } = await db.auth.admin.listUsers({ perPage: 1000 }) as any;
     const existing = (listRes?.users || []).find((u: any) => u.email === email);
     let userId: string;
     if (existing) { userId = existing.id; ok(`exists: ${email}`); }
