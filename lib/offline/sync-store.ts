@@ -151,6 +151,11 @@ export async function updateBatchStatus(
   }
 }
 
+export async function deleteBatch(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('pending_batches', id);
+}
+
 export async function deleteSyncedBatches(): Promise<void> {
   const db = await getDB();
   const syncedBatches = await db.getAllFromIndex('pending_batches', 'by-status', 'synced');
