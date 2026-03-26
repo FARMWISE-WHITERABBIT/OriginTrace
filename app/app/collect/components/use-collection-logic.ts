@@ -143,16 +143,20 @@ export function useCollectionLogic() {
       }
       if (isOnline && supabase) {
         try {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('farms')
             .select('id, farmer_name, community, commodity, area_hectares, compliance_status, boundary')
             .eq('org_id', organization.id)
+            .neq('compliance_status', 'rejected')
             .order('farmer_name');
+          if (error) throw error;
           if (data) {
             setAllFarms(data);
             await cacheFarmsFull(organization.id, data);
           }
-        } catch {}
+        } catch (err) {
+          console.error('Failed to load farms for collection:', err);
+        }
       }
       setFarmsLoading(false);
     }
