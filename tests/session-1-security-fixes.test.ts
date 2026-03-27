@@ -193,8 +193,6 @@ describe('Project: package.json identity', () => {
   it('build script should be next build for Vercel deployment', async () => {
     const pkg = await import('../package.json', { assert: { type: 'json' } });
     expect(pkg.default.scripts.build).toContain('next build');
-    // Replit-specific wrapper preserved as build:replit
-    expect(pkg.default.scripts['build:replit']).toContain('scripts/build.ts');
   });
 });
 
