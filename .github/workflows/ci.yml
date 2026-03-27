@@ -74,9 +74,9 @@ jobs:
         run: npx wait-on http://localhost:3000 --timeout 60000
 
       - name: Run marketing smoke tests
-        run: npx playwright test tests/e2e/marketing.spec.ts
+        run: npx playwright test tests/e2e/marketing.spec.ts --project=chromium-public
         env:
-          BASE_URL: http://localhost:3000
+          E2E_BASE_URL: http://localhost:3000
 
       - name: Upload Playwright report
         if: failure()
