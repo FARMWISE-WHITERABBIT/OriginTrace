@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key, ShieldCheck, Trash2, Coins } from 'lucide-react';
+import { Loader2, Settings, Shield, Package, Users, RefreshCw, Copy, Check, Plus, X, MapPin, Building2, FileSpreadsheet, Upload, Image as ImageIcon, Globe, Scale, ClipboardCheck, Leaf, ChevronDown, FileText, Sprout, Factory, Truck, Palette, ScrollText, Webhook, Key, ShieldCheck, Trash2, Coins, Plug } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ import { locales, localeNames, type Locale } from '@/i18n';
 import { AuditLogContent } from '@/app/app/audit/audit-content';
 import { WebhooksContent } from '@/components/settings/webhooks-content';
 import { ApiKeysContent } from '@/components/settings/api-keys-content';
+import { IntegrationsContent } from '@/components/settings/integrations-content';
 
 interface OrgSettings {
   require_polygon?: boolean;
@@ -1139,6 +1140,10 @@ function SettingsContent() {
                 <Key className="h-4 w-4 mr-2" />
                 API Keys
               </TabsTrigger>
+              <TabsTrigger value="integrations" data-testid="tab-integrations">
+                <Plug className="h-4 w-4 mr-2" />
+                Integrations
+              </TabsTrigger>
             </>
           )}
           {(isAdmin || profile.role === 'compliance_officer') && (
@@ -2153,6 +2158,12 @@ function SettingsContent() {
         {isAdmin && (
           <TabsContent value="api-keys" className="space-y-6">
             <ApiKeysContent />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="integrations" className="space-y-6">
+            <IntegrationsContent />
           </TabsContent>
         )}
 

@@ -273,7 +273,6 @@ async function seed() {
   await tryIns('processing_run_batches', {
     processing_run_id: (gingerRun as any).id,
     collection_batch_id: (gingerBatch as any).id,
-    weight_kg: 3200,
   }, 'run-batch link');
 
   // 10. Finished Good

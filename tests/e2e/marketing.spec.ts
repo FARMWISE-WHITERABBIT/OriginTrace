@@ -22,7 +22,7 @@ test.describe('Marketing — Homepage', () => {
 
   test('Sign In link is present in nav', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();
+    await expect(page.getByTestId('nav-sign-in')).toBeVisible();
   });
 
   test('Request Demo CTA is present', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('Marketing — Compliance Pages', () => {
     const heading = page.locator('h1, h2').first();
     await expect(heading).toBeVisible();
     const text = await heading.textContent();
-    expect(text?.toLowerCase()).toContain('eudr');
+    expect(text?.toLowerCase()).toContain('deforestation');
   });
 
   test('/compliance/uk loads', async ({ page }) => {

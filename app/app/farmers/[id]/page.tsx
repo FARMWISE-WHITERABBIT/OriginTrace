@@ -129,7 +129,23 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       .finally(() => setLoading(false));
   }, [id, router]);
 
+  const PHONE_REGEX = /^(\+?234|0)[7-9][01]\d{8}$/;
+
   async function handleSaveCard(card: 'identity' | 'location' | 'compliance') {
+    // Client-side validation before sending to server
+    if (card === 'identity') {
+      if (identityForm.phone && !PHONE_REGEX.test(identityForm.phone.trim())) {
+        toast({ title: 'Invalid phone number', description: 'Enter a valid Nigerian phone number (e.g. 08012345678)', variant: 'destructive' });
+        return;
+      }
+    }
+    if (card === 'location') {
+      const area = parseFloat(locationForm.area_hectares);
+      if (locationForm.area_hectares && (isNaN(area) || area < 0.1 || area > 5000)) {
+        toast({ title: 'Invalid area', description: 'Farm area must be between 0.1 and 5,000 hectares', variant: 'destructive' });
+        return;
+      }
+    }
     setSavingCard(true);
     const formData = card === 'identity' ? identityForm : card === 'location' ? locationForm : complianceForm;
     try {

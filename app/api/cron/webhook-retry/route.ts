@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  console.log(`[cron/webhook-retry] processed=${pending.length} succeeded=${succeeded} failed=${failed} skipped=${skipped}`);
+  console.info(`[cron/webhook-retry] processed=${pending.length} succeeded=${succeeded} failed=${failed} skipped=${skipped}`);
 
   return NextResponse.json({
     processed: pending.length,

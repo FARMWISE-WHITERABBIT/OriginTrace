@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       .insert({
         batch_id,
         farm_id,
+        org_id: batch.org_id,
         farmer_name: farmer_name ?? null,
         weight_kg,
         bag_count,

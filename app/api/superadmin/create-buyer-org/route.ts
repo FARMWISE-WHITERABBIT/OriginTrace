@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check email uniqueness
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const emailExists = existingUsers?.users?.some(
       (u: any) => u.email?.toLowerCase() === adminEmail.toLowerCase()
     );

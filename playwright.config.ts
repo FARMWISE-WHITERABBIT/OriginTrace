@@ -33,8 +33,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: process.env.E2E_BASE_URL ||
-      'https://9abaaa0d-3e9e-43f0-a0b9-5029b15d7df1-00-2htohfo5tjvw3.kirk.replit.dev',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
@@ -56,7 +55,13 @@ export default defineConfig({
         storageState: 'tests/e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/auth\.setup\.ts/, /marketing\.spec\.ts/],
+    },
+    // Public pages — no auth required, safe to run in CI without credentials
+    {
+      name: 'chromium-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /marketing\.spec\.ts/,
     },
   ],
 });

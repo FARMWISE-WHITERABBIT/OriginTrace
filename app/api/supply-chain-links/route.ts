@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
 
       if (exporterAdmins && exporterAdmins.length > 0) {
         const adminUserIds = exporterAdmins.map((a: { user_id: string }) => a.user_id);
-        const { data: { users: adminUsers } } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: { users: adminUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
         const adminEmails = adminUsers
           ?.filter((u: { id: string }) => adminUserIds.includes(u.id))
           .map((u: { email?: string }) => u.email)
