@@ -135,7 +135,7 @@ export interface ProfileWithRole {
  */
 export function requireRole(
   profile: ProfileWithRole | null | undefined,
-  allowedRoles: (AppRole | SystemRole)[]
+  allowedRoles: readonly (AppRole | SystemRole)[]
 ): NextResponse | null {
   if (!profile) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
