@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { parsePagination } from '../lib/api/validation';
 import { backoffMs, MAX_ATTEMPTS, WEBHOOK_EVENTS } from '../lib/webhooks';
@@ -58,16 +58,28 @@ describe('Session 4 — getAuthenticatedUser removed from all routes', () => {
     });
   }
 
-  it('all 96 route.ts files import getAuthenticatedProfile not getAuthenticatedUser', () => {
-    // Any remaining getAuthenticatedUser usage must only be in api-auth.ts itself
-    const { execSync } = require('child_process');
-    const result = execSync(
-      "grep -rn 'getAuthenticatedUser' " +
-        join(__dirname, '..', 'app/api') +
-        ' --include=route.ts 2>/dev/null || true',
-      { encoding: 'utf8' }
-    );
-    expect(result.trim()).toBe('');
+  it('all route.ts files import getAuthenticatedProfile not getAuthenticatedUser', () => {
+    function walkDir(dir: string, callback: (filePath: string) => void) {
+      readdirSync(dir).forEach( f => {
+        let dirPath = join(dir, f);
+        let isDirectory = statSync(dirPath).isDirectory();
+        isDirectory ? walkDir(dirPath, callback) : callback(join(dir, f));
+      });
+    }
+
+    const apiPath = join(__dirname, '..', 'app/api');
+    const violations: string[] = [];
+
+    walkDir(apiPath, (filePath) => {
+      if (filePath.endsWith('route.ts')) {
+        const content = readFileSync(filePath, 'utf8');
+        if (content.includes('getAuthenticatedUser')) {
+          violations.push(filePath);
+        }
+      }
+    });
+
+    expect(violations).toEqual([]);
   });
 });
 
