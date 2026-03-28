@@ -16,8 +16,9 @@ interface PendingBatch {
   bags: PendingBag[];
   notes?: string;
   collected_at: string;
-  status: 'pending' | 'syncing' | 'synced' | 'error';
+  status: 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
   error_message?: string;
+  conflict_id?: string;
   created_at: string;
   synced_at?: string;
   yield_photo_proof?: string;
@@ -68,7 +69,7 @@ interface OriginTraceDB extends DBSchema {
 }
 
 const DB_NAME = 'origintrace-offline';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<OriginTraceDB> | null = null;
 
@@ -137,7 +138,8 @@ export async function getAllBatches(): Promise<PendingBatch[]> {
 export async function updateBatchStatus(
   id: string, 
   status: PendingBatch['status'], 
-  error_message?: string
+  error_message?: string,
+  conflict_id?: string
 ): Promise<void> {
   const db = await getDB();
   const batch = await db.get('pending_batches', id);
@@ -145,8 +147,12 @@ export async function updateBatchStatus(
   if (batch) {
     batch.status = status;
     if (error_message) batch.error_message = error_message;
+    if (conflict_id) batch.conflict_id = conflict_id;
     if (status === 'synced') batch.synced_at = new Date().toISOString();
-    if (status === 'pending') batch.error_message = undefined;
+    if (status === 'pending') {
+      batch.error_message = undefined;
+      batch.conflict_id = undefined;
+    }
     await db.put('pending_batches', batch);
   }
 }
