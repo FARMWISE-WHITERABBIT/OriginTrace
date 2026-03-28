@@ -49,6 +49,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   themeColor: '#2E7D6B',
 };
+import QueryProvider from '@/components/providers/query-provider';
 
 export default function RootLayout({
   children,
@@ -65,14 +66,16 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('origintrace-theme');if(t==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}
         />
-        <ThemeProvider>
-          <LocaleProvider>
-            <OrgProvider>
-              {children}
-              <Toaster />
-            </OrgProvider>
-          </LocaleProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <LocaleProvider>
+              <OrgProvider>
+                {children}
+                <Toaster />
+              </OrgProvider>
+            </LocaleProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

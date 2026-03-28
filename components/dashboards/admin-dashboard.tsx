@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { StatCardSkeleton } from '@/components/skeletons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,30 +99,18 @@ function TrendIndicator({ value }: { value: number }) {
 }
 
 export function AdminDashboard() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [period, setPeriod] = useState<Period>('30d');
-  const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
 
-  const fetchAnalytics = useCallback(async () => {
-    if (!organization) return;
-    setIsLoading(true);
-    try {
+  const { data: analytics, isLoading } = useQuery<AnalyticsData>({
+    queryKey: ['analytics', period, organization?.id],
+    queryFn: async () => {
       const res = await fetch(`/api/analytics?period=${period}&section=all`);
-      if (res.ok) {
-        const data = await res.json();
-        setAnalytics(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, period]);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+      if (!res.ok) throw new Error('Failed to fetch analytics');
+      return res.json();
+    },
+    enabled: !!organization,
+  });
 
   const overallComplianceRate = analytics
     ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
