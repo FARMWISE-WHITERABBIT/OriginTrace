@@ -1,3 +1,7 @@
+import { post as howToExportChina } from './how-to-export-to-china-gacc-registration-guide';
+import { post as supplyChainTraceability } from './supply-chain-traceability-global-trade';
+import { post as foodTraceability } from './food-supply-chain-traceability';
+import { post as eudrCompleteGuide } from './eudr-regulation-complete-guide';
 import { post as chineGacc } from './china-gacc-deadline-june-2026';
 import { post as eudrCocoa } from './eudr-compliance-tools-cocoa-exporters';
 import { post as eudrHerbs } from './eudr-compliance-tools-herbs-spices-exporters';
@@ -11,6 +15,10 @@ import { post as offline } from './offline-first-traceability-low-connectivity';
 import type { BlogPost } from '@/lib/blog';
 
 export const posts: BlogPost[] = [
+  howToExportChina,
+  supplyChainTraceability,
+  foodTraceability,
+  eudrCompleteGuide,
   chineGacc,
   eudrCocoa,
   eudrHerbs,
