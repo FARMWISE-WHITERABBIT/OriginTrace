@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
 
 const shipmentPatchSchema = z.object({
+  // ── Original fields ────────────────────────────────────────────────────────
   status: z.string().optional(),
   destination_country: z.string().optional(),
   destination_port: z.string().optional(),
@@ -17,6 +18,75 @@ const shipmentPatchSchema = z.object({
   estimated_ship_date: z.string().optional(),
   doc_status: z.record(z.any()).optional(),
   storage_controls: z.record(z.any()).optional(),
+
+  // ── Stage data (set by advance-stage endpoint; also patchable here) ────────
+  stage_data: z.record(z.any()).optional(),
+
+  // ── Freight & Vessel (Stage 5) ─────────────────────────────────────────────
+  freight_forwarder_name: z.string().optional(),
+  freight_forwarder_contact: z.string().optional(),
+  shipping_line: z.string().optional(),
+  vessel_name: z.string().optional(),
+  imo_number: z.string().optional(),
+  voyage_number: z.string().optional(),
+  booking_reference: z.string().optional(),
+  port_of_loading: z.string().optional(),
+  port_of_discharge: z.string().optional(),
+  etd: z.string().optional(),
+  eta: z.string().optional(),
+  actual_departure_date: z.string().optional(),
+  actual_arrival_date: z.string().optional(),
+  bill_of_lading_number: z.string().optional(),
+
+  // ── Container (Stage 6) ────────────────────────────────────────────────────
+  container_number: z.string().optional(),
+  container_seal_number: z.string().optional(),
+  container_type: z.enum(['20FT', '40FT', '40HC', 'Reefer']).optional(),
+
+  // ── Customs & Clearance (Stage 4) ─────────────────────────────────────────
+  clearing_agent_name: z.string().optional(),
+  clearing_agent_contact: z.string().optional(),
+  customs_declaration_number: z.string().optional(),
+  exit_certificate_number: z.string().optional(),
+
+  // ── Pre-shipment Inspection (Stage 2) ─────────────────────────────────────
+  inspection_body: z.string().optional(),
+  inspection_date: z.string().optional(),
+  inspection_certificate_number: z.string().optional(),
+  inspection_result: z.enum(['pass', 'fail', 'conditional']).optional(),
+
+  // ── Commercial (Stage 1) ───────────────────────────────────────────────────
+  purchase_order_number: z.string().optional(),
+  purchase_order_date: z.string().optional(),
+  contract_price_per_mt: z.number().optional(),
+  total_shipment_value_usd: z.number().optional(),
+
+  // ── Costs (entered at respective stages) ──────────────────────────────────
+  freight_cost_usd: z.number().optional(),
+  customs_fees_ngn: z.number().optional(),
+  inspection_fees_ngn: z.number().optional(),
+  certification_costs_ngn: z.number().optional(),
+  port_handling_charges_ngn: z.number().optional(),
+  freight_insurance_usd: z.number().optional(),
+
+  // ── Outcome (Stage 9 close) ────────────────────────────────────────────────
+  shipment_outcome: z.enum(['accepted', 'rejected', 'conditional']).optional(),
+  rejection_reason: z.string().optional(),
+  outcome_recorded_at: z.string().optional(),
+
+  // ── Pre-notification status (all markets) ─────────────────────────────────
+  prenotif_eu_traces: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_eu_traces_ref: z.string().optional(),
+  prenotif_uk_ipaffs: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_uk_ipaffs_ref: z.string().optional(),
+  prenotif_us_fda: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_us_fda_ref: z.string().optional(),
+  prenotif_cn_gacc: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_cn_gacc_ref: z.string().optional(),
+  prenotif_uae_esma: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_uae_esma_ref: z.string().optional(),
+
+  // ── Item management ────────────────────────────────────────────────────────
   add_items: z.array(z.object({
     item_type: z.enum(['batch', 'finished_good']),
     batch_id: z.number().optional(),
@@ -399,9 +469,38 @@ export async function PATCH(
     const { add_items, remove_items, ...updateFields } = parsed.data;
 
     const allowedFields = [
+      // Original fields
       'status', 'destination_country', 'destination_port', 'buyer_company',
       'buyer_contact', 'target_regulations', 'notes', 'estimated_ship_date',
       'doc_status', 'storage_controls',
+      // Stage data
+      'stage_data',
+      // Freight & Vessel (Stage 5)
+      'freight_forwarder_name', 'freight_forwarder_contact', 'shipping_line',
+      'vessel_name', 'imo_number', 'voyage_number', 'booking_reference',
+      'port_of_loading', 'port_of_discharge', 'etd', 'eta',
+      'actual_departure_date', 'actual_arrival_date', 'bill_of_lading_number',
+      // Container (Stage 6)
+      'container_number', 'container_seal_number', 'container_type',
+      // Customs & Clearance (Stage 4)
+      'clearing_agent_name', 'clearing_agent_contact',
+      'customs_declaration_number', 'exit_certificate_number',
+      // Pre-shipment Inspection (Stage 2)
+      'inspection_body', 'inspection_date', 'inspection_certificate_number', 'inspection_result',
+      // Commercial (Stage 1)
+      'purchase_order_number', 'purchase_order_date',
+      'contract_price_per_mt', 'total_shipment_value_usd',
+      // Costs
+      'freight_cost_usd', 'customs_fees_ngn', 'inspection_fees_ngn',
+      'certification_costs_ngn', 'port_handling_charges_ngn', 'freight_insurance_usd',
+      // Outcome (Stage 9)
+      'shipment_outcome', 'rejection_reason', 'outcome_recorded_at',
+      // Pre-notifications
+      'prenotif_eu_traces', 'prenotif_eu_traces_ref',
+      'prenotif_uk_ipaffs', 'prenotif_uk_ipaffs_ref',
+      'prenotif_us_fda', 'prenotif_us_fda_ref',
+      'prenotif_cn_gacc', 'prenotif_cn_gacc_ref',
+      'prenotif_uae_esma', 'prenotif_uae_esma_ref',
     ] as const;
 
     const updateData: Record<string, any> = {};
