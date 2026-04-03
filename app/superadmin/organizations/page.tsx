@@ -11,8 +11,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Search, Building2, Users, Eye, Weight, CheckCircle2,
-  LogIn, Plus, Mail, Copy, Check, Crown, Ban, PlayCircle, ArrowUpRight, CreditCard
+  LogIn, Plus, Mail, Copy, Check, Crown, Ban, PlayCircle, ArrowUpRight, CreditCard,
+  ShieldCheck, ShieldAlert, Clock as ClockIcon,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -99,6 +101,14 @@ export default function OrganizationsPage() {
   const [statusTarget, setStatusTarget] = useState<Organization | null>(null);
   const [newStatus, setNewStatus] = useState<string>('active');
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+
+  // KYC review
+  const [kycDialogOpen, setKycDialogOpen] = useState(false);
+  const [kycTarget, setKycTarget] = useState<Organization | null>(null);
+  const [kycRecord, setKycRecord] = useState<any>(null);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [kycNote, setKycNote] = useState('');
+  const [isKycReviewing, setIsKycReviewing] = useState(false);
 
   const { toast } = useToast();
 
@@ -210,6 +220,46 @@ export default function OrganizationsPage() {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setIsStatusUpdating(false);
+    }
+  }
+
+  async function openKycDialog(org: Organization) {
+    setKycTarget(org);
+    setKycRecord(null);
+    setKycNote('');
+    setKycDialogOpen(true);
+    setKycLoading(true);
+    try {
+      // Fetch KYC record via superadmin endpoint (org_id param)
+      const res = await fetch(`/api/superadmin?resource=kyc_record&org_id=${org.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setKycRecord(data.kyc_record ?? null);
+      }
+    } catch { /* silent */ }
+    finally { setKycLoading(false); }
+  }
+
+  async function handleKycDecision(decision: 'approved' | 'rejected') {
+    if (!kycTarget) return;
+    setIsKycReviewing(true);
+    try {
+      const res = await fetch(`/api/org/kyc/${kycTarget.id}/review`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision, note: kycNote }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Review failed');
+      }
+      toast({ title: decision === 'approved' ? 'KYC Approved' : 'KYC Rejected', description: `${kycTarget.name} KYC ${decision}.` });
+      setKycDialogOpen(false);
+      setKycTarget(null);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsKycReviewing(false);
     }
   }
 
@@ -335,6 +385,7 @@ export default function OrganizationsPage() {
                   <TableHead className="text-slate-400">Agents</TableHead>
                   <TableHead className="text-slate-400">Tonnage</TableHead>
                   <TableHead className="text-slate-400">Compliance</TableHead>
+                  <TableHead className="text-slate-400">KYC</TableHead>
                   <TableHead className="text-slate-400">Created</TableHead>
                   <TableHead className="text-slate-400">Actions</TableHead>
                 </TableRow>
@@ -385,6 +436,17 @@ export default function OrganizationsPage() {
                           <span className="text-sm">{compPct}</span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-slate-400 hover:text-white hover:bg-slate-700 text-xs"
+                          onClick={() => openKycDialog(org)}
+                          data-testid={`button-kyc-${org.id}`}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5 mr-1" />Review
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-slate-400 text-sm">
                         {org.created_at ? new Date(org.created_at).toLocaleDateString('en-GB') : '—'}
                       </TableCell>
@@ -419,7 +481,7 @@ export default function OrganizationsPage() {
                 })}
                 {filteredOrgs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                    <TableCell colSpan={9} className="text-center py-12 text-slate-500">
                       {searchQuery ? `No organizations matching "${searchQuery}"` : 'No organizations found'}
                     </TableCell>
                   </TableRow>
@@ -698,6 +760,107 @@ export default function OrganizationsPage() {
           )}
         </DialogContent>
       </Dialog>
+      {/* ── KYC Review Dialog ── */}
+      <Dialog open={kycDialogOpen} onOpenChange={open => { setKycDialogOpen(open); if (!open) setKycTarget(null); }}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-emerald-400" />
+              KYC Review — {kycTarget?.name}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Review the organization's KYC submission and approve or reject.
+            </DialogDescription>
+          </DialogHeader>
+          {kycLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+          ) : kycRecord ? (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-slate-500 mb-0.5">Business Name</p>
+                  <p className="text-slate-200 font-medium">{kycRecord.business_name || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-0.5">RC Number</p>
+                  <p className="text-slate-200 font-mono">{kycRecord.rc_number || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-0.5">TIN</p>
+                  <p className="text-slate-200 font-mono">{kycRecord.tin || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-0.5">Current Status</p>
+                  <Badge
+                    variant="outline"
+                    className={
+                      kycRecord.kyc_status === 'approved' ? 'border-emerald-700 text-emerald-400' :
+                      kycRecord.kyc_status === 'rejected' ? 'border-red-700 text-red-400' :
+                      kycRecord.kyc_status === 'under_review' ? 'border-amber-700 text-amber-400' :
+                      'border-slate-600 text-slate-400'
+                    }
+                  >
+                    {kycRecord.kyc_status || 'not_submitted'}
+                  </Badge>
+                </div>
+                {kycRecord.director_name && (
+                  <div className="col-span-2">
+                    <p className="text-slate-500 mb-0.5">Director</p>
+                    <p className="text-slate-200">{kycRecord.director_name}</p>
+                  </div>
+                )}
+                {kycRecord.bank_account_name && (
+                  <div className="col-span-2">
+                    <p className="text-slate-500 mb-0.5">Bank Account</p>
+                    <p className="text-slate-200">{kycRecord.bank_account_name} · {kycRecord.bank_account_number} ({kycRecord.bank_name})</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-300 text-sm">Review Note (optional)</Label>
+                <Textarea
+                  value={kycNote}
+                  onChange={e => setKycNote(e.target.value)}
+                  placeholder="Reason for approval or rejection…"
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              <ShieldAlert className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">No KYC record submitted for this organization.</p>
+            </div>
+          )}
+          {kycRecord && (
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                variant="outline"
+                className="border-red-700 text-red-400 hover:bg-red-500/10 flex-1"
+                onClick={() => handleKycDecision('rejected')}
+                disabled={isKycReviewing}
+                data-testid="button-kyc-reject"
+              >
+                {isKycReviewing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
+                Reject
+              </Button>
+              <Button
+                className="bg-emerald-700 hover:bg-emerald-600 flex-1"
+                onClick={() => handleKycDecision('approved')}
+                disabled={isKycReviewing}
+                data-testid="button-kyc-approve"
+              >
+                {isKycReviewing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                Approve
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -381,10 +381,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ sync_status: enrichedStatus });
       }
       
+      case 'kyc_record': {
+        const orgId = searchParams.get('org_id');
+        if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
+        const { data: kycRecord } = await supabase
+          .from('org_kyc_records')
+          .select('*')
+          .eq('org_id', orgId)
+          .maybeSingle();
+        return NextResponse.json({ kyc_record: kycRecord ?? null });
+      }
+
       default:
         return NextResponse.json({ status: 'authorized', role: 'superadmin', user_id: user.id });
     }
-    
+
   } catch (error) {
     console.error('Superadmin API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
