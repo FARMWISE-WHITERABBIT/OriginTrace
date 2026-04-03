@@ -2175,7 +2175,7 @@ function SettingsContent() {
 
         {isAdmin && (
           <TabsContent value="kyc" className="space-y-6">
-            <KycPaymentsTab orgId={profile.org_id} />
+            <KycPaymentsTab orgId={String(profile.org_id ?? '')} />
           </TabsContent>
         )}
 
