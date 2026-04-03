@@ -264,8 +264,8 @@ export function getNavigationConfig(role: UserRole): NavigationConfig {
 }
 
 export const agentBottomNavItems: MenuItem[] = [
-  { title: 'Collect', url: '/app/collect', icon: PlusCircle, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'smart_collect' },
-  { title: 'Register', url: '/app/farmers/new', icon: UserPlus, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'farmer_registration' },
-  { title: 'Map', url: '/app/farms/map', icon: Map, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'farm_mapping' },
-  { title: 'Sync', url: '/app/sync', icon: RefreshCw, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'sync_dashboard' },
+  { title: 'Collect', url: '/app/collect', icon: PlusCircle, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'smart_collect' },
+  { title: 'Register', url: '/app/farmers/new', icon: UserPlus, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'farmer_registration' },
+  { title: 'Map', url: '/app/farms/map', icon: Map, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'farm_mapping' },
+  { title: 'Sync', url: '/app/sync', icon: RefreshCw, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
 ];

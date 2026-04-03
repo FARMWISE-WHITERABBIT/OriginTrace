@@ -117,6 +117,14 @@ export function checkFarmEligibility(
         warnings,
       };
     }
+    if (!override.reason || override.reason.trim().length < 10) {
+      return {
+        eligible: false,
+        status: 'blocked',
+        blockers: [...blockers, 'Admin override reason is required and must be at least 10 characters.'],
+        warnings,
+      };
+    }
     // Admin override accepted — return eligible with all warnings
     return {
       eligible: true,
