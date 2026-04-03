@@ -209,6 +209,38 @@ export async function getCachedFarmsFull(orgId: number): Promise<any[] | null> {
   }
 }
 
+export async function purgeExpiredCaches(): Promise<void> {
+  try {
+    const db = await getCacheDB();
+    const allMeta = await db.getAll('cache_meta');
+    const now = Date.now();
+
+    for (const meta of allMeta) {
+      const age = now - new Date(meta.cached_at).getTime();
+      if (age < meta.ttl_ms) continue;
+
+      if (meta.key === 'locations') {
+        await db.clear('cached_locations');
+      } else if (meta.key === 'commodities') {
+        await db.clear('cached_commodities');
+      } else if (meta.key.startsWith('farms-')) {
+        const orgId = parseInt(meta.key.replace('farms-', ''), 10);
+        if (!isNaN(orgId)) {
+          const tx = db.transaction('cached_farms_full', 'readwrite');
+          const farmsInOrg = await tx.store.index('by-org').getAll(orgId);
+          for (const farm of farmsInOrg) {
+            await tx.store.delete(farm.id);
+          }
+          await tx.done;
+        }
+      }
+      await db.delete('cache_meta', meta.key);
+    }
+  } catch {
+    // Non-critical — swallow errors
+  }
+}
+
 export async function isLocationsCacheValid(): Promise<boolean> {
   return isCacheValid('locations');
 }

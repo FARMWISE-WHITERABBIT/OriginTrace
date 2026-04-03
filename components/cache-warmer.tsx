@@ -8,6 +8,7 @@ import {
   isLocationsCacheValid,
   isCommoditiesCacheValid,
   isFarmsCacheValid,
+  purgeExpiredCaches,
 } from '@/lib/offline/offline-cache';
 
 export function CacheWarmer() {
@@ -15,6 +16,13 @@ export function CacheWarmer() {
   const { organization } = useOrg();
   const warmedRefDataRef = useRef(false);
   const warmedFarmsOrgRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Purge stale cached entries on every app init (client-side only)
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      purgeExpiredCaches();
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOnline) return;

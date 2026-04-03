@@ -4,12 +4,13 @@
  * Cross-layer propagation when a shipment advances to the next stage:
  * 1. Update legacy status field (backward compatibility)
  * 2. Log audit event with stage transition details
- * 3. Evaluate escrow trigger (stub — real implementation in Layer 5 payment sprint)
+ * 3. Evaluate escrow state if escrow is enabled for this shipment
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DomainEvent, ShipmentStageAdvancedPayload } from '../types';
 import { logAuditEvent } from '@/lib/audit';
+import { getEscrowStatus } from '@/lib/services/escrow';
 
 /** Maps the 9 pipeline stages to the legacy status field values */
 const STAGE_TO_STATUS: Record<number, string> = {
@@ -38,6 +39,17 @@ export async function handleShipmentStageAdvanced(
     .update({ status: legacyStatus })
     .eq('id', shipmentId);
 
+  // Evaluate escrow state when escrow is configured for this shipment
+  let escrowNote = 'No escrow configured for this shipment';
+  if (escrowEnabled) {
+    const escrowStatus = await getEscrowStatus(shipmentId);
+    if (escrowStatus.escrow) {
+      escrowNote = escrowStatus.hasOpenDispute
+        ? `Escrow has active dispute (id: ${escrowStatus.openDispute?.id}) — releases blocked`
+        : `Escrow active: held=${escrowStatus.escrow.held_amount} ${escrowStatus.escrow.currency}, released=${escrowStatus.escrow.released_amount}`;
+    }
+  }
+
   await logAuditEvent({
     orgId: event.orgId,
     actorId: event.actorId,
@@ -49,12 +61,8 @@ export async function handleShipmentStageAdvanced(
       previousStage,
       newStage,
       legacyStatus,
-      escrowEvaluated: escrowEnabled ?? false,
-      // Escrow release logic is a stub here. The payment sprint builds the full
-      // Blockradar + Circle integration. For now, log that evaluation occurred.
-      escrowNote: escrowEnabled
-        ? 'Escrow trigger evaluated — payment sprint will implement release logic'
-        : 'No escrow configured for this shipment',
+      escrowEnabled: escrowEnabled ?? false,
+      escrowNote,
     },
   });
 }

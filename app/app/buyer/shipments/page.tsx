@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Search, Ship, Package, MapPin, Calendar, Weight, ChevronRight } from 'lucide-react';
+import { ShipmentProofPanel } from '@/components/buyer/shipment-proof-panel';
 
 interface LinkedContract {
   id: string;
@@ -254,6 +255,8 @@ export default function BuyerShipmentsPage() {
                         <span className="font-medium capitalize">{shipment.readiness_decision.replace(/_/g, ' ')}</span>
                       </div>
                     )}
+
+                    <ShipmentProofPanel shipmentId={shipment.id} />
                   </div>
                 </div>
               </CardContent>

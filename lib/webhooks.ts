@@ -173,6 +173,11 @@ export const WEBHOOK_EVENTS = [
   'kyc.submitted',
   'kyc.approved',
   'kyc.rejected',
+  // Escrow
+  'escrow.held',
+  'escrow.released',
+  'escrow.disputed',
+  'dispute.resolved',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
