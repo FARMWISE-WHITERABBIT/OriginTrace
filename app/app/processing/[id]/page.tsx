@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Factory, CheckCircle2, AlertTriangle, Package,
   Loader2, MapPin, Calendar, Scale, Boxes, ArrowRight,
-  QrCode, Layers, Pencil, X, Save,
+  QrCode, Layers, Pencil, X, Save, Ship,
 } from 'lucide-react';
+import { AddToShipmentDialog } from '@/components/shipments/add-to-shipment-dialog';
 
 interface ProcessingRunDetail {
   id: string;
@@ -81,6 +82,7 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ facility_name: '', facility_location: '', notes: '' });
+  const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
 
   const startEdit = () => {
     if (!run) return;
@@ -358,13 +360,26 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
               </CardTitle>
               <CardDescription>Export-ready products produced from this run</CardDescription>
             </div>
-            {finishedGoods.length === 0 && (
-              <Link href={`/app/pedigree?processing_run_id=${run.id}`}>
-                <Button size="sm" variant="outline">
-                  <Package className="h-3.5 w-3.5 mr-1.5" />Create
+            <div className="flex items-center gap-2">
+              {finishedGoods.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAddToShipmentOpen(true)}
+                  className="gap-1.5"
+                >
+                  <Ship className="h-3.5 w-3.5" />
+                  Add to Shipment
                 </Button>
-              </Link>
-            )}
+              )}
+              {finishedGoods.length === 0 && (
+                <Link href={`/app/pedigree?processing_run_id=${run.id}`}>
+                  <Button size="sm" variant="outline">
+                    <Package className="h-3.5 w-3.5 mr-1.5" />Create
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -417,6 +432,21 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
           )}
         </CardContent>
       </Card>
+
+      {/* Add finished goods to shipment */}
+      <AddToShipmentDialog
+        open={addToShipmentOpen}
+        onOpenChange={setAddToShipmentOpen}
+        itemType="finished_good"
+        items={finishedGoods.map((fg) => ({
+          id: fg.id,
+          name: fg.product_name,
+          weight_kg: fg.weight_kg,
+        }))}
+        onLinked={(shipmentId) => {
+          window.location.href = `/app/shipments/${shipmentId}`;
+        }}
+      />
     </div>
   );
 }

@@ -150,6 +150,8 @@ const appNavigation: NavigationConfig = {
         { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
         { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
+        { title: 'Service Providers', url: '/app/service-providers', icon: Store, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
+        { title: 'Shipment Templates', url: '/app/shipment-templates', icon: BookOpen, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
         { title: 'DDS Export', url: '/app/dds', icon: FileText, tourId: 'nav-dds', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'dds_export' },
       ],
     },
