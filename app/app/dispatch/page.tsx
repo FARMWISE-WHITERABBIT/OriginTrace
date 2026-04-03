@@ -192,7 +192,7 @@ function DispatchContent() {
       });
 
       // Prompt to add to shipment instead of immediately navigating away
-      setDispatchedBatchId(batch.id);
+      setDispatchedBatchId(String(batch.id));
       setAddToShipmentOpen(true);
     } catch (error) {
       console.error('Failed to dispatch batch:', error);
