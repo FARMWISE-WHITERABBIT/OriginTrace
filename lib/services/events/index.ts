@@ -21,16 +21,18 @@ import { handleDocumentUploaded }      from './handlers/document-uploaded.handle
 import { handleShipmentStageAdvanced } from './handlers/shipment-stage-advanced.handler';
 import { handleBorderOutcomeRecorded } from './handlers/border-outcome.handler';
 import { handleFarmerInputRecorded }   from './handlers/farmer-input.handler';
+import { handleLabResultUploaded }     from './handlers/lab-result.handler';
 
 type Handler = (event: DomainEvent<any>, supabase: SupabaseClient) => Promise<void>;
 
 const HANDLERS: Partial<Record<DomainEventName, Handler>> = {
-  'farm.registered':       handleFarmRegistered,
-  'batch.created':         handleBatchCreated,
-  'document.uploaded':     handleDocumentUploaded,
+  'farm.registered':         handleFarmRegistered,
+  'batch.created':           handleBatchCreated,
+  'lab_result.uploaded':     handleLabResultUploaded,
+  'document.uploaded':       handleDocumentUploaded,
   'shipment.stage_advanced': handleShipmentStageAdvanced,
   'border_outcome.recorded': handleBorderOutcomeRecorded,
-  'farmer_input.recorded': handleFarmerInputRecorded,
+  'farmer_input.recorded':   handleFarmerInputRecorded,
 };
 
 /**

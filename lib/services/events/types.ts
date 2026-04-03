@@ -46,13 +46,17 @@ export interface BatchCreatedPayload {
 }
 
 export interface LabResultUploadedPayload {
-  documentId: string;
+  labResultId: string;
+  documentId?: string;      // legacy — may be set if doc was uploaded first
   shipmentId?: string;
   batchId?: string;
   finishedGoodId?: string;
-  testType: string; // 'aflatoxin' | 'pesticide_residue' | 'heavy_metal' | 'microbiological' | 'moisture'
+  testType: string; // 'aflatoxin' | 'pesticide_residue' | 'heavy_metal' | 'microbiological' | 'moisture' | 'other'
   result: 'pass' | 'fail' | 'conditional';
-  destinationMarkets: string[];
+  commodity?: string;
+  targetMarkets: string[];  // renamed from destinationMarkets for consistency
+  resultValue?: number;
+  resultUnit?: string;
 }
 
 export interface DocumentUploadedPayload {
