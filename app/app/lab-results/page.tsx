@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,7 +116,7 @@ function ExpiryBadge({ expiryDate }: { expiryDate?: string }) {
   return <span className="text-xs text-muted-foreground">{expiryDate}</span>;
 }
 
-export default function LabResultsPage() {
+function LabResultsPageInner() {
   const searchParams = useSearchParams();
   const prefillBatchId    = searchParams.get('batch_id') ?? '';
   const prefillShipmentId = searchParams.get('shipment_id') ?? '';
@@ -568,5 +568,14 @@ export default function LabResultsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+export default function LabResultsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-[#2E7D6B]" /></div>}>
+      <LabResultsPageInner />
+    </Suspense>
   );
 }
