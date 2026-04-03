@@ -4,6 +4,8 @@ import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
 import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 
+const ALLOWED_SYNC_ROLES = ['admin', 'aggregator', 'agent'];
+
 const syncBatchSchema = z.object({
   local_id: z.string().min(1, 'local_id is required'),
   batch_id: z.string().optional(),
@@ -40,6 +42,9 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     if (profile.role === 'admin' || profile.role === 'aggregator') {
@@ -86,6 +91,9 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     const body = await request.json();
@@ -127,6 +135,9 @@ export async function PUT(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     const body = await request.json();
@@ -169,7 +180,14 @@ export async function PUT(request: NextRequest) {
       }
 
       const farmMap = new Map((farms || []).map((f: any) => [String(f.id), f]));
-      const blocked: Array<{ local_id: string; farm_id?: string; blockers: string[]; warnings: string[] }> = [];
+      const blocked: Array<{
+        local_id: string;
+        farm_id?: string;
+        blockers: string[];
+        blocker_codes: string[];
+        warnings: string[];
+        warning_codes: string[];
+      }> = [];
 
       for (const batch of batches as any[]) {
         const targetMarkets = normalizeMarketCodes(batch.target_markets ?? []);
@@ -187,7 +205,9 @@ export async function PUT(request: NextRequest) {
               local_id: String(batch.local_id),
               farm_id: farmId,
               blockers: eligibility.blockers,
+              blocker_codes: eligibility.blocker_codes,
               warnings: eligibility.warnings,
+              warning_codes: eligibility.warning_codes,
             });
           }
         }

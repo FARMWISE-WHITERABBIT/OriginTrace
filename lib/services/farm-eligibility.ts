@@ -13,6 +13,17 @@
  */
 
 export type EligibilityStatus = 'eligible' | 'conditional' | 'blocked';
+export type EligibilityCode =
+  | 'FARM_REJECTED'
+  | 'MISSING_GPS_BOUNDARY'
+  | 'FAILED_DEFORESTATION_CHECK'
+  | 'MISSING_FARMER_CONSENT'
+  | 'PENDING_COMPLIANCE_REVIEW'
+  | 'DEFORESTATION_CHECK_PENDING'
+  | 'HIGH_DEFORESTATION_RISK'
+  | 'OVERRIDE_NON_ADMIN'
+  | 'OVERRIDE_REASON_TOO_SHORT'
+  | 'ADMIN_OVERRIDE_APPLIED';
 
 export interface FarmRecord {
   id: string;
@@ -31,7 +42,9 @@ export interface FarmEligibilityResult {
   eligible: boolean;
   status: EligibilityStatus;
   blockers: string[];
+  blocker_codes: EligibilityCode[];
   warnings: string[];
+  warning_codes: EligibilityCode[];
 }
 
 /**
@@ -58,50 +71,65 @@ export function checkFarmEligibility(
   override?: { reason: string; actorRole: string }
 ): FarmEligibilityResult {
   const blockers: string[] = [];
+  const blockerCodes: EligibilityCode[] = [];
   const warnings: string[] = [];
+  const warningCodes: EligibilityCode[] = [];
+
+  const addBlocker = (code: EligibilityCode, message: string) => {
+    blockerCodes.push(code);
+    blockers.push(message);
+  };
+  const addWarning = (code: EligibilityCode, message: string) => {
+    warningCodes.push(code);
+    warnings.push(message);
+  };
 
   const isEUDRBound = targetMarkets.some((m) => EUDR_MARKETS.includes(m));
   const isDeforestationMarket = targetMarkets.some((m) => DEFORESTATION_BLOCKED_MARKETS.includes(m));
 
   // ── Rule 1: Rejected farm is always blocked ───────────────────────────────
   if (farm.compliance_status === 'rejected') {
-    blockers.push(
+    addBlocker(
+      'FARM_REJECTED',
       'Farm compliance status is REJECTED. An administrator must review this farm before it can contribute produce.'
     );
   }
 
   // ── Rule 2: No GPS boundary → blocked for EUDR-bound batches ─────────────
   if (isEUDRBound && !farm.boundary_geo) {
-    blockers.push(
+    addBlocker(
+      'MISSING_GPS_BOUNDARY',
       'Farm has no GPS boundary polygon. A GPS boundary is required for EU and UK-bound shipments (EUDR Article 3).'
     );
   }
 
   // ── Rule 3: Failed deforestation check → blocked for EU/UK markets ────────
   if (isDeforestationMarket && farm.deforestation_check?.risk_level === 'failed') {
-    blockers.push(
+    addBlocker(
+      'FAILED_DEFORESTATION_CHECK',
       'Farm has a FAILED deforestation check. EU/UK-bound batches cannot include produce from this farm until an administrator reviews and resolves the deforestation finding.'
     );
   }
 
   // ── Rule 4: No farmer consent → blocked for EUDR batches ─────────────────
   if (isEUDRBound && !farm.consent_timestamp) {
-    blockers.push(
+    addBlocker(
+      'MISSING_FARMER_CONSENT',
       'Farmer consent has not been recorded. Farmer consent is required for EUDR compliance (Article 3). Record consent before assigning this farm to an EU-bound batch.'
     );
   }
 
   // ── Warnings (non-blocking) ───────────────────────────────────────────────
   if (farm.compliance_status === 'pending') {
-    warnings.push('Farm compliance review is pending. Approve or reject before the shipment reaches Documentation stage.');
+    addWarning('PENDING_COMPLIANCE_REVIEW', 'Farm compliance review is pending. Approve or reject before the shipment reaches Documentation stage.');
   }
 
   if (farm.deforestation_check === null && isDeforestationMarket) {
-    warnings.push('Deforestation check has not been run for this farm. Run the check before shipping to the EU or UK.');
+    addWarning('DEFORESTATION_CHECK_PENDING', 'Deforestation check has not been run for this farm. Run the check before shipping to the EU or UK.');
   }
 
   if (farm.deforestation_check?.risk_level === 'high' && !blockers.some((b) => b.includes('deforestation'))) {
-    warnings.push('Farm has a HIGH deforestation risk rating. Ensure additional due diligence is documented.');
+    addWarning('HIGH_DEFORESTATION_RISK', 'Farm has a HIGH deforestation risk rating. Ensure additional due diligence is documented.');
   }
 
   // ── Admin override ────────────────────────────────────────────────────────
@@ -114,7 +142,9 @@ export function checkFarmEligibility(
         eligible: false,
         status: 'blocked',
         blockers: [...blockers, 'Only an admin can override farm compliance gate blockers.'],
+        blocker_codes: [...blockerCodes, 'OVERRIDE_NON_ADMIN'],
         warnings,
+        warning_codes: warningCodes,
       };
     }
     if (!override.reason || override.reason.trim().length < 10) {
@@ -122,7 +152,9 @@ export function checkFarmEligibility(
         eligible: false,
         status: 'blocked',
         blockers: [...blockers, 'Admin override reason is required and must be at least 10 characters.'],
+        blocker_codes: [...blockerCodes, 'OVERRIDE_REASON_TOO_SHORT'],
         warnings,
+        warning_codes: warningCodes,
       };
     }
     // Admin override accepted — return eligible with all warnings
@@ -130,19 +162,21 @@ export function checkFarmEligibility(
       eligible: true,
       status: 'conditional',
       blockers: [],
+      blocker_codes: [],
       warnings: [
         ...warnings,
         ...blockers.map((b) => `[ADMIN OVERRIDE] ${b} — Reason: ${override.reason}`),
       ],
+      warning_codes: [...warningCodes, 'ADMIN_OVERRIDE_APPLIED'],
     };
   }
 
   if (blockers.length > 0) {
-    return { eligible: false, status: 'blocked', blockers, warnings };
+    return { eligible: false, status: 'blocked', blockers, blocker_codes: blockerCodes, warnings, warning_codes: warningCodes };
   }
 
   const status: EligibilityStatus =
     warnings.length > 0 ? 'conditional' : 'eligible';
 
-  return { eligible: true, status, blockers: [], warnings };
+  return { eligible: true, status, blockers: [], blocker_codes: [], warnings, warning_codes: warningCodes };
 }

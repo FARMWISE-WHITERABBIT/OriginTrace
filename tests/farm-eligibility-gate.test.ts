@@ -25,6 +25,7 @@ describe('farm compliance gate', () => {
     expect(eligibility.eligible).toBe(false);
     expect(eligibility.status).toBe('blocked');
     expect(eligibility.blockers.join(' ')).toContain('GPS boundary polygon');
+    expect(eligibility.blocker_codes).toContain('MISSING_GPS_BOUNDARY');
   });
 
   it('allows non-EUDR market when only GPS boundary is missing', () => {
@@ -46,6 +47,7 @@ describe('farm compliance gate', () => {
 
     expect(eligibility.eligible).toBe(false);
     expect(eligibility.blockers.join(' ')).toContain('Only an admin can override');
+    expect(eligibility.blocker_codes).toContain('OVERRIDE_NON_ADMIN');
   });
 
   it('requires admin override reason to be meaningful', () => {
@@ -57,5 +59,6 @@ describe('farm compliance gate', () => {
 
     expect(eligibility.eligible).toBe(false);
     expect(eligibility.blockers.join(' ')).toContain('at least 10 characters');
+    expect(eligibility.blocker_codes).toContain('OVERRIDE_REASON_TOO_SHORT');
   });
 });

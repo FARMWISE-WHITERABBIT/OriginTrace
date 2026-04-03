@@ -136,7 +136,9 @@ export async function POST(request: NextRequest) {
         {
           error: 'Farm Compliance Gate: this farm cannot contribute to this batch.',
           blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
           warnings: eligibility.warnings,
+          warning_codes: eligibility.warning_codes,
           farmId: farm_id,
         },
         { status: 422 }
