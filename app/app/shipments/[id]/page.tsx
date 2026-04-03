@@ -54,6 +54,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DocumentUpload } from '@/components/document-upload';
+import { CostTracker } from '@/components/shipments/cost-tracker';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 
 
@@ -1559,6 +1560,9 @@ export default function ShipmentDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cost of Export & Net Margin */}
+      <CostTracker shipmentId={shipment.id} />
 
       {/* Evidence Package */}
       <Card>

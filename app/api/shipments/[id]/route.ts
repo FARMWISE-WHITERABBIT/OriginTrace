@@ -65,9 +65,11 @@ const shipmentPatchSchema = z.object({
   freight_cost_usd: z.number().optional(),
   customs_fees_ngn: z.number().optional(),
   inspection_fees_ngn: z.number().optional(),
+  phyto_lab_costs_ngn: z.number().optional(),
   certification_costs_ngn: z.number().optional(),
   port_handling_charges_ngn: z.number().optional(),
   freight_insurance_usd: z.number().optional(),
+  usd_ngn_rate: z.number().positive().optional(),
 
   // ── Outcome (Stage 9 close) ────────────────────────────────────────────────
   shipment_outcome: z.enum(['accepted', 'rejected', 'conditional']).optional(),
