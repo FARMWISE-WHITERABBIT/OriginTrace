@@ -438,6 +438,17 @@ export default function InventoryPage() {
                             Dispatch
                           </Button>
                         )}
+                        {batch.status === 'dispatched' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-muted-foreground"
+                            onClick={() => router.push(`/app/dispatch/${batch.id}`)}
+                          >
+                            <Truck className="h-3.5 w-3.5 mr-1 text-green-600" />
+                            View
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -453,6 +464,22 @@ export default function InventoryPage() {
         <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
           <span className="text-sm font-medium text-muted-foreground">{selected.size} batch{selected.size !== 1 ? 'es' : ''} selected</span>
           <div className="w-px h-4 bg-border" />
+          {(() => {
+            const dispatchable = filteredBatches.filter(b => selected.has(b.id) && ['completed', 'aggregated', 'resolved'].includes(b.status));
+            return dispatchable.length > 0 ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => {
+                  const ids = dispatchable.map(b => b.id).join(',');
+                  router.push(`/app/dispatch?batches=${ids}`);
+                }}
+              >
+                <Truck className="h-3.5 w-3.5 mr-1.5" />
+                Dispatch {dispatchable.length > 1 ? `${dispatchable.length} Batches` : 'Batch'}
+              </Button>
+            ) : null;
+          })()}
           <Button
             size="sm"
             variant="outline"

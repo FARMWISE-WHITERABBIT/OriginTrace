@@ -135,10 +135,10 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
-    const paymentAllowedRoles = ['admin', 'aggregator'];
+    const paymentAllowedRoles = ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'];
     if (!paymentAllowedRoles.includes(profile.role as string)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions' },
+        { error: 'Insufficient permissions to record payments' },
         { status: 403 }
       );
     }

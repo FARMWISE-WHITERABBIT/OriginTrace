@@ -50,6 +50,8 @@ interface ContributionItem {
   complianceStatus: string;
 }
 
+const DISPATCHABLE = ['completed', 'aggregated', 'resolved'];
+
 function DispatchPageInner() {
   return (
     <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
@@ -67,9 +69,17 @@ function DispatchPageInner() {
 function DispatchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const batchIdParam = searchParams.get('batch');
 
-  const [batch, setBatch] = useState<Batch | null>(null);
+  // Support single: ?batch=id  OR  multi: ?batches=id1,id2,id3
+  const batchIdParam  = searchParams.get('batch');
+  const batchesParam  = searchParams.get('batches');
+  const batchIds: string[] = batchesParam
+    ? batchesParam.split(',').map(s => s.trim()).filter(Boolean)
+    : batchIdParam
+    ? [batchIdParam]
+    : [];
+
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [bags, setBags] = useState<BagItem[]>([]);
   const [contributions, setContributions] = useState<ContributionItem[]>([]);
   const [destination, setDestination] = useState('');
@@ -78,57 +88,67 @@ function DispatchContent() {
   const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
-  const [dispatchedBatchId, setDispatchedBatchId] = useState<string | null>(null);
+  const [dispatchedIds, setDispatchedIds] = useState<string[]>([]);
   const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
   const { profile, organization } = useOrg();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!batchIdParam) {
+    if (batchIds.length === 0) {
       setIsLoading(false);
       return;
     }
 
-    async function fetchBatch() {
+    async function fetchAllBatches() {
       try {
-        const res = await fetch(`/api/batches/${batchIdParam}`);
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to load batch');
-        }
-        const data = await res.json();
-        const b = data.batch;
+        const results = await Promise.all(
+          batchIds.map(id =>
+            fetch(`/api/batches/${id}`)
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null)
+          )
+        );
 
-        const farmData = Array.isArray(b.farm) ? b.farm[0] : b.farm;
-        setBatch({
-          id: b.id,
-          batch_code: b.batch_code ?? null,
-          status: b.status,
-          commodity: b.commodity ?? '',
-          total_weight: parseFloat(b.total_weight) || 0,
-          bag_count: b.bag_count ?? 0,
-          farm: farmData
-            ? { farmer_name: farmData.farmer_name ?? 'Unknown', community: farmData.community ?? 'Unknown' }
-            : { farmer_name: 'Unknown', community: 'Unknown' },
-        });
+        const loaded: Batch[] = [];
+        const allBags: BagItem[] = [];
+        const allContributions: ContributionItem[] = [];
 
-        if (data.bags?.length > 0) {
-          setBags(data.bags.map((bg: any) => ({
-            serial: bg.serial || '-',
-            weight: parseFloat(bg.weight_kg) || 0,
-            grade: bg.grade || 'Standard',
-          })));
+        for (const data of results) {
+          if (!data?.batch) continue;
+          const b = data.batch;
+          const farmData = Array.isArray(b.farm) ? b.farm[0] : b.farm;
+          loaded.push({
+            id: b.id,
+            batch_code: b.batch_code ?? null,
+            status: b.status,
+            commodity: b.commodity ?? '',
+            total_weight: parseFloat(b.total_weight) || 0,
+            bag_count: b.bag_count ?? 0,
+            farm: farmData
+              ? { farmer_name: farmData.farmer_name ?? 'Unknown', community: farmData.community ?? 'Unknown' }
+              : { farmer_name: 'Unknown', community: 'Unknown' },
+          });
+          if (data.bags?.length > 0) {
+            allBags.push(...data.bags.map((bg: any) => ({
+              serial: bg.serial || '-',
+              weight: parseFloat(bg.weight_kg) || 0,
+              grade: bg.grade || 'Standard',
+            })));
+          }
+          if (data.contributions?.length > 0) {
+            allContributions.push(...data.contributions.map((c: any) => ({
+              farmerName: c.farmer_name || 'Unknown',
+              community: c.community || '-',
+              bagCount: c.bag_count || 0,
+              weightKg: parseFloat(c.weight_kg) || 0,
+              complianceStatus: c.compliance_status || 'pending',
+            })));
+          }
         }
 
-        if (data.contributions?.length > 0) {
-          setContributions(data.contributions.map((c: any) => ({
-            farmerName: c.farmer_name || 'Unknown',
-            community: c.community || '-',
-            bagCount: c.bag_count || 0,
-            weightKg: parseFloat(c.weight_kg) || 0,
-            complianceStatus: c.compliance_status || 'pending',
-          })));
-        }
+        setBatches(loaded);
+        setBags(allBags);
+        setContributions(allContributions);
       } catch (err: any) {
         toast({
           title: 'Error',
@@ -140,36 +160,47 @@ function DispatchContent() {
       }
     }
 
-    fetchBatch();
-  }, [batchIdParam, toast]);
+    fetchAllBatches();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchesParam, batchIdParam]);
 
   const handleDispatch = async () => {
-    if (!batch || !destination.trim() || !confirmDispatch) return;
+    if (batches.length === 0 || !destination.trim() || !confirmDispatch) return;
     setIsDispatching(true);
     try {
-      const res = await fetch(`/api/batches/${batch.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'dispatch',
-          dispatch_destination: destination.trim(),
-          vehicle_reference: vehicleRef.trim() || null,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to dispatch');
+      const results = await Promise.all(
+        batches.map(batch =>
+          fetch(`/api/batches/${batch.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'dispatch',
+              dispatch_destination: destination.trim(),
+              vehicle_reference: vehicleRef.trim() || null,
+            }),
+          }).then(r => r.json().then(j => ({ ok: r.ok, json: j, id: batch.id })))
+        )
+      );
 
+      const failed = results.filter(r => !r.ok);
+      if (failed.length > 0) {
+        throw new Error(failed[0].json.error || 'Failed to dispatch one or more batches');
+      }
+
+      const label = batches.length === 1
+        ? `Batch ${batches[0].batch_code || batches[0].id.slice(0, 8)}`
+        : `${batches.length} batches`;
       toast({
-        title: 'Batch Dispatched',
-        description: `Batch ${batch.batch_code || batch.id} has been dispatched to ${destination}`,
+        title: 'Dispatched',
+        description: `${label} dispatched to ${destination}`,
       });
 
-      setDispatchedBatchId(batch.id);
+      setDispatchedIds(batches.map(b => b.id));
       setAddToShipmentOpen(true);
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err.message || 'Failed to dispatch batch',
+        description: err.message || 'Failed to dispatch',
         variant: 'destructive',
       });
     } finally {
@@ -185,17 +216,19 @@ function DispatchContent() {
     );
   }
 
-  if (!batchIdParam) {
+  if (batchIds.length === 0) {
     router.replace('/app/inventory');
     return null;
   }
 
-  if (!batch) {
+  if (batches.length === 0) {
     return (
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Batch Not Found</h2>
-        <p className="text-muted-foreground mb-4">Could not load this batch. It may have been deleted or you may not have access.</p>
+        <h2 className="text-xl font-semibold mb-2">Batches Not Found</h2>
+        <p className="text-muted-foreground mb-4">
+          Could not load the selected batch(es). They may have been deleted or you may not have access.
+        </p>
         <Link href="/app/inventory">
           <Button>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -206,12 +239,18 @@ function DispatchContent() {
     );
   }
 
-  if (batch.status === 'dispatched') {
+  const alreadyDispatched = batches.filter(b => b.status === 'dispatched');
+  const notReady = batches.filter(b => !DISPATCHABLE.includes(b.status) && b.status !== 'dispatched');
+  const dispatchable = batches.filter(b => DISPATCHABLE.includes(b.status));
+
+  if (alreadyDispatched.length === batches.length) {
     return (
       <div className="text-center py-12">
         <Truck className="h-12 w-12 mx-auto text-green-600 mb-4" />
         <h2 className="text-xl font-semibold mb-2">Already Dispatched</h2>
-        <p className="text-muted-foreground mb-4">This batch has already been dispatched.</p>
+        <p className="text-muted-foreground mb-4">
+          {batches.length === 1 ? 'This batch has' : 'These batches have'} already been dispatched.
+        </p>
         <Link href="/app/inventory">
           <Button>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -222,22 +261,25 @@ function DispatchContent() {
     );
   }
 
-  const DISPATCHABLE = ['completed', 'aggregated', 'resolved'];
-  const canDispatch = DISPATCHABLE.includes(batch.status);
-  if (!canDispatch) {
+  if (notReady.length === batches.length) {
     return (
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Batch Not Ready</h2>
+        <h2 className="text-xl font-semibold mb-2">Batches Not Ready</h2>
         <p className="text-muted-foreground mb-4">
-          This batch must be in <span className="font-mono">completed</span>, <span className="font-mono">aggregated</span>, or <span className="font-mono">resolved</span> status before it can be dispatched. Current status: <span className="font-mono font-semibold">{batch.status}</span>
+          Selected batches must be in <span className="font-mono">completed</span>,{' '}
+          <span className="font-mono">aggregated</span>, or <span className="font-mono">resolved</span> status before dispatch.
         </p>
-        <Link href={`/app/inventory/${batch.id}`}>
-          <Button variant="outline">View Batch Details</Button>
+        <Link href="/app/inventory">
+          <Button variant="outline">Back to Inventory</Button>
         </Link>
       </div>
     );
   }
+
+  const totalWeight = dispatchable.reduce((s, b) => s + b.total_weight, 0);
+  const totalBags   = dispatchable.reduce((s, b) => s + b.bag_count, 0);
+  const isMulti     = dispatchable.length > 1;
 
   return (
     <div className="space-y-6">
@@ -249,18 +291,23 @@ function DispatchContent() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
-            Dispatch Batch
+            Dispatch {isMulti ? `${dispatchable.length} Batches` : 'Batch'}
           </h1>
           <p className="text-muted-foreground">
-            Batch: {batch.batch_code || `#${batch.id}`}
+            {isMulti
+              ? `${totalBags} bags · ${totalWeight.toFixed(1)} kg total`
+              : `Batch: ${dispatchable[0]?.batch_code || `#${dispatchable[0]?.id}`}`}
           </p>
         </div>
-        <Badge variant="secondary" className="ml-auto">
-          {batch.status}
-        </Badge>
+        {notReady.length > 0 && (
+          <Badge variant="outline" className="ml-auto text-amber-600 border-amber-300">
+            {notReady.length} batch{notReady.length > 1 ? 'es' : ''} skipped (not ready)
+          </Badge>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Dispatch form */}
         <Card className="card-accent-blue">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -298,7 +345,7 @@ function DispatchContent() {
               <Label htmlFor="driverPhone">Driver Phone (optional)</Label>
               <Input
                 id="driverPhone"
-                placeholder="e.g., +234..."
+                placeholder="e.g., +234…"
                 value={driverPhone}
                 onChange={(e) => setDriverPhone(e.target.value)}
                 data-testid="input-driver-phone"
@@ -313,8 +360,8 @@ function DispatchContent() {
                 data-testid="checkbox-confirm-dispatch"
               />
               <label htmlFor="confirmDispatch" className="text-sm cursor-pointer">
-                I confirm that the batch has been loaded and is ready for transport.
-                After dispatch, the batch cannot be edited.
+                I confirm {isMulti ? 'these batches have' : 'this batch has'} been loaded and {isMulti ? 'are' : 'is'} ready
+                for transport. After dispatch, {isMulti ? 'they' : 'it'} cannot be edited.
               </label>
             </div>
 
@@ -329,72 +376,111 @@ function DispatchContent() {
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Dispatch Batch
+              Dispatch {isMulti ? `${dispatchable.length} Batches` : 'Batch'}
             </Button>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={async () => {
-                const { generateWaybillPDF } = await import('@/lib/export/waybill-pdf');
-                const doc = generateWaybillPDF({
-                  orgName: organization?.name || 'OriginTrace',
-                  batchId: batch.batch_code || `#${batch.id}`,
-                  commodity: batch.commodity || '-',
-                  farmerName: batch.farm.farmer_name,
-                  community: batch.farm.community,
-                  bagCount: batch.bag_count,
-                  totalWeight: batch.total_weight,
-                  destination: destination || '-',
-                  vehicleRef: vehicleRef || undefined,
-                  driverPhone: driverPhone || undefined,
-                  collectedBy: profile?.full_name || 'Unknown',
-                  collectionDate: new Date().toLocaleDateString(),
-                  bags: bags.length > 0 ? bags : undefined,
-                  contributions: contributions.length > 0 ? contributions : undefined,
-                });
-                doc.save(`waybill-${batch.batch_code || batch.id}.pdf`);
-              }}
-              data-testid="button-download-waybill"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Download Waybill PDF
-            </Button>
+            {!isMulti && dispatchable[0] && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  const { generateWaybillPDF } = await import('@/lib/export/waybill-pdf');
+                  const b = dispatchable[0];
+                  const doc = generateWaybillPDF({
+                    orgName: organization?.name || 'OriginTrace',
+                    batchId: b.batch_code || `#${b.id}`,
+                    commodity: b.commodity || '-',
+                    farmerName: b.farm.farmer_name,
+                    community: b.farm.community,
+                    bagCount: b.bag_count,
+                    totalWeight: b.total_weight,
+                    destination: destination || '-',
+                    vehicleRef: vehicleRef || undefined,
+                    driverPhone: driverPhone || undefined,
+                    collectedBy: profile?.full_name || 'Unknown',
+                    collectionDate: new Date().toLocaleDateString(),
+                    bags: bags.length > 0 ? bags : undefined,
+                    contributions: contributions.length > 0 ? contributions : undefined,
+                  });
+                  doc.save(`waybill-${b.batch_code || b.id}.pdf`);
+                }}
+                data-testid="button-download-waybill"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Download Waybill PDF
+              </Button>
+            )}
           </CardContent>
         </Card>
 
+        {/* Batch summary */}
         <Card className="card-accent-emerald">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-emerald shrink-0">
                 <Package className="h-4 w-4" />
               </div>
-              Batch Summary
+              {isMulti ? 'Selected Batches' : 'Batch Summary'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {[
-              { label: 'Batch ID',  value: batch.batch_code || `#${batch.id}`, mono: true },
-              { label: 'Farmer',    value: batch.farm.farmer_name },
-              { label: 'Community', value: batch.farm.community },
-              { label: 'Commodity', value: batch.commodity || '—' },
-              { label: 'Bags',      value: String(batch.bag_count) },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
-                <span className="text-sm text-muted-foreground">{row.label}</span>
-                <span className={`font-medium text-sm ${row.mono ? 'font-mono' : ''}`}>{row.value}</span>
+          <CardContent className="space-y-3">
+            {dispatchable.map((b) => (
+              <div key={b.id} className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-semibold">{b.batch_code || `#${b.id.slice(0, 8)}`}</span>
+                  <Badge variant="secondary" className="text-xs">{b.status}</Badge>
+                </div>
+                {isMulti && (
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <span className="text-muted-foreground">Farmer</span>
+                    <span className="font-medium truncate">{b.farm.farmer_name}</span>
+                    <span className="text-muted-foreground">Community</span>
+                    <span className="font-medium">{b.farm.community}</span>
+                    <span className="text-muted-foreground">Commodity</span>
+                    <span className="font-medium">{b.commodity || '—'}</span>
+                    <span className="text-muted-foreground">Weight</span>
+                    <span className="font-medium">{b.total_weight.toFixed(1)} kg</span>
+                  </div>
+                )}
+                {!isMulti && (
+                  <div className="space-y-1.5">
+                    {[
+                      { label: 'Farmer',    value: b.farm.farmer_name },
+                      { label: 'Community', value: b.farm.community },
+                      { label: 'Commodity', value: b.commodity || '—' },
+                      { label: 'Bags',      value: String(b.bag_count) },
+                    ].map(row => (
+                      <div key={row.label} className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{row.label}</span>
+                        <span className="text-xs font-medium">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/8 border border-primary/20">
-              <span className="text-sm font-semibold text-primary">Total Weight</span>
-              <span className="font-bold text-xl text-primary">{batch.total_weight.toFixed(1)} kg</span>
-            </div>
+
+            {isMulti && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/8 border border-primary/20">
+                <span className="text-sm font-semibold text-primary">Total</span>
+                <div className="text-right">
+                  <p className="font-bold text-lg text-primary">{totalWeight.toFixed(1)} kg</p>
+                  <p className="text-xs text-muted-foreground">{totalBags} bags · {dispatchable.length} batches</p>
+                </div>
+              </div>
+            )}
+            {!isMulti && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/8 border border-primary/20">
+                <span className="text-sm font-semibold text-primary">Total Weight</span>
+                <span className="font-bold text-xl text-primary">{totalWeight.toFixed(1)} kg</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* After dispatch: prompt to add batch to a shipment */}
-      {dispatchedBatchId && batch && (
+      {/* After dispatch: prompt to add to shipment */}
+      {dispatchedIds.length > 0 && (
         <AddToShipmentDialog
           open={addToShipmentOpen}
           onOpenChange={(v) => {
@@ -402,11 +488,14 @@ function DispatchContent() {
             if (!v) router.push('/app/inventory');
           }}
           itemType="batch"
-          items={[{
-            id: dispatchedBatchId,
-            name: batch.batch_code ?? `Batch ${dispatchedBatchId.slice(0, 8)}`,
-            weight_kg: batch.total_weight,
-          }]}
+          items={dispatchedIds.map(id => {
+            const b = batches.find(x => x.id === id)!;
+            return {
+              id,
+              name: b.batch_code ?? `Batch ${id.slice(0, 8)}`,
+              weight_kg: b.total_weight,
+            };
+          })}
           onLinked={(shipmentId) => {
             router.push(`/app/shipments/${shipmentId}`);
           }}
