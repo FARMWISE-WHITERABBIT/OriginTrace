@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
       .from('disbursement_calculations')
       .select(`
         *,
-        farmer_bank_accounts!farm_id(id, account_name, bank_name, is_verified, paystack_recipient_code),
         collection_batches!batch_id(batch_code, commodity)
       `, { count: 'exact' })
       .eq('org_id', profile.org_id)
@@ -37,8 +36,9 @@ export async function GET(request: NextRequest) {
 
     const { data, error, count } = await query;
     if (error) {
-      // Table not yet migrated — return empty instead of 500
-      if ((error as any).code === 'PGRST205' || error.message?.includes('disbursement_calculations')) {
+      // Table or related object not yet migrated — return empty instead of 500
+      const code = (error as any).code;
+      if (code === 'PGRST205' || code === 'PGRST200' || error.message?.includes('disbursement') || error.message?.includes('relation')) {
         return NextResponse.json({ disbursements: [], total: 0, page, limit });
       }
       throw error;
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const batchId = body.batch_id;
-    if (!batchId || typeof batchId !== 'number') {
-      return NextResponse.json({ error: 'batch_id (number) is required' }, { status: 400 });
+    if (!batchId || typeof batchId !== 'string') {
+      return NextResponse.json({ error: 'batch_id (UUID string) is required' }, { status: 400 });
     }
 
     const result = await computeBatchDisbursements(batchId, profile.org_id);

@@ -16,11 +16,24 @@ export async function GET(request: NextRequest) {
     if (profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const supabase = createAdminClient();
-    const { data: org } = await supabase
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('blockradar_wallet_id, usdc_deposit_address, usdc_balance, grey_virtual_accounts, name')
       .eq('id', profile.org_id)
       .single();
+
+    // If wallet columns don't exist yet (migration not applied), return a default unprovisioned state
+    if (orgError) {
+      const code = (orgError as any).code;
+      if (code === 'PGRST205' || code === 'PGRST200' || code === '42703') {
+        return NextResponse.json({
+          usdc: { provisioned: false, wallet_id: null, balance: 0, deposit_address: null, networks: ['polygon', 'ethereum', 'tron'] },
+          ngn: { balance: null, currency: 'NGN' },
+          virtual_accounts: [],
+        });
+      }
+      return NextResponse.json({ error: orgError.message }, { status: 500 });
+    }
 
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
 
@@ -94,12 +107,13 @@ export async function POST(request: NextRequest) {
     if (profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const supabase = createAdminClient();
-    const { data: org } = await supabase
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('blockradar_wallet_id, name')
       .eq('id', profile.org_id)
       .single();
 
+    if (orgError) return NextResponse.json({ error: orgError.message }, { status: 500 });
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
 
     if (org.blockradar_wallet_id) {

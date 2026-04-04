@@ -70,7 +70,13 @@ export async function GET(request: NextRequest) {
     if (result)         query = query.eq('result', result);
 
     const { data, error, count } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      const code = (error as any).code;
+      if (code === 'PGRST205' || code === 'PGRST200' || error.message?.includes('lab_results')) {
+        return NextResponse.json({ results: [], total: 0, page, pageSize });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ results: data, total: count, page, pageSize });
   } catch (error) {
