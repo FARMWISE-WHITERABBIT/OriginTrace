@@ -101,7 +101,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function WalletPage() {
+export function WalletContent() {
   const { organization } = useOrg();
   const { toast } = useToast();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -181,8 +181,7 @@ export default function WalletPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-semibold">Wallet</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground">
             Manage inbound payments — NGN balance, USDC wallet, and virtual bank accounts
           </p>
         </div>
@@ -444,3 +443,5 @@ export default function WalletPage() {
     </div>
   );
 }
+
+export default WalletContent;

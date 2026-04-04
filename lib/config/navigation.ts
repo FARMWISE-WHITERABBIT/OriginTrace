@@ -130,14 +130,13 @@ const appNavigation: NavigationConfig = {
     // ── 3. COLLECTION ─────────────────────────────────────────────────────────
     {
       label: 'COLLECTION',
-      allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'],
+      allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'warehouse_supervisor'],
       items: [
         { title: 'Smart Collect', url: '/app/collect', icon: PlusCircle, tourId: 'nav-collect', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'smart_collect' },
         { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'inventory' },
+        { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
         { title: 'Payments', url: '/app/payments', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
-        { title: 'Disbursements', url: '/app/payments/disbursements', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
-        { title: 'Wallet', url: '/app/payments/wallet', icon: CreditCard, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'payments' },
         { title: 'Sync', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
       ],
     },
@@ -150,7 +149,6 @@ const appNavigation: NavigationConfig = {
         { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'processing' },
         { title: 'Pedigree', url: '/app/pedigree', icon: QrCode, tourId: 'nav-pedigree', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'pedigree' },
         { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
-        { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
         { title: 'Service Providers', url: '/app/service-providers', icon: Store, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
         { title: 'Shipment Templates', url: '/app/shipment-templates', icon: BookOpen, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },

@@ -186,7 +186,7 @@ function PayDialog({
   );
 }
 
-export default function DisbursementsPage() {
+export function DisbursementsContent() {
   const { organization } = useOrg();
   const { toast } = useToast();
   const [disbursements, setDisbursements] = useState<DisbursementRow[]>([]);
@@ -286,8 +286,7 @@ export default function DisbursementsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-semibold">Farmer Disbursements</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground">
             Review, approve, and execute payments to farmers and aggregators
           </p>
         </div>
@@ -519,3 +518,5 @@ export default function DisbursementsPage() {
     </div>
   );
 }
+
+export default DisbursementsContent;

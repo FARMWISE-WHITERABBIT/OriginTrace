@@ -2,7 +2,10 @@
 import { Suspense } from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DisbursementsContent } from './disbursements/page';
+import { WalletContent } from './wallet/page';
 import { PaymentTableSkeleton } from '@/components/skeletons';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
@@ -206,8 +209,7 @@ function PaymentsPageInner() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Payment Tracking</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Record and track payments to farmers, aggregators, and suppliers</p>
+            <p className="text-sm text-muted-foreground">Record and track payments to farmers, aggregators, and suppliers</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" onClick={handleExportCSV} disabled={payments.length===0} data-testid="button-export-csv"><Download className="h-4 w-4 mr-2"/>Export CSV</Button>
@@ -637,10 +639,47 @@ function FarmerBankAccountsTab() {
   );
 }
 
+function PaymentsPageWithTabs() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') ?? 'transactions';
+
+  const switchTab = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    // Preserve contract deep-link params when switching tabs
+    params.set('tab', tab);
+    router.replace(`/app/payments?${params.toString()}`);
+  };
+
+  return (
+    <div className="flex-1 space-y-0">
+      <div className="border-b px-6 pt-6 pb-0">
+        <h1 className="text-xl font-semibold mb-4">Payments</h1>
+        <Tabs value={activeTab} onValueChange={switchTab}>
+          <TabsList className="h-9">
+            <TabsTrigger value="transactions" className="text-sm">Transactions</TabsTrigger>
+            <TabsTrigger value="disbursements" className="text-sm">Disbursements</TabsTrigger>
+            <TabsTrigger value="wallet" className="text-sm">Wallet</TabsTrigger>
+          </TabsList>
+          <TabsContent value="transactions" className="mt-0">
+            <PaymentsPageInner />
+          </TabsContent>
+          <TabsContent value="disbursements" className="mt-0">
+            <DisbursementsContent />
+          </TabsContent>
+          <TabsContent value="wallet" className="mt-0">
+            <WalletContent />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
 export default function PaymentsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-      <PaymentsPageInner />
+      <PaymentsPageWithTabs />
     </Suspense>
   );
 }

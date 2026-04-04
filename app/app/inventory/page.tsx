@@ -396,6 +396,7 @@ export default function InventoryPage() {
                     <TableHead>Weight</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Date</TableHead>
+                    <TableHead className="w-24 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -420,6 +421,19 @@ export default function InventoryPage() {
                       <TableCell><StatusBadge domain="batch" status={batch.status} /></TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {new Date(batch.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        {['completed', 'aggregated'].includes(batch.status) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => router.push(`/app/dispatch?batch=${batch.id}`)}
+                          >
+                            <Truck className="h-3.5 w-3.5 mr-1" />
+                            Dispatch
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
