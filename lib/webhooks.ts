@@ -152,14 +152,9 @@ export const WEBHOOK_EVENTS = [
   'document.expired',
   // Compliance
   'compliance.changed',
-  'lab_result.uploaded',
-  'lab_result.non_compliant',
   // Payments
-  'payment.received',
   'payment.recorded',
   'payment.disbursed',
-  'payment.transfer_completed',
-  'payment.transfer_failed',
   // Farms
   'farm.approved',
   'farm.rejected',
@@ -168,17 +163,6 @@ export const WEBHOOK_EVENTS = [
   // Trade
   'tender.created',
   'tender.awarded',
-  // Evidence
-  'evidence_package.created',
-  // KYC
-  'kyc.submitted',
-  'kyc.approved',
-  'kyc.rejected',
-  // Escrow
-  'escrow.held',
-  'escrow.released',
-  'escrow.disputed',
-  'dispute.resolved',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
