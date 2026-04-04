@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
-import { sendSMS, buildPaymentConfirmationSMS, buildPaymentFailureSMS } from '@/lib/notifications/termii';
+import { sendSMS, buildPaymentConfirmationSMS } from '@/lib/notifications/termii';
 import { createTransferRecipient, initiateTransfer } from '@/lib/payments/paystack';
 import { getPaymentProvider } from '@/lib/payments';
 import { z } from 'zod';
@@ -254,15 +254,13 @@ export async function POST(
 
     const farmerPhone = farm?.phone;
     if (farmerPhone) {
-      const smsText = disbursementStatus !== 'failed'
-        ? buildPaymentConfirmationSMS({
-            amount,
-            currency,
-            weightKg: Number(calc.weight_kg),
-            commodity,
-            reference,
-          })
-        : buildPaymentFailureSMS({ amount, currency, reference });
+      const smsText = buildPaymentConfirmationSMS({
+        amount,
+        currency,
+        weightKg: Number(calc.weight_kg),
+        commodity,
+        reference,
+      });
       sendSMS({ to: farmerPhone, sms: smsText }).catch(() => {});
     }
 
