@@ -21,7 +21,7 @@ import {
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
   Sprout, ShieldCheck, Clock, Activity, Plus, Trash2, IdCard,
-  Upload, ExternalLink,
+  Upload, ExternalLink, DollarSign, Banknote, CreditCard, ArrowDownToLine, CheckCircle,
 } from 'lucide-react';
 
 interface FarmerData {
@@ -31,6 +31,8 @@ interface FarmerData {
   inputs: any[];
   training: any[];
   files: any[];
+  payments: any[];
+  disbursements: any[];
 }
 
 const COMPLIANCE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -110,6 +112,19 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     status: 'not_started',
     score: '',
     completed_at: '',
+  });
+
+  // Payment recording
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    currency: 'NGN',
+    payment_method: 'bank_transfer',
+    reference_number: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    linked_batch_id: '',
+    notes: '',
   });
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
@@ -272,6 +287,42 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     } finally { setDeletingTrainingId(null); }
   }
 
+  async function handleRecordPayment() {
+    if (!data || !paymentForm.amount) return;
+    setSavingPayment(true);
+    try {
+      const body: any = {
+        payee_name: data.farm.farmer_name,
+        payee_type: 'farmer',
+        amount: parseFloat(paymentForm.amount),
+        currency: paymentForm.currency,
+        payment_method: paymentForm.payment_method,
+        reference_number: paymentForm.reference_number || undefined,
+        payment_date: paymentForm.payment_date,
+        notes: paymentForm.notes || undefined,
+      };
+      if (paymentForm.linked_batch_id) {
+        body.linked_entity_type = 'collection_batch';
+        body.linked_entity_id = parseInt(paymentForm.linked_batch_id);
+      }
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      setData(prev => prev ? { ...prev, payments: [json.payment, ...prev.payments] } : prev);
+      setPaymentSheetOpen(false);
+      setPaymentForm({ amount: '', currency: 'NGN', payment_method: 'bank_transfer', reference_number: '', payment_date: new Date().toISOString().split('T')[0], linked_batch_id: '', notes: '' });
+      toast({ title: 'Payment recorded' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -282,10 +333,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   if (!data) { notFound(); return null; }
 
-  const { farm, ledger, batches, inputs, training, files } = data;
+  const { farm, ledger, batches, inputs, training, files, payments, disbursements } = data;
   const statusCfg = COMPLIANCE_STATUS_CONFIG[farm.compliance_status] || COMPLIANCE_STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
   const completedTraining = training.filter((t: any) => t.status === 'completed').length;
+  const totalDisbursed = (disbursements || []).filter((d: any) => d.status === 'disbursed').reduce((s: number, d: any) => s + (d.net_amount || 0), 0);
+  const pendingDisbursements = (disbursements || []).filter((d: any) => d.status === 'pending' || d.status === 'approved');
+  const totalDirectPayments = (payments || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -358,6 +412,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <Package className="h-3.5 w-3.5" />
             Batches
             {batches.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{batches.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5" />
+            Payments
+            {((disbursements?.length || 0) + (payments?.length || 0)) > 0 && (
+              <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{(disbursements?.length || 0) + (payments?.length || 0)}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" />Activity
@@ -756,6 +817,168 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                       </div>
                     </Link>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Payments Tab ── */}
+        <TabsContent value="payments" className="mt-4 space-y-4">
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Total Disbursed</p>
+                    <p className="text-lg font-bold">₦{totalDisbursed.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-emerald">
+                    <Banknote className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="card-accent-amber transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Pending</p>
+                    <p className="text-lg font-bold">{pendingDisbursements.length}</p>
+                    <p className="text-xs text-muted-foreground">disbursements</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-amber">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Direct Payments</p>
+                    <p className="text-lg font-bold">₦{totalDirectPayments.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-blue">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Disbursements from batches */}
+          <Card className="card-accent-emerald">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0"><ArrowDownToLine className="h-3.5 w-3.5" /></div>
+                  Batch Disbursements
+                </CardTitle>
+                <Link href="/app/payments/disbursements">
+                  <Button size="sm" variant="outline" className="h-7 text-xs">View All</Button>
+                </Link>
+              </div>
+              <CardDescription className="mt-1">Calculated disbursements linked to collection batches for this farmer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!disbursements || disbursements.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><Banknote className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No disbursements yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">Disbursements are calculated automatically when this farmer&apos;s produce is collected into a batch and the batch is processed.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {disbursements.map((d: any) => {
+                    const sc = d.status === 'disbursed' ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                      : d.status === 'approved' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      : d.status === 'failed' ? 'bg-red-500/10 text-red-700 dark:text-red-400'
+                      : 'bg-amber-500/10 text-amber-700 dark:text-amber-400';
+                    const batchCode = d.collection_batches?.batch_code || d.batch_id?.toString().slice(0,8) || '—';
+                    const commodity = d.collection_batches?.commodity;
+                    return (
+                      <div key={d.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-mono font-medium truncate">{batchCode}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {Number(d.weight_kg || 0).toLocaleString()} kg{commodity ? ` · ${commodity}` : ''}
+                              {d.price_per_kg ? ` · ₦${Number(d.price_per_kg).toLocaleString()}/kg` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-bold">₦{Number(d.net_amount || 0).toLocaleString()}</p>
+                            {d.deductions > 0 && <p className="text-xs text-muted-foreground">-₦{Number(d.deductions).toLocaleString()} deductions</p>}
+                          </div>
+                          <Badge variant="outline" className={`text-xs capitalize ${sc}`}>{d.status}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Direct payments */}
+          <Card className="card-accent-blue">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><CreditCard className="h-3.5 w-3.5" /></div>
+                  Direct Payments
+                </CardTitle>
+                {canEdit && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPaymentSheetOpen(true)}>
+                    <Plus className="h-3 w-3 mr-1" />Record Payment
+                  </Button>
+                )}
+              </div>
+              <CardDescription className="mt-1">Ad-hoc cash advances, bonus payments, or direct transfers to this farmer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!payments || payments.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><DollarSign className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No direct payments recorded</p>
+                  <p className="text-xs text-muted-foreground mt-1">Record cash advances, bonus payments, or direct transfers.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={() => setPaymentSheetOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Record First Payment</Button>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {payments.map((p: any) => {
+                    const methodLabel: Record<string, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', mobile_money: 'Mobile Money', cheque: 'Cheque' };
+                    return (
+                      <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{methodLabel[p.payment_method] || p.payment_method}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—'}
+                              {p.reference_number ? ` · Ref: ${p.reference_number}` : ''}
+                            </p>
+                            {p.notes && <p className="text-xs text-muted-foreground italic">{p.notes}</p>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold">{p.currency || 'NGN'} {Number(p.amount || 0).toLocaleString()}</p>
+                          <Badge variant="outline" className="text-xs capitalize bg-green-500/10 text-green-700 dark:text-green-400">{p.status || 'completed'}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
