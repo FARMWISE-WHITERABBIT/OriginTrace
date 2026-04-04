@@ -160,13 +160,13 @@ const aggregatorTourSteps: DriveStep[] = [
 
 // ─── Admin Tour ───────────────────────────────────────────────────────────────
 // Roles: admin
-// Focus: full platform overview — all 9 key modules
+// Focus: full platform overview — all 10 key modules
 
 const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-dashboard"]',
     popover: {
-      title: '1 of 9 · Organisation Dashboard',
+      title: '1 of 10 · Organisation Dashboard',
       description: 'Your organisation overview: collection stats, compliance scores, agent activity, and pending actions. Everything critical surfaces here first.',
       side: 'right',
       align: 'start',
@@ -175,7 +175,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-farmers"]',
     popover: {
-      title: '2 of 9 · Farmer Registry',
+      title: '2 of 10 · Farmer Registry',
       description: 'Every farmer in your supply chain is registered here. Each profile must have signed consent, a GPS-mapped farm boundary, and completed training records before export.',
       side: 'right',
       align: 'start',
@@ -184,7 +184,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-farm-polygons"]',
     popover: {
-      title: '3 of 9 · Farm Polygons',
+      title: '3 of 10 · Farm Polygons',
       description: 'Review and approve GPS farm boundaries submitted by your field agents. Every farm must be mapped for EUDR deforestation-free compliance — no polygon, no export.',
       side: 'right',
       align: 'start',
@@ -193,8 +193,17 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-inventory"]',
     popover: {
-      title: '4 of 9 · Inventory & Batches',
+      title: '4 of 10 · Inventory & Batches',
       description: 'Track all collection batches from arrival through grading to warehouse storage. Approve batches to move them into the processing pipeline.',
+      side: 'right',
+      align: 'start',
+    },
+  },
+  {
+    element: '[data-tour="nav-payments"]',
+    popover: {
+      title: '5 of 10 · Farmer Payments',
+      description: 'Record and track payments owed to farmers based on collected weight and agreed price per kg. Log disbursements, view per-farmer payment history, and manage your wallet balance. Set a default contract price per commodity in Settings so amounts are auto-calculated.',
       side: 'right',
       align: 'start',
     },
@@ -202,7 +211,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-shipments"]',
     popover: {
-      title: '5 of 9 · Shipment Readiness',
+      title: '6 of 10 · Shipment Readiness',
       description: 'Create shipment records and run the 5-dimension compliance check: Farm Compliance, GPS Coverage, Document Completeness, Chain of Custody, and Certification Validity.',
       side: 'right',
       align: 'start',
@@ -211,7 +220,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-traceability"]',
     popover: {
-      title: '6 of 9 · Traceability',
+      title: '7 of 10 · Traceability',
       description: 'Search any bag serial number, batch ID, or farmer to see the complete chain of custody from GPS-mapped farm through collection, processing, and export.',
       side: 'right',
       align: 'start',
@@ -220,7 +229,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-dds"]',
     popover: {
-      title: '7 of 9 · DDS Export',
+      title: '8 of 10 · DDS Export',
       description: 'Generate EU Due Diligence Statements with embedded farm GeoJSON polygons for submission to the EU TRACES system. Required for every shipment to the EU.',
       side: 'right',
       align: 'start',
@@ -229,7 +238,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="nav-analytics"]',
     popover: {
-      title: '8 of 9 · Analytics',
+      title: '9 of 10 · Analytics',
       description: 'Monitor compliance rates, collection volumes, shipment scores, and training completion across your entire supply chain. Export reports for buyer audits.',
       side: 'right',
       align: 'start',
@@ -238,7 +247,7 @@ const adminTourSteps: DriveStep[] = [
   {
     element: '[data-tour="help-button"]',
     popover: {
-      title: '9 of 9 · Help & Guide',
+      title: '10 of 10 · Help & Guide',
       description: 'Click here at any time to restart this tour or open the Getting Started Guide — detailed walkthroughs for every module and compliance workflow.',
       side: 'bottom',
       align: 'end',
