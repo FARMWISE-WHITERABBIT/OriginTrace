@@ -76,11 +76,12 @@ function ScoreSparkline({ breakdown }: { breakdown: Array<{ name: string; score:
     <div className="flex items-end gap-0.5 h-8" title={breakdown.map(d => `${DIM_SHORT[d.name] || d.name}: ${Math.round(d.score)}`).join(' | ')}>
       {breakdown.map(dim => {
         const pct = Math.round(dim.score);
-        const color = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626';
+        // Semantic traffic-light for readiness dimensions
+        const color = pct >= 75 ? '#16A34A' : pct >= 50 ? '#D97706' : '#DC2626';
         return (
           <div key={dim.name} className="flex flex-col items-center gap-0.5" style={{ width: 10 }}>
             <div
-              style={{ height: `${Math.max(4, (pct / 100) * 28)}px`, backgroundColor: color, borderRadius: 2, width: 8, opacity: 0.85 }}
+              style={{ height: `${Math.max(4, (pct / 100) * 28)}px`, backgroundColor: color, borderRadius: 2, width: 8 }}
               title={`${DIM_SHORT[dim.name] || dim.name}: ${pct}`}
             />
           </div>
@@ -322,58 +323,24 @@ export default function ShipmentsPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                  <Package className="h-5 w-5 text-muted-foreground" />
+          {[
+            { label: 'Total Shipments', value: stats.total,       icon: Ship,        iconClass: 'icon-bg-blue',    accent: 'card-accent-blue',    testId: 'text-stat-total' },
+            { label: 'Ready to Ship',   value: stats.ready,       icon: CheckCircle2,iconClass: 'icon-bg-green',   accent: 'card-accent-green',   testId: 'text-stat-ready' },
+            { label: 'Conditional',     value: stats.conditional, icon: AlertTriangle,iconClass: 'icon-bg-amber',  accent: 'card-accent-amber',   testId: 'text-stat-conditional' },
+            { label: 'Blocked',         value: stats.blocked,     icon: XCircle,     iconClass: 'icon-bg-red',     accent: 'card-accent-red',     testId: 'text-stat-blocked' },
+          ].map(s => (
+            <Card key={s.label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${s.accent}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${s.iconClass}`}>
+                  <s.icon className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-total">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total Shipments</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-ready">{stats.ready}</p>
-                  <p className="text-xs text-muted-foreground">Ready to Ship</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-yellow-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-conditional">{stats.conditional}</p>
-                  <p className="text-xs text-muted-foreground">Conditional</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-red-500/10 flex items-center justify-center">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-blocked">{stats.blocked}</p>
-                  <p className="text-xs text-muted-foreground">Blocked</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tracking-tight" data-testid={s.testId}>{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -420,49 +387,42 @@ export default function ShipmentsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {filteredShipments.map(shipment => {
               const decision = DECISION_CONFIG[shipment.readiness_decision || 'pending'] || DECISION_CONFIG.pending;
               const DecisionIcon = decision.icon;
+              const decisionBorderClass = shipment.readiness_decision === 'go' ? 'border-l-green-500' : shipment.readiness_decision === 'no_go' ? 'border-l-red-500' : shipment.readiness_decision === 'conditional' ? 'border-l-amber-500' : 'border-l-border';
 
               return (
                 <Card
                   key={shipment.id}
-                  className="hover-elevate cursor-pointer"
+                  className={`cursor-pointer border-l-4 ${decisionBorderClass} transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}
                   onClick={() => router.push(`/app/shipments/${shipment.id}`)}
                   data-testid={`card-shipment-${shipment.id}`}
                 >
-                  <CardContent className="py-4">
+                  <CardContent className="py-3.5 px-4">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                          <Ship className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-9 w-9 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                          <Ship className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-sm font-medium" data-testid={`text-shipment-code-${shipment.id}`}>
+                            <span className="font-mono text-sm font-semibold" data-testid={`text-shipment-code-${shipment.id}`}>
                               {shipment.shipment_code}
                             </span>
-                            <Badge variant="outline" data-testid={`badge-status-${shipment.id}`}>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5" data-testid={`badge-status-${shipment.id}`}>
                               {STATUS_LABELS[shipment.status] || shipment.status}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                            {shipment.destination_country && (
-                              <span>{shipment.destination_country}</span>
-                            )}
-                            {shipment.commodity && (
-                              <span>{shipment.commodity}</span>
-                            )}
-                            {shipment.buyer_company && (
-                              <span>{shipment.buyer_company}</span>
-                            )}
-                            <span>{shipment.total_items || 0} items</span>
-                            {shipment.total_weight_kg > 0 && (
-                              <span>{Number(shipment.total_weight_kg).toLocaleString()} kg</span>
-                            )}
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                            {shipment.destination_country && <span>{shipment.destination_country}</span>}
+                            {shipment.commodity && <><span className="text-muted-foreground/40">·</span><span>{shipment.commodity}</span></>}
+                            {shipment.buyer_company && <><span className="text-muted-foreground/40">·</span><span>{shipment.buyer_company}</span></>}
+                            <span className="text-muted-foreground/40">·</span><span>{shipment.total_items || 0} items</span>
+                            {shipment.total_weight_kg > 0 && <><span className="text-muted-foreground/40">·</span><span>{Number(shipment.total_weight_kg).toLocaleString()} kg</span></>}
                             {shipment.linked_contracts && shipment.linked_contracts.length > 0 && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-primary" data-testid={`text-contract-link-${shipment.id}`}>
+                              <span className="flex items-center gap-1 font-medium text-primary" data-testid={`text-contract-link-${shipment.id}`}>
                                 <FileText className="h-3 w-3" />
                                 {shipment.linked_contracts.map(c => c.contract_reference).join(', ')}
                               </span>
@@ -470,24 +430,20 @@ export default function ShipmentsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-3">
-                          {shipment.score_breakdown && shipment.score_breakdown.length > 0 ? (
-                            <div className="flex flex-col items-end gap-0.5">
-                              <ScoreSparkline breakdown={shipment.score_breakdown} />
-                              <p className="text-[10px] text-muted-foreground">5 dimensions</p>
-                            </div>
-                          ) : null}
-                          {shipment.readiness_score !== null && (
-                            <div className="text-right">
-                              <p className="text-2xl font-bold" data-testid={`text-score-${shipment.id}`}>
-                                {shipment.readiness_score}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Score</p>
-                            </div>
-                          )}
-                        </div>
-                        <Badge variant={decision.variant} data-testid={`badge-decision-${shipment.id}`}>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {shipment.score_breakdown && shipment.score_breakdown.length > 0 && (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <ScoreSparkline breakdown={shipment.score_breakdown} />
+                            <p className="text-[10px] text-muted-foreground">5 dims</p>
+                          </div>
+                        )}
+                        {shipment.readiness_score !== null && (
+                          <div className="text-right">
+                            <p className="text-xl font-bold" data-testid={`text-score-${shipment.id}`}>{shipment.readiness_score}</p>
+                            <p className="text-[10px] text-muted-foreground">Score</p>
+                          </div>
+                        )}
+                        <Badge variant={decision.variant} className="shrink-0" data-testid={`badge-decision-${shipment.id}`}>
                           <DecisionIcon className="h-3 w-3 mr-1" />
                           {decision.label}
                         </Badge>

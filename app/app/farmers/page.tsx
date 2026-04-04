@@ -197,27 +197,13 @@ export default function FarmersPage() {
             </div>
             <div className="flex items-center gap-2">
               {/* View toggle */}
-              <div className="flex rounded-md border overflow-hidden">
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-none border-0 px-2.5 h-9"
-                  onClick={() => setViewMode('table')}
-                  title="Table view"
-                  data-testid="button-view-table"
-                >
+              <div className="segmented-control">
+                <button className="segmented-control-item px-2.5" data-active={viewMode === 'table'} onClick={() => setViewMode('table')} title="Table view" data-testid="button-view-table" aria-label="Table view">
                   <LayoutList className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-none border-0 px-2.5 h-9"
-                  onClick={() => setViewMode('grid')}
-                  title="Card grid view"
-                  data-testid="button-view-grid"
-                >
+                </button>
+                <button className="segmented-control-item px-2.5" data-active={viewMode === 'grid'} onClick={() => setViewMode('grid')} title="Card grid view" data-testid="button-view-grid" aria-label="Card grid view">
                   <LayoutGrid className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <a href="/app/farmers/new">+ Register Farmer</a>
@@ -227,48 +213,25 @@ export default function FarmersPage() {
 
           {/* Summary cards */}
           <div className="grid gap-4 sm:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Total Farmers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{farmers.length}</div>
-                <p className="text-xs text-muted-foreground">Registered in network</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{(totalDelivery / 1000).toFixed(1)}t</div>
-                <p className="text-xs text-muted-foreground">Lifetime deliveries</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Avg Grade</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{avgGrade.toFixed(1)}/4.0</div>
-                <p className="text-xs text-muted-foreground">Quality score</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">With Consent</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{withConsent}</div>
-                <p className="text-xs text-muted-foreground">
-                  {farmers.length > 0 ? Math.round((withConsent / farmers.length) * 100) : 0}% of farmers
-                </p>
-              </CardContent>
-            </Card>
+            {[
+              { title: 'Total Farmers', value: String(farmers.length), sub: 'Registered in network', icon: Users, iconClass: 'icon-bg-blue', accent: 'card-accent-blue' },
+              { title: 'Total Volume', value: `${(totalDelivery / 1000).toFixed(1)}t`, sub: 'Lifetime deliveries', icon: Package, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+              { title: 'Avg Grade', value: `${avgGrade.toFixed(1)}/4.0`, sub: 'Quality score', icon: TrendingUp, iconClass: 'icon-bg-amber', accent: 'card-accent-amber' },
+              { title: 'With Consent', value: String(withConsent), sub: `${farmers.length > 0 ? Math.round((withConsent / farmers.length) * 100) : 0}% of farmers`, icon: CheckCircle2, iconClass: 'icon-bg-green', accent: 'card-accent-green' },
+            ].map(s => (
+              <Card key={s.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${s.accent}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${s.iconClass}`}>
+                    <s.icon className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold tracking-tight">{s.value}</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Search */}
