@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'revoke_auditor_session',
-          targetType: 'auditor_access_session',
+          targetType: 'organization',
           targetId: session_id,
           request,
         });
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'invalidate_compliance_badge',
-          targetType: 'compliance_badge',
+          targetType: 'organization',
           targetId: badge_id,
           afterState: { reason },
           request,

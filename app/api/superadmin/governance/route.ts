@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'assign_superadmin_role',
-          targetType: 'system_admin',
+          targetType: 'user',
           targetId: target_user_id,
           afterState: { role },
           request,
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'approve_tenant_deletion',
-          targetType: 'tenant_deletion_request',
+          targetType: 'organization',
           targetId: request_id,
           request,
         });

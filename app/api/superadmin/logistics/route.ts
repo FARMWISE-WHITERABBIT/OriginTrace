@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: id ? 'update_notification_template' : 'create_notification_template',
-          targetType: 'notification_template',
+          targetType: 'system',
           targetId: template_key,
           request,
         });
