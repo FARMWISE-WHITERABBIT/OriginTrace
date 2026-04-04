@@ -22,6 +22,13 @@ import {
   CreditCard,
   CalendarDays,
   ChevronRight,
+  FileCheck,
+  DollarSign,
+  SendToBack,
+  ClipboardList,
+  Ship,
+  TrendingUp,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -49,15 +56,37 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/superadmin/organizations', label: 'Tenants', icon: Building2 },
       { href: '/superadmin/users', label: 'Users', icon: Users },
       { href: '/superadmin/tenant-health', label: 'Tenant Health', icon: Activity },
+      { href: '/superadmin/compliance-health', label: 'Compliance Health', icon: ClipboardList },
+    ],
+  },
+  {
+    title: 'Compliance',
+    items: [
+      { href: '/superadmin/compliance', label: 'Frameworks & MRL', icon: FileCheck },
+      { href: '/superadmin/submissions', label: 'Submission Monitor', icon: SendToBack },
+      { href: '/superadmin/audit-infra', label: 'Audit Infrastructure', icon: Shield },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { href: '/superadmin/payments', label: 'Payments & Escrow', icon: DollarSign },
+      { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
     ],
   },
   {
     title: 'Platform',
     items: [
       { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
+      { href: '/superadmin/logistics', label: 'Logistics Reference', icon: Ship },
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
-      { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
       { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
+    ],
+  },
+  {
+    title: 'Intelligence',
+    items: [
+      { href: '/superadmin/intelligence', label: 'Platform Intelligence', icon: TrendingUp },
     ],
   },
   {
@@ -65,6 +94,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
       { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
+      { href: '/superadmin/governance', label: 'Security & Governance', icon: Lock },
       { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },
       { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
     ],
