@@ -317,17 +317,23 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       {/* ── Stats strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: Package,    label: 'Total Volume',    value: ledger ? `${Number(ledger.total_delivery_kg).toLocaleString()} kg` : '0 kg' },
-          { icon: TrendingUp, label: 'Total Batches',   value: ledger?.total_batches ?? batches.length },
-          { icon: Leaf,       label: 'Farm Area',       value: farm.area_hectares ? `${Number(farm.area_hectares).toFixed(2)} ha` : '—' },
-          { icon: GraduationCap, label: 'Training',     value: `${completedTraining} / ${training.length} completed` },
-        ].map(({ icon: Icon, label, value }) => (
-          <Card key={label} className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{label}</span>
-            </div>
-            <p className="text-lg font-bold">{value}</p>
+          { icon: Package,    label: 'Total Volume',    value: ledger ? `${Number(ledger.total_delivery_kg).toLocaleString()} kg` : '0 kg', iconClass: 'icon-bg-blue', accent: 'card-accent-blue' },
+          { icon: TrendingUp, label: 'Total Batches',   value: ledger?.total_batches ?? batches.length, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+          { icon: Leaf,       label: 'Farm Area',       value: farm.area_hectares ? `${Number(farm.area_hectares).toFixed(2)} ha` : '—', iconClass: 'icon-bg-green', accent: 'card-accent-green' },
+          { icon: GraduationCap, label: 'Training',     value: `${completedTraining} / ${training.length}`, iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
+        ].map(({ icon: Icon, label, value, iconClass, accent }) => (
+          <Card key={label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${accent}`}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <p className="text-lg font-bold">{value}</p>
+                </div>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${iconClass}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -364,10 +370,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
           <div className="grid lg:grid-cols-2 gap-4">
 
             {/* Identity */}
-            <Card>
+            <Card className="card-accent-blue">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Identity</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><User className="h-3.5 w-3.5" /></div>
+                    Identity
+                  </CardTitle>
                   {canEdit && editingCard !== 'identity' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('identity')} data-testid="button-edit-farmer">
                       <Pencil className="h-3.5 w-3.5" />
@@ -432,10 +441,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* Location */}
-            <Card>
+            <Card className="card-accent-emerald">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />Location & Farm</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0"><MapPin className="h-3.5 w-3.5" /></div>
+                    Location & Farm
+                  </CardTitle>
                   {canEdit && editingCard !== 'location' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('location')}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -473,10 +485,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* Compliance status */}
-            <Card>
+            <Card className="card-accent-green">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Compliance Status</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-green shrink-0"><ShieldCheck className="h-3.5 w-3.5" /></div>
+                    Compliance Status
+                  </CardTitle>
                   {canEdit && editingCard !== 'compliance' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('compliance')}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -519,10 +534,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* KYC documents */}
-            <Card>
+            <Card className="card-accent-violet">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />KYC Documents</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><FileText className="h-3.5 w-3.5" /></div>
+                    KYC Documents
+                  </CardTitle>
                   {canEdit && (
                     <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setKycFile(null); setKycFileType('photo'); setKycSheetOpen(true); }}>
                       <Upload className="h-3 w-3 mr-1" />Upload
