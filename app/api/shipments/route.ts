@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('shipments')
-      .select('id, shipment_code, status, destination_country, destination_port, buyer_company, commodity, total_weight_kg, readiness_score, readiness_decision, score_breakdown, estimated_ship_date, created_at, total_shipment_value_usd, freight_cost_usd, customs_fees_ngn, inspection_fees_ngn, certification_costs_ngn, phyto_lab_costs_ngn, port_handling_charges_ngn, freight_insurance_usd, usd_ngn_rate, shipment_items(id)', { count: 'exact' })
+      .select('id, shipment_code, status, destination_country, destination_port, buyer_company, commodity, total_weight_kg, readiness_score, readiness_decision, score_breakdown, estimated_ship_date, created_at, shipment_items(id)', { count: 'exact' })
       .eq('org_id', profile.org_id)
       .order('created_at', { ascending: false })
       .range(from, to);

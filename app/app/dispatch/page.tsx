@@ -9,16 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   Truck,
   Package,
   Loader2,
-  Scale,
   ArrowLeft,
-  MapPin,
-  Clock,
   Send,
   FileText,
   Ship,
@@ -57,13 +53,13 @@ interface ContributionItem {
 function DispatchPageInner() {
   return (
     <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-20 bg-muted animate-pulse rounded-xl"/>)}</div>
-      </div>
-    }>
-      <DispatchContent />
-    </Suspense>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        <DispatchContent />
+      </Suspense>
     </TierGate>
   );
 }
@@ -84,83 +80,60 @@ function DispatchContent() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchedBatchId, setDispatchedBatchId] = useState<string | null>(null);
   const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
-  const { organization, profile } = useOrg();
+  const { profile } = useOrg();
   const { toast } = useToast();
-  const supabase = createClient();
 
   useEffect(() => {
+    if (!batchIdParam) {
+      setIsLoading(false);
+      return;
+    }
+
     async function fetchBatch() {
-      // If there's no batch param at all, stop loading immediately (will redirect)
-      if (!batchIdParam) {
-        setIsLoading(false);
-        return;
-      }
-      // Wait silently for org context — don't set loading=false yet
-      if (!supabase || !organization) return;
-
       try {
-        const { data, error } = await supabase
-          .from('collection_batches')
-          .select(`
-            id,
-            batch_code,
-            status,
-            commodity,
-            total_weight,
-            bag_count,
-            farm:farms!farm_id (
-              farmer_name,
-              community
-            )
-          `)
-          .eq('org_id', organization.id)
-          .eq('id', batchIdParam)
-          .single();
+        const res = await fetch(`/api/batches/${batchIdParam}`);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to load batch');
+        }
+        const data = await res.json();
+        const b = data.batch;
 
-        if (error) throw error;
-
-        const farmData = Array.isArray(data.farm) ? data.farm[0] : data.farm;
+        const farmData = Array.isArray(b.farm) ? b.farm[0] : b.farm;
         setBatch({
-          ...data,
-          total_weight: parseFloat(data.total_weight) || 0,
-          farm: farmData || { farmer_name: 'Unknown', community: 'Unknown' }
-        } as Batch);
+          id: b.id,
+          batch_code: b.batch_code ?? null,
+          status: b.status,
+          commodity: b.commodity ?? '',
+          total_weight: parseFloat(b.total_weight) || 0,
+          bag_count: b.bag_count ?? 0,
+          farm: farmData
+            ? { farmer_name: farmData.farmer_name ?? 'Unknown', community: farmData.community ?? 'Unknown' }
+            : { farmer_name: 'Unknown', community: 'Unknown' },
+        });
 
-        const { data: bagsData } = await supabase
-          .from('bags')
-          .select('serial, weight_kg, grade')
-          .eq('collection_batch_id', batchIdParam);
-
-        if (bagsData && bagsData.length > 0) {
-          setBags(bagsData.map(b => ({
-            serial: b.serial || '-',
-            weight: parseFloat(b.weight_kg) || 0,
-            grade: b.grade || 'Standard'
+        if (data.bags?.length > 0) {
+          setBags(data.bags.map((bg: any) => ({
+            serial: bg.serial || '-',
+            weight: parseFloat(bg.weight_kg) || 0,
+            grade: bg.grade || 'Standard',
           })));
         }
 
-        try {
-          const contribRes = await fetch(`/api/batch-contributions?batch_id=${batchIdParam}`);
-          if (contribRes.ok) {
-            const contribData = await contribRes.json();
-            if (contribData.contributions && contribData.contributions.length > 0) {
-              setContributions(contribData.contributions.map((c: any) => ({
-                farmerName: c.farmer_name || 'Unknown',
-                community: c.community || '-',
-                bagCount: c.bag_count || 0,
-                weightKg: parseFloat(c.weight_kg) || 0,
-                complianceStatus: c.compliance_status || 'pending'
-              })));
-            }
-          }
-        } catch {}
-
-      } catch (error) {
-        console.error('Failed to fetch batch:', error);
+        if (data.contributions?.length > 0) {
+          setContributions(data.contributions.map((c: any) => ({
+            farmerName: c.farmer_name || 'Unknown',
+            community: c.community || '-',
+            bagCount: c.bag_count || 0,
+            weightKg: parseFloat(c.weight_kg) || 0,
+            complianceStatus: c.compliance_status || 'pending',
+          })));
+        }
+      } catch (err: any) {
         toast({
           title: 'Error',
-          description: 'Failed to load batch details',
-          variant: 'destructive'
+          description: err.message || 'Failed to load batch details',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -168,41 +141,36 @@ function DispatchContent() {
     }
 
     fetchBatch();
-  }, [organization, supabase, batchIdParam, toast]);
+  }, [batchIdParam, toast]);
 
   const handleDispatch = async () => {
-    if (!supabase || !batch || !profile || !destination.trim() || !confirmDispatch) return;
-
+    if (!batch || !destination.trim() || !confirmDispatch) return;
     setIsDispatching(true);
-
     try {
-      const { error } = await supabase
-        .from('collection_batches')
-        .update({
-          status: 'dispatched',
-          dispatched_at: new Date().toISOString(),
-          dispatched_by: profile.user_id,
+      const res = await fetch(`/api/batches/${batch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'dispatch',
           dispatch_destination: destination.trim(),
-          vehicle_reference: vehicleRef.trim() || null
-        })
-        .eq('id', batch.id);
-
-      if (error) throw error;
+          vehicle_reference: vehicleRef.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to dispatch');
 
       toast({
         title: 'Batch Dispatched',
-        description: `Batch ${batch.batch_code || batch.id} has been dispatched to ${destination}`
+        description: `Batch ${batch.batch_code || batch.id} has been dispatched to ${destination}`,
       });
 
-      // Prompt to add to shipment instead of immediately navigating away
-      setDispatchedBatchId(String(batch.id));
+      setDispatchedBatchId(batch.id);
       setAddToShipmentOpen(true);
-    } catch (error) {
-      console.error('Failed to dispatch batch:', error);
+    } catch (err: any) {
       toast({
         title: 'Error',
-        description: 'Failed to dispatch batch',
-        variant: 'destructive'
+        description: err.message || 'Failed to dispatch batch',
+        variant: 'destructive',
       });
     } finally {
       setIsDispatching(false);
@@ -219,11 +187,7 @@ function DispatchContent() {
 
   if (!batchIdParam) {
     router.replace('/app/inventory');
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return null;
   }
 
   if (!batch) {
@@ -231,6 +195,7 @@ function DispatchContent() {
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Batch Not Found</h2>
+        <p className="text-muted-foreground mb-4">Could not load this batch. It may have been deleted or you may not have access.</p>
         <Link href="/app/inventory">
           <Button>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -246,9 +211,7 @@ function DispatchContent() {
       <div className="text-center py-12">
         <Truck className="h-12 w-12 mx-auto text-green-600 mb-4" />
         <h2 className="text-xl font-semibold mb-2">Already Dispatched</h2>
-        <p className="text-muted-foreground mb-4">
-          This batch has already been dispatched.
-        </p>
+        <p className="text-muted-foreground mb-4">This batch has already been dispatched.</p>
         <Link href="/app/inventory">
           <Button>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -269,10 +232,8 @@ function DispatchContent() {
         <p className="text-muted-foreground mb-4">
           This batch must be in <span className="font-mono">completed</span>, <span className="font-mono">aggregated</span>, or <span className="font-mono">resolved</span> status before it can be dispatched. Current status: <span className="font-mono font-semibold">{batch.status}</span>
         </p>
-        <Link href={`/app/inventory/${batch.id}`} className="mr-2">
-          <Button variant="outline">
-            View Batch Details
-          </Button>
+        <Link href={`/app/inventory/${batch.id}`}>
+          <Button variant="outline">View Batch Details</Button>
         </Link>
       </div>
     );
@@ -308,9 +269,7 @@ function DispatchContent() {
               </div>
               Dispatch Details
             </CardTitle>
-            <CardDescription>
-              Record handover information for chain-of-custody
-            </CardDescription>
+            <CardDescription>Record handover information for chain-of-custody</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -354,7 +313,7 @@ function DispatchContent() {
                 data-testid="checkbox-confirm-dispatch"
               />
               <label htmlFor="confirmDispatch" className="text-sm cursor-pointer">
-                I confirm that the batch has been loaded and is ready for transport. 
+                I confirm that the batch has been loaded and is ready for transport.
                 After dispatch, the batch cannot be edited.
               </label>
             </div>
@@ -390,8 +349,6 @@ function DispatchContent() {
                   driverPhone: driverPhone || undefined,
                   collectedBy: profile?.full_name || 'Unknown',
                   collectionDate: new Date().toLocaleDateString(),
-                  orgName: organization?.name || 'OriginTrace',
-                  orgLogoUrl: organization?.logo_url || null,
                   bags: bags.length > 0 ? bags : undefined,
                   contributions: contributions.length > 0 ? contributions : undefined,
                 });
@@ -431,18 +388,6 @@ function DispatchContent() {
               <span className="text-sm font-semibold text-primary">Total Weight</span>
               <span className="font-bold text-xl text-primary">{batch.total_weight.toFixed(1)} kg</span>
             </div>
-
-            <div className="pt-3 border-t mt-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                After Dispatch
-              </h4>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Batch status changes to "Dispatched"</li>
-                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Weights and quantities are locked</li>
-                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Destination warehouse scans to confirm receipt</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -456,13 +401,11 @@ function DispatchContent() {
             if (!v) router.push('/app/inventory');
           }}
           itemType="batch"
-          items={[
-            {
-              id: dispatchedBatchId,
-              name: batch.batch_code ?? `Batch ${dispatchedBatchId.slice(0, 8)}`,
-              weight_kg: batch.total_weight,
-            },
-          ]}
+          items={[{
+            id: dispatchedBatchId,
+            name: batch.batch_code ?? `Batch ${dispatchedBatchId.slice(0, 8)}`,
+            weight_kg: batch.total_weight,
+          }]}
           onLinked={(shipmentId) => {
             router.push(`/app/shipments/${shipmentId}`);
           }}
@@ -474,7 +417,11 @@ function DispatchContent() {
 
 export default function DispatchPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    }>
       <DispatchPageInner />
     </Suspense>
   );

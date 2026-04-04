@@ -320,3 +320,124 @@ ALTER TABLE organizations
   ADD COLUMN IF NOT EXISTS usdc_deposit_address TEXT,
   ADD COLUMN IF NOT EXISTS usdc_balance DECIMAL(18,6) DEFAULT 0,
   ADD COLUMN IF NOT EXISTS grey_virtual_accounts JSONB DEFAULT '[]'::jsonb;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 6. COLLECTION_BATCHES — missing columns for dispatch, identification, grading
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE collection_batches
+  ADD COLUMN IF NOT EXISTS batch_code            TEXT,
+  ADD COLUMN IF NOT EXISTS commodity             TEXT,
+  ADD COLUMN IF NOT EXISTS grade                 TEXT,
+  ADD COLUMN IF NOT EXISTS yield_validated       BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS dispatched_at         TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS dispatched_by         UUID REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS dispatch_destination  TEXT,
+  ADD COLUMN IF NOT EXISTS vehicle_reference     TEXT;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 7. SHIPMENTS — columns added by logistics fields migrations
+--    (20260402_shipment_logistics_fields.sql, 20260403_shipment_cost_additions.sql)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Commercial (Stage 1)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS purchase_order_number     TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS purchase_order_date       DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS contract_price_per_mt     DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS total_shipment_value_usd  DECIMAL(14,2);
+
+-- Cost tracking
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS freight_cost_usd          DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS customs_fees_ngn           DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS inspection_fees_ngn        DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS certification_costs_ngn    DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS phyto_lab_costs_ngn        DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS port_handling_charges_ngn  DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS freight_insurance_usd      DECIMAL(14,2);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS usd_ngn_rate               DECIMAL(10,4);
+
+-- Freight & Vessel (Stage 5)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS freight_forwarder_name     TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS freight_forwarder_contact  TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipping_line              TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS vessel_name               TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS imo_number                TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS voyage_number             TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS booking_reference         TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS port_of_loading           TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS port_of_discharge         TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS etd                       DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS eta                       DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS actual_departure_date     DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS actual_arrival_date       DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS bill_of_lading_number     TEXT;
+
+-- Container (Stage 6)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS container_number          TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS container_seal_number     TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS container_type            TEXT
+  CHECK (container_type IN ('20FT', '40FT', '40HC', 'Reefer'));
+
+-- Customs (Stage 4)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS clearing_agent_name       TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS clearing_agent_contact    TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS customs_declaration_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS exit_certificate_number   TEXT;
+
+-- Pre-shipment Inspection (Stage 2)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS inspection_body           TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS inspection_date           DATE;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS inspection_certificate_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS inspection_result         TEXT
+  CHECK (inspection_result IN ('pass', 'fail', 'conditional'));
+
+-- Outcome (Stage 9)
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipment_outcome          TEXT
+  CHECK (shipment_outcome IN ('accepted', 'rejected', 'conditional'));
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS rejection_reason          TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS outcome_recorded_at       TIMESTAMPTZ;
+
+-- Stage pipeline
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS current_stage    INTEGER DEFAULT 1
+  CHECK (current_stage BETWEEN 1 AND 9);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS stage_data       JSONB DEFAULT '{}';
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS stage_history    JSONB DEFAULT '[]';
+
+-- Pre-notifications
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_eu_traces        TEXT DEFAULT 'not_filed'
+  CHECK (prenotif_eu_traces IN ('not_filed', 'filed', 'confirmed'));
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_eu_traces_ref    TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_eu_traces_filed_at TIMESTAMPTZ;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_uk_ipaffs        TEXT DEFAULT 'not_filed'
+  CHECK (prenotif_uk_ipaffs IN ('not_filed', 'filed', 'confirmed'));
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_uk_ipaffs_ref    TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_uk_ipaffs_filed_at TIMESTAMPTZ;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_us_fda           TEXT DEFAULT 'not_filed'
+  CHECK (prenotif_us_fda IN ('not_filed', 'filed', 'confirmed'));
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_us_fda_ref       TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS prenotif_us_fda_filed_at  TIMESTAMPTZ;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. PAYMENTS — fix linked_entity_type constraint to include 'collection_batch'
+--    (original schema only had 'batch'; newer code sends 'collection_batch')
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+  -- Drop the old check constraint if it exists (it may or may not be named)
+  BEGIN
+    ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_linked_entity_type_check;
+  EXCEPTION WHEN undefined_object THEN NULL;
+  END;
+
+  -- Re-add constraint with both values
+  BEGIN
+    ALTER TABLE payments
+      ADD CONSTRAINT payments_linked_entity_type_check
+      CHECK (linked_entity_type IN ('collection_batch', 'batch', 'contract', 'shipment', 'farm', 'farmer', 'organization'));
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;

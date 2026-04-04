@@ -90,15 +90,39 @@ export async function GET(
       disbursements = disbData ?? [];
     } catch { /* table not yet migrated */ }
 
-    // Direct payments recorded for this farmer
-    const { data: payments } = await supabase
-      .from('payments')
-      .select('id, amount, currency, payment_method, reference_number, payment_date, status, notes, linked_entity_type, linked_entity_id, created_at')
-      .eq('org_id', profile.org_id)
-      .eq('payee_type', 'farmer')
-      .ilike('payee_name', farm.farmer_name)
-      .order('payment_date', { ascending: false })
-      .limit(50);
+    // Direct payments for this farmer: match by exact farmer_name OR by linked batch IDs
+    const batchIds = (batches ?? []).map((b: any) => b.id).filter(Boolean);
+    let payments: any[] = [];
+    try {
+      // Primary: match by payee_name (case-insensitive)
+      const { data: nameMatches } = await supabase
+        .from('payments')
+        .select('id, amount, currency, payment_method, reference_number, payment_date, status, notes, linked_entity_type, linked_entity_id, created_at')
+        .eq('org_id', profile.org_id)
+        .eq('payee_type', 'farmer')
+        .ilike('payee_name', farm.farmer_name)
+        .order('payment_date', { ascending: false })
+        .limit(50);
+
+      const seen = new Set<string>();
+      const merged: any[] = [];
+      for (const p of nameMatches ?? []) { seen.add(p.id); merged.push(p); }
+
+      // Also fetch payments linked to this farmer's batches
+      if (batchIds.length > 0) {
+        const { data: batchLinked } = await supabase
+          .from('payments')
+          .select('id, amount, currency, payment_method, reference_number, payment_date, status, notes, linked_entity_type, linked_entity_id, created_at')
+          .eq('org_id', profile.org_id)
+          .eq('payee_type', 'farmer')
+          .in('linked_entity_id', batchIds)
+          .order('payment_date', { ascending: false })
+          .limit(50);
+        for (const p of batchLinked ?? []) { if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); } }
+      }
+
+      payments = merged;
+    } catch { /* payments table may not exist */ }
 
     return NextResponse.json({
       farm,

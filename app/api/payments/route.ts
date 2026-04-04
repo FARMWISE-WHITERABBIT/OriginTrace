@@ -13,7 +13,8 @@ const paymentCreateSchema = z.object({
   currency: z.enum(['NGN', 'USD', 'EUR', 'GBP', 'XOF']).optional(),
   payment_method: z.enum(['cash', 'bank_transfer', 'mobile_money', 'cheque'], { required_error: 'payment_method is required' }),
   reference_number: z.string().optional(),
-  linked_entity_type: z.enum(['collection_batch', 'contract']).optional(),
+  // 'collection_batch' is the canonical value; 'batch' is accepted for backward compat
+  linked_entity_type: z.enum(['collection_batch', 'batch', 'contract']).optional(),
   linked_entity_id: z.union([z.number(), z.string()]).optional(),
   payment_date: z.string().optional(),
   notes: z.string().optional(),
