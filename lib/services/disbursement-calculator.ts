@@ -15,8 +15,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export interface DisbursementCalculation {
   id: string;
   org_id: string;
-  batch_id: number;
-  farm_id: number;
+  batch_id: string;
+  farm_id: string;
   farmer_name: string;
   community: string | null;
   weight_kg: number;
@@ -37,7 +37,7 @@ export interface DisbursementCalculation {
 export interface ComputeResult {
   calculations: DisbursementCalculation[];
   /** Farm IDs that had no price agreement — amounts are 0 and need manual review */
-  missingPrices: Array<{ farm_id: number; farmer_name: string }>;
+  missingPrices: Array<{ farm_id: string; farmer_name: string }>;
   /** How many rows already existed (idempotent — won't double-insert) */
   existingCount: number;
 }
@@ -47,7 +47,7 @@ export interface ComputeResult {
  * Safe to call multiple times — skips farms that already have a calculation row.
  */
 export async function computeBatchDisbursements(
-  batchId: number,
+  batchId: string,
   orgId: string
 ): Promise<ComputeResult> {
   const supabase = createAdminClient();
@@ -115,7 +115,7 @@ export async function computeBatchDisbursements(
   const agreements = priceAgreements ?? [];
 
   // Build lookup: farm_id -> price (farm-specific preferred over org-wide)
-  const priceMap = new Map<number | null, { price: number; currency: string }>();
+  const priceMap = new Map<string | null, { price: number; currency: string }>();
   // Insert org-wide (farm_id=null) first, then farm-specific will overwrite
   for (const a of agreements.filter((x) => x.farm_id === null)) {
     priceMap.set(null, { price: Number(a.price_per_kg), currency: a.currency });
@@ -127,7 +127,7 @@ export async function computeBatchDisbursements(
   const orgWidePrice = priceMap.get(null);
 
   // 5. Build insert rows
-  const missingPrices: Array<{ farm_id: number; farmer_name: string }> = [];
+  const missingPrices: Array<{ farm_id: string; farmer_name: string }> = [];
   const insertRows = toCompute.map((c) => {
     const farmPrice = priceMap.get(c.farm_id) ?? orgWidePrice;
     const pricePerKg = farmPrice?.price ?? 0;

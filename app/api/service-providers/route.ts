@@ -63,7 +63,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      const code = (error as any).code;
+      if (code === 'PGRST205' || code === 'PGRST200' || error.message?.includes('service_providers')) {
+        return NextResponse.json({ providers: [] });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ providers: data ?? [] });
   } catch (error) {

@@ -503,7 +503,7 @@ function LabResultsPageInner() {
       </div>
 
       {/* Results table */}
-      <Card>
+      <Card className="card-accent-emerald">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>

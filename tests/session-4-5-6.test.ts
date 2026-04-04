@@ -299,7 +299,7 @@ describe('Session 6 — WEBHOOK_EVENTS catalog unchanged', () => {
     }
   });
 
-  it('has exactly 14 event types', () => {
-    expect(WEBHOOK_EVENTS.length).toBe(14);
+  it('has exactly 27 event types', () => {
+    expect(WEBHOOK_EVENTS.length).toBe(27);
   });
 });

@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS farmer_price_agreements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id INTEGER REFERENCES farms(id) ON DELETE CASCADE,  -- NULL = org-wide default
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,  -- NULL = org-wide default
   commodity TEXT NOT NULL,
   price_per_kg DECIMAL(10,4) NOT NULL,
   currency TEXT NOT NULL DEFAULT 'NGN',
@@ -42,8 +42,8 @@ CREATE POLICY "admin_manage_price_agreements" ON farmer_price_agreements
 CREATE TABLE IF NOT EXISTS disbursement_calculations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   farmer_name TEXT NOT NULL,
   community TEXT,
   weight_kg DECIMAL(10,3) NOT NULL,

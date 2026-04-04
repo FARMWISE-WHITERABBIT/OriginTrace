@@ -263,36 +263,24 @@ export default function AgentManagementPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.total}</div>
-            <p className="text-xs text-muted-foreground">Registered field agents</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <Activity className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.active}</div>
-            <p className="text-xs text-muted-foreground">With at least 1 collection</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unassigned Region</CardTitle>
-            <MapPin className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{isLoading ? '...' : agentStats.unassigned}</div>
-            <p className="text-xs text-muted-foreground">No state assigned</p>
-          </CardContent>
-        </Card>
+        {[
+          { icon: Users,    label: 'Total Agents',    value: isLoading ? '…' : String(agentStats.total),     sub: 'Registered field agents',    iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+          { icon: Activity, label: 'Active Agents',   value: isLoading ? '…' : String(agentStats.active),    sub: 'With at least 1 collection', iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+          { icon: MapPin,   label: 'Unassigned',      value: isLoading ? '…' : String(agentStats.unassigned), sub: 'No state assigned',          iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
+        ].map(({ icon: Icon, label, value, sub, iconClass, accent }) => (
+          <Card key={label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${accent}`}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${iconClass}`}>
+                <Icon className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight">{value}</div>
+              <p className="text-xs text-muted-foreground">{sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>

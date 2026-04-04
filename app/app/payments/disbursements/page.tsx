@@ -37,11 +37,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Users,
-  Scale,
   ArrowRight,
   AlertCircle,
-  CreditCard,
   Banknote,
   RefreshCw,
 } from 'lucide-react';
@@ -126,16 +123,36 @@ function PayDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Pay {disbursement.farmer_name}</DialogTitle>
-          <DialogDescription>
-            {disbursement.currency} {Number(disbursement.net_amount).toLocaleString()} for {Number(disbursement.weight_kg).toFixed(1)} kg
-          </DialogDescription>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+              <Banknote className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base">Pay {disbursement.farmer_name}</DialogTitle>
+              <DialogDescription className="text-sm mt-0.5">
+                {disbursement.currency} {Number(disbursement.net_amount).toLocaleString()} &mdash; {Number(disbursement.weight_kg).toFixed(1)} kg
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
+
         <div className="space-y-4 py-2">
+          {hasBankAccount && provider === 'paystack_transfer' && (
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3 flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-sm font-bold text-emerald-700">
+                {disbursement.farmer_name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-900">{disbursement.farmer_bank_accounts?.account_name}</p>
+                <p className="text-xs text-emerald-700">{disbursement.farmer_bank_accounts?.bank_name}</p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
-            <Label className="text-xs">Payment Method</Label>
+            <Label className="text-xs font-medium">Payment Method</Label>
             <Select value={provider} onValueChange={setProvider}>
               <SelectTrigger className="h-9">
                 <SelectValue />
@@ -154,7 +171,7 @@ function PayDialog({
 
           {isMoMo && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Phone Number</Label>
+              <Label className="text-xs font-medium">Phone Number</Label>
               <Input
                 placeholder="+234..."
                 value={phone}
@@ -163,22 +180,20 @@ function PayDialog({
               />
             </div>
           )}
-
-          {hasBankAccount && provider === 'paystack_transfer' && (
-            <div className="rounded-md bg-muted/50 p-3 text-xs space-y-0.5">
-              <div className="font-medium">{disbursement.farmer_bank_accounts?.account_name}</div>
-              <div className="text-muted-foreground">{disbursement.farmer_bank_accounts?.bank_name}</div>
-            </div>
-          )}
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
             onClick={handlePay}
             disabled={isPaying || (isMoMo && !phone)}
+            className="min-w-[120px]"
           >
-            {isPaying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Send Payment
+            {isPaying ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</>
+            ) : (
+              <><Banknote className="h-4 w-4 mr-2" />Send Payment</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -186,7 +201,7 @@ function PayDialog({
   );
 }
 
-export default function DisbursementsPage() {
+export function DisbursementsContent() {
   const { organization } = useOrg();
   const { toast } = useToast();
   const [disbursements, setDisbursements] = useState<DisbursementRow[]>([]);
@@ -285,71 +300,85 @@ export default function DisbursementsPage() {
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold">Farmer Disbursements</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Review, approve, and execute payments to farmers and aggregators
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+            <Banknote className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold leading-tight">Disbursement Management</h2>
+            <p className="text-sm text-muted-foreground">Approve and execute farmer payments</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchDisbursements}>
             <RefreshCw className="h-4 w-4 mr-1.5" />
             Refresh
           </Button>
-          {selectedPendingIds.length > 0 && (
-            <Button
-              size="sm"
-              onClick={handleApproveSelected}
-              disabled={isApproving}
-            >
-              {isApproving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-              Approve {selectedPendingIds.length} Selected
-            </Button>
-          )}
+          <Button
+            size="sm"
+            onClick={handleApproveSelected}
+            disabled={isApproving || selectedPendingIds.length === 0}
+          >
+            {isApproving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+            Approve Selected
+            {selectedPendingIds.length > 0 && (
+              <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-xs font-bold">
+                {selectedPendingIds.length}
+              </span>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Stats strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
+        <Card className="card-accent-amber transition-all hover:shadow-md hover:-translate-y-0.5">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold mt-0.5">NGN {totalPending.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{pendingRows.length} farmers</p>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Pending</p>
+                <p className="text-xl font-bold mt-0.5 leading-tight">NGN {totalPending.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{pendingRows.length} farmer{pendingRows.length !== 1 ? 's' : ''}</p>
               </div>
-              <Clock className="h-8 w-8 text-amber-500 opacity-60" />
+              <div className="h-9 w-9 rounded-lg icon-bg-amber flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
+
+        <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Approved</p>
-                <p className="text-xl font-bold mt-0.5">NGN {totalApproved.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{approvedRows.length} farmers</p>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Approved</p>
+                <p className="text-xl font-bold mt-0.5 leading-tight">NGN {totalApproved.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{approvedRows.length} farmer{approvedRows.length !== 1 ? 's' : ''}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-blue-500 opacity-60" />
+              <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
+
+        <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Disbursed</p>
-                <p className="text-xl font-bold mt-0.5">NGN {totalDisbursed.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{disbursedRows.length} farmers</p>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Disbursed</p>
+                <p className="text-xl font-bold mt-0.5 leading-tight">NGN {totalDisbursed.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{disbursedRows.length} farmer{disbursedRows.length !== 1 ? 's' : ''}</p>
               </div>
-              <DollarSign className="h-8 w-8 text-green-500 opacity-60" />
+              <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters row */}
       <div className="flex items-center gap-3 flex-wrap">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-8 w-36 text-sm">
@@ -378,7 +407,7 @@ export default function DisbursementsPage() {
               checked={selectedIds.size > 0 && selectedIds.size === pendingRows.length}
               onCheckedChange={handleSelectAll}
             />
-            <label htmlFor="select-all" className="text-sm cursor-pointer">
+            <label htmlFor="select-all" className="text-sm cursor-pointer text-muted-foreground">
               Select all pending
             </label>
           </div>
@@ -391,17 +420,17 @@ export default function DisbursementsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : visibleRows.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="font-medium">No disbursements found</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Dispatch a batch to automatically compute farmer disbursements, or use the API to trigger computation.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <DollarSign className="h-6 w-6" />
+          </div>
+          <p className="font-semibold mt-3">No disbursements found</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+            Dispatch a batch to automatically compute farmer disbursements, or use the API to trigger computation.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {[...byBatch.entries()].map(([batchId, rows]) => {
             const batchCode = rows[0]?.collection_batches?.batch_code ?? `Batch #${batchId}`;
             const commodity = rows[0]?.collection_batches?.commodity ?? '-';
@@ -409,18 +438,23 @@ export default function DisbursementsPage() {
             const currency = rows[0]?.currency ?? 'NGN';
 
             return (
-              <Card key={batchId}>
+              <Card key={batchId} className="card-accent-blue">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-sm font-mono">{batchCode}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {commodity} · {rows.length} farmers · {currency} {batchTotal.toLocaleString()} total
-                      </CardDescription>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                        <Banknote className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-mono">{batchCode}</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          {commodity} &nbsp;&middot;&nbsp; {rows.length} farmer{rows.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; {currency} {batchTotal.toLocaleString()} total
+                        </CardDescription>
+                      </div>
                     </div>
                     <Link href={`/app/inventory/${batchId}`}>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs">
-                        View Batch <ArrowRight className="h-3 w-3 ml-1" />
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                        View Batch <ArrowRight className="h-3 w-3" />
                       </Button>
                     </Link>
                   </div>
@@ -437,22 +471,29 @@ export default function DisbursementsPage() {
                       return (
                         <div
                           key={row.id}
-                          className={`flex items-center gap-3 px-6 py-3 ${isSelectable ? 'hover:bg-muted/30' : ''}`}
+                          className={`flex items-center gap-3 px-5 py-3 ${isSelectable ? 'hover:bg-muted/30 transition-colors' : ''}`}
                         >
+                          {/* Checkbox or spacer */}
                           {isSelectable ? (
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => handleToggle(row.id)}
                             />
                           ) : (
-                            <div className="w-4" />
+                            <div className="w-4 shrink-0" />
                           )}
 
+                          {/* Avatar initial */}
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground">
+                            {row.farmer_name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Name + community + weight */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium text-sm truncate">{row.farmer_name}</span>
                               {row.community && (
-                                <span className="text-xs text-muted-foreground">· {row.community}</span>
+                                <span className="text-xs text-muted-foreground">{row.community}</span>
                               )}
                               {!hasBankAccount && row.status !== 'disbursed' && (
                                 <span className="text-xs text-amber-600 flex items-center gap-0.5">
@@ -462,34 +503,37 @@ export default function DisbursementsPage() {
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">
-                              {Number(row.weight_kg).toFixed(1)} kg · {row.currency} {Number(row.price_per_kg).toFixed(2)}/kg
+                              {Number(row.weight_kg).toFixed(1)} kg &nbsp;&middot;&nbsp; {row.currency} {Number(row.price_per_kg).toFixed(2)}/kg
                             </div>
                             {row.notes && (
                               <div className="text-xs text-amber-600 mt-0.5">{row.notes}</div>
                             )}
                           </div>
 
+                          {/* Amount */}
                           <div className="text-right shrink-0">
                             <div className="font-semibold text-sm">
                               {row.currency} {Number(row.net_amount).toLocaleString()}
                             </div>
                             {row.deductions > 0 && (
                               <div className="text-xs text-muted-foreground">
-                                −{Number(row.deductions).toLocaleString()} deducted
+                                &minus;{Number(row.deductions).toLocaleString()} deducted
                               </div>
                             )}
                           </div>
 
+                          {/* Status badge */}
                           <Badge className={`text-xs shrink-0 ${statusCfg.className}`} variant="secondary">
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {statusCfg.label}
                           </Badge>
 
+                          {/* Pay button for approved */}
                           {row.status === 'approved' && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs shrink-0"
+                              className="h-7 text-xs shrink-0 border-blue-200 text-blue-700 hover:bg-blue-50"
                               onClick={() => {
                                 setPayTarget(row);
                                 setPayDialogOpen(true);
@@ -519,3 +563,5 @@ export default function DisbursementsPage() {
     </div>
   );
 }
+
+export default DisbursementsContent;

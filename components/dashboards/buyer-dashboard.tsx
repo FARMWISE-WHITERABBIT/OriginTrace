@@ -79,27 +79,29 @@ export function BuyerDashboard() {
   };
 
   const statCards = [
-    { title: 'Active Suppliers', value: summary.activeSuppliers, icon: Handshake, description: 'Connected exporters', href: '/app/buyer/suppliers' },
-    { title: 'Active Contracts', value: summary.activeContracts, icon: FileCheck, description: `${summary.totalContracts} total`, href: '/app/buyer/contracts' },
-    { title: 'Pending Shipments', value: summary.pendingShipments, icon: Ship, description: 'Linked to contracts', href: '/app/buyer/shipments' },
-    { title: 'Pending Invitations', value: summary.pendingInvitations, icon: Clock, description: 'Awaiting response', href: '/app/buyer/suppliers' },
+    { title: 'Active Suppliers',    value: summary.activeSuppliers,   icon: Handshake, description: 'Connected exporters',  href: '/app/buyer/suppliers', iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+    { title: 'Active Contracts',    value: summary.activeContracts,   icon: FileCheck, description: `${summary.totalContracts} total`,       href: '/app/buyer/contracts', iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+    { title: 'Pending Shipments',   value: summary.pendingShipments,  icon: Ship,      description: 'Linked to contracts', href: '/app/buyer/shipments', iconClass: 'icon-bg-violet',  accent: 'card-accent-violet' },
+    { title: 'Pending Invitations', value: summary.pendingInvitations,icon: Clock,     description: 'Awaiting response',   href: '/app/buyer/suppliers', iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
   ];
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Link key={stat.title} href={stat.href}>
-            <Card className="hover-elevate cursor-pointer" data-testid={`stat-${stat.title.toLowerCase().replace(/\s/g, '-')}`}>
+          <Link key={stat.title} href={stat.href} className="group cursor-pointer">
+            <Card className={`h-full transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s/g, '-')}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                  <stat.icon className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid={`text-stat-value-${stat.title.toLowerCase().replace(/\s/g, '-')}`}>
+                <div className="text-2xl font-bold tracking-tight" data-testid={`text-stat-value-${stat.title.toLowerCase().replace(/\s/g, '-')}`}>
                   {stat.value}
                 </div>
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
               </CardContent>
             </Card>
           </Link>

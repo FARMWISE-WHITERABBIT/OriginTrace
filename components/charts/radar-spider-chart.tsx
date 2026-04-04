@@ -1,23 +1,10 @@
 'use client';
 
 import {
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, Tooltip, Legend,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-];
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface RadarSpiderChartProps {
   data: Array<Record<string, string | number>>;
@@ -27,13 +14,6 @@ interface RadarSpiderChartProps {
   showLegend?: boolean;
   maxValue?: number;
 }
-
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
 
 export function RadarSpiderChart({
   data,
@@ -58,24 +38,27 @@ export function RadarSpiderChart({
           tick={{ fontSize: 10 }}
           className="text-muted-foreground"
         />
-        <Tooltip contentStyle={tooltipStyle} />
-        {series.map((s, index) => (
-          <Radar
-            key={s.dataKey}
-            name={s.label}
-            dataKey={s.dataKey}
-            stroke={s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length]}
-            fill={s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length]}
-            fillOpacity={0.15}
-            strokeWidth={2}
-          />
-        ))}
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
+        {series.map((s, index) => {
+          const color = s.color || VIZ_COLORS[index % VIZ_COLORS.length];
+          return (
+            <Radar
+              key={s.dataKey}
+              name={s.label}
+              dataKey={s.dataKey}
+              stroke={color}
+              fill={color}
+              fillOpacity={0.15}
+              strokeWidth={2}
+            />
+          );
+        })}
         {showLegend && (
           <Legend
             verticalAlign="bottom"
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{ fontSize: '12px' }}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
           />
         )}
       </RadarChart>

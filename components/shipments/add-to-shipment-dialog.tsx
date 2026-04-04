@@ -46,7 +46,6 @@ interface ActiveShipment {
   shipment_code: string;
   destination_country: string | null;
   commodity: string | null;
-  current_stage: number;
   status: string;
 }
 
@@ -80,10 +79,14 @@ export function AddToShipmentDialog({
   useEffect(() => {
     if (!open) return;
     setIsLoading(true);
-    fetch('/api/shipments?status=draft&status=pending&status=booked')
+    fetch('/api/shipments')
       .then((r) => r.json())
       .then((d) => {
-        setShipments(d.shipments ?? []);
+        // Show only shipments that haven't shipped or been cancelled
+        const active = (d.shipments ?? []).filter(
+          (s: ActiveShipment) => s.status !== 'shipped' && s.status !== 'cancelled'
+        );
+        setShipments(active);
         setSelectedShipmentId('');
       })
       .catch(() => setShipments([]))
@@ -211,7 +214,7 @@ export function AddToShipmentDialog({
                         <span className="text-muted-foreground text-xs">
                           {s.destination_country && `· ${s.destination_country}`}
                           {s.commodity && ` · ${s.commodity}`}
-                          {` · Stage ${s.current_stage ?? '?'}`}
+                          {` · ${s.status}`}
                         </span>
                       </div>
                     </SelectItem>
@@ -229,9 +232,12 @@ export function AddToShipmentDialog({
                   Destination: {selectedShipment.destination_country}
                 </div>
               )}
-              <div className="text-muted-foreground">
-                Stage {selectedShipment.current_stage ?? '?'} · {selectedShipment.status}
-              </div>
+              {selectedShipment.commodity && (
+                <div className="text-muted-foreground">
+                  Commodity: {selectedShipment.commodity}
+                </div>
+              )}
+              <div className="text-muted-foreground capitalize">Status: {selectedShipment.status}</div>
             </div>
           )}
         </div>

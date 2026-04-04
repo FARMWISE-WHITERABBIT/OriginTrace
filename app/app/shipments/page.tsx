@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ShipmentCardSkeleton } from '@/components/skeletons';
 import { useRouter } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,8 +23,10 @@ import {
   AlertTriangle,
   XCircle,
   Clock,
-  Package,
+  MapPin,
   FileText,
+  Package,
+  Calendar,
 } from 'lucide-react';
 
 interface Shipment {
@@ -46,22 +48,22 @@ interface Shipment {
   linked_contracts?: Array<{ id: number; contract_reference: string }>;
 }
 
-const DECISION_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2 }> = {
-  go: { label: 'Ready to Ship', variant: 'default', icon: CheckCircle2 },
-  conditional: { label: 'Conditional', variant: 'secondary', icon: AlertTriangle },
-  no_go: { label: 'Do Not Ship', variant: 'destructive', icon: XCircle },
-  pending: { label: 'Pending', variant: 'outline', icon: Clock },
+const DECISION_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2; colorClass: string }> = {
+  go:          { label: 'GO',          variant: 'default',     icon: CheckCircle2,  colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  conditional: { label: 'CONDITIONAL', variant: 'secondary',   icon: AlertTriangle, colorClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  no_go:       { label: 'NO-GO',       variant: 'destructive', icon: XCircle,       colorClass: 'bg-red-50 text-red-700 border-red-200' },
+  pending:     { label: 'PENDING',     variant: 'outline',     icon: Clock,         colorClass: 'bg-muted text-muted-foreground border-border' },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  ready: 'Ready',
-  shipped: 'Shipped',
-  cancelled: 'Cancelled',
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  draft:     { label: 'Draft',     className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  ready:     { label: 'Ready',     className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  conditional: { label: 'Conditional', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  shipped:   { label: 'Shipped',   className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  cancelled: { label: 'Cancelled', className: 'bg-red-50 text-red-600 border-red-200' },
 };
 
-
-// Short names for the 5 dimensions used in sparkline bars
+// Short names for the 5 dimensions used in score bars
 const DIM_SHORT: Record<string, string> = {
   'Traceability Integrity':        'Trace',
   'Chemical & Contamination Risk': 'Chem',
@@ -70,22 +72,36 @@ const DIM_SHORT: Record<string, string> = {
   'Regulatory Alignment':          'Reg',
 };
 
-function ScoreSparkline({ breakdown }: { breakdown: Array<{ name: string; score: number }> | null }) {
+const DIM_COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+
+function ScoreBar({ breakdown }: { breakdown: Array<{ name: string; score: number }> | null }) {
   if (!breakdown || breakdown.length === 0) return null;
+  const total = breakdown.reduce((sum, d) => sum + d.score, 0);
   return (
-    <div className="flex items-end gap-0.5 h-8" title={breakdown.map(d => `${DIM_SHORT[d.name] || d.name}: ${Math.round(d.score)}`).join(' | ')}>
-      {breakdown.map(dim => {
-        const pct = Math.round(dim.score);
-        const color = pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626';
-        return (
-          <div key={dim.name} className="flex flex-col items-center gap-0.5" style={{ width: 10 }}>
+    <div className="space-y-1.5">
+      <div className="flex h-2 w-full rounded-full overflow-hidden gap-px bg-muted">
+        {breakdown.map((dim, i) => {
+          const pct = total > 0 ? (dim.score / total) * 100 : 100 / breakdown.length;
+          const color = DIM_COLORS[i % DIM_COLORS.length];
+          return (
             <div
-              style={{ height: `${Math.max(4, (pct / 100) * 28)}px`, backgroundColor: color, borderRadius: 2, width: 8, opacity: 0.85 }}
-              title={`${DIM_SHORT[dim.name] || dim.name}: ${pct}`}
+              key={dim.name}
+              style={{ width: `${pct}%`, backgroundColor: color }}
+              title={`${DIM_SHORT[dim.name] || dim.name}: ${Math.round(dim.score)}`}
+              className="transition-all"
             />
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        {breakdown.map((dim, i) => (
+          <div key={dim.name} className="flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: DIM_COLORS[i % DIM_COLORS.length] }} />
+            <span className="text-[10px] text-muted-foreground">{DIM_SHORT[dim.name] || dim.name}</span>
+            <span className="text-[10px] font-medium tabular-nums">{Math.round(dim.score)}</span>
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -105,16 +121,26 @@ interface ShipmentTemplate {
   contract_price_per_mt: number | null;
 }
 
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all',        label: 'All' },
+  { value: 'draft',      label: 'Draft' },
+  { value: 'ready',      label: 'Ready' },
+  { value: 'conditional',label: 'Conditional' },
+  { value: 'shipped',    label: 'Shipped' },
+  { value: 'cancelled',  label: 'Cancelled' },
+];
+
 export default function ShipmentsPage() {
-  const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [templates, setTemplates] = useState<ShipmentTemplate[]>([]);
+  const [shipments, setShipments]           = useState<Shipment[]>([]);
+  const [isLoading, setIsLoading]           = useState(true);
+  const [searchQuery, setSearchQuery]       = useState('');
+  const [statusFilter, setStatusFilter]     = useState('all');
+  const [sortBy, setSortBy]                 = useState<'date' | 'score'>('date');
+  const [dialogOpen, setDialogOpen]         = useState(false);
+  const [isCreating, setIsCreating]         = useState(false);
+  const [templates, setTemplates]           = useState<ShipmentTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [newShipment, setNewShipment] = useState({
+  const [newShipment, setNewShipment]       = useState({
     destination_country: '',
     commodity: '',
     buyer_company: '',
@@ -135,11 +161,12 @@ export default function ShipmentsPage() {
         ? `/api/shipments?status=${statusFilter}`
         : '/api/shipments';
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch shipments');
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch shipments');
       setShipments(data.shipments || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch shipments:', error);
+      toast({ title: 'Failed to load shipments', description: error.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -165,8 +192,8 @@ export default function ShipmentsPage() {
     setNewShipment((s) => ({
       ...s,
       destination_country: tpl.destination_country ?? s.destination_country,
-      commodity: tpl.commodity ?? s.commodity,
-      buyer_company: tpl.buyer_company ?? s.buyer_company,
+      commodity:           tpl.commodity           ?? s.commodity,
+      buyer_company:       tpl.buyer_company        ?? s.buyer_company,
     }));
   };
 
@@ -199,36 +226,51 @@ export default function ShipmentsPage() {
     }
   };
 
-  const filteredShipments = shipments.filter(s => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.shipment_code.toLowerCase().includes(q) ||
-      (s.destination_country?.toLowerCase().includes(q)) ||
-      (s.buyer_company?.toLowerCase().includes(q)) ||
-      (s.commodity?.toLowerCase().includes(q))
-    );
-  });
+  const filteredShipments = shipments
+    .filter(s => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        s.shipment_code.toLowerCase().includes(q) ||
+        (s.destination_country?.toLowerCase().includes(q)) ||
+        (s.buyer_company?.toLowerCase().includes(q)) ||
+        (s.commodity?.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'score') {
+        return (b.readiness_score ?? -1) - (a.readiness_score ?? -1);
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const stats = {
-    total: shipments.length,
-    ready: shipments.filter(s => s.readiness_decision === 'go').length,
+    total:       shipments.length,
+    ready:       shipments.filter(s => s.readiness_decision === 'go').length,
     conditional: shipments.filter(s => s.readiness_decision === 'conditional').length,
-    blocked: shipments.filter(s => s.readiness_decision === 'no_go').length,
+    blocked:     shipments.filter(s => s.readiness_decision === 'no_go').length,
   };
 
   return (
     <TierGate feature="shipment_readiness" requiredTier="pro" featureLabel="Shipment Readiness">
       <div className="flex-1 space-y-6 p-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
-              Shipment Readiness
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Pre-shipment compliance scoring and Go/No-Go export decisions
-            </p>
+
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+              <Ship className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
+                Shipment Operations
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Manage export shipments and compliance readiness checks
+              </p>
+            </div>
           </div>
+
           <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (v) fetchTemplates(); }}>
             <DialogTrigger asChild>
               <Button data-testid="button-create-shipment">
@@ -321,179 +363,224 @@ export default function ShipmentsPage() {
           </Dialog>
         </div>
 
+        {/* ── Stats Strip ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                  <Package className="h-5 w-5 text-muted-foreground" />
+          {[
+            { label: 'Total Shipments', value: stats.total,       icon: Ship,         iconClass: 'icon-bg-blue',    accent: 'card-accent-blue',    testId: 'text-stat-total' },
+            { label: 'Ready to Ship',   value: stats.ready,       icon: CheckCircle2, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald', testId: 'text-stat-ready' },
+            { label: 'Conditional',     value: stats.conditional, icon: AlertTriangle,iconClass: 'icon-bg-amber',   accent: 'card-accent-amber',   testId: 'text-stat-conditional' },
+            { label: 'Blocked (NO-GO)', value: stats.blocked,     icon: XCircle,      iconClass: 'icon-bg-red',     accent: 'card-accent-red',     testId: 'text-stat-blocked' },
+          ].map(s => (
+            <Card key={s.label} className={`transition-all hover:shadow-md hover:-translate-y-0.5 ${s.accent}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${s.iconClass}`}>
+                  <s.icon className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-total">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total Shipments</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-ready">{stats.ready}</p>
-                  <p className="text-xs text-muted-foreground">Ready to Ship</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-yellow-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-conditional">{stats.conditional}</p>
-                  <p className="text-xs text-muted-foreground">Conditional</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-red-500/10 flex items-center justify-center">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-stat-blocked">{stats.blocked}</p>
-                  <p className="text-xs text-muted-foreground">Blocked</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tracking-tight" data-testid={s.testId}>{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+        {/* ── Filter Controls ── */}
+        <div className="space-y-3">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by code, destination, buyer, commodity..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 w-full"
               data-testid="input-search-shipments"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="ready">Ready</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            {/* Segmented control for status */}
+            <div className="segmented-control" data-testid="select-status-filter">
+              {STATUS_FILTER_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  className={`segmented-control-item${statusFilter === opt.value ? ' active' : ''}`}
+                  onClick={() => setStatusFilter(opt.value)}
+                  data-testid={`filter-status-${opt.value}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Sort by</span>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'date' | 'score')}>
+                <SelectTrigger className="w-[130px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Latest First</SelectItem>
+                  <SelectItem value="score">Highest Score</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
+        {/* ── Content ── */}
         {isLoading || orgLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => <ShipmentCardSkeleton key={i} />)}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => <ShipmentCardSkeleton key={i} />)}
           </div>
         ) : filteredShipments.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <Ship className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-1">No shipments yet</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                Create your first shipment to start assessing export readiness. Add batches and finished goods, then get a Go/No-Go decision.
-              </p>
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Ship className="h-7 w-7" />
+            </div>
+            <h3 className="text-lg font-semibold mt-4 mb-1">No shipments found</h3>
+            <p className="text-sm text-muted-foreground max-w-sm text-center mb-5">
+              {searchQuery || statusFilter !== 'all'
+                ? 'No shipments match your current filters. Try adjusting your search or status selection.'
+                : 'Create your first shipment to start assessing export readiness. Add batches and finished goods, then get a Go/No-Go decision.'}
+            </p>
+            {!searchQuery && statusFilter === 'all' && (
               <Button onClick={() => setDialogOpen(true)} data-testid="button-create-first-shipment">
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Shipment
               </Button>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredShipments.map(shipment => {
-              const decision = DECISION_CONFIG[shipment.readiness_decision || 'pending'] || DECISION_CONFIG.pending;
+              const decisionKey = shipment.readiness_decision || 'pending';
+              const decision = DECISION_CONFIG[decisionKey] || DECISION_CONFIG.pending;
               const DecisionIcon = decision.icon;
+              const statusCfg = STATUS_CONFIG[shipment.status] || { label: shipment.status, className: 'bg-muted text-muted-foreground border-border' };
+              const score = shipment.readiness_score;
+              const scoreColor = score === null ? '' : score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-amber-600' : 'text-red-600';
 
               return (
                 <Card
                   key={shipment.id}
-                  className="hover-elevate cursor-pointer"
+                  className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col"
                   onClick={() => router.push(`/app/shipments/${shipment.id}`)}
                   data-testid={`card-shipment-${shipment.id}`}
                 >
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                          <Ship className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-sm font-medium" data-testid={`text-shipment-code-${shipment.id}`}>
-                              {shipment.shipment_code}
-                            </span>
-                            <Badge variant="outline" data-testid={`badge-status-${shipment.id}`}>
-                              {STATUS_LABELS[shipment.status] || shipment.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                            {shipment.destination_country && (
-                              <span>{shipment.destination_country}</span>
-                            )}
-                            {shipment.commodity && (
-                              <span>{shipment.commodity}</span>
-                            )}
-                            {shipment.buyer_company && (
-                              <span>{shipment.buyer_company}</span>
-                            )}
-                            <span>{shipment.total_items || 0} items</span>
-                            {shipment.total_weight_kg > 0 && (
-                              <span>{Number(shipment.total_weight_kg).toLocaleString()} kg</span>
-                            )}
-                            {shipment.linked_contracts && shipment.linked_contracts.length > 0 && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-primary" data-testid={`text-contract-link-${shipment.id}`}>
-                                <FileText className="h-3 w-3" />
-                                {shipment.linked_contracts.map(c => c.contract_reference).join(', ')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                  <CardContent className="p-4 flex flex-col gap-3 flex-1">
+
+                    {/* Top row: code + badges */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span
+                          className="font-mono text-sm font-bold tracking-tight truncate"
+                          data-testid={`text-shipment-code-${shipment.id}`}
+                        >
+                          {shipment.shipment_code}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] h-5 px-1.5 font-medium border ${statusCfg.className}`}
+                          data-testid={`badge-status-${shipment.id}`}
+                        >
+                          {statusCfg.label}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-3">
-                          {shipment.score_breakdown && shipment.score_breakdown.length > 0 ? (
-                            <div className="flex flex-col items-end gap-0.5">
-                              <ScoreSparkline breakdown={shipment.score_breakdown} />
-                              <p className="text-[10px] text-muted-foreground">5 dimensions</p>
-                            </div>
-                          ) : null}
-                          {shipment.readiness_score !== null && (
-                            <div className="text-right">
-                              <p className="text-2xl font-bold" data-testid={`text-score-${shipment.id}`}>
-                                {shipment.readiness_score}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Score</p>
-                            </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] h-5 px-1.5 font-semibold border shrink-0 flex items-center gap-1 ${decision.colorClass}`}
+                        data-testid={`badge-decision-${shipment.id}`}
+                      >
+                        <DecisionIcon className="h-2.5 w-2.5" />
+                        {decision.label}
+                      </Badge>
+                    </div>
+
+                    {/* Destination */}
+                    {(shipment.destination_country || shipment.destination_port) && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                        <span className="truncate">
+                          {[shipment.destination_country, shipment.destination_port].filter(Boolean).join(' — ')}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Buyer + Commodity */}
+                    {(shipment.buyer_company || shipment.commodity) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        {shipment.buyer_company && (
+                          <span className="truncate font-medium text-foreground/80">{shipment.buyer_company}</span>
+                        )}
+                        {shipment.buyer_company && shipment.commodity && (
+                          <span className="text-muted-foreground/40">·</span>
+                        )}
+                        {shipment.commodity && (
+                          <span className="truncate">{shipment.commodity}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Item count + weight */}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3 shrink-0" />
+                        <span>{shipment.total_items || 0} items</span>
+                      </div>
+                      {shipment.total_weight_kg > 0 && (
+                        <span>{Number(shipment.total_weight_kg).toLocaleString()} kg</span>
+                      )}
+                      {shipment.linked_contracts && shipment.linked_contracts.length > 0 && (
+                        <span
+                          className="flex items-center gap-1 font-medium text-primary ml-auto"
+                          data-testid={`text-contract-link-${shipment.id}`}
+                        >
+                          <FileText className="h-3 w-3" />
+                          {shipment.linked_contracts.map(c => c.contract_reference).join(', ')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 5-dimension score bar */}
+                    {shipment.score_breakdown && shipment.score_breakdown.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Readiness Score</span>
+                          {score !== null && (
+                            <span
+                              className={`text-xl font-bold tabular-nums leading-none ${scoreColor}`}
+                              data-testid={`text-score-${shipment.id}`}
+                            >
+                              {score}
+                              <span className="text-xs font-normal text-muted-foreground ml-0.5">%</span>
+                            </span>
                           )}
                         </div>
-                        <Badge variant={decision.variant} data-testid={`badge-decision-${shipment.id}`}>
-                          <DecisionIcon className="h-3 w-3 mr-1" />
-                          {decision.label}
-                        </Badge>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <ScoreBar breakdown={shipment.score_breakdown} />
                       </div>
+                    )}
+
+                    {/* Footer: ship date + view link */}
+                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3 shrink-0" />
+                        {shipment.estimated_ship_date ? (
+                          <span>{new Date(shipment.estimated_ship_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        ) : (
+                          <span className="italic">No ship date</span>
+                        )}
+                      </div>
+                      <button
+                        className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        onClick={e => { e.stopPropagation(); router.push(`/app/shipments/${shipment.id}`); }}
+                      >
+                        View Details
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
                     </div>
+
                   </CardContent>
                 </Card>
               );

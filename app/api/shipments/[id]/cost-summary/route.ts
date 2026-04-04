@@ -11,19 +11,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
-const ALLOWED_ROLES = ['admin', 'logistics_coordinator', 'compliance_officer'];
+const ALLOWED_ROLES = ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'];
 
 // Fallback rate used only when shipment has no stored rate yet.
 // Exporter should set their own rate on the shipment for reproducibility.
 const FALLBACK_USD_NGN_RATE = 1650;
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createServiceClient();
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
@@ -31,7 +31,8 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { data: shipment } = await supabase
+    let shipment: any = null;
+    const { data: shipmentFull, error: shipmentErr } = await supabase
       .from('shipments')
       .select(`
         id, shipment_code, total_weight_kg,
@@ -49,6 +50,19 @@ export async function GET(
       .eq('id', params.id)
       .eq('org_id', profile.org_id)
       .single();
+
+    if (shipmentErr?.code === '42703' || shipmentErr?.message?.includes('column')) {
+      // Cost columns not yet migrated — return base record with zeroed costs
+      const { data: base } = await supabase
+        .from('shipments')
+        .select('id, shipment_code, total_weight_kg')
+        .eq('id', params.id)
+        .eq('org_id', profile.org_id)
+        .single();
+      shipment = base;
+    } else {
+      shipment = shipmentFull;
+    }
 
     if (!shipment) {
       return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });

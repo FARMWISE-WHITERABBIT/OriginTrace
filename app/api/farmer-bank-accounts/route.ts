@@ -36,7 +36,13 @@ export async function GET(request: NextRequest) {
     if (farmId) query = query.eq('farm_id', farmId);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      const code = (error as any).code;
+      if (code === 'PGRST205' || code === 'PGRST200' || error.message?.includes('farmer_bank_accounts')) {
+        return NextResponse.json({ accounts: [] });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ accounts: data ?? [] });
   } catch (err) {

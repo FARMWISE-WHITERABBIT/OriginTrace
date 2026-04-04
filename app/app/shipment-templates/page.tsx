@@ -74,7 +74,7 @@ function TemplateCard({
   onDelete: (id: string) => void;
 }) {
   return (
-    <Card>
+    <Card className="card-accent-blue transition-shadow hover:shadow-md">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{template.name}</CardTitle>

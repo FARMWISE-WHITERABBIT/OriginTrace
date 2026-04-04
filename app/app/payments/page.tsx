@@ -2,7 +2,10 @@
 import { Suspense } from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DisbursementsContent } from './disbursements/page';
+import { WalletContent } from './wallet/page';
 import { PaymentTableSkeleton } from '@/components/skeletons';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
@@ -18,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
 import { downloadCSV } from '@/lib/export/csv-export';
-import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil, Landmark, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil, Landmark, CheckCircle, ArrowDown, ArrowUp, CreditCard } from 'lucide-react';
 
 interface Payment { id:string; payee_name:string; payee_type:string; farm_id?:string|null; amount:number; currency:string; payment_method:string; reference_number:string|null; linked_entity_type:string|null; linked_entity_id:string|null; payment_date:string; status:string; notes:string|null; created_at:string; }
 interface FarmerOption { id:string; name:string; community?:string; commodity?:string; }
@@ -205,9 +208,14 @@ function PaymentsPageInner() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Payment Tracking</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Record and track payments to farmers, aggregators, and suppliers</p>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold leading-tight">Payment Operations</h2>
+              <p className="text-sm text-muted-foreground">Record and track payments to farmers, aggregators, and suppliers</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" onClick={handleExportCSV} disabled={payments.length===0} data-testid="button-export-csv"><Download className="h-4 w-4 mr-2"/>Export CSV</Button>
@@ -352,11 +360,52 @@ function PaymentsPageInner() {
         {isSummaryLoading?(<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[1,2,3].map(i=><Card key={i}><CardContent className="pt-4 pb-4 h-[72px] flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardContent></Card>)}</div>)
         :summary?(
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center shrink-0"><Banknote className="h-5 w-5 text-green-600 dark:text-green-400"/></div><div data-testid="text-total-paid">{currencyEntries.length>0?currencyEntries.map(([,amt])=><p key={String(amt)} className="text-lg font-bold leading-tight">{format(amt)}</p>):<p className="text-lg font-bold">{format(0)}</p>}<p className="text-xs text-muted-foreground">Total Paid</p></div></div></CardContent></Card>
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0"><Hash className="h-5 w-5 text-muted-foreground"/></div><div><p className="text-2xl font-bold" data-testid="text-payment-count">{summary.totalCount}</p><p className="text-xs text-muted-foreground">Total Payments</p></div></div></CardContent></Card>
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400"/></div><div><p className="text-lg font-bold" data-testid="text-average-amount">{format(summary.averageAmount)}</p><p className="text-xs text-muted-foreground">Average Payment</p></div></div></CardContent></Card>
+            <Card className="card-accent-emerald transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div data-testid="text-total-paid">{currencyEntries.length>0?currencyEntries.map(([,amt])=><p key={String(amt)} className="text-lg font-bold leading-tight">{format(amt)}</p>):<p className="text-lg font-bold">{format(0)}</p>}<p className="text-xs text-muted-foreground">Total Paid</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-emerald"><Banknote className="h-5 w-5"/></div></div></CardContent></Card>
+            <Card className="card-accent-blue transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-2xl font-bold" data-testid="text-payment-count">{summary.totalCount}</p><p className="text-xs text-muted-foreground">Total Payments</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-blue"><Hash className="h-5 w-5"/></div></div></CardContent></Card>
+            <Card className="card-accent-violet transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-lg font-bold" data-testid="text-average-amount">{format(summary.averageAmount)}</p><p className="text-xs text-muted-foreground">Average Payment</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-violet"><TrendingUp className="h-5 w-5"/></div></div></CardContent></Card>
           </div>
         ):null}
+
+        {/* Payment Flows */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Outbound</p>
+                  <p className="text-base font-semibold leading-tight mt-0.5">Farmer Disbursements</p>
+                  {summary && currencyEntries.length > 0
+                    ? currencyEntries.map(([, amt]) => (
+                        <p key={String(amt)} className="text-2xl font-bold mt-1 leading-tight">{format(amt)}</p>
+                      ))
+                    : <p className="text-2xl font-bold mt-1">{format(0)}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">Total paid out</p>
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+                  <ArrowDown className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Inbound</p>
+                  <p className="text-base font-semibold leading-tight mt-0.5">Buyer Receipts</p>
+                  <p className="text-sm text-muted-foreground mt-1">Stablecoin &amp; wire transfers</p>
+                  <a href="/app/payments?tab=wallet" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1 font-medium">
+                    Track via Wallet <ArrowUp className="h-3 w-3" />
+                  </a>
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                  <ArrowUp className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
@@ -383,7 +432,7 @@ function PaymentsPageInner() {
           </div></CardContent></Card>
         )
         :payments.length===0?(
-          <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4"><Banknote className="h-7 w-7 text-muted-foreground"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
+          <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="empty-state-icon mb-4"><Banknote className="h-6 w-6"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
         ):(
           <>
             <Card><CardContent className="p-0"><div className="overflow-x-auto">
@@ -637,10 +686,47 @@ function FarmerBankAccountsTab() {
   );
 }
 
+function PaymentsPageWithTabs() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') ?? 'transactions';
+
+  const switchTab = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    // Preserve contract deep-link params when switching tabs
+    params.set('tab', tab);
+    router.replace(`/app/payments?${params.toString()}`);
+  };
+
+  return (
+    <div className="flex-1 space-y-0">
+      <div className="border-b px-6 pt-6 pb-0">
+        <h1 className="text-xl font-semibold mb-4 sr-only">Payments</h1>
+        <Tabs value={activeTab} onValueChange={switchTab}>
+          <TabsList className="h-9">
+            <TabsTrigger value="transactions" className="text-sm">Transactions</TabsTrigger>
+            <TabsTrigger value="disbursements" className="text-sm">Disbursements</TabsTrigger>
+            <TabsTrigger value="wallet" className="text-sm">Wallet</TabsTrigger>
+          </TabsList>
+          <TabsContent value="transactions" className="mt-0">
+            <PaymentsPageInner />
+          </TabsContent>
+          <TabsContent value="disbursements" className="mt-0">
+            <DisbursementsContent />
+          </TabsContent>
+          <TabsContent value="wallet" className="mt-0">
+            <WalletContent />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
 export default function PaymentsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-      <PaymentsPageInner />
+      <PaymentsPageWithTabs />
     </Suspense>
   );
 }

@@ -50,8 +50,9 @@ export async function checkTierAccess(supabase: ReturnType<typeof createServiceC
   const settings = (org as any).settings || {};
   const featureFlags = settings.feature_flags || {};
   const hasFeatureFlag = featureFlags.shipment_readiness === true;
-  // Read tier from top-level column first, fall back to settings.subscription_tier
-  const tier = (org as any).subscription_tier || settings.subscription_tier || 'starter';
+  // Read tier from top-level column; null/unset → no billing configured → full access
+  const tier = (org as any).subscription_tier || settings.subscription_tier;
+  if (!tier) return true; // no tier set → grant access
   const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
   return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
 }

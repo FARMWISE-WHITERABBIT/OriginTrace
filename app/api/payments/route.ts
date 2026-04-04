@@ -13,8 +13,9 @@ const paymentCreateSchema = z.object({
   currency: z.enum(['NGN', 'USD', 'EUR', 'GBP', 'XOF']).optional(),
   payment_method: z.enum(['cash', 'bank_transfer', 'mobile_money', 'cheque'], { required_error: 'payment_method is required' }),
   reference_number: z.string().optional(),
-  linked_entity_type: z.enum(['collection_batch', 'contract']).optional(),
-  linked_entity_id: z.number().optional(),
+  // 'collection_batch' is the canonical value; 'batch' is accepted for backward compat
+  linked_entity_type: z.enum(['collection_batch', 'batch', 'contract']).optional(),
+  linked_entity_id: z.union([z.number(), z.string()]).optional(),
   payment_date: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -134,10 +135,10 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
-    const paymentAllowedRoles = ['admin', 'aggregator'];
+    const paymentAllowedRoles = ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'];
     if (!paymentAllowedRoles.includes(profile.role as string)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions' },
+        { error: 'Insufficient permissions to record payments' },
         { status: 403 }
       );
     }

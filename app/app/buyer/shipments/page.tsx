@@ -114,21 +114,21 @@ export default function BuyerShipmentsPage() {
 
       {!isLoading && shipments.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
+          <Card className="card-accent-blue transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">Total Shipments</p>
+              <p className="text-xs text-muted-foreground">Total Shipments</p>
               <p className="text-2xl font-semibold mt-1" data-testid="text-total-shipments">{totalShipments}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-accent-amber transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">In Transit</p>
+              <p className="text-xs text-muted-foreground">In Transit</p>
               <p className="text-2xl font-semibold mt-1" data-testid="text-in-transit">{inTransitCount}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-accent-emerald transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">Avg. Readiness</p>
+              <p className="text-xs text-muted-foreground">Avg. Readiness</p>
               <p className={`text-2xl font-semibold mt-1 ${getReadinessColor(avgReadiness)}`} data-testid="text-avg-readiness">
                 {avgReadiness !== null ? `${avgReadiness}%` : 'N/A'}
               </p>

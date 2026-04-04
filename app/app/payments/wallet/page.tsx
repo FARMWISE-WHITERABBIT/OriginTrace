@@ -1,15 +1,5 @@
 'use client';
 
-/**
- * Wallet Dashboard
- *
- * Shows the org's:
- * - NGN balance (from Paystack)
- * - USDC wallet + deposit address (from Blockradar)
- * - Virtual bank accounts USD/GBP/EUR (from Grey)
- * - Recent inbound transactions
- */
-
 import { useState, useEffect, useCallback } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -42,6 +32,7 @@ import {
   CheckCircle2,
   Clock,
   ArrowDownToLine,
+  Info,
 } from 'lucide-react';
 
 interface WalletData {
@@ -101,7 +92,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function WalletPage() {
+export function WalletContent() {
   const { organization } = useOrg();
   const { toast } = useToast();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -136,8 +127,8 @@ export default function WalletPage() {
     try {
       const res = await fetch('/api/org/wallet', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to provision wallet');
-      toast({ title: 'USDC Wallet provisioned', description: `Deposit address: ${data.deposit_address}` });
+      if (!res.ok) throw new Error(data.error || 'Failed to activate USDC wallet');
+      toast({ title: 'USDC wallet activated', description: `Your deposit address is ready.` });
       fetchWallet();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -155,8 +146,8 @@ export default function WalletPage() {
         body: JSON.stringify({ currency: selectedCurrency }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to provision virtual account');
-      toast({ title: `${selectedCurrency} virtual account provisioned` });
+      if (!res.ok) throw new Error(data.error || 'Failed to create account');
+      toast({ title: `${selectedCurrency} account created`, description: 'Your new account is ready to receive transfers.' });
       setAddAccountOpen(false);
       fetchWallet();
     } catch (err: any) {
@@ -180,11 +171,16 @@ export default function WalletPage() {
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold">Wallet</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage inbound payments — NGN balance, USDC wallet, and virtual bank accounts
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+            <Wallet className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold leading-tight">OriginTrace Wallet</h2>
+            <p className="text-sm text-muted-foreground">
+              Receive payments from buyers — NGN, USDC, and international wire transfers
+            </p>
+          </div>
         </div>
         <Button variant="outline" size="sm" onClick={fetchWallet}>
           <RefreshCw className="h-4 w-4 mr-1.5" />
@@ -192,88 +188,98 @@ export default function WalletPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* NGN Balance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              NGN Balance (Paystack)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {walletData?.ngn.balance !== null ? (
-              <div>
-                <p className="text-3xl font-bold">
-                  ₦{Number(walletData?.ngn.balance ?? 0).toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Available for outbound transfers</p>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                PAYSTACK_SECRET_KEY not configured or balance unavailable.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* USDC Wallet */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Coins className="h-4 w-4" />
-              USDC Wallet (Blockradar)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {walletData?.usdc.provisioned ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-3xl font-bold">{Number(walletData.usdc.balance).toFixed(2)} USDC</p>
-                  <p className="text-xs text-muted-foreground mt-1">Confirmed balance</p>
+      {/* Stats strip */}
+      {walletData && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* NGN Balance */}
+          <Card className="card-accent-emerald transition-all hover:shadow-md">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">NGN Balance</p>
+                  <p className="text-xl font-bold mt-0.5 leading-tight">
+                    {walletData.ngn.balance !== null
+                      ? `₦${Number(walletData.ngn.balance).toLocaleString()}`
+                      : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Available for disbursements</p>
                 </div>
-                {walletData.usdc.deposit_address && (
-                  <div className="rounded-md bg-muted/50 p-3 space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Deposit address (Polygon)</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono flex-1 truncate">
+                <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+                  <Wallet className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* USDC Balance */}
+          <Card className="card-accent-blue transition-all hover:shadow-md">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">USDC Balance</p>
+                  <p className="text-xl font-bold mt-0.5 leading-tight">
+                    {walletData.usdc.provisioned
+                      ? `${Number(walletData.usdc.balance).toFixed(2)} USDC`
+                      : '—'}
+                  </p>
+                  {walletData.usdc.provisioned && walletData.usdc.deposit_address ? (
+                    <div className="flex items-center gap-1 mt-1">
+                      <code className="text-xs font-mono text-muted-foreground truncate max-w-[120px]">
                         {walletData.usdc.deposit_address}
                       </code>
                       <CopyButton text={walletData.usdc.deposit_address} />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Also supports: Ethereum, Tron. Share this address with buyers to receive USDC.
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {walletData.usdc.provisioned ? 'No address' : 'Not activated'}
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                  <Coins className="h-5 w-5" />
+                </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  No USDC wallet provisioned. Provision one to start receiving stablecoin payments from buyers.
-                </p>
-                <Button onClick={handleProvisionWallet} disabled={isProvisioning} size="sm">
-                  {isProvisioning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Provision USDC Wallet
+              {!walletData.usdc.provisioned && (
+                <Button size="sm" className="mt-3 w-full h-8 text-xs" onClick={handleProvisionWallet} disabled={isProvisioning}>
+                  {isProvisioning && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  Activate USDC Wallet
                 </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Virtual Bank Accounts */}
-      <Card>
+          {/* Virtual Accounts count */}
+          <Card className="card-accent-violet transition-all hover:shadow-md">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Transfer Accounts</p>
+                  <p className="text-xl font-bold mt-0.5 leading-tight">{walletData.virtual_accounts.length}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">USD / GBP / EUR</p>
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-violet flex items-center justify-center shrink-0">
+                  <Building2 className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* International Transfer Accounts */}
+      <Card className="card-accent-violet">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-sm flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg icon-bg-violet flex items-center justify-center shrink-0">
                 <Building2 className="h-4 w-4" />
-                Virtual Bank Accounts (Grey)
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                USD, GBP, or EUR accounts for traditional SWIFT wire transfers from buyers
-              </CardDescription>
+              </div>
+              <div>
+                <CardTitle className="text-sm">International Transfer Accounts</CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Receive USD, GBP, or EUR wire transfers from international buyers — issued in your organisation's name
+                </CardDescription>
+              </div>
             </div>
             <Button
               size="sm"
@@ -282,25 +288,29 @@ export default function WalletPage() {
               disabled={(walletData?.virtual_accounts ?? []).length >= 3}
             >
               <Plus className="h-4 w-4 mr-1.5" />
-              Add Currency
+              Add Account
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {(walletData?.virtual_accounts ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No virtual accounts yet. Add a USD, GBP, or EUR account for buyers to wire to.
-            </p>
+            <div className="flex items-start gap-3 rounded-lg bg-muted/40 p-4">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                No transfer accounts set up yet. Add a USD, GBP, or EUR account to receive wire payments from buyers.
+                Accounts are issued in your organisation's name.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {walletData!.virtual_accounts.map((acct) => (
-                <div key={acct.account_id} className="rounded-lg border p-4 space-y-2">
+                <div key={acct.account_id} className="rounded-lg border bg-card p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{CURRENCY_FLAGS[acct.currency] ?? '🏦'}</span>
-                    <span className="font-semibold">{acct.currency}</span>
-                    <Badge variant="secondary" className="text-xs ml-auto">Virtual</Badge>
+                    <span className="text-xl">{CURRENCY_FLAGS[acct.currency] ?? '🏦'}</span>
+                    <span className="font-semibold text-sm">{acct.currency}</span>
+                    <Badge variant="secondary" className="text-xs ml-auto">Active</Badge>
                   </div>
-                  <div className="space-y-1 text-xs">
+                  <div className="space-y-1.5 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Bank</span>
                       <span className="font-medium">{acct.bank_name}</span>
@@ -350,14 +360,19 @@ export default function WalletPage() {
       {/* Recent Inbound Transactions */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ArrowDownToLine className="h-4 w-4" />
-            Recent Inbound Transactions
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <ArrowDownToLine className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-sm">Recent Inbound Payments</CardTitle>
+              <CardDescription className="text-xs mt-0.5">Latest payments received across all channels</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No inbound transactions recorded yet.</p>
+            <p className="text-sm text-muted-foreground">No inbound payments recorded yet.</p>
           ) : (
             <div className="space-y-0 divide-y">
               {transactions.map((tx) => (
@@ -368,15 +383,14 @@ export default function WalletPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {tx.type === 'usdc_deposit' ? 'USDC Deposit' : 'Wire Transfer'}
+                        {tx.type === 'usdc_deposit' ? 'USDC Payment' : 'Wire Transfer'}
                       </span>
                       {tx.network && (
                         <Badge variant="secondary" className="text-xs">{tx.network}</Badge>
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {tx.from && <span>From: {tx.from.slice(0, 12)}… · </span>}
-                      {tx.reference && <span>Ref: {tx.reference} · </span>}
+                      {tx.reference && <span>Ref: {tx.reference} &middot; </span>}
                       {new Date(tx.created_at).toLocaleDateString()}
                     </div>
                   </div>
@@ -403,13 +417,14 @@ export default function WalletPage() {
         </CardContent>
       </Card>
 
-      {/* Add virtual account dialog */}
+      {/* Add account dialog */}
       <Dialog open={addAccountOpen} onOpenChange={setAddAccountOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add Virtual Account</DialogTitle>
+            <DialogTitle>Set Up Transfer Account</DialogTitle>
             <DialogDescription>
-              Provision a new virtual bank account for receiving international wire transfers.
+              Create a dedicated bank account for receiving international payments.
+              The account will be issued in the name of <strong>{organization?.name || 'your organisation'}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -425,18 +440,21 @@ export default function WalletPage() {
                 <SelectContent>
                   {(['USD', 'GBP', 'EUR'] as const).map((c) => (
                     <SelectItem key={c} value={c} disabled={existingCurrencies.includes(c)}>
-                      {CURRENCY_FLAGS[c]} {c} {existingCurrencies.includes(c) ? '(already provisioned)' : ''}
+                      {CURRENCY_FLAGS[c]} {c} {existingCurrencies.includes(c) ? '(already active)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2.5">
+              OriginTrace will provision the account and link it to your organisation. Buyers can wire funds directly to this account, which will be reconciled against your shipments.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddAccountOpen(false)}>Cancel</Button>
             <Button onClick={handleAddVirtualAccount} disabled={isAddingAccount}>
               {isAddingAccount && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Provision Account
+              Create Account
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -444,3 +462,5 @@ export default function WalletPage() {
     </div>
   );
 }
+
+export default WalletContent;

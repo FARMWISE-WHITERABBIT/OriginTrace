@@ -143,7 +143,7 @@ function ProviderCard({
   const Icon = cfg.icon;
 
   return (
-    <Card className="relative">
+    <Card className="relative transition-shadow hover:shadow-md">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${cfg.bg}`}>

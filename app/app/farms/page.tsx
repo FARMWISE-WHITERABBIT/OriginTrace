@@ -492,7 +492,7 @@ export default function FarmsPage() {
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {farms.filter(f => f.compliance_status === 'pending').map(farm => (
-                        <Card key={farm.id} className="hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
+                        <Card key={farm.id} className="card-accent-amber hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
                           <div className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                               <div>
