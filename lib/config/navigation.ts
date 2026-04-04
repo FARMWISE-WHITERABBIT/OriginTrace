@@ -136,6 +136,8 @@ const appNavigation: NavigationConfig = {
         { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'inventory' },
         { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
         { title: 'Payments', url: '/app/payments', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Disbursements', url: '/app/payments/disbursements', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Wallet', url: '/app/payments/wallet', icon: CreditCard, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'payments' },
         { title: 'Sync', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
       ],
     },

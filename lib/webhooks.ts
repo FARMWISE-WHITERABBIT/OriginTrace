@@ -155,6 +155,7 @@ export const WEBHOOK_EVENTS = [
   'lab_result.uploaded',
   'lab_result.non_compliant',
   // Payments
+  'payment.received',
   'payment.recorded',
   'payment.disbursed',
   'payment.transfer_completed',
