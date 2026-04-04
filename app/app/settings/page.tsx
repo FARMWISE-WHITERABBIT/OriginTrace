@@ -1164,10 +1164,12 @@ function SettingsContent() {
         <TabsContent value="general" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             {/* Profile Card */}
-            <Card>
+            <Card className="card-accent-blue">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                    <Building2 className="h-4 w-4" />
+                  </div>
                   Your Profile
                 </CardTitle>
                 <CardDescription>Your personal information</CardDescription>
@@ -1204,10 +1206,12 @@ function SettingsContent() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-accent-violet">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-violet shrink-0">
+                    <Globe className="h-4 w-4" />
+                  </div>
                   Language Preference
                 </CardTitle>
                 <CardDescription>Choose your preferred language for the interface</CardDescription>
@@ -1218,10 +1222,12 @@ function SettingsContent() {
             </Card>
 
             {/* Currency Preference */}
-            <Card>
+            <Card className="card-accent-emerald">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Coins className="h-5 w-5" />
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-emerald shrink-0">
+                    <Coins className="h-4 w-4" />
+                  </div>
                   Currency Preference
                 </CardTitle>
                 <CardDescription>Default currency for payments, analytics, and reports. Nigerian Naira (₦) is the default for Nigerian operations.</CardDescription>
@@ -1404,9 +1410,14 @@ function SettingsContent() {
           </div>
 
           {/* Organization Info Card */}
-          <Card>
+          <Card className="card-accent-blue">
             <CardHeader>
-              <CardTitle>Organization Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                Organization Details
+              </CardTitle>
               <CardDescription>Your organization information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1467,10 +1478,12 @@ function SettingsContent() {
         {isAdmin && (
           <TabsContent value="compliance" className="space-y-6">
             <ComplianceProfilesSection />
-            <Card>
+            <Card className="card-accent-green">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-green shrink-0">
+                    <Shield className="h-4 w-4" />
+                  </div>
                   Compliance Rules Engine
                 </CardTitle>
                 <CardDescription>
