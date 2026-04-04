@@ -399,7 +399,7 @@ export function AggregatorDashboard() {
                 data={deforestationData}
                 donut
                 height={280}
-                colors={DEFORESTATION_COLORS}
+                colors={['#16A34A', '#DC2626', '#D97706', '#6B7280']}
               />
             )}
           </CardContent>
