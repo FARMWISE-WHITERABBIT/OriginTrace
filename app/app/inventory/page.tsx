@@ -298,25 +298,25 @@ export default function InventoryPage() {
       </div>
 
       <Tabs defaultValue="batches">
-        <TabsList>
-          <TabsTrigger value="batches">Batches</TabsTrigger>
-          <TabsTrigger value="bags" onClick={fetchBags}>Bags</TabsTrigger>
+        <TabsList className="h-9">
+          <TabsTrigger value="batches" className="text-sm">Batches</TabsTrigger>
+          <TabsTrigger value="bags" className="text-sm" onClick={fetchBags}>Bags</TabsTrigger>
         </TabsList>
         <TabsContent value="batches" className="mt-4 space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="segmented-control" data-testid="status-filter-group">
         {(['all', 'collecting', 'resolved', 'dispatched'] as const).map((status) => (
-          <Button
+          <button
             key={status}
-            variant={statusFilter === status ? 'default' : 'outline'}
-            size="sm"
+            className="segmented-control-item flex items-center gap-1.5"
+            data-active={statusFilter === status}
             onClick={() => setStatusFilter(status)}
             data-testid={`filter-${status}`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
-            <Badge variant="secondary" className="ml-2">
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${statusFilter === status ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
               {statusCounts[status]}
-            </Badge>
-          </Button>
+            </span>
+          </button>
         ))}
       </div>
 
@@ -359,18 +359,20 @@ export default function InventoryPage() {
               </table>
             </div>
           ) : filteredBatches.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Package className="h-6 w-6 text-muted-foreground" />
+              </div>
               {searchQuery || statusFilter !== 'all' ? (
                 <>
-                  <p className="font-medium text-muted-foreground">No batches match your filters</p>
-                  <p className="text-sm text-muted-foreground mt-1">Try clearing the search or changing the status filter</p>
+                  <p className="font-medium">No batches match your filters</p>
+                  <p className="text-sm mt-1">Try clearing the search or changing the status filter</p>
                 </>
               ) : (
                 <>
-                  <p className="font-medium">No collection batches yet</p>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Batches are created when a field agent completes a Smart Collect run. Each batch tracks weight, grade, and which farmers contributed.
+                  <p className="font-medium text-foreground">No collection batches yet</p>
+                  <p className="text-sm mt-1 max-w-xs">
+                    Batches are created when a field agent completes a Smart Collect run.
                   </p>
                   <Link href="/app/collect" className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:underline">
                     Start your first collection →
@@ -525,16 +527,18 @@ export default function InventoryPage() {
 
           {/* Stats strip */}
           {bags.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total', value: bags.length, color: '' },
-                { label: 'Unused', value: bags.filter(b => b.status === 'unused').length, color: 'text-blue-600' },
-                { label: 'Collected', value: bags.filter(b => b.status === 'collected').length, color: 'text-green-600' },
-                { label: 'Processed', value: bags.filter(b => b.status === 'processed').length, color: 'text-purple-600' },
+                { label: 'Total',     value: bags.length,                                       iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+                { label: 'Unused',    value: bags.filter(b => b.status === 'unused').length,    iconClass: 'icon-bg-neutral', accent: '' },
+                { label: 'Collected', value: bags.filter(b => b.status === 'collected').length, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+                { label: 'Processed', value: bags.filter(b => b.status === 'processed').length, iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
               ].map(s => (
-                <Card key={s.label} className="text-center p-3">
-                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                <Card key={s.label} className={`${s.accent} transition-shadow hover:shadow-sm`}>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold tracking-tight">{s.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                  </CardContent>
                 </Card>
               ))}
             </div>

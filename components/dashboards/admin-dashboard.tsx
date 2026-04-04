@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS } from '@/lib/chart-colors';
 
 const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
   ssr: false,
@@ -52,25 +53,7 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: '1y', label: '1 Year' },
 ];
 
-const COMPLIANCE_COLORS: Record<string, string> = {
-  'Approved': '#16a34a',
-  'Pending': '#f59e0b',
-  'Rejected': '#dc2626',
-  'Not Reviewed': '#6b7280',
-};
-
-const DECISION_COLORS: Record<string, string> = {
-  'Go': '#16a34a',
-  'Conditional': '#f59e0b',
-  'No Go': '#dc2626',
-  'Pending': '#6b7280',
-};
-
-const DOC_HEALTH_COLORS: Record<string, string> = {
-  'Valid': '#16a34a',
-  'Expiring Soon': '#f59e0b',
-  'Expired': '#dc2626',
-};
+const COMPLIANCE_COLORS = STATUS_COLORS;
 
 function TrendIndicator({ value }: { value: number }) {
   if (value > 0) {

@@ -1,26 +1,10 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-  '#A8DDD3',
-  '#4EAFA0',
-];
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface StackedBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -31,13 +15,6 @@ interface StackedBarChartProps {
   showLegend?: boolean;
   valueFormatter?: (value: number) => string;
 }
-
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
 
 export function StackedBarChart({
   data,
@@ -61,7 +38,7 @@ export function StackedBarChart({
         />
         <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
         <Tooltip
-          contentStyle={tooltipStyle}
+          contentStyle={TOOLTIP_STYLE}
           formatter={(value: unknown, name: unknown) => [
             valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
             String(name),
@@ -72,7 +49,7 @@ export function StackedBarChart({
             verticalAlign="bottom"
             iconType="rect"
             iconSize={10}
-            wrapperStyle={{ fontSize: '12px' }}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
           />
         )}
         {series.map((s, index) => (
@@ -81,10 +58,8 @@ export function StackedBarChart({
             dataKey={s.dataKey}
             name={s.label}
             stackId="stack"
-            fill={s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length]}
-            radius={
-              index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-            }
+            fill={s.color || VIZ_COLORS[index % VIZ_COLORS.length]}
+            radius={index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
             maxBarSize={60}
           />
         ))}

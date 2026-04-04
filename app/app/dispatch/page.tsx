@@ -300,10 +300,12 @@ function DispatchContent() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="card-accent-blue">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                <Truck className="h-4 w-4" />
+              </div>
               Dispatch Details
             </CardTitle>
             <CardDescription>
@@ -403,48 +405,42 @@ function DispatchContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-accent-emerald">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-emerald shrink-0">
+                <Package className="h-4 w-4" />
+              </div>
               Batch Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm text-muted-foreground">Batch ID</span>
-              <span className="font-mono font-medium">{batch.batch_code || `#${batch.id}`}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm text-muted-foreground">Farmer</span>
-              <span className="font-medium">{batch.farm.farmer_name}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm text-muted-foreground">Community</span>
-              <span className="font-medium">{batch.farm.community}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm text-muted-foreground">Commodity</span>
-              <span className="font-medium">{batch.commodity || '-'}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm text-muted-foreground">Bags</span>
-              <span className="font-medium text-lg">{batch.bag_count}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <span className="text-sm font-medium">Total Weight</span>
-              <span className="font-bold text-lg">{batch.total_weight.toFixed(1)} kg</span>
+          <CardContent className="space-y-2">
+            {[
+              { label: 'Batch ID',  value: batch.batch_code || `#${batch.id}`, mono: true },
+              { label: 'Farmer',    value: batch.farm.farmer_name },
+              { label: 'Community', value: batch.farm.community },
+              { label: 'Commodity', value: batch.commodity || '—' },
+              { label: 'Bags',      value: String(batch.bag_count) },
+            ].map(row => (
+              <div key={row.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className={`font-medium text-sm ${row.mono ? 'font-mono' : ''}`}>{row.value}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/8 border border-primary/20">
+              <span className="text-sm font-semibold text-primary">Total Weight</span>
+              <span className="font-bold text-xl text-primary">{batch.total_weight.toFixed(1)} kg</span>
             </div>
 
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+            <div className="pt-3 border-t mt-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
                 After Dispatch
               </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Batch status changes to "Dispatched"</li>
-                <li>• Weights and quantities are locked</li>
-                <li>• Destination warehouse scans to confirm receipt</li>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Batch status changes to "Dispatched"</li>
+                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Weights and quantities are locked</li>
+                <li className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-muted-foreground/60 shrink-0" />Destination warehouse scans to confirm receipt</li>
               </ul>
             </div>
           </CardContent>

@@ -79,24 +79,26 @@ export function ComplianceOfficerDashboard() {
   }, [organization]);
 
   const statCards = [
-    { title: 'Compliance Rate', value: `${stats.complianceRate}%`, icon: ShieldCheck, color: 'text-green-600' },
-    { title: 'Pending Reviews', value: stats.pendingFarms, icon: Clock, color: 'text-orange-600' },
-    { title: 'DDS Exports', value: stats.ddsExportCount, icon: FileDown, color: 'text-blue-600' },
-    { title: 'Documents', value: stats.complianceFilesCount, icon: FileText, color: 'text-purple-600' },
+    { title: 'Compliance Rate', value: `${stats.complianceRate}%`, icon: ShieldCheck, iconClass: 'icon-bg-green',  accent: 'card-accent-green' },
+    { title: 'Pending Reviews', value: stats.pendingFarms,          icon: Clock,       iconClass: 'icon-bg-amber',  accent: 'card-accent-amber' },
+    { title: 'DDS Exports',     value: stats.ddsExportCount,        icon: FileDown,    iconClass: 'icon-bg-blue',   accent: 'card-accent-blue' },
+    { title: 'Documents',       value: stats.complianceFilesCount,  icon: FileText,    iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
   ];
 
   return (
     <div className="space-y-6" data-testid="compliance-officer-dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
+              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                {isLoading ? '—' : stat.value}
               </div>
             </CardContent>
           </Card>

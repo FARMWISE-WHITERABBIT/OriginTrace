@@ -1,26 +1,7 @@
 'use client';
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-  '#A8DDD3',
-  '#4EAFA0',
-  '#0D3B33',
-  '#B5E4DB',
-];
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface PieDonutChartProps {
   data: Array<{ name: string; value: number; color?: string }>;
@@ -32,20 +13,13 @@ interface PieDonutChartProps {
   labelFormatter?: (name: string, value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
-
 export function PieDonutChart({
   data,
   donut = false,
   showLabels = true,
   showLegend = true,
   height = 300,
-  colors = ORIGIN_TRACE_COLORS,
+  colors = VIZ_COLORS,
   labelFormatter,
 }: PieDonutChartProps) {
   const renderLabel = showLabels
@@ -80,9 +54,11 @@ export function PieDonutChart({
           ))}
         </Pie>
         <Tooltip
-          contentStyle={tooltipStyle}
+          contentStyle={TOOLTIP_STYLE}
           formatter={(value: unknown, name: unknown) => [
-            labelFormatter ? labelFormatter(String(name), Number(value)) : Number(value).toLocaleString(),
+            labelFormatter
+              ? labelFormatter(String(name), Number(value))
+              : Number(value).toLocaleString(),
             String(name),
           ]}
         />
@@ -91,7 +67,7 @@ export function PieDonutChart({
             verticalAlign="bottom"
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{ fontSize: '12px' }}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
           />
         )}
       </PieChart>

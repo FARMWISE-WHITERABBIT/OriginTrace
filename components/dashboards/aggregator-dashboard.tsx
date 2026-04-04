@@ -32,6 +32,7 @@ import {
   VerticalBarChart,
   HorizontalBarChart,
 } from '@/components/charts';
+import { VIZ_COLORS, GRADE_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -180,10 +181,10 @@ export function AggregatorDashboard() {
   }, [fetchTrends]);
 
   const statCards = [
-    { title: 'Total Batches', value: stats.totalBatches, icon: Package, color: 'text-blue-600' },
-    { title: 'Open Batches', value: stats.collectingBatches + stats.resolvedBatches, icon: Clock, color: 'text-orange-600' },
-    { title: 'Dispatched', value: stats.dispatchedBatches, icon: Truck, color: 'text-green-600' },
-    { title: 'Field Agents', value: stats.activeAgents, icon: Users, color: 'text-purple-600' },
+    { title: 'Total Batches',  value: stats.totalBatches, icon: Package, iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+    { title: 'Open Batches',   value: stats.collectingBatches + stats.resolvedBatches, icon: Clock, iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
+    { title: 'Dispatched',     value: stats.dispatchedBatches, icon: Truck,   iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+    { title: 'Field Agents',   value: stats.activeAgents, icon: Users,   iconClass: 'icon-bg-violet',  accent: 'card-accent-violet' },
   ];
 
   const weightCards = [
@@ -193,20 +194,20 @@ export function AggregatorDashboard() {
     { label: 'Total Dispatched', value: stats.totalWeight },
   ];
 
-  const DEFORESTATION_COLORS = ['#16a34a', '#4ade80', '#f59e0b', '#ef4444'];
-
   return (
     <div data-testid="aggregator-dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
+              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                {isLoading ? '—' : stat.value}
               </div>
             </CardContent>
           </Card>
@@ -223,18 +224,20 @@ export function AggregatorDashboard() {
               </CardTitle>
               <CardDescription>Collection weight over time</CardDescription>
             </div>
-            <div className="flex items-center gap-1" data-testid="aggregator-period-selector">
-              {PERIOD_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={trendPeriod === opt.value ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTrendPeriod(opt.value)}
-                  data-testid={`button-agg-period-${opt.value}`}
-                >
-                  {opt.label}
-                </Button>
-              ))}
+            <div className="flex items-center gap-3" data-testid="aggregator-period-selector">
+              <div className="segmented-control">
+                {PERIOD_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className="segmented-control-item"
+                    data-active={trendPeriod === opt.value}
+                    onClick={() => setTrendPeriod(opt.value)}
+                    data-testid={`button-agg-period-${opt.value}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               {weightTrend !== 0 && <TrendIndicator value={weightTrend} />}
             </div>
           </div>
@@ -266,12 +269,8 @@ export function AggregatorDashboard() {
                 />
                 <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                   formatter={(value) => [`${Number(value || 0).toLocaleString()} kg`, 'Weight']}
                 />
                 <Area
@@ -340,7 +339,7 @@ export function AggregatorDashboard() {
                 categoryKey="grade"
                 height={280}
                 barLabel="Bags"
-                colors={['#16a34a', '#15803d', '#4ade80', '#22c55e', '#86efac']}
+                colors={Object.values(GRADE_COLORS)}
               />
             )}
           </CardContent>
