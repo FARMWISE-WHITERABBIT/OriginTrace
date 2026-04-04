@@ -6,6 +6,7 @@ import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { parsePagination } from '@/lib/api/validation';
 import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 import { emitEvent } from '@/lib/services/events';
 
 const batchCreateSchema = z.object({
@@ -20,7 +21,7 @@ const batchCreateSchema = z.object({
   local_id: z.string().optional(),
   collected_at: z.string().optional(),
   // Admin override fields for farm compliance gate
-  compliance_override_reason: z.string().optional(),
+  compliance_override_reason: z.string().trim().min(10, 'Override reason must be at least 10 characters').optional(),
   target_markets: z.array(z.string()).optional(),
 });
 
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve target markets: use provided value, else fall back to org's active compliance profiles
-    const resolvedTargetMarkets = target_markets ?? [];
+    const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
 
     const override = compliance_override_reason
       ? { reason: compliance_override_reason, actorRole: profile.role }
@@ -135,7 +136,9 @@ export async function POST(request: NextRequest) {
         {
           error: 'Farm Compliance Gate: this farm cannot contribute to this batch.',
           blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
           warnings: eligibility.warnings,
+          warning_codes: eligibility.warning_codes,
           farmId: farm_id,
         },
         { status: 422 }

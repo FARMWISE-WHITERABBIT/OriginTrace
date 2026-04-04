@@ -19,6 +19,7 @@ import { emitEvent } from '@/lib/services/events';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import {
   validateStageGate,
+  validateReadinessHardGate,
   buildStageHistoryEntry,
   buildStageCompletionData,
   STAGE_TO_LEGACY_STATUS,
@@ -73,6 +74,7 @@ export async function POST(
         actual_departure_date, bill_of_lading_number,
         actual_arrival_date, shipment_outcome,
         target_regulations,
+        readiness_score, readiness_decision,
         buyer_company, buyer_contact,
         shipment_code
       `)
@@ -95,7 +97,13 @@ export async function POST(
     }
 
     // ── Validate gate conditions ───────────────────────────────────────────────
-    const gateResult = validateStageGate(shipment as ShipmentForGate, targetStage);
+    const stageGate = validateStageGate(shipment as ShipmentForGate, targetStage);
+    const readinessGate = validateReadinessHardGate(shipment as ShipmentForGate, targetStage);
+    const gateResult = {
+      valid: stageGate.valid && readinessGate.valid,
+      blockers: [...stageGate.blockers, ...readinessGate.blockers],
+      warnings: [...stageGate.warnings, ...readinessGate.warnings],
+    };
 
     if (!gateResult.valid) {
       return NextResponse.json(
