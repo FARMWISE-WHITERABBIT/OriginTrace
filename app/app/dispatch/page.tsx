@@ -90,10 +90,13 @@ function DispatchContent() {
 
   useEffect(() => {
     async function fetchBatch() {
-      if (!supabase || !organization || !batchIdParam) {
+      // If there's no batch param at all, stop loading immediately (will redirect)
+      if (!batchIdParam) {
         setIsLoading(false);
         return;
       }
+      // Wait silently for org context — don't set loading=false yet
+      if (!supabase || !organization) return;
 
       try {
         const { data, error } = await supabase
@@ -256,20 +259,16 @@ function DispatchContent() {
     );
   }
 
-  if (batch.status !== 'resolved') {
+  const canDispatch = batch.status === 'resolved' || batch.status === 'completed';
+  if (!canDispatch) {
     return (
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Batch Not Ready</h2>
         <p className="text-muted-foreground mb-4">
-          This batch must be resolved before it can be dispatched.
+          This batch must be in <span className="font-mono">resolved</span> or <span className="font-mono">completed</span> status before it can be dispatched. Current status: <span className="font-mono font-semibold">{batch.status}</span>
         </p>
-        <Link href={`/app/resolve?batch=${batch.id}`}>
-          <Button>
-            Resolve Batch First
-          </Button>
-        </Link>
-        <Link href={`/app/inventory/${batch.id}`} className="ml-2">
+        <Link href={`/app/inventory/${batch.id}`} className="mr-2">
           <Button variant="outline">
             View Batch Details
           </Button>
