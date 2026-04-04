@@ -215,7 +215,7 @@ export async function POST(
     await supabase
       .from('disbursement_calculations')
       .update({
-        status: disbursementStatus === 'failed' ? 'failed' : 'disbursed',
+        status: 'disbursed',
         payment_id: paymentId,
         updated_at: now,
       })
