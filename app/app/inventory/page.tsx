@@ -255,9 +255,11 @@ export default function InventoryPage() {
   };
 
   const statusCounts = {
-    all: batches.length,
+    all:        batches.length,
     collecting: batches.filter(b => b.status === 'collecting').length,
-    resolved: batches.filter(b => b.status === 'resolved').length,
+    completed:  batches.filter(b => b.status === 'completed').length,
+    aggregated: batches.filter(b => b.status === 'aggregated').length,
+    resolved:   batches.filter(b => b.status === 'resolved').length,
     dispatched: batches.filter(b => b.status === 'dispatched').length,
   };
 
@@ -304,7 +306,7 @@ export default function InventoryPage() {
         </TabsList>
         <TabsContent value="batches" className="mt-4 space-y-4">
       <div className="segmented-control" data-testid="status-filter-group">
-        {(['all', 'collecting', 'resolved', 'dispatched'] as const).map((status) => (
+        {(['all', 'collecting', 'completed', 'aggregated', 'resolved', 'dispatched'] as const).map((status) => (
           <button
             key={status}
             className="segmented-control-item flex items-center gap-1.5"
@@ -425,7 +427,7 @@ export default function InventoryPage() {
                         {new Date(batch.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                        {['completed', 'aggregated'].includes(batch.status) && (
+                        {['completed', 'aggregated', 'resolved'].includes(batch.status) && (
                           <Button
                             size="sm"
                             variant="outline"

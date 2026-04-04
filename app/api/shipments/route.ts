@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentWriteRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

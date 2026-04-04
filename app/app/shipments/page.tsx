@@ -161,11 +161,12 @@ export default function ShipmentsPage() {
         ? `/api/shipments?status=${statusFilter}`
         : '/api/shipments';
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch shipments');
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch shipments');
       setShipments(data.shipments || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch shipments:', error);
+      toast({ title: 'Failed to load shipments', description: error.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }

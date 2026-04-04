@@ -28,7 +28,7 @@ import { TierGate } from '@/components/tier-gate';
 import { AddToShipmentDialog } from '@/components/shipments/add-to-shipment-dialog';
 
 interface Batch {
-  id: number;
+  id: string;
   batch_code: string | null;
   status: string;
   commodity: string;
@@ -259,14 +259,15 @@ function DispatchContent() {
     );
   }
 
-  const canDispatch = batch.status === 'resolved' || batch.status === 'completed';
+  const DISPATCHABLE = ['completed', 'aggregated', 'resolved'];
+  const canDispatch = DISPATCHABLE.includes(batch.status);
   if (!canDispatch) {
     return (
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Batch Not Ready</h2>
         <p className="text-muted-foreground mb-4">
-          This batch must be in <span className="font-mono">resolved</span> or <span className="font-mono">completed</span> status before it can be dispatched. Current status: <span className="font-mono font-semibold">{batch.status}</span>
+          This batch must be in <span className="font-mono">completed</span>, <span className="font-mono">aggregated</span>, or <span className="font-mono">resolved</span> status before it can be dispatched. Current status: <span className="font-mono font-semibold">{batch.status}</span>
         </p>
         <Link href={`/app/inventory/${batch.id}`} className="mr-2">
           <Button variant="outline">

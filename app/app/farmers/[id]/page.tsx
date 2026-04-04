@@ -20,7 +20,7 @@ import {
   Loader2, ArrowLeft, User, Phone, MapPin, Leaf, Package,
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
-  Sprout, ShieldCheck, Clock, Activity, Plus, Trash2, IdCard,
+  Sprout, ShieldCheck, Clock, Activity, Plus, Trash2,
   Upload, ExternalLink, DollarSign, Banknote, CreditCard, ArrowDownToLine, CheckCircle,
 } from 'lucide-react';
 
@@ -303,7 +303,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       };
       if (paymentForm.linked_batch_id) {
         body.linked_entity_type = 'collection_batch';
-        body.linked_entity_id = parseInt(paymentForm.linked_batch_id);
+        body.linked_entity_id = paymentForm.linked_batch_id; // UUID — pass as-is
       }
       const res = await fetch('/api/payments', {
         method: 'POST',
