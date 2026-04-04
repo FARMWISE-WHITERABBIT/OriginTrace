@@ -113,6 +113,20 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  /* Smooth transitions for interactive elements */
+  a, button, [role="button"] {
+    @apply transition-colors duration-150;
+  }
+  /* Focus rings */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  /* Clickable cards and list items */
+  [data-clickable], .clickable {
+    @apply cursor-pointer;
   }
 }
 
@@ -121,21 +135,49 @@
   .touch-target {
     @apply min-h-[48px] min-w-[48px];
   }
-  
+
   .field-text {
     @apply text-lg font-medium;
   }
-  
+
   .field-heading {
     @apply text-2xl font-bold;
   }
-  
+
   .hover-elevate {
     @apply transition-all duration-200 hover:brightness-110 hover:shadow-sm;
   }
-  
+
   .active-elevate-2 {
     @apply transition-all duration-100 active:brightness-95 active:scale-[0.98];
+  }
+
+  /* Enterprise stat card accent — top border strip */
+  .card-accent-emerald { @apply border-t-2 border-t-emerald-500; }
+  .card-accent-blue    { @apply border-t-2 border-t-blue-500; }
+  .card-accent-violet  { @apply border-t-2 border-t-violet-500; }
+  .card-accent-green   { @apply border-t-2 border-t-green-500; }
+  .card-accent-amber   { @apply border-t-2 border-t-amber-500; }
+  .card-accent-red     { @apply border-t-2 border-t-red-500; }
+
+  /* Icon badge backgrounds */
+  .icon-bg-emerald { @apply bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400; }
+  .icon-bg-blue    { @apply bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400; }
+  .icon-bg-violet  { @apply bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400; }
+  .icon-bg-green   { @apply bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400; }
+  .icon-bg-amber   { @apply bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400; }
+  .icon-bg-red     { @apply bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400; }
+
+  /* Segmented control for period selector */
+  .segmented-control {
+    @apply inline-flex items-center bg-muted rounded-md p-0.5 gap-0.5;
+  }
+  .segmented-control-item {
+    @apply px-3 py-1 text-xs font-medium rounded-sm cursor-pointer transition-all duration-150
+           text-muted-foreground hover:text-foreground;
+  }
+  .segmented-control-item[data-active="true"] {
+    @apply bg-background text-foreground shadow-sm;
   }
 }
 

@@ -139,6 +139,8 @@ export function AdminDashboard() {
     ? analytics.shipmentDecisions.reduce((s, d) => s + d.count, 0)
     : 0;
 
+  const complianceColor = overallComplianceRate >= 80 ? 'green' : overallComplianceRate >= 50 ? 'amber' : 'red';
+
   const statCards = [
     {
       title: 'Total Farms',
@@ -146,9 +148,10 @@ export function AdminDashboard() {
       icon: Map,
       description: `${analytics?.farmSummary.approved || 0} approved`,
       trend: null as number | null,
-      color: 'text-emerald-600 dark:text-emerald-400',
+      iconClass: 'icon-bg-emerald',
+      accentClass: 'card-accent-emerald',
       href: '/app/farms',
-      action: analytics?.farmSummary.pending ? `${analytics.farmSummary.pending} pending review →` : 'View all farms →',
+      action: analytics?.farmSummary.pending ? `${analytics.farmSummary.pending} pending review` : 'View all farms',
     },
     {
       title: 'Collection Volume',
@@ -156,9 +159,10 @@ export function AdminDashboard() {
       icon: Scale,
       description: `${analytics?.batchSummary.current || 0} batches collected`,
       trend: analytics?.weightSummary.trend ?? null,
-      color: 'text-blue-600 dark:text-blue-400',
+      iconClass: 'icon-bg-blue',
+      accentClass: 'card-accent-blue',
       href: '/app/inventory',
-      action: 'View inventory →',
+      action: 'View inventory',
     },
     {
       title: 'Active Shipments',
@@ -166,9 +170,10 @@ export function AdminDashboard() {
       icon: Ship,
       description: 'Recent shipments tracked',
       trend: null as number | null,
-      color: 'text-violet-600 dark:text-violet-400',
+      iconClass: 'icon-bg-violet',
+      accentClass: 'card-accent-violet',
       href: '/app/shipments?status=pending',
-      action: 'View active shipments →',
+      action: 'View active shipments',
     },
     {
       title: 'Compliance Rate',
@@ -176,17 +181,14 @@ export function AdminDashboard() {
       icon: ShieldCheck,
       description: 'Avg across farms/batches/bags',
       trend: null as number | null,
-      color: overallComplianceRate >= 80
-        ? 'text-green-600 dark:text-green-400'
-        : overallComplianceRate >= 50
-        ? 'text-amber-600 dark:text-amber-400'
-        : 'text-red-600 dark:text-red-400',
+      iconClass: `icon-bg-${complianceColor}`,
+      accentClass: `card-accent-${complianceColor}`,
       href: analytics?.farmSummary.pending
         ? '/app/farms?status=pending'
         : analytics?.compliance.flaggedBatches
         ? '/app/yield-alerts'
         : '/app/farms',
-      action: overallComplianceRate < 100 ? 'Review compliance →' : 'All compliant →',
+      action: overallComplianceRate < 100 ? 'Review compliance' : 'All compliant',
     },
   ];
 
@@ -257,17 +259,17 @@ export function AdminDashboard() {
     <div className="space-y-6" data-testid="admin-dashboard">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-semibold" data-testid="text-dashboard-title">Dashboard Overview</h2>
-        <div className="flex items-center gap-1" data-testid="period-selector">
+        <div className="segmented-control" data-testid="period-selector">
           {PERIOD_OPTIONS.map((opt) => (
-            <Button
+            <button
               key={opt.value}
-              variant={period === opt.value ? 'default' : 'outline'}
-              size="sm"
+              className="segmented-control-item"
+              data-active={period === opt.value}
               onClick={() => setPeriod(opt.value)}
               data-testid={`button-period-${opt.value}`}
             >
               {opt.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
@@ -276,22 +278,24 @@ export function AdminDashboard() {
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : statCards.map((stat) => (
-          <Link key={stat.title} href={stat.href} className="group" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-            <Card className="h-full transition-shadow group-hover:shadow-md group-hover:border-primary/30">
+          <Link key={stat.title} href={stat.href} className="group cursor-pointer" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Card className={`h-full transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 ${stat.accentClass}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                  <stat.icon className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                  {isLoading ? '...' : stat.value}
+                <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {stat.value}
                 </div>
                 <div className="flex items-center justify-between flex-wrap gap-1 mt-1">
                   <p className="text-xs text-muted-foreground">{stat.description}</p>
                   {stat.trend !== null && <TrendIndicator value={stat.trend} />}
                 </div>
                 <p className="text-xs text-primary mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {stat.action}
+                  {stat.action} →
                 </p>
               </CardContent>
             </Card>
@@ -301,46 +305,48 @@ export function AdminDashboard() {
 
       {/* Audit Readiness Score */}
       {auditScore && (
-        <Card data-testid="audit-readiness-card">
+        <Card data-testid="audit-readiness-card" className="card-accent-green">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-green-600" />
-              Audit Readiness Score
-            </CardTitle>
-            <CardDescription>Platform-wide readiness across farm data, batch records, lab coverage, documents, and shipment outcomes</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-green shrink-0">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  Audit Readiness Score
+                </CardTitle>
+                <CardDescription className="mt-1">Platform-wide readiness across farm data, batch records, lab coverage, documents, and shipment outcomes</CardDescription>
+              </div>
+              <Badge
+                variant="secondary"
+                className={`text-base font-bold px-3 py-1 shrink-0 ${
+                  auditScore.grade === 'A' ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' :
+                  auditScore.grade === 'B' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                  auditScore.grade === 'C' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' :
+                  'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                }`}
+                data-testid="audit-grade"
+              >
+                {auditScore.grade} · {auditScore.overall}/100
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="flex items-center gap-4 shrink-0">
-                <div className={`text-4xl font-bold w-16 h-16 rounded-full flex items-center justify-center border-4 ${
-                  auditScore.grade === 'A' ? 'border-green-500 text-green-700 dark:text-green-400' :
-                  auditScore.grade === 'B' ? 'border-blue-500 text-blue-700 dark:text-blue-400' :
-                  auditScore.grade === 'C' ? 'border-amber-500 text-amber-700 dark:text-amber-400' :
-                  'border-red-500 text-red-700 dark:text-red-400'
-                }`} data-testid="audit-grade">
-                  {auditScore.grade}
-                </div>
-                <div>
-                  <p className="text-2xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
-                  <p className="text-xs text-muted-foreground">Overall score</p>
-                </div>
-              </div>
-              <div className="flex-1 space-y-2 w-full">
-                {Object.entries(auditScore.components).map(([key, comp]) => (
-                  <div key={key}>
-                    <div className="flex justify-between text-xs mb-0.5">
-                      <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      <span className="font-medium">{comp.score}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-                        style={{ width: `${comp.score}%` }}
-                      />
-                    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
+              {Object.entries(auditScore.components).map(([key, comp]) => (
+                <div key={key}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    <span className="font-semibold">{comp.score}%</span>
                   </div>
-                ))}
-              </div>
+                  <div className="w-full bg-muted rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${comp.score}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -350,7 +356,9 @@ export function AdminDashboard() {
         <Card className="lg:col-span-2" data-testid="chart-volume-trends">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                <BarChart3 className="h-3.5 w-3.5" />
+              </div>
               Volume Trends
             </CardTitle>
             <CardDescription>Collection weight and bag count over time</CardDescription>
@@ -403,30 +411,36 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2" data-testid="row-flags-shipments">
-        <Card data-testid="card-active-flags">
+        <Card data-testid="card-active-flags" className="card-accent-amber">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-amber shrink-0">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
               Active Flags Requiring Action
             </CardTitle>
             <CardDescription>Issues needing immediate attention</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : flagItems.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {flagItems.map((flag, idx) => (
                   <Link
                     key={idx}
                     href={flag.href}
-                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors group"
+                    className="flex items-center gap-3 p-3 rounded-md border border-transparent hover:border-border hover:bg-muted/60 transition-all duration-150 group cursor-pointer"
                     data-testid={`flag-item-${idx}`}
                   >
-                    <flag.icon className={`h-4 w-4 flex-shrink-0 ${
-                      flag.priority === 'high'
-                        ? 'text-red-500 dark:text-red-400'
-                        : 'text-amber-500 dark:text-amber-400'
-                    }`} />
-                    <span className="text-sm flex-1">{flag.label}</span>
+                    <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${
+                      flag.priority === 'high' ? 'bg-red-50 dark:bg-red-950/50' : 'bg-amber-50 dark:bg-amber-950/50'
+                    }`}>
+                      <flag.icon className={`h-3.5 w-3.5 ${
+                        flag.priority === 'high'
+                          ? 'text-red-500 dark:text-red-400'
+                          : 'text-amber-500 dark:text-amber-400'
+                      }`} />
+                    </div>
+                    <span className="text-sm flex-1 leading-snug">{flag.label}</span>
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
                         flag.priority === 'high'
@@ -441,8 +455,11 @@ export function AdminDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                No active flags
+              <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <div className="h-10 w-10 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-green-500" />
+                </div>
+                <p className="text-sm font-medium">All clear — no active flags</p>
               </div>
             )}
           </CardContent>
