@@ -51,9 +51,12 @@ export async function GET(request: NextRequest) {
       }
 
       case 'mrl_database': {
+        // mrl_database columns: active_ingredient, commodity, market, mrl_ppm,
+        // mrl_notes, source_regulation, codex_mrl_ppm, effective_date, review_date
+        // Markets: EU, UK, US, China, Codex
         const { data, error } = await supabase
           .from('mrl_database')
-          .select('*')
+          .select('id, active_ingredient, commodity, market, mrl_ppm, mrl_notes, source_regulation')
           .order('commodity')
           .order('active_ingredient');
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -117,7 +120,6 @@ export async function POST(request: NextRequest) {
         const { market, document_checklist, required_fields, submission_workflow, notes } = body;
         if (!market) return NextResponse.json({ error: 'market required' }, { status: 400 });
 
-        // Get current max version for this market
         const { data: existing } = await supabase
           .from('compliance_rulesets')
           .select('version')
@@ -128,7 +130,6 @@ export async function POST(request: NextRequest) {
 
         const nextVersion = ((existing?.[0]?.version) ?? 0) + 1;
 
-        // Archive old active rulesets for this market
         await supabase
           .from('compliance_rulesets')
           .update({ status: 'archived' })
@@ -154,7 +155,6 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-        // Log the change
         await supabase.from('regulatory_update_log').insert({
           market,
           change_type: 'submission_workflow',
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'upsert_compliance_ruleset',
-          targetType: 'compliance_ruleset',
+          targetType: 'organization',
           targetId: market,
           afterState: { version: nextVersion },
           request,
@@ -176,15 +176,30 @@ export async function POST(request: NextRequest) {
       }
 
       case 'upsert_mrl': {
-        const { id, active_ingredient, commodity, market, limit_ppm, unit, regulation_ref } = body;
+        // Correct column names: mrl_ppm (not limit_ppm), source_regulation (not regulation_ref)
+        // MRL markets: EU, UK, US, China, Codex
+        // No 'unit' column — always mg/kg (ppm)
+        const { id, active_ingredient, commodity, market, mrl_ppm, mrl_notes, source_regulation } = body;
         if (!active_ingredient || !commodity || !market)
           return NextResponse.json({ error: 'active_ingredient, commodity, market required' }, { status: 400 });
+
+        const validMarkets = ['EU', 'UK', 'US', 'China', 'Codex'];
+        if (!validMarkets.includes(market))
+          return NextResponse.json({ error: `market must be one of: ${validMarkets.join(', ')}` }, { status: 400 });
 
         let result;
         if (id) {
           const { data, error } = await supabase
             .from('mrl_database')
-            .update({ active_ingredient, commodity, market, limit_ppm, unit, regulation_ref, updated_at: new Date().toISOString() })
+            .update({
+              active_ingredient,
+              commodity,
+              market,
+              mrl_ppm: parseFloat(mrl_ppm),
+              mrl_notes,
+              source_regulation,
+              updated_at: new Date().toISOString(),
+            })
             .eq('id', id)
             .select()
             .single();
@@ -193,7 +208,14 @@ export async function POST(request: NextRequest) {
         } else {
           const { data, error } = await supabase
             .from('mrl_database')
-            .insert({ active_ingredient, commodity, market, limit_ppm, unit, regulation_ref })
+            .insert({
+              active_ingredient,
+              commodity,
+              market,
+              mrl_ppm: parseFloat(mrl_ppm),
+              mrl_notes,
+              source_regulation,
+            })
             .select()
             .single();
           if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -219,7 +241,14 @@ export async function POST(request: NextRequest) {
         if (id) {
           const { data, error } = await supabase
             .from('hs_code_library')
-            .update({ commodity, hs_code, tariff_schedule, description, notes, updated_at: new Date().toISOString() })
+            .update({
+              commodity,
+              hs_code,
+              tariff_schedule,
+              description,
+              notes,
+              updated_at: new Date().toISOString(),
+            })
             .eq('id', id)
             .select()
             .single();
@@ -259,7 +288,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'trigger_facility_sync',
-          targetType: 'facility_list',
+          targetType: 'organization',
           targetId: list_type,
           request,
         });
@@ -272,7 +301,6 @@ export async function POST(request: NextRequest) {
         if (!title || !alertBody || !affected_markets?.length)
           return NextResponse.json({ error: 'title, body, affected_markets required' }, { status: 400 });
 
-        // Count recipients
         const { count: recipientCount } = await supabase
           .from('organizations')
           .select('*', { count: 'exact', head: true })
@@ -298,7 +326,7 @@ export async function POST(request: NextRequest) {
         await logSuperadminAction({
           superadminId: user.id,
           action: 'send_broadcast_alert',
-          targetType: 'broadcast_alert',
+          targetType: 'organization',
           targetId: data.id,
           afterState: { title, affected_markets, recipient_count: recipientCount },
           request,

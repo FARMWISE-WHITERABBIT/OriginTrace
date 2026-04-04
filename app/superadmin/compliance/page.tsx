@@ -44,9 +44,9 @@ interface MrlEntry {
   active_ingredient: string;
   commodity: string;
   market: string;
-  limit_ppm: number;
-  unit: string;
-  regulation_ref: string | null;
+  mrl_ppm: number;
+  mrl_notes: string | null;
+  source_regulation: string | null;
 }
 
 interface HsCode {
@@ -135,7 +135,8 @@ export default function CompliancePage() {
   // MRL editor
   const [showMrlDialog, setShowMrlDialog] = useState(false);
   const [editingMrl, setEditingMrl] = useState<MrlEntry | null>(null);
-  const [mrlForm, setMrlForm] = useState({ active_ingredient: '', commodity: '', market: '', limit_ppm: '', unit: 'mg/kg', regulation_ref: '' });
+  // MRL markets use EU/UK/US/China/Codex (not the ruleset markets EUDR/GACC/UAE)
+  const [mrlForm, setMrlForm] = useState({ active_ingredient: '', commodity: '', market: '', mrl_ppm: '', mrl_notes: '', source_regulation: '' });
   const [savingMrl, setSavingMrl] = useState(false);
 
   // Broadcast alert
@@ -226,8 +227,12 @@ export default function CompliancePage() {
         body: JSON.stringify({
           action: 'upsert_mrl',
           id: editingMrl?.id,
-          ...mrlForm,
-          limit_ppm: parseFloat(mrlForm.limit_ppm),
+          active_ingredient: mrlForm.active_ingredient,
+          commodity: mrlForm.commodity,
+          market: mrlForm.market,
+          mrl_ppm: parseFloat(mrlForm.mrl_ppm),
+          mrl_notes: mrlForm.mrl_notes || null,
+          source_regulation: mrlForm.source_regulation || null,
         }),
       });
       const data = await res.json();
@@ -385,7 +390,7 @@ export default function CompliancePage() {
                 className="bg-cyan-600 hover:bg-cyan-500 text-white"
                 onClick={() => {
                   setEditingMrl(null);
-                  setMrlForm({ active_ingredient: '', commodity: '', market: '', limit_ppm: '', unit: 'mg/kg', regulation_ref: '' });
+                  setMrlForm({ active_ingredient: '', commodity: '', market: '', mrl_ppm: '', mrl_notes: '', source_regulation: '' });
                   setShowMrlDialog(true);
                 }}
               >
@@ -417,8 +422,8 @@ export default function CompliancePage() {
                         <TableCell>
                           <Badge className={`text-xs border ${MARKET_COLORS[e.market] ?? 'bg-slate-800 text-slate-300 border-slate-700'}`}>{e.market}</Badge>
                         </TableCell>
-                        <TableCell className="text-slate-300 text-right">{e.limit_ppm} {e.unit}</TableCell>
-                        <TableCell className="text-slate-500 text-xs">{e.regulation_ref ?? '—'}</TableCell>
+                        <TableCell className="text-slate-300 text-right">{e.mrl_ppm} mg/kg</TableCell>
+                        <TableCell className="text-slate-500 text-xs">{e.source_regulation ?? '—'}</TableCell>
                         <TableCell>
                           <Button
                             size="sm"
@@ -426,7 +431,14 @@ export default function CompliancePage() {
                             className="h-7 text-xs text-slate-400 hover:text-white"
                             onClick={() => {
                               setEditingMrl(e);
-                              setMrlForm({ active_ingredient: e.active_ingredient, commodity: e.commodity, market: e.market, limit_ppm: String(e.limit_ppm), unit: e.unit, regulation_ref: e.regulation_ref ?? '' });
+                              setMrlForm({
+                                active_ingredient: e.active_ingredient,
+                                commodity: e.commodity,
+                                market: e.market,
+                                mrl_ppm: String(e.mrl_ppm),
+                                mrl_notes: e.mrl_notes ?? '',
+                                source_regulation: e.source_regulation ?? '',
+                              });
                               setShowMrlDialog(true);
                             }}
                           >
@@ -675,6 +687,7 @@ export default function CompliancePage() {
       </Dialog>
 
       {/* MRL Editor Dialog */}
+      {/* Note: MRL database uses EU/UK/US/China/Codex markets — separate from compliance ruleset markets */}
       <Dialog open={showMrlDialog} onOpenChange={setShowMrlDialog}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg">
           <DialogHeader>
@@ -684,45 +697,78 @@ export default function CompliancePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-slate-300">Active Ingredient</Label>
-                <Input className="bg-slate-800 border-slate-700 text-white" placeholder="e.g. chlorpyrifos" value={mrlForm.active_ingredient} onChange={e => setMrlForm(f => ({ ...f, active_ingredient: e.target.value }))} />
+                <Input
+                  className="bg-slate-800 border-slate-700 text-white"
+                  placeholder="e.g. chlorpyrifos"
+                  value={mrlForm.active_ingredient}
+                  onChange={e => setMrlForm(f => ({ ...f, active_ingredient: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-slate-300">Commodity</Label>
-                <Input className="bg-slate-800 border-slate-700 text-white" placeholder="e.g. cocoa" value={mrlForm.commodity} onChange={e => setMrlForm(f => ({ ...f, commodity: e.target.value }))} />
+                <Input
+                  className="bg-slate-800 border-slate-700 text-white"
+                  placeholder="e.g. cocoa"
+                  value={mrlForm.commodity}
+                  onChange={e => setMrlForm(f => ({ ...f, commodity: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-slate-300">Market</Label>
                 <Select value={mrlForm.market} onValueChange={v => setMrlForm(f => ({ ...f, market: v }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue placeholder="Market" /></SelectTrigger>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue placeholder="Market" />
+                  </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {MARKETS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    {['EU', 'UK', 'US', 'China', 'Codex'].map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label className="text-slate-300">Limit</Label>
-                  <Input type="number" step="0.001" className="bg-slate-800 border-slate-700 text-white" placeholder="0.050" value={mrlForm.limit_ppm} onChange={e => setMrlForm(f => ({ ...f, limit_ppm: e.target.value }))} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-slate-300">Unit</Label>
-                  <Select value={mrlForm.unit} onValueChange={v => setMrlForm(f => ({ ...f, unit: v }))}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="mg/kg">mg/kg</SelectItem>
-                      <SelectItem value="ppm">ppm</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-300">Limit (mg/kg)</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  className="bg-slate-800 border-slate-700 text-white"
+                  placeholder="0.050"
+                  value={mrlForm.mrl_ppm}
+                  onChange={e => setMrlForm(f => ({ ...f, mrl_ppm: e.target.value }))}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-slate-300">Regulation Reference</Label>
-              <Input className="bg-slate-800 border-slate-700 text-white" placeholder="e.g. Regulation (EC) 396/2005" value={mrlForm.regulation_ref} onChange={e => setMrlForm(f => ({ ...f, regulation_ref: e.target.value }))} />
+              <Label className="text-slate-300">Source Regulation</Label>
+              <Input
+                className="bg-slate-800 border-slate-700 text-white"
+                placeholder="e.g. Regulation (EC) No 396/2005"
+                value={mrlForm.source_regulation}
+                onChange={e => setMrlForm(f => ({ ...f, source_regulation: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-slate-300">Notes <span className="text-slate-500 font-normal">(optional)</span></Label>
+              <Input
+                className="bg-slate-800 border-slate-700 text-white"
+                placeholder="e.g. provisional MRL, not authorised = LOD"
+                value={mrlForm.mrl_notes}
+                onChange={e => setMrlForm(f => ({ ...f, mrl_notes: e.target.value }))}
+              />
             </div>
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setShowMrlDialog(false)}>Cancel</Button>
-              <Button className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white" onClick={saveMrl} disabled={savingMrl}>
+              <Button
+                variant="outline"
+                className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                onClick={() => setShowMrlDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white"
+                onClick={saveMrl}
+                disabled={savingMrl}
+              >
                 {savingMrl ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save
               </Button>
             </div>

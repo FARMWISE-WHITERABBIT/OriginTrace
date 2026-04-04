@@ -44,10 +44,11 @@ const MARKET_COLORS: Record<string, string> = {
 };
 
 const KYC_COLORS: Record<string, string> = {
-  approved:       'bg-green-900/40 text-green-300 border-green-700',
-  pending_review: 'bg-yellow-900/40 text-yellow-300 border-yellow-700',
-  rejected:       'bg-red-900/40 text-red-300 border-red-700',
-  not_submitted:  'bg-slate-700/40 text-slate-400 border-slate-600',
+  approved:      'bg-green-900/40 text-green-300 border-green-700',
+  under_review:  'bg-yellow-900/40 text-yellow-300 border-yellow-700',
+  pending:       'bg-blue-900/40 text-blue-300 border-blue-700',
+  rejected:      'bg-red-900/40 text-red-300 border-red-700',
+  not_submitted: 'bg-slate-700/40 text-slate-400 border-slate-600',
 };
 
 function fmtDate(s: string | null) {

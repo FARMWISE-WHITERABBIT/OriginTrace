@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
             .gte('paid_at', twelveMonthsAgo.toISOString()),
           supabase
             .from('escrow_accounts')
-            .select('amount, currency, created_at')
+            .select('held_amount, total_amount, currency, created_at')
             .gte('created_at', twelveMonthsAgo.toISOString()),
           supabase
             .from('audit_events')
@@ -54,29 +54,36 @@ export async function GET(request: NextRequest) {
             .select('subscription_tier, subscription_status'),
         ]);
 
-        // MRR by tier
+        // MRR by tier (12-month total / 12 for monthly average)
         const mrrByTier: Record<string, number> = {};
         const mrrByMonth: Record<string, number> = {};
         for (const pl of paymentLinks ?? []) {
           const tier = pl.tier ?? 'unknown';
-          const monthly = pl.billing_period === 'annual' ? pl.amount_ngn / 12 : pl.amount_ngn;
+          const monthly =
+            pl.billing_period === 'annual'
+              ? pl.amount_ngn / 12
+              : pl.amount_ngn;
           mrrByTier[tier] = (mrrByTier[tier] ?? 0) + monthly;
           const month = (pl.paid_at ?? '').substring(0, 7);
           if (month) mrrByMonth[month] = (mrrByMonth[month] ?? 0) + monthly;
         }
 
-        // GMV and escrow fee revenue estimate (using 1.25% average fee)
-        const gmv = (escrowAccounts ?? []).reduce((sum: number, e: any) => sum + parseFloat(e.amount ?? 0), 0);
-        const escrowFeeRevenue = gmv * 0.0125;
+        // GMV from escrow total_amount (USD/EUR/GBP typically)
+        const gmvByAccount = (escrowAccounts ?? []).reduce(
+          (sum: number, e: any) => sum + parseFloat(e.total_amount ?? 0),
+          0
+        );
+        // Estimate NGN equivalent at ~1500/USD for display purposes
+        const gmvNgn = gmvByAccount * 1500;
+        const escrowFeeRevenue = gmvNgn * 0.0125; // ~1.25% average
 
-        // Audit report revenue estimate (5000 NGN average)
         const auditReportRevenue = (auditReportEvents ?? []).length * 5000;
 
-        // Tenant breakdown by tier
         const activeTenantsByTier: Record<string, number> = {};
         for (const o of orgs ?? []) {
           if (o.subscription_status === 'active') {
-            activeTenantsByTier[o.subscription_tier] = (activeTenantsByTier[o.subscription_tier] ?? 0) + 1;
+            activeTenantsByTier[o.subscription_tier] =
+              (activeTenantsByTier[o.subscription_tier] ?? 0) + 1;
           }
         }
 
@@ -84,7 +91,7 @@ export async function GET(request: NextRequest) {
           revenue: {
             mrr_by_tier: mrrByTier,
             mrr_by_month: mrrByMonth,
-            total_gmv_ngn: gmv,
+            total_gmv_ngn: gmvNgn,
             escrow_fee_revenue_ngn: escrowFeeRevenue,
             audit_report_revenue_ngn: auditReportRevenue,
             active_tenants_by_tier: activeTenantsByTier,
@@ -93,22 +100,37 @@ export async function GET(request: NextRequest) {
       }
 
       case 'mrl_flag_frequency': {
+        // farmer_inputs table (NOT farm_inputs)
+        // mrl_flag is a JSONB column: { market, mrl_ppm, estimated_ppm, exceeded, checked_at }
+        // active_ingredient is a TEXT column added by migration
         const { data, error } = await supabase
-          .from('farm_inputs')
-          .select('active_ingredient, commodity, mrl_flag_market')
-          .eq('mrl_flagged', true);
+          .from('farmer_inputs')
+          .select('active_ingredient, commodity, mrl_flag')
+          .not('mrl_flag', 'is', null);
 
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+          // Table may not exist in all environments — return empty gracefully
+          console.error('farmer_inputs query error:', error.message);
+          return NextResponse.json({ mrl_flags: [] });
+        }
 
         const freq: Record<string, { count: number; markets: string[]; commodities: string[] }> = {};
         for (const fi of data ?? []) {
           const key = fi.active_ingredient ?? 'unknown';
           if (!freq[key]) freq[key] = { count: 0, markets: [], commodities: [] };
           freq[key].count += 1;
-          if (fi.mrl_flag_market && !freq[key].markets.includes(fi.mrl_flag_market))
-            freq[key].markets.push(fi.mrl_flag_market);
-          if (fi.commodity && !freq[key].commodities.includes(fi.commodity))
-            freq[key].commodities.push(fi.commodity);
+
+          // Parse JSONB mrl_flag for market info
+          const flag = fi.mrl_flag as any;
+          const market = flag?.market;
+          if (market && !freq[key].markets.includes(market)) {
+            freq[key].markets.push(market);
+          }
+
+          const commodity = fi.commodity;
+          if (commodity && !freq[key].commodities.includes(commodity)) {
+            freq[key].commodities.push(commodity);
+          }
         }
 
         const ranked = Object.entries(freq)
@@ -119,37 +141,77 @@ export async function GET(request: NextRequest) {
       }
 
       case 'compliance_adoption': {
-        const frameworks = ['EUDR', 'UK', 'US', 'GACC', 'UAE'];
-
-        const [{ data: allOrgs }, { data: profiles }] = await Promise.all([
-          supabase.from('organizations').select('id, subscription_tier').eq('subscription_status', 'active'),
+        // compliance_profiles: has regulation_framework (singular), not target_markets[]
+        // No dds_submitted column — use submission_health_log as proxy
+        const [{ data: allOrgs }, { data: profiles }, { data: submissions }] = await Promise.all([
+          supabase
+            .from('organizations')
+            .select('id, subscription_tier')
+            .eq('subscription_status', 'active'),
           supabase
             .from('compliance_profiles')
-            .select('org_id, target_markets, readiness_score, dds_submitted'),
+            .select('org_id, regulation_framework'),
+          supabase
+            .from('submission_health_log')
+            .select('org_id, framework, status')
+            .eq('status', 'confirmed'),
         ]);
 
-        const profileMap = new Map<string, any>();
-        for (const p of profiles ?? []) profileMap.set(p.org_id, p);
-
         const total = (allOrgs ?? []).length;
-        const adoption = frameworks.map((fw) => {
-          const fwOrgs = (allOrgs ?? []).filter((o: any) => {
-            const cp = profileMap.get(o.id);
-            return cp?.target_markets?.includes(fw);
+
+        // Map org_id → set of frameworks they have profiles for
+        const orgFrameworks = new Map<string, Set<string>>();
+        for (const p of profiles ?? []) {
+          const s = orgFrameworks.get(p.org_id) ?? new Set();
+          if (p.regulation_framework) s.add(p.regulation_framework);
+          orgFrameworks.set(p.org_id, s);
+        }
+
+        // Orgs that have at least one confirmed submission per integration
+        const submittedOrgs = new Map<string, Set<string>>();
+        for (const s of submissions ?? []) {
+          const set = submittedOrgs.get(s.org_id) ?? new Set();
+          set.add(s.framework);
+          submittedOrgs.set(s.org_id, set);
+        }
+
+        // Map compliance frameworks to their submission health_log framework names
+        const frameworkToSubmission: Record<string, string> = {
+          EUDR: 'EU_TRACES',
+          UK_Environment_Act: 'IPAFFS',
+          FSMA_204: 'FDA_PRIOR_NOTICE',
+          Lacey_Act_UFLPA: 'FDA_PRIOR_NOTICE',
+        };
+
+        const displayFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'China_Green_Trade', 'UAE_Halal'];
+
+        const adoption = displayFrameworks.map((fw) => {
+          const configuredOrgs = (allOrgs ?? []).filter((o: any) => {
+            const fws = orgFrameworks.get(o.id);
+            return fws?.has(fw);
           });
-          const configured = fwOrgs.length;
-          const withDds = fwOrgs.filter((o: any) => {
-            const cp = profileMap.get(o.id);
-            return cp?.dds_submitted === true;
-          }).length;
+          const configured = configuredOrgs.length;
+
+          const submissionFw = frameworkToSubmission[fw];
+          const withSubmission = submissionFw
+            ? configuredOrgs.filter((o: any) => submittedOrgs.get(o.id)?.has(submissionFw)).length
+            : 0;
+
+          const displayLabel =
+            fw === 'EUDR' ? 'EUDR' :
+            fw === 'FSMA_204' ? 'US' :
+            fw === 'UK_Environment_Act' ? 'UK' :
+            fw === 'China_Green_Trade' ? 'GACC' :
+            fw === 'UAE_Halal' ? 'UAE' : fw;
 
           return {
-            framework: fw,
+            framework: displayLabel,
             total_orgs: total,
             configured_count: configured,
             configured_pct: total > 0 ? Math.round((configured / total) * 100) : 0,
-            dds_submitted_count: withDds,
-            dds_submitted_pct: configured > 0 ? Math.round((withDds / configured) * 100) : 0,
+            dds_submitted_count: withSubmission,
+            dds_submitted_pct:
+              configured > 0 ? Math.round((withSubmission / configured) * 100) : 0,
           };
         });
 
@@ -157,30 +219,37 @@ export async function GET(request: NextRequest) {
       }
 
       case 'escrow_adoption': {
-        const { count: totalShipments } = await supabase
-          .from('shipments')
-          .select('*', { count: 'exact', head: true });
+        // shipments does NOT have escrow_account_id
+        // Instead, escrow_accounts has shipment_id → count distinct shipments with escrows
+        const [{ count: totalShipments }, { data: escrowedShipments }] = await Promise.all([
+          supabase.from('shipments').select('*', { count: 'exact', head: true }),
+          supabase
+            .from('escrow_accounts')
+            .select('shipment_id')
+            .not('shipment_id', 'is', null),
+        ]);
 
-        const { count: escrowShipments } = await supabase
-          .from('shipments')
-          .select('*', { count: 'exact', head: true })
-          .not('escrow_account_id', 'is', null);
+        const uniqueEscrowedShipments = new Set(
+          (escrowedShipments ?? []).map((e: any) => e.shipment_id)
+        ).size;
 
         return NextResponse.json({
           escrow_adoption: {
             total_shipments: totalShipments ?? 0,
-            escrow_enabled: escrowShipments ?? 0,
-            adoption_pct: (totalShipments ?? 0) > 0
-              ? Math.round(((escrowShipments ?? 0) / (totalShipments ?? 1)) * 100)
-              : 0,
+            escrow_enabled: uniqueEscrowedShipments,
+            adoption_pct:
+              (totalShipments ?? 0) > 0
+                ? Math.round((uniqueEscrowedShipments / (totalShipments ?? 1)) * 100)
+                : 0,
           },
         });
       }
 
       case 'rejection_patterns': {
+        // shipments.rejection_reason added by 20260402_shipment_logistics_fields migration
         const { data, error } = await supabase
           .from('shipments')
-          .select('rejection_reason, destination_country, commodity')
+          .select('rejection_reason, destination_country')
           .not('rejection_reason', 'is', null)
           .order('created_at', { ascending: false })
           .limit(500);
@@ -192,8 +261,12 @@ export async function GET(request: NextRequest) {
           const reason = s.rejection_reason ?? 'unspecified';
           if (!freq[reason]) freq[reason] = { count: 0, markets: [] };
           freq[reason].count += 1;
-          if (s.destination_country && !freq[reason].markets.includes(s.destination_country))
+          if (
+            s.destination_country &&
+            !freq[reason].markets.includes(s.destination_country)
+          ) {
             freq[reason].markets.push(s.destination_country);
+          }
         }
 
         const ranked = Object.entries(freq)
@@ -201,7 +274,10 @@ export async function GET(request: NextRequest) {
           .sort((a, b) => b.count - a.count)
           .slice(0, 20);
 
-        return NextResponse.json({ rejection_patterns: ranked, total_rejections: (data ?? []).length });
+        return NextResponse.json({
+          rejection_patterns: ranked,
+          total_rejections: (data ?? []).length,
+        });
       }
 
       default:

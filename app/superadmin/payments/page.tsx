@@ -26,25 +26,25 @@ interface EscrowOverview {
   total_by_currency: Record<string, number>;
 }
 
-interface FailedTransaction {
+// Disputes surface as the "failed transaction" signal for escrow (no 'failed' type exists)
+interface EscrowDispute {
   id: string;
-  type: string;
-  amount: number;
-  currency: string;
-  failure_reason: string | null;
+  reason: string;
+  status: string;
   created_at: string;
-  escrow_accounts?: { org_id: string; organizations?: { name: string } };
+  escrow_accounts?: { org_id: string; currency: string; organizations?: { name: string } };
 }
 
 interface FailedPayment {
   id: string;
+  org_id: string;
+  org_name: string;
   amount: number;
   currency: string;
   status: string;
-  provider: string | null;
-  failure_reason: string | null;
+  provider: string;
+  failure_reason: string;
   created_at: string;
-  organizations?: { name: string };
 }
 
 interface KycRecord {
@@ -109,7 +109,7 @@ export default function PaymentsPage() {
   const { toast } = useToast();
 
   const [escrowOverview, setEscrowOverview] = useState<EscrowOverview | null>(null);
-  const [failedTxns, setFailedTxns] = useState<FailedTransaction[]>([]);
+  const [failedTxns, setFailedTxns] = useState<EscrowDispute[]>([]);
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([]);
   const [kycQueue, setKycQueue] = useState<KycRecord[]>([]);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
@@ -370,48 +370,83 @@ export default function PaymentsPage() {
 
         {/* Failed Transactions */}
         <TabsContent value="failed">
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Failed Transactions</CardTitle>
-              <CardDescription>Payment and escrow failures requiring investigation</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Organisation</TableHead>
-                    <TableHead className="text-slate-400">Type</TableHead>
-                    <TableHead className="text-slate-400 text-right">Amount</TableHead>
-                    <TableHead className="text-slate-400">Reason</TableHead>
-                    <TableHead className="text-slate-400">Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {failedPayments.length === 0 && failedTxns.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center text-slate-500 py-8">No failed transactions</TableCell></TableRow>
-                  ) : (
-                    [...failedPayments.map(p => ({
-                      id: p.id,
-                      org: p.organizations?.name ?? '—',
-                      type: `Payment · ${p.provider ?? 'unknown'}`,
-                      amount: p.amount,
-                      currency: p.currency,
-                      reason: p.failure_reason,
-                      date: p.created_at,
-                    }))].map(row => (
-                      <TableRow key={row.id} className="border-slate-800 hover:bg-slate-800/30">
-                        <TableCell className="text-slate-200 font-medium">{row.org}</TableCell>
-                        <TableCell className="text-slate-400 text-sm">{row.type}</TableCell>
-                        <TableCell className="text-right text-slate-300">{row.currency === 'NGN' ? fmtNgn(row.amount) : `${row.currency} ${row.amount}`}</TableCell>
-                        <TableCell className="text-red-400 text-sm max-w-[200px] truncate">{row.reason ?? 'Unknown'}</TableCell>
-                        <TableCell className="text-slate-500 text-sm">{fmtDateTime(row.date)}</TableCell>
+          <div className="space-y-4">
+            {/* Escrow Disputes */}
+            {failedTxns.length > 0 && (
+              <Card className="bg-slate-900 border-slate-800 border-amber-800/40">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm">Open Escrow Disputes</CardTitle>
+                  <CardDescription>Disputed holds requiring resolution before funds release</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-slate-800">
+                        <TableHead className="text-slate-400">Organisation</TableHead>
+                        <TableHead className="text-slate-400">Reason</TableHead>
+                        <TableHead className="text-slate-400">Status</TableHead>
+                        <TableHead className="text-slate-400">Date</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {failedTxns.map(d => (
+                        <TableRow key={d.id} className="border-slate-800 hover:bg-slate-800/30">
+                          <TableCell className="text-slate-200 font-medium">
+                            {(d.escrow_accounts as any)?.organizations?.name ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-amber-400 text-sm max-w-[250px] truncate">{d.reason}</TableCell>
+                          <TableCell>
+                            <Badge className="text-xs border bg-amber-900/40 text-amber-300 border-amber-700">{d.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-sm">{fmtDateTime(d.created_at)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Failed Payments */}
+            <Card className="bg-slate-900 border-slate-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm">Failed Payments</CardTitle>
+                <CardDescription>Payment transactions that did not complete</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-800">
+                      <TableHead className="text-slate-400">Organisation</TableHead>
+                      <TableHead className="text-slate-400">Method</TableHead>
+                      <TableHead className="text-slate-400 text-right">Amount</TableHead>
+                      <TableHead className="text-slate-400">Notes</TableHead>
+                      <TableHead className="text-slate-400">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {failedPayments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-slate-500 py-6">No failed payments</TableCell>
+                      </TableRow>
+                    ) : (
+                      failedPayments.map(p => (
+                        <TableRow key={p.id} className="border-slate-800 hover:bg-slate-800/30">
+                          <TableCell className="text-slate-200 font-medium">{p.org_name}</TableCell>
+                          <TableCell className="text-slate-400 text-sm capitalize">{p.provider}</TableCell>
+                          <TableCell className="text-right text-slate-300">
+                            {p.currency === 'NGN' ? fmtNgn(p.amount) : `${p.currency} ${p.amount}`}
+                          </TableCell>
+                          <TableCell className="text-red-400 text-sm max-w-[200px] truncate">{p.failure_reason}</TableCell>
+                          <TableCell className="text-slate-500 text-sm">{fmtDateTime(p.created_at)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Provider Status */}
