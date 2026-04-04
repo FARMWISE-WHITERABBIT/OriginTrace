@@ -108,7 +108,6 @@ export default function SatelliteMap({ coordinates, onPointsChange, center, sate
       return null;
     }
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => { drawMapRef.current(); };
     img.onerror = () => {
       tileCache.current.delete(key);

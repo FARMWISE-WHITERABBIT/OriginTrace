@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
     }
 
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const emailExists = existingUsers?.users?.some(
       (u: any) => u.email?.toLowerCase() === adminEmail.toLowerCase()
     );

@@ -713,3 +713,148 @@ origintrace.trade`;
 
   return { html, text };
 }
+
+// ─── Stage transition notification ───────────────────────────────────────────
+
+const STAGE_NAMES: Record<number, string> = {
+  1: 'Preparation',
+  2: 'Quality & Certification',
+  3: 'Documentation',
+  4: 'Customs & Clearance',
+  5: 'Freight & Vessel',
+  6: 'Container Stuffing',
+  7: 'Departure',
+  8: 'Arrival & Clearance',
+  9: 'Close',
+};
+
+const STAGE_NEXT_ACTIONS: Record<number, string> = {
+  1: 'Commission lab tests and arrange pre-shipment inspection.',
+  2: 'Collect all required export documents (commercial invoice, packing list, COO, phytosanitary certificate).',
+  3: 'Assign clearing agent and file NCS/NESS customs declaration.',
+  4: 'Confirm vessel booking, ETD and ETA with freight forwarder.',
+  5: 'Record container number and seal number after container stuffing.',
+  6: 'Confirm actual vessel departure and upload Bill of Lading.',
+  7: 'Monitor transit and record actual arrival date.',
+  8: 'Confirm customs clearance at destination and record shipment outcome.',
+  9: 'Shipment is at the close stage. Record the final outcome to complete.',
+};
+
+export function buildShipmentStageEmail(params: {
+  recipientName: string;
+  recipientRole: 'exporter' | 'buyer' | 'freight_forwarder' | 'internal';
+  shipmentCode: string;
+  previousStage: number;
+  newStage: number;
+  dashboardUrl: string;
+  orgName: string;
+}) {
+  const {
+    recipientName,
+    recipientRole,
+    shipmentCode,
+    previousStage,
+    newStage,
+    dashboardUrl,
+    orgName,
+  } = params;
+
+  const stageName = STAGE_NAMES[newStage] ?? `Stage ${newStage}`;
+  const prevStageName = STAGE_NAMES[previousStage] ?? `Stage ${previousStage}`;
+  const nextAction = STAGE_NEXT_ACTIONS[newStage] ?? '';
+
+  const roleLabel =
+    recipientRole === 'buyer'
+      ? 'As the buyer, you can view the shipment status and compliance documentation in your buyer portal.'
+      : recipientRole === 'freight_forwarder'
+      ? 'As the freight forwarder, please ensure all vessel and container details are up to date in the system.'
+      : 'Log in to OriginTrace to review the current stage and complete required actions.';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipment ${shipmentCode} — Stage Advanced</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color:#1F5F52;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+              <p style="margin:8px 0 0;color:#6FB8A8;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Shipment Pipeline Update</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:600;">Shipment Advanced to Stage ${newStage}</h2>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">Hello ${recipientName},</p>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                Shipment <strong style="color:#111827;font-family:'Courier New',monospace;">${shipmentCode}</strong> has advanced from
+                <strong>Stage ${previousStage}: ${prevStageName}</strong> to
+                <strong>Stage ${newStage}: ${stageName}</strong>.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 4px;color:#166534;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Current Stage</p>
+                    <p style="margin:0;color:#111827;font-size:18px;font-weight:700;">Stage ${newStage}: ${stageName}</p>
+                    <p style="margin:8px 0 0;color:#166534;font-size:13px;">${orgName}</p>
+                  </td>
+                </tr>
+              </table>
+
+              ${nextAction ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 8px;color:#92400E;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Next Actions</p>
+                    <p style="margin:0;color:#78350F;font-size:14px;line-height:1.6;">${nextAction}</p>
+                  </td>
+                </tr>
+              </table>` : ''}
+
+              <p style="margin:0 0 24px;color:#4B5563;font-size:14px;line-height:1.6;">${roleLabel}</p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 24px;">
+                    <a href="${dashboardUrl}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;letter-spacing:0.3px;">View Shipment</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#F9FAFB;padding:24px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0 0 4px;color:#9CA3AF;font-size:12px;text-align:center;">&copy; 2026 OriginTrace. All rights reserved.</p>
+              <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">EUDR Compliance Ready &bull; origintrace.trade</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `Shipment ${shipmentCode} — Stage Advanced to ${stageName}
+
+Hello ${recipientName},
+
+Shipment ${shipmentCode} has advanced from Stage ${previousStage}: ${prevStageName} to Stage ${newStage}: ${stageName}.
+
+${nextAction ? `Next actions: ${nextAction}` : ''}
+
+${roleLabel}
+
+View shipment: ${dashboardUrl}
+
+© 2026 OriginTrace. All rights reserved.
+origintrace.trade`;
+
+  return { html, text };
+}

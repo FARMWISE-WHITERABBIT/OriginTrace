@@ -163,6 +163,9 @@ export default function FarmerRegistrationPage() {
   const canSave = fullName.trim().length >= 2 && selectedState && selectedLGA && community.trim() && hasConsent;
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const PHONE_REGEX = /^(\+?234|0)[7-9][01]\d{8}$/;
+  const NIN_REGEX = /^\d{11}$/;
+
   const handleSave = async () => {
     // Validate fields inline before submitting
     const errs: Record<string, string> = {};
@@ -171,6 +174,7 @@ export default function FarmerRegistrationPage() {
     if (!selectedLGA) errs.lga = 'LGA is required';
     if (!community.trim()) errs.community = 'Community is required';
     if (!hasConsent) errs.consent = 'Farmer consent is required';
+    if (phone.trim() && !PHONE_REGEX.test(phone.trim())) errs.phone = 'Enter a valid Nigerian phone number (e.g. 08012345678)';
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
     setFieldErrors({});
     setIsSaving(true);
@@ -355,10 +359,11 @@ export default function FarmerRegistrationPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="08012345678"
                   type="tel"
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.phone ? 'border-destructive' : ''}`}
                   data-testid="input-phone"
                 />
               </div>
+              {fieldErrors.phone && <p className="text-xs text-destructive mt-1">{fieldErrors.phone}</p>}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Primary Commodity</Label>

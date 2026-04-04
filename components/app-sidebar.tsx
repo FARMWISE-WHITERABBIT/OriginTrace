@@ -104,6 +104,10 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     if (supabase) {
+      try {
+        const { clearAllData } = await import('@/lib/offline/sync-store');
+        await clearAllData();
+      } catch {}
       await supabase.auth.signOut();
       router.push('/');
       router.refresh();

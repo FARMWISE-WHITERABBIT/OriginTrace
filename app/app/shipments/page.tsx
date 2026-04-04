@@ -90,6 +90,21 @@ function ScoreSparkline({ breakdown }: { breakdown: Array<{ name: string; score:
   );
 }
 
+interface ShipmentTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  destination_country: string | null;
+  destination_port: string | null;
+  buyer_company: string | null;
+  buyer_contact: string | null;
+  commodity: string | null;
+  target_regulations: string[];
+  freight_forwarder_name: string | null;
+  clearing_agent_name: string | null;
+  contract_price_per_mt: number | null;
+}
+
 export default function ShipmentsPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +112,8 @@ export default function ShipmentsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [templates, setTemplates] = useState<ShipmentTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [newShipment, setNewShipment] = useState({
     destination_country: '',
     commodity: '',
@@ -132,6 +149,27 @@ export default function ShipmentsPage() {
     fetchShipments();
   }, [organization, orgLoading, statusFilter]);
 
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch('/api/shipment-templates');
+      if (res.ok) {
+        const d = await res.json();
+        setTemplates(d.templates ?? []);
+      }
+    } catch { /* silent */ }
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setNewShipment((s) => ({
+      ...s,
+      destination_country: tpl.destination_country ?? s.destination_country,
+      commodity: tpl.commodity ?? s.commodity,
+      buyer_company: tpl.buyer_company ?? s.buyer_company,
+    }));
+  };
+
   const handleCreate = async () => {
     if (!newShipment.destination_country || !newShipment.commodity) {
       toast({ title: 'Missing fields', description: 'Destination country and commodity are required.', variant: 'destructive' });
@@ -152,6 +190,7 @@ export default function ShipmentsPage() {
       toast({ title: 'Shipment created', description: `Shipment ${data.shipment?.shipment_code || ''} has been created.` });
       setDialogOpen(false);
       setNewShipment({ destination_country: '', commodity: '', buyer_company: '', estimated_ship_date: '' });
+      setSelectedTemplateId('');
       fetchShipments();
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to create shipment', variant: 'destructive' });
@@ -190,7 +229,7 @@ export default function ShipmentsPage() {
               Pre-shipment compliance scoring and Go/No-Go export decisions
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (v) fetchTemplates(); }}>
             <DialogTrigger asChild>
               <Button data-testid="button-create-shipment">
                 <Plus className="h-4 w-4 mr-2" />
@@ -205,6 +244,29 @@ export default function ShipmentsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                {templates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="template">Start from Template (optional)</Label>
+                    <Select
+                      value={selectedTemplateId}
+                      onValueChange={(v) => {
+                        setSelectedTemplateId(v);
+                        if (v) applyTemplate(v);
+                      }}
+                    >
+                      <SelectTrigger id="template">
+                        <SelectValue placeholder="Select a template…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="destination">Destination Country</Label>
                   <Input

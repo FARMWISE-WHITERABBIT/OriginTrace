@@ -16,6 +16,7 @@ import {
   FolderOpen,
   CheckCircle,
   AlertTriangle,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,6 +36,12 @@ interface ComplianceStats {
   }>;
 }
 
+interface AuditScore {
+  overall: number;
+  grade: string;
+  components: Record<string, { score: number; detail: string }>;
+}
+
 export function ComplianceOfficerDashboard() {
   const [stats, setStats] = useState<ComplianceStats>({
     totalFarms: 0,
@@ -46,6 +53,7 @@ export function ComplianceOfficerDashboard() {
     complianceFilesCount: 0,
     recentActivity: [],
   });
+  const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
 
@@ -54,11 +62,12 @@ export function ComplianceOfficerDashboard() {
       if (!organization) return;
 
       try {
-        const res = await fetch('/api/dashboard?role=compliance_officer');
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
-        }
+        const [dashRes, auditRes] = await Promise.all([
+          fetch('/api/dashboard?role=compliance_officer'),
+          fetch('/api/audit-readiness'),
+        ]);
+        if (dashRes.ok) setStats(await dashRes.json());
+        if (auditRes.ok) setAuditScore(await auditRes.json());
       } catch (error) {
         console.error('Failed to fetch compliance stats:', error);
       } finally {
@@ -168,6 +177,56 @@ export function ComplianceOfficerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Audit Readiness Score */}
+      <Card data-testid="audit-readiness-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-green-600" />
+            Audit Readiness Score
+          </CardTitle>
+          <CardDescription>5-component readiness across traceability, lab coverage, and document health</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading || !auditScore ? (
+            <p className="text-sm text-muted-foreground">Loading audit score…</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className={`text-5xl font-bold w-20 h-20 rounded-full flex items-center justify-center border-4 ${
+                  auditScore.grade === 'A' ? 'border-green-500 text-green-700' :
+                  auditScore.grade === 'B' ? 'border-blue-500 text-blue-700' :
+                  auditScore.grade === 'C' ? 'border-amber-500 text-amber-700' :
+                  'border-red-500 text-red-700'
+                }`} data-testid="audit-grade">
+                  {auditScore.grade}
+                </div>
+                <div>
+                  <p className="text-3xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
+                  <p className="text-sm text-muted-foreground">Overall audit readiness</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(auditScore.components).map(([key, comp]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="font-medium">{comp.score}%</span>
+                    </div>
+                    <Progress value={comp.score} className="h-1.5" />
+                  </div>
+                ))}
+              </div>
+              <Link href="/app/analytics/reports">
+                <Button variant="outline" size="sm" className="w-full mt-2">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Generate Audit Report
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

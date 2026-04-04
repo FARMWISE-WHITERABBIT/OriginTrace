@@ -97,8 +97,15 @@ function TrendIndicator({ value }: { value: number }) {
   );
 }
 
+interface AuditScore {
+  overall: number;
+  grade: string;
+  components: Record<string, { score: number; detail: string }>;
+}
+
 export function AdminDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
   const [period, setPeriod] = useState<Period>('30d');
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
@@ -107,11 +114,12 @@ export function AdminDashboard() {
     if (!organization) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/analytics?period=${period}&section=all`);
-      if (res.ok) {
-        const data = await res.json();
-        setAnalytics(data);
-      }
+      const [analyticsRes, auditRes] = await Promise.all([
+        fetch(`/api/analytics?period=${period}&section=all`),
+        fetch('/api/audit-readiness'),
+      ]);
+      if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
+      if (auditRes.ok) setAuditScore(await auditRes.json());
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
@@ -290,6 +298,53 @@ export function AdminDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* Audit Readiness Score */}
+      {auditScore && (
+        <Card data-testid="audit-readiness-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-green-600" />
+              Audit Readiness Score
+            </CardTitle>
+            <CardDescription>Platform-wide readiness across farm data, batch records, lab coverage, documents, and shipment outcomes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="flex items-center gap-4 shrink-0">
+                <div className={`text-4xl font-bold w-16 h-16 rounded-full flex items-center justify-center border-4 ${
+                  auditScore.grade === 'A' ? 'border-green-500 text-green-700 dark:text-green-400' :
+                  auditScore.grade === 'B' ? 'border-blue-500 text-blue-700 dark:text-blue-400' :
+                  auditScore.grade === 'C' ? 'border-amber-500 text-amber-700 dark:text-amber-400' :
+                  'border-red-500 text-red-700 dark:text-red-400'
+                }`} data-testid="audit-grade">
+                  {auditScore.grade}
+                </div>
+                <div>
+                  <p className="text-2xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+                  <p className="text-xs text-muted-foreground">Overall score</p>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2 w-full">
+                {Object.entries(auditScore.components).map(([key, comp]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="font-medium">{comp.score}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        style={{ width: `${comp.score}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3" data-testid="row-volume-commodity">
         <Card className="lg:col-span-2" data-testid="chart-volume-trends">

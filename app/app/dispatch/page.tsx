@@ -20,10 +20,12 @@ import {
   MapPin,
   Clock,
   Send,
-  FileText
+  FileText,
+  Ship,
 } from 'lucide-react';
 import Link from 'next/link';
 import { TierGate } from '@/components/tier-gate';
+import { AddToShipmentDialog } from '@/components/shipments/add-to-shipment-dialog';
 
 interface Batch {
   id: number;
@@ -80,6 +82,8 @@ function DispatchContent() {
   const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchedBatchId, setDispatchedBatchId] = useState<string | null>(null);
+  const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
   const { organization, profile } = useOrg();
   const { toast } = useToast();
   const supabase = createClient();
@@ -187,7 +191,9 @@ function DispatchContent() {
         description: `Batch ${batch.batch_code || batch.id} has been dispatched to ${destination}`
       });
 
-      router.push('/app/inventory');
+      // Prompt to add to shipment instead of immediately navigating away
+      setDispatchedBatchId(String(batch.id));
+      setAddToShipmentOpen(true);
     } catch (error) {
       console.error('Failed to dispatch batch:', error);
       toast({
@@ -444,6 +450,28 @@ function DispatchContent() {
           </CardContent>
         </Card>
       </div>
+
+      {/* After dispatch: prompt to add batch to a shipment */}
+      {dispatchedBatchId && batch && (
+        <AddToShipmentDialog
+          open={addToShipmentOpen}
+          onOpenChange={(v) => {
+            setAddToShipmentOpen(v);
+            if (!v) router.push('/app/inventory');
+          }}
+          itemType="batch"
+          items={[
+            {
+              id: dispatchedBatchId,
+              name: batch.batch_code ?? `Batch ${dispatchedBatchId.slice(0, 8)}`,
+              weight_kg: batch.total_weight,
+            },
+          ]}
+          onLinked={(shipmentId) => {
+            router.push(`/app/shipments/${shipmentId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+
+const ALLOWED_SYNC_ROLES = ['admin', 'aggregator', 'agent'];
 
 const syncBatchSchema = z.object({
   local_id: z.string().min(1, 'local_id is required'),
@@ -25,6 +29,7 @@ const syncBatchSchema = z.object({
   })).optional(),
   notes: z.string().optional(),
   collected_at: z.string().optional(),
+  target_markets: z.array(z.string()).optional(),
 });
 
 const syncPutSchema = z.object({
@@ -37,6 +42,9 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     if (profile.role === 'admin' || profile.role === 'aggregator') {
@@ -83,6 +91,9 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     const body = await request.json();
@@ -124,6 +135,9 @@ export async function PUT(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
     const serviceClient = createServiceClient();
 
     const body = await request.json();
@@ -137,6 +151,78 @@ export async function PUT(request: NextRequest) {
     }
 
     const { batches } = parsed.data;
+
+    // Pre-flight Farm Compliance Gate checks before atomic sync insert.
+    // We block the sync batch when restricted-market gate rules fail.
+    const farmIdsToCheck = [
+      ...new Set(
+        batches
+          .flatMap((b: any) => [
+            String(b.farm_id ?? ''),
+            ...((b.contributors || []).map((c: any) => String(c.farm_id ?? ''))),
+          ])
+          .filter((id: string) => !!id && !id.startsWith('temp-') && id !== 'unknown')
+      ),
+    ];
+
+    if (farmIdsToCheck.length > 0) {
+      const { data: farms, error: farmsError } = await serviceClient
+        .from('farms')
+        .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp')
+        .in('id', farmIdsToCheck)
+        .eq('org_id', profile.org_id);
+
+      if (farmsError) {
+        return NextResponse.json(
+          { error: 'Failed to validate farm compliance gate', detail: farmsError.message },
+          { status: 500 }
+        );
+      }
+
+      const farmMap = new Map((farms || []).map((f: any) => [String(f.id), f]));
+      const blocked: Array<{
+        local_id: string;
+        farm_id?: string;
+        blockers: string[];
+        blocker_codes: string[];
+        warnings: string[];
+        warning_codes: string[];
+      }> = [];
+
+      for (const batch of batches as any[]) {
+        const targetMarkets = normalizeMarketCodes(batch.target_markets ?? []);
+        const batchFarmIds = [
+          batch.farm_id ? String(batch.farm_id) : undefined,
+          ...((batch.contributors || []).map((c: any) => c.farm_id ? String(c.farm_id) : undefined)),
+        ].filter((id: string | undefined): id is string => !!id && !id.startsWith('temp-') && id !== 'unknown');
+
+        for (const farmId of batchFarmIds) {
+          const farm = farmMap.get(farmId);
+          if (!farm) continue;
+          const eligibility = checkFarmEligibility(farm, targetMarkets);
+          if (!eligibility.eligible) {
+            blocked.push({
+              local_id: String(batch.local_id),
+              farm_id: farmId,
+              blockers: eligibility.blockers,
+              blocker_codes: eligibility.blocker_codes,
+              warnings: eligibility.warnings,
+              warning_codes: eligibility.warning_codes,
+            });
+          }
+        }
+      }
+
+      if (blocked.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Farm Compliance Gate blocked one or more synced batches',
+            blocked_batches: blocked,
+          },
+          { status: 422 }
+        );
+      }
+    }
 
     // Atomic RPC: replaces the N×M loop (per-batch select + insert + N contrib inserts + M bag updates).
     // All batches processed in a single DB round-trip. Idempotent on local_id.

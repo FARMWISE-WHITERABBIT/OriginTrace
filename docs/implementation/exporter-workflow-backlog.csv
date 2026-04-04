@@ -1,0 +1,19 @@
+Epic,Workstream,Priority,Sprint,Task,Deliverable,Acceptance
+First-mile hardening,WS-A,P0,1,Implement farm eligibility service,Eligibility status computation API,Deterministic eligible/conditional/blocked results with tests
+First-mile hardening,WS-A,P0,2,Enforce eligibility in write routes,API-level hard blocks for restricted flows,Rejected/blocked farms cannot enter restricted shipment flows
+First-mile hardening,WS-A,P0,2,Add override governance,Override with reason + immutable audit event,Every override is attributable and queryable
+Policy consistency,WS-B,P0,3,Create unified policy map,Single config for route-role-tier-severity,No contradictory route/tier mappings
+Policy consistency,WS-B,P0,3,Contract tests for access parity,CI tests across nav/middleware/API,Build fails on mapping drift
+Offline resilience,WS-C,P1,4,Add offline TTL and purge,Retention policy for local cached data,Stale sensitive data purged automatically
+Offline resilience,WS-C,P1,4,Implement shared-device clear mode,Quick clear on logout for field devices,No prior-user data visible after clear
+Compliance gates,WS-D,P0,5,Define market hard-fail matrix,Per-market mandatory evidence matrix,All hard blockers represented in gate engine
+Compliance gates,WS-D,P0,5,Gate enforcement in readiness transitions,Hard blockers prevent ready status,No ready transition with unresolved hard blocker
+Shipment controls,WS-E,P0,6,Implement stage transition guards,No-skip stage transition service,Stages cannot be skipped via API/UI
+Shipment controls,WS-E,P1,6,Emit stage audit timeline events,Timeline records for all transitions,Each transition has actor/timestamp/event payload
+Audit acceleration,WS-F,P1,7,Build audit package v1,EUDR/general audit export,Auditable package generated from one screen
+Audit acceleration,WS-F,P1,7,Build detention evidence link,Scoped expiring evidence link,All evidence-link access events logged
+Buyer trust,WS-G,P1,8,Expose buyer proof status,Buyer-facing compliance proof panel,Buyer can self-verify core shipment artifacts
+Payout maturity,WS-H,P1,9,Batch-close disbursement summary,Contribution-based payout summary,Payout totals reconcile with batch contributions
+Payout maturity,WS-H,P1,9,Bulk payout exception handling,Retry/error queue for failed disbursements,Failed payouts triaged without spreadsheet workflow
+Escrow foundations,WS-I,P2,10,Create escrow domain schema,Milestone-aware escrow entities,No release path without milestone association
+Escrow foundations,WS-I,P2,10,Implement dispute hold controls,Dispute pause + dual-confirmation workflow,Release blocked during active dispute hold

@@ -9,12 +9,11 @@ const ocrSchema = z.object({
   image: z.string().min(1, 'Image data is required'),
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
-
 export async function POST(request: NextRequest) {
+  const openai = new OpenAI({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
   const rateCheck = await checkRateLimit(request, null, RATE_LIMIT_PRESETS.ocr);
   if (rateCheck) return rateCheck;
 

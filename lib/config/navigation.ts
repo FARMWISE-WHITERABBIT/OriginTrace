@@ -42,6 +42,7 @@ import {
   CreditCard as CreditCardIcon,
   ScanLine,
   BookOpen,
+  FlaskConical,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -135,6 +136,8 @@ const appNavigation: NavigationConfig = {
         { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'inventory' },
         { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
         { title: 'Payments', url: '/app/payments', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Disbursements', url: '/app/payments/disbursements', icon: DollarSign, allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Wallet', url: '/app/payments/wallet', icon: CreditCard, allowedRoles: ['admin'], requiredTier: 'pro', tierFeature: 'payments' },
         { title: 'Sync', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
       ],
     },
@@ -149,6 +152,8 @@ const appNavigation: NavigationConfig = {
         { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
         { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
+        { title: 'Service Providers', url: '/app/service-providers', icon: Store, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
+        { title: 'Shipment Templates', url: '/app/shipment-templates', icon: BookOpen, allowedRoles: ['admin', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
         { title: 'DDS Export', url: '/app/dds', icon: FileText, tourId: 'nav-dds', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'dds_export' },
       ],
     },
@@ -160,6 +165,7 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Traceability', url: '/app/traceability', icon: Database, tourId: 'nav-traceability', allowedRoles: ['admin', 'aggregator', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'traceability' },
         { title: 'Scan & Verify', url: '/app/verify', icon: ScanLine, tourId: 'nav-verify', allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'scan_verify' },
+        { title: 'Lab Results', url: '/app/lab-results', icon: FlaskConical, allowedRoles: ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
         { title: 'Compliance Profiles', url: '/app/settings?tab=compliance', icon: ShieldCheck, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
       ],
     },
@@ -262,8 +268,8 @@ export function getNavigationConfig(role: UserRole): NavigationConfig {
 }
 
 export const agentBottomNavItems: MenuItem[] = [
-  { title: 'Collect', url: '/app/collect', icon: PlusCircle, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'smart_collect' },
-  { title: 'Register', url: '/app/farmers/new', icon: UserPlus, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'farmer_registration' },
-  { title: 'Map', url: '/app/farms/map', icon: Map, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'farm_mapping' },
-  { title: 'Sync', url: '/app/sync', icon: RefreshCw, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'basic', tierFeature: 'sync_dashboard' },
+  { title: 'Collect', url: '/app/collect', icon: PlusCircle, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'smart_collect' },
+  { title: 'Register', url: '/app/farmers/new', icon: UserPlus, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'farmer_registration' },
+  { title: 'Map', url: '/app/farms/map', icon: Map, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'farm_mapping' },
+  { title: 'Sync', url: '/app/sync', icon: RefreshCw, allowedRoles: ['agent', 'aggregator', 'admin'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
 ];
