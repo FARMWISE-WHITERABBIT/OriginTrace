@@ -1195,6 +1195,76 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* ── Record Payment Sheet ── */}
+      <Sheet open={paymentSheetOpen} onOpenChange={open => { if (!open) setPaymentSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Record Direct Payment</SheetTitle>
+            <SheetDescription>Record a cash advance, bonus, or direct transfer to {data?.farm?.farmer_name}.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" step="0.01" value={paymentForm.amount} onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Currency</Label>
+                <Select value={paymentForm.currency} onValueChange={v => setPaymentForm(p => ({ ...p, currency: v }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NGN">NGN</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Payment Method</Label>
+              <Select value={paymentForm.payment_method} onValueChange={v => setPaymentForm(p => ({ ...p, payment_method: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Payment Date</Label>
+              <Input type="date" value={paymentForm.payment_date} onChange={e => setPaymentForm(p => ({ ...p, payment_date: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Reference Number</Label>
+              <Input value={paymentForm.reference_number} onChange={e => setPaymentForm(p => ({ ...p, reference_number: e.target.value }))} placeholder="e.g. TXN-2024-001 (optional)" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Linked Batch (optional)</Label>
+              <Select value={paymentForm.linked_batch_id} onValueChange={v => setPaymentForm(p => ({ ...p, linked_batch_id: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select a batch..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {(data?.batches || []).map((b: any) => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.batch_code || b.id.slice(0,8)} — {Number(b.total_weight).toLocaleString()} kg</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={paymentForm.notes} onChange={e => setPaymentForm(p => ({ ...p, notes: e.target.value }))} placeholder="e.g. Advance payment for Q1 harvest" rows={2} className="mt-1 text-sm" />
+            </div>
+            <Button className="w-full" onClick={handleRecordPayment} disabled={savingPayment || !paymentForm.amount}>
+              {savingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Record Payment
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
