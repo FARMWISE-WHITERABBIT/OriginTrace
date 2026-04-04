@@ -80,7 +80,7 @@ function DispatchContent() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchedBatchId, setDispatchedBatchId] = useState<string | null>(null);
   const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
-  const { profile, orgName } = useOrg();
+  const { profile, organization } = useOrg();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -338,7 +338,7 @@ function DispatchContent() {
               onClick={async () => {
                 const { generateWaybillPDF } = await import('@/lib/export/waybill-pdf');
                 const doc = generateWaybillPDF({
-                  orgName: orgName || 'OriginTrace',
+                  orgName: organization?.name || 'OriginTrace',
                   batchId: batch.batch_code || `#${batch.id}`,
                   commodity: batch.commodity || '-',
                   farmerName: batch.farm.farmer_name,
