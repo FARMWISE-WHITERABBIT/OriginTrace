@@ -578,11 +578,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Inputs Tab ── */}
         <TabsContent value="inputs" className="mt-4">
-          <Card>
+          <Card className="card-accent-amber">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><Sprout className="h-4 w-4" />Agricultural Inputs</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0"><Sprout className="h-3.5 w-3.5" /></div>Agricultural Inputs</CardTitle>
                   <CardDescription className="mt-1">Fertilizers, pesticides, herbicides, seeds, and organic amendments. Required for Rainforest Alliance, EUDR, and GACC compliance records.</CardDescription>
                 </div>
                 {canEdit && (
@@ -641,11 +641,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Training Tab ── */}
         <TabsContent value="training" className="mt-4">
-          <Card>
+          <Card className="card-accent-violet">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-4 w-4" />Training Records</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><GraduationCap className="h-3.5 w-3.5" /></div>Training Records</CardTitle>
                   <CardDescription className="mt-1">Compliance and sustainability training modules. Required for Rainforest Alliance certification and EUDR due diligence records.</CardDescription>
                 </div>
                 {canEdit && (
@@ -703,11 +703,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Batches Tab ── */}
         <TabsContent value="batches" className="mt-4">
-          <Card>
+          <Card className="card-accent-blue">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" />Collection Batches</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><Package className="h-3.5 w-3.5" /></div>Collection Batches</CardTitle>
                   <CardDescription className="mt-1">All produce collected from this farm, linked for full supply chain traceability.</CardDescription>
                 </div>
                 {canEdit && (
@@ -764,10 +764,10 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Activity Tab ── */}
         <TabsContent value="activity" className="mt-4">
-          <Card>
+          <Card className="card-accent-green">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4" />Activity Timeline
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-green shrink-0"><Activity className="h-3.5 w-3.5" /></div>Activity Timeline
               </CardTitle>
               <CardDescription>Audit trail of changes to this farmer record</CardDescription>
             </CardHeader>
