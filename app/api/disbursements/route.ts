@@ -30,13 +30,19 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (batchId) query = query.eq('batch_id', parseInt(batchId));
+    if (batchId) query = query.eq('batch_id', batchId); // UUID — no parseInt
     if (status) query = query.eq('status', status);
     if (dateFrom) query = query.gte('created_at', dateFrom);
     if (dateTo) query = query.lte('created_at', dateTo);
 
     const { data, error, count } = await query;
-    if (error) throw error;
+    if (error) {
+      // Table not yet migrated — return empty instead of 500
+      if ((error as any).code === 'PGRST205' || error.message?.includes('disbursement_calculations')) {
+        return NextResponse.json({ disbursements: [], total: 0, page, limit });
+      }
+      throw error;
+    }
 
     return NextResponse.json({
       disbursements: data ?? [],

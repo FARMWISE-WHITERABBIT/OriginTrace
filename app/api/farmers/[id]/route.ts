@@ -77,14 +77,18 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(50);
 
-    // Disbursement calculations for this farmer
-    const { data: disbursements } = await supabase
-      .from('disbursement_calculations')
-      .select('id, batch_id, farmer_name, weight_kg, price_per_kg, gross_amount, deductions, net_amount, currency, status, payment_id, approved_at, notes, created_at, collection_batches(batch_code, commodity)')
-      .eq('farm_id', farmId)
-      .eq('org_id', profile.org_id)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    // Disbursement calculations for this farmer (table may not exist in all envs yet)
+    let disbursements: any[] = [];
+    try {
+      const { data: disbData } = await supabase
+        .from('disbursement_calculations')
+        .select('id, batch_id, farmer_name, weight_kg, price_per_kg, gross_amount, deductions, net_amount, currency, status, payment_id, approved_at, notes, created_at, collection_batches(batch_code, commodity)')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      disbursements = disbData ?? [];
+    } catch { /* table not yet migrated */ }
 
     // Direct payments recorded for this farmer
     const { data: payments } = await supabase
