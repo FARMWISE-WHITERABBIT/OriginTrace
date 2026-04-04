@@ -54,6 +54,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DocumentUpload } from '@/components/document-upload';
+import { CostTracker } from '@/components/shipments/cost-tracker';
+import { ShipmentPipeline } from '@/components/shipments/shipment-pipeline';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 
 
@@ -76,6 +78,69 @@ interface ShipmentDetail {
   notes: string | null;
   estimated_ship_date: string | null;
   created_at: string;
+  // 9-stage pipeline fields
+  current_stage: number;
+  stage_data: Record<string, any>;
+  stage_history: any[];
+  // Stage 1 — Preparation
+  purchase_order_number: string | null;
+  purchase_order_date: string | null;
+  contract_price_per_mt: number | null;
+  total_shipment_value_usd: number | null;
+  // Stage 2 — Quality & Certification
+  inspection_body: string | null;
+  inspection_date: string | null;
+  inspection_certificate_number: string | null;
+  inspection_result: string | null;
+  inspection_fees_ngn: number | null;
+  phyto_lab_costs_ngn: number | null;
+  // Stage 3 — Documentation
+  doc_status: Record<string, any>;
+  // Stage 4 — Customs & Clearance
+  clearing_agent_name: string | null;
+  clearing_agent_contact: string | null;
+  customs_declaration_number: string | null;
+  exit_certificate_number: string | null;
+  customs_fees_ngn: number | null;
+  port_handling_charges_ngn: number | null;
+  certification_costs_ngn: number | null;
+  // Stage 5 — Freight & Vessel
+  freight_forwarder_name: string | null;
+  freight_forwarder_contact: string | null;
+  shipping_line: string | null;
+  vessel_name: string | null;
+  imo_number: string | null;
+  voyage_number: string | null;
+  booking_reference: string | null;
+  port_of_loading: string | null;
+  port_of_discharge: string | null;
+  etd: string | null;
+  eta: string | null;
+  freight_cost_usd: number | null;
+  freight_insurance_usd: number | null;
+  // Stage 6 — Container Stuffing
+  container_number: string | null;
+  container_seal_number: string | null;
+  container_type: string | null;
+  // Stage 7 — Departure
+  actual_departure_date: string | null;
+  bill_of_lading_number: string | null;
+  // Stage 8 — Arrival
+  actual_arrival_date: string | null;
+  prenotif_eu_traces: string | null;
+  prenotif_eu_traces_ref: string | null;
+  prenotif_uk_ipaffs: string | null;
+  prenotif_uk_ipaffs_ref: string | null;
+  prenotif_us_fda: string | null;
+  prenotif_us_fda_ref: string | null;
+  prenotif_cn_gacc: string | null;
+  prenotif_cn_gacc_ref: string | null;
+  prenotif_uae_esma: string | null;
+  prenotif_uae_esma_ref: string | null;
+  // Stage 9 — Close
+  shipment_outcome: string | null;
+  rejection_reason: string | null;
+  usd_ngn_rate: number | null;
 }
 
 interface ShipmentItem {
@@ -846,7 +911,7 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
+      <ShipmentPipeline shipment={shipment} onRefresh={fetchShipment} />
 
       {/* Linear Supply Chain Traceability Timeline */}
       <Card data-testid="card-supply-chain-graph">
@@ -1559,6 +1624,9 @@ export default function ShipmentDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cost of Export & Net Margin */}
+      <CostTracker shipmentId={shipment.id} />
 
       {/* Evidence Package */}
       <Card>

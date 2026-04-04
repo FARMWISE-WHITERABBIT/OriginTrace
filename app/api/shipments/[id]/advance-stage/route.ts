@@ -19,12 +19,14 @@ import { emitEvent } from '@/lib/services/events';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import {
   validateStageGate,
+  validateReadinessHardGate,
   buildStageHistoryEntry,
   buildStageCompletionData,
   STAGE_TO_LEGACY_STATUS,
   STAGE_DEFINITIONS,
   type ShipmentForGate,
 } from '@/lib/services/shipment-stages';
+import { getEscrowStatus } from '@/lib/services/escrow';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
 
@@ -73,6 +75,7 @@ export async function POST(
         actual_departure_date, bill_of_lading_number,
         actual_arrival_date, shipment_outcome,
         target_regulations,
+        readiness_score, readiness_decision,
         buyer_company, buyer_contact,
         shipment_code
       `)
@@ -95,7 +98,20 @@ export async function POST(
     }
 
     // ── Validate gate conditions ───────────────────────────────────────────────
-    const gateResult = validateStageGate(shipment as ShipmentForGate, targetStage);
+    const stageGate = validateStageGate(shipment as ShipmentForGate, targetStage);
+    const readinessGate = validateReadinessHardGate(shipment as ShipmentForGate, targetStage);
+
+    // Check for escrow dispute hold
+    const escrowStatus = await getEscrowStatus(shipmentId);
+    const escrowBlocker = escrowStatus.hasOpenDispute
+      ? [`ESCROW_DISPUTE_HOLD: Escrow has an active dispute (${escrowStatus.openDispute?.reason ?? 'reason unspecified'}). Resolve the dispute before advancing.`]
+      : [];
+
+    const gateResult = {
+      valid: stageGate.valid && readinessGate.valid && !escrowStatus.hasOpenDispute,
+      blockers: [...stageGate.blockers, ...readinessGate.blockers, ...escrowBlocker],
+      warnings: [...stageGate.warnings, ...readinessGate.warnings],
+    };
 
     if (!gateResult.valid) {
       return NextResponse.json(
@@ -173,7 +189,7 @@ export async function POST(
           newStage: targetStage,
           shipmentCode: shipment.shipment_code ?? undefined,
           buyerEmail: shipment.buyer_contact ?? undefined,
-          escrowEnabled: false, // Payment sprint enables this
+          escrowEnabled: !!escrowStatus.escrow,
         },
       },
       supabase

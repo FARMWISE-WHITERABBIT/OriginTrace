@@ -155,6 +155,7 @@ export const WEBHOOK_EVENTS = [
   'lab_result.uploaded',
   'lab_result.non_compliant',
   // Payments
+  'payment.received',
   'payment.recorded',
   'payment.disbursed',
   'payment.transfer_completed',
@@ -173,6 +174,11 @@ export const WEBHOOK_EVENTS = [
   'kyc.submitted',
   'kyc.approved',
   'kyc.rejected',
+  // Escrow
+  'escrow.held',
+  'escrow.released',
+  'escrow.disputed',
+  'dispute.resolved',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];

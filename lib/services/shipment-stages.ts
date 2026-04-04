@@ -31,6 +31,8 @@ export interface ShipmentForGate {
   actual_arrival_date: string | null;
   shipment_outcome: string | null;
   target_regulations: string[];
+  readiness_score?: number | null;
+  readiness_decision?: string | null;
 }
 
 export interface StageGateResult {
@@ -212,6 +214,43 @@ export function validateStageGate(
   if (gate.customValidator) {
     const customErrors = gate.customValidator(shipment);
     blockers.push(...customErrors);
+  }
+
+  return {
+    valid: blockers.length === 0,
+    blockers,
+    warnings,
+  };
+}
+
+/**
+ * Readiness hard-gate validator.
+ *
+ * PRD-aligned behavior:
+ * - Before Departure (Stage 7), readiness must be >= 80 and decision cannot be NO_GO.
+ * - This is an API-layer gate so stage advancement cannot bypass it.
+ */
+export function validateReadinessHardGate(
+  shipment: ShipmentForGate,
+  targetStage: number
+): StageGateResult {
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+
+  // Apply hard gate from Stage 7 onward (Departure and beyond)
+  if (targetStage >= 7) {
+    const score = shipment.readiness_score ?? null;
+    const decision = (shipment.readiness_decision ?? '').toUpperCase();
+
+    if (decision === 'NO_GO') {
+      blockers.push('Shipment readiness decision is NO_GO. Resolve compliance blockers before departure.');
+    }
+
+    if (score === null || Number.isNaN(score)) {
+      blockers.push('Shipment readiness score is missing. Recalculate readiness before departure.');
+    } else if (score < 80) {
+      blockers.push(`Shipment readiness score is ${score}. Minimum score is 80 before departure.`);
+    }
   }
 
   return {
