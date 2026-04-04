@@ -44,6 +44,10 @@ import {
   CircleCheckBig,
   FileDown,
   RotateCw,
+  FlaskConical,
+  Share2,
+  Copy,
+  CheckCircle,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -529,6 +533,11 @@ export default function ShipmentDetailPage() {
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
+  // Lab results + evidence packages
+  const [labResults, setLabResults] = useState<any[]>([]);
+  const [evidencePackages, setEvidencePackages] = useState<any[]>([]);
+  const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const fetchActivity = async () => {
     if (activityFetched || !shipmentId) return;
@@ -561,6 +570,41 @@ export default function ShipmentDetailPage() {
       setIsLoading(false);
     }
   }, [shipmentId, organization, orgLoading, toast]);
+
+  const fetchLabResultsAndEvidence = useCallback(async () => {
+    if (!shipmentId) return;
+    try {
+      const [labRes, evRes] = await Promise.all([
+        fetch(`/api/lab-results?shipment_id=${shipmentId}&page_size=20`),
+        fetch(`/api/shipments/${shipmentId}/evidence-package`),
+      ]);
+      if (labRes.ok) { const d = await labRes.json(); setLabResults(d.results ?? []); }
+      if (evRes.ok) { const d = await evRes.json(); setEvidencePackages(d.packages ?? []); }
+    } catch (e) { console.error('Failed to fetch lab/evidence:', e); }
+  }, [shipmentId]);
+
+  const generateEvidencePackage = async () => {
+    if (!shipmentId) return;
+    setIsGeneratingEvidence(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentId}/evidence-package`, { method: 'POST' });
+      const d = await res.json();
+      if (!res.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
+      // Download PDF
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${d.pdf}`;
+      link.download = d.fileName;
+      link.click();
+      toast({ title: 'Evidence package generated', description: `Shareable link: ${d.shareableUrl}` });
+      fetchLabResultsAndEvidence();
+    } finally { setIsGeneratingEvidence(false); }
+  };
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
 
   const fetchOutcomes = useCallback(async () => {
     if (!organization) return;
@@ -601,7 +645,8 @@ export default function ShipmentDetailPage() {
     fetchOutcomes();
     fetchColdChain();
     fetchLots();
-  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots]);
+    fetchLabResultsAndEvidence();
+  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots, fetchLabResultsAndEvidence]);
 
   const updateField = async (field: string, value: unknown) => {
     setIsSaving(true);
@@ -1454,6 +1499,134 @@ export default function ShipmentDetailPage() {
               data-testid="input-edit-notes"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Lab Results */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FlaskConical className="h-4 w-4" />
+                Lab Results ({labResults.length})
+              </CardTitle>
+              <CardDescription>Pesticide residue and quality test results for this shipment</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/app/lab-results?prefillShipmentId=${shipmentId}`}>
+                <Plus className="h-4 w-4 mr-1" /> Upload Lab Result
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {labResults.length === 0 ? (
+            <div className="text-center py-6">
+              <FlaskConical className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No lab results linked to this shipment.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {labResults.map((lr: any) => (
+                <div key={lr.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{lr.test_type?.replace(/_/g, ' ')}</span>
+                      <Badge
+                        variant={lr.overall_result === 'pass' ? 'default' : lr.overall_result === 'fail' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {lr.overall_result?.toUpperCase()}
+                      </Badge>
+                      {lr.mrl_flags && Array.isArray(lr.mrl_flags) && lr.mrl_flags.length > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {lr.mrl_flags.length} MRL exceedance{lr.mrl_flags.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {lr.lab_provider} · {lr.test_date ? new Date(lr.test_date).toLocaleDateString() : '—'}
+                      {lr.result_value != null && ` · ${lr.result_value} ${lr.result_unit || ''}`}
+                    </p>
+                  </div>
+                  {lr.certificate_number && (
+                    <Badge variant="outline" className="text-xs shrink-0">Cert #{lr.certificate_number}</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Evidence Package */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Share2 className="h-4 w-4" />
+                Evidence Packages
+              </CardTitle>
+              <CardDescription>Shareable border-detention evidence bundles (valid 7 days)</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateEvidencePackage}
+              disabled={isGeneratingEvidence}
+            >
+              {isGeneratingEvidence ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Generating…</>
+              ) : (
+                <><FileDown className="h-4 w-4 mr-1" />Generate Package</>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {evidencePackages.length === 0 ? (
+            <div className="text-center py-6">
+              <Share2 className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No evidence packages generated yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {evidencePackages.map((pkg: any) => {
+                const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/app/evidence/${pkg.token}`;
+                const expired = new Date(pkg.expires_at) < new Date();
+                return (
+                  <div key={pkg.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px]">{pkg.token}</span>
+                        {expired ? (
+                          <Badge variant="destructive" className="text-xs">Expired</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />Active
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Expires {new Date(pkg.expires_at).toLocaleDateString()} · {pkg.view_count ?? 0} views
+                      </p>
+                    </div>
+                    {!expired && (
+                      <Button variant="ghost" size="sm" onClick={() => copyUrl(shareUrl)} className="shrink-0">
+                        {copiedUrl === shareUrl ? (
+                          <><CheckCircle className="h-4 w-4 mr-1 text-green-600" />Copied</>
+                        ) : (
+                          <><Copy className="h-4 w-4 mr-1" />Copy Link</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
