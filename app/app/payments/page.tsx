@@ -312,7 +312,7 @@ function ManageAccountDialog({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setView('menu'); setShowTotpInput(false); }}>Back</Button>
-              <Button onClick={handleWithdraw} disabled={!withdrawAmount || !withdrawAccountNumber || !withdrawAccountName || isWithdrawing || ((showTotpInput || twoFaEnabled) && totpCode.length < 6)}>
+              <Button onClick={handleWithdraw} disabled={!withdrawAmount || !withdrawAccountNumber || !withdrawAccountName || isWithdrawing || ((showTotpInput || !!twoFaEnabled) && totpCode.length < 6)}>
                 {isWithdrawing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowUpFromLine className="h-4 w-4 mr-2" />}
                 Withdraw
               </Button>
