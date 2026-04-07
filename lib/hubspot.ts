@@ -59,22 +59,47 @@ async function attachNote(contactId: string, body: string): Promise<void> {
   await hubspot(`/crm/v3/objects/notes/${note.id}/associations/contacts/${contactId}/note_to_contact`, { method: 'PUT' });
 }
 
-async function createDealForContact(contactId: string, data: HubSpotLeadData): Promise<void> {
+async function createDealForContact(contactId: string, data: HubSpotLeadData): Promise<string | null> {
   const dealName = `${data.company || data.organization_type || 'Unknown'} — OriginTrace Demo`;
   const deal = await hubspot('/crm/v3/objects/deals', {
     method: 'POST',
     body: JSON.stringify({ properties: {
       dealname:   dealName,
       pipeline:   PIPELINE_ID,
-      dealstage:  DEAL_STAGE_ID,
+      dealstage:  'new_lead',
       closedate:  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     }}),
   }) as { id?: string; message?: string };
-  if (!deal.id) { console.error('[HubSpot] Deal creation failed:', deal.message); return; }
+  if (!deal.id) { console.error('[HubSpot] Deal creation failed:', deal.message); return null; }
   await hubspot(`/crm/v3/objects/deals/${deal.id}/associations/contacts/${contactId}/deal_to_contact`, { method: 'PUT' });
+  return deal.id;
 }
 
-export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void> {
+/**
+ * Update a HubSpot deal's pipeline stage.
+ * Call after key funnel events: booking, no-show, nurture dropped, etc.
+ *
+ * Stage keys used in this project:
+ *   new_lead | meeting_scheduled | meeting_rescheduled | no_show | nurture_dropped
+ *
+ * These must exist as custom stages in your HubSpot pipeline (one-time UI setup).
+ */
+export async function updateDealStage(dealId: string, stage: string): Promise<void> {
+  try {
+    await hubspot(`/crm/v3/objects/deals/${dealId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ properties: { dealstage: stage } }),
+    });
+  } catch (err) {
+    console.error('[HubSpot] updateDealStage failed (non-fatal):', err);
+  }
+}
+
+/**
+ * Upsert a HubSpot contact and create a deal for new contacts.
+ * Returns the deal ID (null for existing contacts or on failure).
+ */
+export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<{ dealId: string | null }> {
   const { firstname, lastname } = splitName(data.full_name);
   const properties: Record<string, string> = { email: data.email, firstname, lastname, lifecyclestage: 'lead' };
   if (data.phone)             properties.phone    = data.phone;
@@ -107,5 +132,6 @@ export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void>
   }
 
   await attachNote(contactId, buildNoteBody(data));
-  if (isNew) await createDealForContact(contactId, data);
+  const dealId = isNew ? await createDealForContact(contactId, data) : null;
+  return { dealId };
 }

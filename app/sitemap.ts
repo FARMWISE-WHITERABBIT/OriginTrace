@@ -31,9 +31,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/demo`,
-      lastModified: new Date('2026-01-15'),
+      lastModified: new Date('2026-04-07'),
       changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/demo/confirm`,
+      lastModified: new Date('2026-04-07'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
     },
 
     // ── Compliance ─────────────────────────────────────────────────────────

@@ -858,3 +858,129 @@ origintrace.trade`;
 
   return { html, text };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SALES FUNNEL: Nurture drip emails
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EMAIL_HEADER = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr><td style="background-color:#1F5F52;padding:28px 40px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+          <p style="margin:6px 0 0;color:#6FB8A8;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Supply Chain Traceability</p>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+`;
+
+const EMAIL_FOOTER = `
+        </td></tr>
+        <tr><td style="background-color:#F9FAFB;padding:20px 40px;border-top:1px solid #E5E7EB;">
+          <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">&copy; 2026 OriginTrace &bull; origintrace.trade</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+`;
+
+const CTA_BUTTON = (link: string, label: string) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
+    <tr><td align="center">
+      <a href="${link}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:600;">${label}</a>
+    </td></tr>
+  </table>`;
+
+/**
+ * Nurture Email 1 — T+24h
+ * Short, single CTA. Sent to leads who haven't booked within 24h.
+ */
+export function buildNurtureEmail1(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We received your request for a demo — still happy to show you exactly how OriginTrace handles traceability and EUDR compliance for your operation.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">It takes 30 minutes and you'll leave knowing whether the platform is a fit. No pressure, no pitch deck.</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a time that works →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply to this email if you have questions first.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe received your demo request and we're still happy to show you OriginTrace.\n\nBook a 30-minute call: ${calcomLink}\n\nOr just reply to this email.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * Nurture Email 2 — T+72h
+ * Personalised with commodity and org type. Lead with a compliance insight.
+ */
+export function buildNurtureEmail2(
+  name: string,
+  commodity: string | null,
+  orgType: string | null,
+  calcomLink: string
+) {
+  const firstName = name.split(' ')[0];
+  const commodityStr = commodity || 'your commodity';
+  const orgStr = orgType || 'your organisation';
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">One question worth thinking about: <strong>what does a single rejected shipment cost ${orgStr}?</strong></p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">For ${commodityStr} exporters, EUDR non-compliance means shipment holds, demurrage fees, and the risk of losing buyer relationships that took years to build. The regulation is being enforced now — and buyers are already requesting due diligence documentation.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">In a 30-minute call we'll walk through your current traceability stack, identify exactly where the gaps are, and show you what OriginTrace does to close them.</p>
+  ${CTA_BUTTON(calcomLink, 'Book your free assessment →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWhat does a rejected shipment actually cost ${orgStr}?\n\nFor ${commodityStr} exporters, EUDR non-compliance is a growing risk. In 30 minutes we can review your traceability gaps and show you how OriginTrace addresses them.\n\nBook here: ${calcomLink}\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * Nurture Email 3 — T+7d
+ * Final email. Scarcity framing — pilot slot expires.
+ */
+export function buildNurtureEmail3(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We hold pilot slots for 7 days after a demo request — yours expires tomorrow.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">If now isn't the right time, no problem at all — just let us know and we'll follow up when you're ready. But if you'd like to see the platform before the slot closes, you can book in the next 24 hours:</p>
+  ${CTA_BUTTON(calcomLink, 'Secure your pilot slot →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Either way, reply to this email and we'll make a note for whenever works best.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nYour OriginTrace pilot slot expires tomorrow (we hold them for 7 days).\n\nBook before it closes: ${calcomLink}\n\nOr just reply and we'll follow up when the timing is better.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * No-show recovery email — sent when a lead misses their booked call.
+ */
+export function buildNoShowRecoveryEmail(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We missed you on today's call — these things happen.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">Happy to reschedule at a time that works better for you:</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a new time →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply and we'll sort something out directly.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe missed you on today's call — no worries at all.\n\nPick a new time: ${calcomLink}\n\nOr just reply and we'll sort it out.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
