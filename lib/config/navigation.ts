@@ -43,6 +43,9 @@ import {
   ScanLine,
   BookOpen,
   FlaskConical,
+  Wallet,
+  Banknote,
+  ScrollText,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -136,8 +139,18 @@ const appNavigation: NavigationConfig = {
         { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'inventory' },
         { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, tourId: 'nav-dispatch', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
-        { title: 'Payments', url: '/app/payments', icon: DollarSign, tourId: 'nav-payments', allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
         { title: 'Sync', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
+      ],
+    },
+
+    // ── 3b. FINANCE ───────────────────────────────────────────────────────────
+    {
+      label: 'FINANCE',
+      allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
+      items: [
+        { title: 'Wallet', url: '/app/payments', icon: Wallet, tourId: 'nav-wallet', allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Disbursements', url: '/app/payments/disbursements', icon: Banknote, tourId: 'nav-disbursements', allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Transactions', url: '/app/payments/transactions', icon: DollarSign, tourId: 'nav-transactions', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'payments' },
       ],
     },
 
@@ -165,6 +178,7 @@ const appNavigation: NavigationConfig = {
         { title: 'Scan & Verify', url: '/app/verify', icon: ScanLine, tourId: 'nav-verify', allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'scan_verify' },
         { title: 'Lab Results', url: '/app/lab-results', icon: FlaskConical, tourId: 'nav-lab-results', allowedRoles: ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
         { title: 'Compliance Profiles', url: '/app/settings?tab=compliance', icon: ShieldCheck, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
+        { title: 'Audit Log', url: '/app/audit', icon: ScrollText, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'payments' },
       ],
     },
 

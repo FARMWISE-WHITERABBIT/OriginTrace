@@ -157,22 +157,27 @@ export function AppSidebar() {
           </div>
         )}
         
-        <div className="flex items-center gap-2 px-2">
-          {organization?.logo_url ? (
+        <div className="flex items-center gap-2 px-2 py-1 justify-center">
+          {state === 'collapsed' ? (
+            /* Square icon in collapsed mode */
+            <img
+              src="/images/icon-green.png"
+              alt="OriginTrace"
+              className="h-8 w-8 object-contain transition-all duration-200"
+            />
+          ) : organization?.logo_url ? (
             <img
               src={organization.logo_url}
               alt={organization.name}
-              className="h-8 object-contain transition-all duration-200"
-              style={{ maxWidth: state === 'collapsed' ? '32px' : '120px' }}
+              className="h-8 object-contain transition-all duration-200 max-w-[120px]"
             />
           ) : (
             <Image
               src="/images/logo-white.png"
               alt="OriginTrace"
-              width={state === 'collapsed' ? 32 : 120}
+              width={120}
               height={32}
-              className="transition-all duration-200"
-              style={{ width: 'auto' }}
+              className="transition-all duration-200 h-8 w-auto"
             />
           )}
         </div>
@@ -322,13 +327,23 @@ export function AppSidebar() {
 
         {/* User Profile Section */}
         {profile && (
-          <div className="px-2 py-2">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary/20 text-primary text-sm">
-                  {getInitials(profile.full_name || 'User')}
-                </AvatarFallback>
-              </Avatar>
+          <div className={`px-2 py-2 ${state === 'collapsed' ? 'flex justify-center' : ''}`}>
+            <div className={`flex items-center gap-3 ${state === 'collapsed' ? 'justify-center' : ''}`}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-default">
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+                      {getInitials(profile.full_name || 'User')}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                {state === 'collapsed' && (
+                  <TooltipContent side="right">
+                    <p className="font-medium">{profile.full_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{userRole === 'superadmin' ? 'Platform Admin' : profile.role}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
               {state === 'expanded' && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-sidebar-foreground truncate">
@@ -344,17 +359,24 @@ export function AppSidebar() {
         )}
 
         {/* Settings & Logout */}
-        <div className="px-2 pb-2 space-y-1">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleLogout}
-            className="w-full justify-start gap-2 text-sidebar-foreground/70"
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4" />
-            {state === 'expanded' && <span>Sign Out</span>}
-          </Button>
+        <div className={`px-2 pb-2 space-y-1 ${state === 'collapsed' ? 'flex flex-col items-center' : ''}`}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className={`gap-2 text-sidebar-foreground/70 ${state === 'collapsed' ? 'w-8 h-8 p-0 justify-center' : 'w-full justify-start'}`}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {state === 'expanded' && <span>Sign Out</span>}
+              </Button>
+            </TooltipTrigger>
+            {state === 'collapsed' && (
+              <TooltipContent side="right">Sign Out</TooltipContent>
+            )}
+          </Tooltip>
         </div>
 
         {state === 'expanded' && organization?.logo_url && (

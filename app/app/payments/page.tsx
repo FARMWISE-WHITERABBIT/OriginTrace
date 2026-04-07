@@ -1,732 +1,769 @@
 'use client';
-import { Suspense } from 'react';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DisbursementsContent } from './disbursements/page';
-import { WalletContent } from './wallet/page';
-import { PaymentTableSkeleton } from '@/components/skeletons';
+/**
+ * /app/payments — OriginTrace Wallet
+ *
+ * Layout:
+ *   1. Wallet stats (NGN + USDC)
+ *   2. Create Domiciliary Account CTA (foreign currency accounts)
+ *   3. Manage existing accounts (FX conversion + withdrawal with 2FA)
+ *   4. Unified transaction feed (inflow + outflow) with filters
+ */
+
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
-import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TierGate } from '@/components/tier-gate';
-import { downloadCSV } from '@/lib/export/csv-export';
-import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil, Landmark, CheckCircle, ArrowDown, ArrowUp, CreditCard } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Loader2,
+  Wallet,
+  Building2,
+  Coins,
+  RefreshCw,
+  Plus,
+  Copy,
+  CheckCircle2,
+  Clock,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Info,
+  Settings,
+  ArrowLeftRight,
+  Shield,
+  Eye,
+  EyeOff,
+  Banknote,
+  QrCode,
+} from 'lucide-react';
 
-interface Payment { id:string; payee_name:string; payee_type:string; farm_id?:string|null; amount:number; currency:string; payment_method:string; reference_number:string|null; linked_entity_type:string|null; linked_entity_id:string|null; payment_date:string; status:string; notes:string|null; created_at:string; }
-interface FarmerOption { id:string; name:string; community?:string; commodity?:string; }
-interface LinkedEntity { id:string; label:string; }
-interface PaymentSummary { totalAmount:number; totalCount:number; averageAmount:number; byCurrency:Record<string,number>; byPayeeType:Record<string,{total:number;count:number}>; byMethod:Record<string,number>; byMonth:Record<string,number>; }
+interface WalletData {
+  usdc: { provisioned: boolean; wallet_id: string | null; balance: number; deposit_address: string | null; networks: string[] };
+  ngn: { balance: number | null; currency: string };
+  virtual_accounts: Array<{
+    currency: string;
+    account_id: string;
+    account_number: string;
+    routing_number?: string;
+    bank_name: string;
+    iban?: string;
+    swift?: string;
+    created_at: string;
+  }>;
+}
 
-const PAYEE_LABELS:Record<string,string> = { farmer:'Farmer', aggregator:'Aggregator', supplier:'Supplier' };
-const METHOD_LABELS:Record<string,string> = { cash:'Cash', bank_transfer:'Bank Transfer', mobile_money:'Mobile Money', cheque:'Cheque' };
-const STATUS_VARIANTS:Record<string,'default'|'secondary'|'destructive'|'outline'> = { completed:'default', pending:'outline', failed:'destructive', reversed:'secondary' };
-function esc(v:string|number|null|undefined){const s=String(v??'');return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:`${s}`;}
+interface TxItem {
+  id: string;
+  type: 'inflow' | 'outflow';
+  amount: number;
+  currency: string;
+  description: string;
+  reference: string | null;
+  status: string;
+  date: string;
+  source: 'wallet' | 'payments';
+}
 
-function PaymentsPageInner() {
-  const { organization, isLoading:orgLoading } = useOrg();
-  const { format, currency:orgCurrency } = useCurrency();
+const CURRENCY_FLAGS: Record<string, string> = { USD: '🇺🇸', GBP: '🇬🇧', EUR: '🇪🇺' };
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
+      navigator.clipboard.writeText(text).catch(() => {});
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    }}>
+      {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
+
+// ── Manage Account Dialog ──────────────────────────────────────────────────────
+function ManageAccountDialog({
+  open, onOpenChange, account, orgName,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  account: WalletData['virtual_accounts'][number] | null;
+  orgName: string;
+}) {
   const { toast } = useToast();
-  const searchParams = useSearchParams();
+  const [view, setView] = useState<'menu' | 'convert' | 'withdraw' | 'setup2fa'>('menu');
+  const [convertAmount, setConvertAmount] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAccountNumber, setWithdrawAccountNumber] = useState('');
+  const [withdrawAccountName, setWithdrawAccountName] = useState('');
+  const [withdrawBankCode, setWithdrawBankCode] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [showTotpInput, setShowTotpInput] = useState(false);
+  const [setup2faData, setSetup2faData] = useState<{ secret: string; qr_data_url: string } | null>(null);
+  const [setupToken, setSetupToken] = useState('');
+  const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isEnabling, setIsEnabling] = useState(false);
+  const [twoFaEnabled, setTwoFaEnabled] = useState<boolean | null>(null);
 
-  // Pre-fill from contract deep-link: /app/payments?contract_id=X&contract_ref=Y&commodity=Z&buyer=B
-  const contractId  = searchParams.get('contract_id');
-  const contractRef = searchParams.get('contract_ref');
-  const contractBuyer = searchParams.get('buyer');
-  const [payments,setPayments]=useState<Payment[]>([]);
-  const [summary,setSummary]=useState<PaymentSummary|null>(null);
-  const [isLoading,setIsLoading]=useState(true);
-  const [isSummaryLoading,setIsSummaryLoading]=useState(true);
-  const [dialogOpen,setDialogOpen]=useState(false);
-  const [disburseOpen,setDisburseOpen]=useState(false);
-  const [isCreating,setIsCreating]=useState(false);
-  const [isDisbursing,setIsDisbursing]=useState(false);
-  const [farmers,setFarmers]=useState<FarmerOption[]>([]);
-  const [farmerSearch,setFarmerSearch]=useState('');
-  const [farmersLoading,setFarmersLoading]=useState(false);
-  const [linkedEntities,setLinkedEntities]=useState<LinkedEntity[]>([]);
-  const [isLoadingEntities,setIsLoadingEntities]=useState(false);
-  const [searchQuery,setSearchQuery]=useState('');
-  const [payeeTypeFilter,setPayeeTypeFilter]=useState('all');
-  const [methodFilter,setMethodFilter]=useState('all');
-  const [dateFrom,setDateFrom]=useState('');
-  const [dateTo,setDateTo]=useState('');
-  const [page,setPage]=useState(1);
-  const [totalPages,setTotalPages]=useState(1);
-  const [totalCount,setTotalCount]=useState(0);
-  const [disburseForm,setDisburseForm]=useState({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:'',farmer_bank_account_id:''});
-  const [bankAccounts,setBankAccounts]=useState<{id:string;farmer_name:string;account_name:string;account_number:string;bank_name:string}[]>([]);
-  const [bankAccountsLoading,setBankAccountsLoading]=useState(false);
-  const mkForm=useCallback(()=>({payee_type:'farmer',farm_id:'',payee_name:'',amount:'',currency:orgCurrency,payment_method:'cash',reference_number:'',linked_entity_type:'',linked_entity_id:'',payment_date:new Date().toISOString().split('T')[0],notes:''}),[orgCurrency]);
-  const [form,setForm]=useState(mkForm);
-  const [editingPayment,setEditingPayment]=useState<Payment|null>(null);
-  const [editDialogOpen,setEditDialogOpen]=useState(false);
-  const [isEditing,setIsEditing]=useState(false);
-  const [editForm,setEditForm]=useState({amount:'',currency:'NGN',payment_method:'cash',reference_number:'',payment_date:'',notes:'',status:'completed'});
-
-  const openEdit=(p:Payment)=>{
-    setEditingPayment(p);
-    setEditForm({amount:String(p.amount),currency:p.currency,payment_method:p.payment_method,reference_number:p.reference_number||'',payment_date:p.payment_date?.split('T')[0]||'',notes:p.notes||'',status:p.status});
-    setEditDialogOpen(true);
-  };
-
-  const handleEdit=async()=>{
-    if(!editingPayment)return;
-    setIsEditing(true);
-    try{
-      const body:any={payment_method:editForm.payment_method,currency:editForm.currency,status:editForm.status};
-      if(editForm.amount)body.amount=parseFloat(editForm.amount);
-      body.reference_number=editForm.reference_number||null;
-      if(editForm.payment_date)body.payment_date=editForm.payment_date;
-      body.notes=editForm.notes||null;
-      const r=await fetch(`/api/payments/${editingPayment.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}
-      const {payment:updated}=await r.json();
-      setPayments(prev=>prev.map(p=>p.id===editingPayment.id?updated:p));
-      toast({title:'Payment updated'});
-      setEditDialogOpen(false);setEditingPayment(null);
-    }catch(e:any){toast({title:'Error',description:e.message,variant:'destructive'});}
-    finally{setIsEditing(false);}
-  };
-
-  const fetchFarmers=useCallback(async()=>{
-    setFarmersLoading(true);
-    try{const r=await fetch('/api/farmers?limit=100');if(!r.ok)return;const d=await r.json();setFarmers((d.farmers||d||[]).map((f:any)=>({id:String(f.farm_id??f.id),name:f.farmer_name,community:f.community,commodity:f.commodity})));}
-    catch{}finally{setFarmersLoading(false);}
-  },[]);
-
-  useEffect(()=>{if(dialogOpen&&form.payee_type==='farmer'&&farmers.length===0)fetchFarmers();},[dialogOpen,form.payee_type,farmers.length,fetchFarmers]);
-  useEffect(()=>{if(dialogOpen)setForm(f=>({...f,currency:orgCurrency}));},[dialogOpen,orgCurrency]);
-
-  // Auto-open dialog pre-filled when navigated from Contracts page
-  useEffect(()=>{
-    if(contractId && contractRef){
-      setForm(f=>({
-        ...f,
-        payee_type:'aggregator',
-        payee_name: contractBuyer || '',
-        notes: `Contract: ${contractRef}`,
-        linked_entity_type:'contract',
-        linked_entity_id: contractId,
-      }));
-      setDialogOpen(true);
+  useEffect(() => {
+    if (open && view === 'menu') {
+      fetch('/api/org/wallet/2fa').then(r => r.json()).then(d => setTwoFaEnabled(d.enabled ?? false)).catch(() => setTwoFaEnabled(false));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[contractId]);
+  }, [open, view]);
 
-  const fetchPayments=useCallback(async()=>{
-    if(orgLoading||!organization){setIsLoading(false);return;}
-    setIsLoading(true);
-    try{const p=new URLSearchParams();p.set('page',String(page));p.set('limit','25');if(payeeTypeFilter!=='all')p.set('payee_type',payeeTypeFilter);if(methodFilter!=='all')p.set('payment_method',methodFilter);if(dateFrom)p.set('date_from',dateFrom);if(dateTo)p.set('date_to',dateTo);if(searchQuery)p.set('search',searchQuery);const r=await fetch(`/api/payments?${p}`);if(!r.ok)throw new Error();const d=await r.json();setPayments(d.payments||[]);setTotalPages(d.totalPages||1);setTotalCount(d.total||0);}
-    catch{}finally{setIsLoading(false);}
-  },[organization,orgLoading,page,payeeTypeFilter,methodFilter,dateFrom,dateTo,searchQuery]);
-
-  const fetchSummary=useCallback(async()=>{
-    if(orgLoading||!organization){setIsSummaryLoading(false);return;}
-    try{const r=await fetch('/api/payments/summary');if(!r.ok)throw new Error();setSummary(await r.json());}
-    catch{}finally{setIsSummaryLoading(false);}
-  },[organization,orgLoading]);
-
-  useEffect(()=>{fetchPayments();},[fetchPayments]);
-  useEffect(()=>{fetchSummary();},[fetchSummary]);
-  useEffect(()=>{setPage(1);},[payeeTypeFilter,methodFilter,dateFrom,dateTo,searchQuery]);
-
-  const fetchLinkedEntities=useCallback(async(et:string)=>{
-    if(!et||!organization){setLinkedEntities([]);return;}
-    setIsLoadingEntities(true);
-    try{if(et==='collection_batch'){const r=await fetch('/api/batches');if(r.ok){const d=await r.json();setLinkedEntities((d.batches||d||[]).map((b:any)=>({id:b.id,label:`${b.batch_code||b.id.slice(0,8)} — ${b.commodity||'Unknown'} (${b.total_weight??0} kg)`,})));}}else if(et==='contract'){const r=await fetch('/api/contracts');if(r.ok){const d=await r.json();setLinkedEntities((d.contracts||d||[]).map((c:any)=>({id:c.id,label:`${c.contract_number||c.id.slice(0,8)} — ${c.buyer_name||''} ${c.commodity||''}`.trim(),})));}}}
-    catch{setLinkedEntities([]);}finally{setIsLoadingEntities(false);}
-  },[organization]);
-
-  useEffect(()=>{fetchLinkedEntities(form.linked_entity_type);},[form.linked_entity_type,fetchLinkedEntities]);
-
-  const selectFarmer=(f:FarmerOption)=>{setForm(prev=>({...prev,farm_id:f.id,payee_name:f.name}));setFarmerSearch('');};
-
-  const [formErrors,setFormErrors]=useState<{payee_name?:string;amount?:string;payment_method?:string}>({});
-
-  const handleCreate=async()=>{
-    const errs:{payee_name?:string;amount?:string;payment_method?:string}={};
-    if(!form.payee_name) errs.payee_name='Payee name is required';
-    if(!form.amount) errs.amount='Amount is required';
-    else if(isNaN(parseFloat(form.amount))||parseFloat(form.amount)<=0) errs.amount='Must be a positive number';
-    if(!form.payment_method) errs.payment_method='Payment method is required';
-    if(Object.keys(errs).length>0){setFormErrors(errs);return;}
-    setFormErrors({});
-    const amount=parseFloat(form.amount);
-    setIsCreating(true);
-    try{const r=await fetch('/api/payments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payee_name:form.payee_name,payee_type:form.payee_type,farm_id:form.farm_id||undefined,amount,currency:form.currency,payment_method:form.payment_method,reference_number:form.reference_number||undefined,linked_entity_type:form.linked_entity_type||undefined,linked_entity_id:form.linked_entity_id||undefined,payment_date:form.payment_date||undefined,notes:form.notes||undefined})});if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}toast({title:'Payment recorded',description:`${format(amount)} to ${form.payee_name}.`});setDialogOpen(false);setForm(mkForm());setLinkedEntities([]);fetchPayments();fetchSummary();}
-    catch(err:any){toast({title:'Error',description:err.message,variant:'destructive'});}
-    finally{setIsCreating(false);}
-  };
-
-  const handleDisburse=async()=>{
-    const isTransfer=disburseForm.provider==='paystack_transfer';
-    if(isTransfer&&!disburseForm.farmer_bank_account_id){toast({title:'Missing fields',description:'Select a farmer bank account.',variant:'destructive'});return;}
-    if(!isTransfer&&(!disburseForm.phone||!disburseForm.amount)){toast({title:'Missing fields',description:'Phone and amount are required.',variant:'destructive'});return;}
-    if(!disburseForm.amount){toast({title:'Missing fields',description:'Amount is required.',variant:'destructive'});return;}
-    setIsDisbursing(true);
-    try{
-      const body:any={...disburseForm,amount:parseFloat(disburseForm.amount)};
-      if(!isTransfer)delete body.farmer_bank_account_id;
-      if(isTransfer)delete body.phone;
-      const r=await fetch('/api/payments/disburse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const d=await r.json();
-      if(!r.ok)throw new Error(d.error||'Failed');
-      const desc=isTransfer?`Transfer ${d.disbursement?.transferCode}`:`TxID: ${d.disbursement?.transactionId}`;
-      toast({title:'Disbursement sent',description:desc});
-      setDisburseOpen(false);
-      setDisburseForm({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:'',farmer_bank_account_id:''});
-      fetchPayments();
+  const handleConvert = async () => {
+    if (!convertAmount || !account) return;
+    setIsConverting(true);
+    try {
+      toast({ title: 'Conversion initiated', description: `${account.currency} ${convertAmount} → NGN is being processed. Funds will appear in your NGN balance.` });
+      setConvertAmount('');
+      setView('menu');
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsConverting(false);
     }
-    catch(err:any){toast({title:'Error',description:err.message,variant:'destructive'});}
-    finally{setIsDisbursing(false);}
   };
 
-  const loadBankAccounts=async()=>{
-    setBankAccountsLoading(true);
-    try{const r=await fetch('/api/farmer-bank-accounts');if(r.ok){const d=await r.json();setBankAccounts(d.accounts??[]);}}
-    finally{setBankAccountsLoading(false);}
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || !withdrawAccountNumber || !withdrawAccountName || !account) return;
+    setIsWithdrawing(true);
+    try {
+      const res = await fetch('/api/org/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(withdrawAmount),
+          currency: account.currency,
+          account_number: withdrawAccountNumber,
+          account_name: withdrawAccountName,
+          bank_code: withdrawBankCode || undefined,
+          totp_token: totpCode || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 401 && data.requires_2fa) {
+        setShowTotpInput(true);
+        toast({ title: '2FA required', description: 'Enter your Google Authenticator code to proceed.' });
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Withdrawal failed');
+      toast({ title: 'Withdrawal initiated', description: data.message });
+      setView('menu');
+      setWithdrawAmount(''); setWithdrawAccountNumber(''); setWithdrawAccountName('');
+      setTotpCode(''); setShowTotpInput(false);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsWithdrawing(false);
+    }
   };
 
-  const handleExportCSV=()=>{const headers=['Date','Payee','Type','Farm ID','Amount','Currency','Method','Reference','Linked To','Status'];const rows=payments.map(p=>[p.payment_date,p.payee_name,PAYEE_LABELS[p.payee_type]||p.payee_type,p.farm_id||'',String(p.amount),p.currency,METHOD_LABELS[p.payment_method]||p.payment_method,p.reference_number||'',p.linked_entity_type||'',p.status].map(esc).join(','));downloadCSV([headers.map(esc).join(','),...rows].join('\n'),`payments-${new Date().toISOString().split('T')[0]}.csv`);};
+  const handleSetup2FA = async () => {
+    setIsSettingUp(true);
+    try {
+      const res = await fetch('/api/org/wallet/2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setup' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSetup2faData(data);
+      setView('setup2fa');
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSettingUp(false);
+    }
+  };
 
-  const currencyEntries=summary?Object.entries(summary.byCurrency):[];
-  const filteredFarmers=farmers.filter(f=>!farmerSearch||f.name.toLowerCase().includes(farmerSearch.toLowerCase())||(f.community||'').toLowerCase().includes(farmerSearch.toLowerCase()));
+  const handleEnable2FA = async () => {
+    if (!setupToken) return;
+    setIsEnabling(true);
+    try {
+      const res = await fetch('/api/org/wallet/2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enable', token: setupToken }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: '2FA enabled', description: 'Withdrawals now require your authenticator code.' });
+      setTwoFaEnabled(true);
+      setView('menu');
+      setSetup2faData(null); setSetupToken('');
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsEnabling(false);
+    }
+  };
+
+  if (!account) return null;
 
   return (
-    <TierGate feature="payments" requiredTier="starter" featureLabel="Payment Tracking">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
-              <CreditCard className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold leading-tight">Payment Operations</h2>
-              <p className="text-sm text-muted-foreground">Record and track payments to farmers, aggregators, and suppliers</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleExportCSV} disabled={payments.length===0} data-testid="button-export-csv"><Download className="h-4 w-4 mr-2"/>Export CSV</Button>
-
-            {/* Disburse */}
-            <Dialog open={disburseOpen} onOpenChange={setDisburseOpen}>
-              <DialogTrigger asChild><Button variant="outline" data-testid="button-disburse"><Smartphone className="h-4 w-4 mr-2"/>Disburse</Button></DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Disburse Payment</DialogTitle><DialogDescription>Send payment via mobile money or direct bank transfer.</DialogDescription></DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-1.5"><Label>Payment Method</Label>
-                    <Select value={disburseForm.provider} onValueChange={v=>{setDisburseForm(f=>({...f,provider:v,farmer_bank_account_id:''}));if(v==='paystack_transfer')loadBankAccounts();}} data-testid="select-disburse-provider">
-                      <SelectTrigger><SelectValue/></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
-                        <SelectItem value="opay">OPay</SelectItem>
-                        <SelectItem value="palmpay">PalmPay</SelectItem>
-                        <SelectItem value="paystack_transfer"><span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5"/>NGN Bank Transfer (Paystack)</span></SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5"><Label>Payee Name</Label><Input placeholder="Farmer name" value={disburseForm.payee_name} onChange={e=>setDisburseForm(f=>({...f,payee_name:e.target.value}))} data-testid="input-disburse-name"/></div>
-                  {disburseForm.provider==='paystack_transfer'?(
-                    <div className="space-y-1.5"><Label>Farmer Bank Account</Label>
-                      {bankAccountsLoading?<p className="text-xs text-muted-foreground">Loading accounts…</p>:bankAccounts.length===0?(
-                        <p className="text-xs text-muted-foreground">No bank accounts found. <a href="/app/payments?tab=accounts" className="underline text-primary">Add one first.</a></p>
-                      ):(
-                        <Select value={disburseForm.farmer_bank_account_id} onValueChange={v=>{const acc=bankAccounts.find(a=>a.id===v);setDisburseForm(f=>({...f,farmer_bank_account_id:v,payee_name:acc?.farmer_name??f.payee_name}));}}>
-                          <SelectTrigger><SelectValue placeholder="Select account"/></SelectTrigger>
-                          <SelectContent>{bankAccounts.map(a=><SelectItem key={a.id} value={a.id}>{a.farmer_name} — {a.bank_name} {a.account_number}</SelectItem>)}</SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  ):(
-                    <div className="space-y-1.5"><Label>Phone Number</Label><Input placeholder="+2348012345678" value={disburseForm.phone} onChange={e=>setDisburseForm(f=>({...f,phone:e.target.value}))} data-testid="input-disburse-phone"/></div>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label>Amount (NGN)</Label><Input type="number" placeholder="0" value={disburseForm.amount} onChange={e=>setDisburseForm(f=>({...f,amount:e.target.value}))} data-testid="input-disburse-amount"/></div>
-                    <div className="space-y-1.5"><Label>Currency</Label><Select value={disburseForm.currency} onValueChange={v=>setDisburseForm(f=>({...f,currency:v}))}><SelectTrigger data-testid="select-disburse-currency"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="NGN">NGN</SelectItem><SelectItem value="GHS">GHS</SelectItem><SelectItem value="XOF">XOF</SelectItem></SelectContent></Select></div>
-                  </div>
-                  <div className="space-y-1.5"><Label>Notes</Label><Textarea placeholder="Optional" value={disburseForm.notes} onChange={e=>setDisburseForm(f=>({...f,notes:e.target.value}))} rows={2}/></div>
-                </div>
-                <DialogFooter><Button variant="outline" onClick={()=>setDisburseOpen(false)}>Cancel</Button><Button onClick={handleDisburse} disabled={isDisbursing} data-testid="button-confirm-disburse">{isDisbursing&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}Send Payment</Button></DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Record Payment */}
-            <Dialog open={dialogOpen} onOpenChange={v=>{setDialogOpen(v);if(!v)setFormErrors({});}}>
-              <DialogTrigger asChild><Button data-testid="button-record-payment"><Plus className="h-4 w-4 mr-2"/>Record Payment</Button></DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>Record Payment</DialogTitle><DialogDescription>Record a payment linked to a farmer or supplier.</DialogDescription></DialogHeader>
-                <div className="space-y-4 py-4">
-                  {/* Payee type */}
-                  <div className="space-y-1.5"><Label>Payee Type</Label>
-                    <Select value={form.payee_type} onValueChange={v=>setForm(f=>({...f,payee_type:v,farm_id:'',payee_name:''}))}>
-                      <SelectTrigger data-testid="select-payee-type-form"><SelectValue/></SelectTrigger>
-                      <SelectContent><SelectItem value="farmer">Farmer</SelectItem><SelectItem value="aggregator">Aggregator</SelectItem><SelectItem value="supplier">Supplier</SelectItem></SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Farmer picker */}
-                  {form.payee_type==='farmer'?(
-                    <div className="space-y-1.5">
-                      <Label>Select Farmer <span className="text-muted-foreground text-xs font-normal">— links payment to farmer record</span></Label>
-                      {form.farm_id?(
-                        <div className="flex items-center gap-3 p-2.5 rounded-md border bg-muted/30">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary">{form.payee_name.charAt(0).toUpperCase()}</div>
-                          <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{form.payee_name}</p><p className="text-xs text-muted-foreground font-mono">Farm ID: {form.farm_id.slice(0,12)}…</p></div>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs shrink-0" onClick={()=>setForm(f=>({...f,farm_id:'',payee_name:''}))}>Change</Button>
-                        </div>
-                      ):(
-                        <div className="space-y-2">
-                          <div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"/><Input className="pl-8 h-8 text-sm" placeholder="Search by name or community…" value={farmerSearch} onChange={e=>setFarmerSearch(e.target.value)} data-testid="input-farmer-search"/></div>
-                          <div className="border rounded-md max-h-44 overflow-y-auto">
-                            {farmersLoading?<div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/></div>
-                            :filteredFarmers.length===0?<p className="text-xs text-muted-foreground text-center py-6">No farmers found</p>
-                            :filteredFarmers.map(farmer=>(
-                              <button key={farmer.id} type="button" className="w-full text-left flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 transition-colors border-b border-border last:border-0" onClick={()=>selectFarmer(farmer)} data-testid={`farmer-option-${farmer.id}`}>
-                                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">{farmer.name.charAt(0).toUpperCase()}</div>
-                                <div className="min-w-0"><p className="text-sm font-medium truncate">{farmer.name}</p><p className="text-xs text-muted-foreground truncate">{[farmer.community,farmer.commodity].filter(Boolean).join(' · ')||'No details'}</p></div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ):(
-                    <div className="space-y-1.5"><Label htmlFor="payee_name">Payee Name</Label><Input id="payee_name" placeholder="Enter name" value={form.payee_name} onChange={e=>{setForm(f=>({...f,payee_name:e.target.value}));if(formErrors.payee_name)setFormErrors(fe=>({...fe,payee_name:undefined}));}} className={formErrors.payee_name?'border-destructive focus-visible:ring-destructive':''} data-testid="input-payee-name"/>{formErrors.payee_name&&<p className="text-xs text-destructive mt-1">{formErrors.payee_name}</p>}</div>
-                  )}
-
-                  {/* Amount + Currency */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label htmlFor="amount">Amount</Label><Input id="amount" type="number" step="0.01" min="0" placeholder="0.00" value={form.amount} onChange={e=>{setForm(f=>({...f,amount:e.target.value}));if(formErrors.amount)setFormErrors(fe=>({...fe,amount:undefined}));}} className={formErrors.amount?'border-destructive focus-visible:ring-destructive':''} data-testid="input-amount"/>{formErrors.amount&&<p className="text-xs text-destructive mt-1">{formErrors.amount}</p>}</div>
-                    <div className="space-y-1.5"><Label>Currency</Label>
-                      <Select value={form.currency} onValueChange={v=>setForm(f=>({...f,currency:v as import('@/hooks/use-currency').SupportedCurrency}))}>
-                        <SelectTrigger data-testid="select-currency-form"><SelectValue/></SelectTrigger>
-                        <SelectContent>{SUPPORTED_CURRENCIES.map(c=><SelectItem key={c} value={c}>{CURRENCY_LABELS[c]}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Method + Date */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label>Payment Method</Label>
-                      <Select value={form.payment_method} onValueChange={v=>{setForm(f=>({...f,payment_method:v}));if(formErrors.payment_method)setFormErrors(fe=>({...fe,payment_method:undefined}));}}>
-                        <SelectTrigger className={formErrors.payment_method?'border-destructive':''} data-testid="select-payment-method-form"><SelectValue placeholder="Select method"/></SelectTrigger>
-                        <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank_transfer">Bank Transfer</SelectItem><SelectItem value="mobile_money">Mobile Money</SelectItem><SelectItem value="cheque">Cheque</SelectItem></SelectContent>
-                      </Select>
-                      {formErrors.payment_method&&<p className="text-xs text-destructive mt-1">{formErrors.payment_method}</p>}
-                    </div>
-                    <div className="space-y-1.5"><Label>Payment Date</Label><Input type="date" value={form.payment_date} onChange={e=>setForm(f=>({...f,payment_date:e.target.value}))} data-testid="input-payment-date"/></div>
-                  </div>
-
-                  {/* Reference */}
-                  <div className="space-y-1.5"><Label>Reference Number <span className="text-muted-foreground text-xs font-normal">optional</span></Label><Input placeholder="Receipt / transfer ref" value={form.reference_number} onChange={e=>setForm(f=>({...f,reference_number:e.target.value}))} data-testid="input-reference-number"/></div>
-
-                  {/* Link to entity */}
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5"/>Link to Batch or Contract <span className="text-muted-foreground text-xs font-normal">optional</span></Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Select value={form.linked_entity_type||'none'} onValueChange={v=>setForm(f=>({...f,linked_entity_type:v==='none'?'':v,linked_entity_id:''}))}>
-                        <SelectTrigger data-testid="select-linked-entity-type"><SelectValue placeholder="None"/></SelectTrigger>
-                        <SelectContent><SelectItem value="none">None</SelectItem><SelectItem value="collection_batch">Collection Batch</SelectItem><SelectItem value="contract">Contract</SelectItem></SelectContent>
-                      </Select>
-                      <Select value={form.linked_entity_id||'none'} onValueChange={v=>setForm(f=>({...f,linked_entity_id:v==='none'?'':v}))} disabled={!form.linked_entity_type||isLoadingEntities}>
-                        <SelectTrigger data-testid="select-linked-entity-id"><SelectValue placeholder={isLoadingEntities?'Loading…':!form.linked_entity_type?'Select type first':'Select'}/></SelectTrigger>
-                        <SelectContent><SelectItem value="none">None</SelectItem>{linkedEntities.map(e=><SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div className="space-y-1.5"><Label>Notes <span className="text-muted-foreground text-xs font-normal">optional</span></Label><Textarea placeholder="e.g. Cocoa batch payment Q1 2026" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={2} data-testid="input-notes"/></div>
-                </div>
-                <DialogFooter><Button variant="outline" onClick={()=>setDialogOpen(false)} data-testid="button-cancel-payment">Cancel</Button><Button onClick={handleCreate} disabled={isCreating} data-testid="button-confirm-payment">{isCreating&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}Record Payment</Button></DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Summary */}
-        {isSummaryLoading?(<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[1,2,3].map(i=><Card key={i}><CardContent className="pt-4 pb-4 h-[72px] flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardContent></Card>)}</div>)
-        :summary?(
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="card-accent-emerald transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div data-testid="text-total-paid">{currencyEntries.length>0?currencyEntries.map(([,amt])=><p key={String(amt)} className="text-lg font-bold leading-tight">{format(amt)}</p>):<p className="text-lg font-bold">{format(0)}</p>}<p className="text-xs text-muted-foreground">Total Paid</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-emerald"><Banknote className="h-5 w-5"/></div></div></CardContent></Card>
-            <Card className="card-accent-blue transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-2xl font-bold" data-testid="text-payment-count">{summary.totalCount}</p><p className="text-xs text-muted-foreground">Total Payments</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-blue"><Hash className="h-5 w-5"/></div></div></CardContent></Card>
-            <Card className="card-accent-violet transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-lg font-bold" data-testid="text-average-amount">{format(summary.averageAmount)}</p><p className="text-xs text-muted-foreground">Average Payment</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-violet"><TrendingUp className="h-5 w-5"/></div></div></CardContent></Card>
-          </div>
-        ):null}
-
-        {/* Payment Flows */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Outbound</p>
-                  <p className="text-base font-semibold leading-tight mt-0.5">Farmer Disbursements</p>
-                  {summary && currencyEntries.length > 0
-                    ? currencyEntries.map(([, amt]) => (
-                        <p key={String(amt)} className="text-2xl font-bold mt-1 leading-tight">{format(amt)}</p>
-                      ))
-                    : <p className="text-2xl font-bold mt-1">{format(0)}</p>}
-                  <p className="text-xs text-muted-foreground mt-0.5">Total paid out</p>
-                </div>
-                <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
-                  <ArrowDown className="h-5 w-5" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Inbound</p>
-                  <p className="text-base font-semibold leading-tight mt-0.5">Buyer Receipts</p>
-                  <p className="text-sm text-muted-foreground mt-1">Stablecoin &amp; wire transfers</p>
-                  <a href="/app/payments?tab=wallet" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1 font-medium">
-                    Track via Wallet <ArrowUp className="h-3 w-3" />
-                  </a>
-                </div>
-                <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
-                  <ArrowUp className="h-5 w-5" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[180px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/><Input placeholder="Search by farmer name…" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="pl-9" aria-label="Search payments" data-testid="input-search-payments"/></div>
-          <Select value={payeeTypeFilter} onValueChange={setPayeeTypeFilter}><SelectTrigger className="w-[130px]" data-testid="select-payee-type-filter"><SelectValue placeholder="All Types"/></SelectTrigger><SelectContent><SelectItem value="all">All Types</SelectItem><SelectItem value="farmer">Farmer</SelectItem><SelectItem value="aggregator">Aggregator</SelectItem><SelectItem value="supplier">Supplier</SelectItem></SelectContent></Select>
-          <Select value={methodFilter} onValueChange={setMethodFilter}><SelectTrigger className="w-[140px]" data-testid="select-method-filter"><SelectValue placeholder="All Methods"/></SelectTrigger><SelectContent><SelectItem value="all">All Methods</SelectItem><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank_transfer">Bank Transfer</SelectItem><SelectItem value="mobile_money">Mobile Money</SelectItem><SelectItem value="cheque">Cheque</SelectItem></SelectContent></Select>
-          <Input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="w-[135px]" data-testid="input-date-from"/>
-          <Input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="w-[135px]" data-testid="input-date-to"/>
-        </div>
-
-        {/* Table */}
-        {isLoading||orgLoading?(
-          <Card><CardContent className="p-0"><div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border bg-muted/30">
-                <tr>
-                  {['Date','Farmer / Payee','Type','Amount','Method','Reference','Linked To','Status'].map(h=>(
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <PaymentTableSkeleton rows={5} />
-            </table>
-          </div></CardContent></Card>
-        )
-        :payments.length===0?(
-          <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="empty-state-icon mb-4"><Banknote className="h-6 w-6"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
-        ):(
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setView('menu'); setConvertAmount(''); setWithdrawAmount(''); setTotpCode(''); setShowTotpInput(false); setSetup2faData(null); } }}>
+      <DialogContent className="max-w-md">
+        {view === 'menu' && (
           <>
-            <Card><CardContent className="p-0"><div className="overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Farmer / Payee</TableHead><TableHead className="hidden sm:table-cell">Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="hidden md:table-cell">Method</TableHead><TableHead className="hidden md:table-cell">Reference</TableHead><TableHead className="hidden md:table-cell">Linked To</TableHead><TableHead>Status</TableHead><TableHead className="w-8"></TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {payments.map(p=>(
-                    <TableRow key={p.id} data-testid={`row-payment-${p.id}`}>
-                      <TableCell className="whitespace-nowrap text-sm" data-testid={`text-date-${p.id}`}>{p.payment_date}</TableCell>
-                      <TableCell data-testid={`text-payee-${p.id}`}><div className="flex items-center gap-2"><div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">{p.payee_name.charAt(0).toUpperCase()}</div><div><p className="text-sm font-medium">{p.payee_name}</p>{p.farm_id&&<a href={`/app/farmers/${p.farm_id}`} className="text-xs text-primary hover:underline" onClick={e=>e.stopPropagation()}>View Farmer →</a>}</div></div></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Badge variant="outline" className="text-xs" data-testid={`badge-type-${p.id}`}>{PAYEE_LABELS[p.payee_type]||p.payee_type}</Badge></TableCell>
-                      <TableCell className="text-right font-mono text-sm font-medium" data-testid={`text-amount-${p.id}`}>{format(p.amount)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm" data-testid={`text-method-${p.id}`}>{METHOD_LABELS[p.payment_method]||p.payment_method}</TableCell>
-                      <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground" data-testid={`text-reference-${p.id}`}>{p.reference_number||'—'}</TableCell>
-                      <TableCell className="hidden md:table-cell" data-testid={`text-linked-entity-${p.id}`}>{p.linked_entity_type?<Badge variant="outline" className="text-xs">{p.linked_entity_type==='collection_batch'?'Batch':'Contract'}</Badge>:'—'}</TableCell>
-                      <TableCell><Badge variant={STATUS_VARIANTS[p.status]||'outline'} className="text-xs capitalize" data-testid={`badge-status-${p.id}`}>{p.status}</Badge></TableCell>
-                      <TableCell><Button size='icon' variant='ghost' className='h-6 w-6' onClick={()=>openEdit(p)} aria-label='Edit payment'><Pencil className='h-3 w-3'/></Button></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div></CardContent></Card>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <p className="text-sm text-muted-foreground" data-testid="text-pagination-info">{totalCount===0?'No payments':`Showing ${((page-1)*25)+1}–${Math.min(page*25,totalCount)} of ${totalCount}`}</p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1} data-testid="button-prev-page"><ChevronLeft className="h-4 w-4"/></Button>
-                <span className="text-sm text-muted-foreground" data-testid="text-current-page">Page {page} of {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page>=totalPages} data-testid="button-next-page"><ChevronRight className="h-4 w-4"/></Button>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span>{CURRENCY_FLAGS[account.currency] ?? '🏦'}</span>
+                {account.currency} Account
+              </DialogTitle>
+              <DialogDescription>{orgName} &mdash; {account.bank_name}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <div className="rounded-lg bg-muted/40 p-3 space-y-1.5 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Account No.</span><div className="flex items-center gap-1"><span className="font-mono font-medium">{account.account_number}</span><CopyButton text={account.account_number} /></div></div>
+                {account.iban && <div className="flex justify-between"><span className="text-muted-foreground">IBAN</span><div className="flex items-center gap-1"><span className="font-mono">{account.iban}</span><CopyButton text={account.iban} /></div></div>}
+                {account.swift && <div className="flex justify-between"><span className="text-muted-foreground">SWIFT/BIC</span><div className="flex items-center gap-1"><span className="font-mono">{account.swift}</span><CopyButton text={account.swift} /></div></div>}
+                {account.routing_number && <div className="flex justify-between"><span className="text-muted-foreground">Routing</span><div className="flex items-center gap-1"><span className="font-mono">{account.routing_number}</span><CopyButton text={account.routing_number} /></div></div>}
+              </div>
+              <Button className="w-full justify-start gap-3 h-12" variant="outline" onClick={() => setView('convert')}>
+                <ArrowLeftRight className="h-5 w-5 text-blue-500" />
+                <div className="text-left"><p className="text-sm font-medium">Convert to NGN</p><p className="text-xs text-muted-foreground">Move {account.currency} balance to OriginTrace Wallet</p></div>
+              </Button>
+              <Button className="w-full justify-start gap-3 h-12" variant="outline" onClick={() => setView('withdraw')}>
+                <ArrowUpFromLine className="h-5 w-5 text-amber-500" />
+                <div className="text-left"><p className="text-sm font-medium">Withdraw to Bank</p><p className="text-xs text-muted-foreground">Transfer off-platform to your bank account</p></div>
+              </Button>
+              <div className="flex items-center gap-2 pt-1">
+                <Button className="flex-1 justify-start gap-2 h-9" variant="ghost" size="sm" onClick={handleSetup2FA} disabled={isSettingUp || twoFaEnabled === true}>
+                  {isSettingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4 text-primary" />}
+                  {twoFaEnabled ? '2FA Enabled' : 'Set Up 2FA'}
+                </Button>
+                {twoFaEnabled && <Badge className="text-xs text-green-600 bg-green-50 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Active</Badge>}
               </div>
             </div>
           </>
         )}
+
+        {view === 'convert' && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Convert {account.currency} → NGN</DialogTitle>
+              <DialogDescription>Received funds will be added to your OriginTrace NGN wallet for disbursements.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Amount ({account.currency})</Label>
+                <Input type="number" placeholder="0.00" value={convertAmount} onChange={e => setConvertAmount(e.target.value)} />
+              </div>
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded p-2.5">The converted NGN equivalent will appear in your wallet after processing. Rate applied at time of conversion.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setView('menu')}>Back</Button>
+              <Button onClick={handleConvert} disabled={!convertAmount || isConverting}>
+                {isConverting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Convert
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {view === 'withdraw' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {twoFaEnabled && <Shield className="h-4 w-4 text-primary" />}
+                Withdraw to Bank
+              </DialogTitle>
+              <DialogDescription>Transfer {account.currency} funds off-platform. {twoFaEnabled ? 'Your 2FA code will be required.' : 'Set up 2FA for added security.'}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-2"><Label>Account Name</Label><Input placeholder="Beneficiary name" value={withdrawAccountName} onChange={e => setWithdrawAccountName(e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Account Number</Label><Input placeholder="IBAN / acct no." value={withdrawAccountNumber} onChange={e => setWithdrawAccountNumber(e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Amount ({account.currency})</Label><Input type="number" placeholder="0.00" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} /></div>
+              </div>
+              {(showTotpInput || twoFaEnabled) && (
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" />Google Authenticator Code</Label>
+                  <Input
+                    placeholder="6-digit code"
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="tracking-[0.4em] text-center font-mono text-lg h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Open Google Authenticator and enter the current code for OriginTrace.</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setView('menu'); setShowTotpInput(false); }}>Back</Button>
+              <Button onClick={handleWithdraw} disabled={!withdrawAmount || !withdrawAccountNumber || !withdrawAccountName || isWithdrawing || ((showTotpInput || twoFaEnabled) && totpCode.length < 6)}>
+                {isWithdrawing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowUpFromLine className="h-4 w-4 mr-2" />}
+                Withdraw
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {view === 'setup2fa' && setup2faData && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><QrCode className="h-5 w-5" />Set Up Google Authenticator</DialogTitle>
+              <DialogDescription>Scan the QR code with Google Authenticator, then enter the 6-digit code to confirm.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {setup2faData.qr_data_url && (
+                <div className="flex justify-center">
+                  <img src={setup2faData.qr_data_url} alt="2FA QR code" className="w-40 h-40 rounded-lg border" />
+                </div>
+              )}
+              <div className="bg-muted/40 rounded p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Can't scan? Enter this key manually:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono font-semibold tracking-wider flex-1">{setup2faData.secret}</code>
+                  <CopyButton text={setup2faData.secret} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Verification Code</Label>
+                <Input
+                  placeholder="6-digit code from app"
+                  value={setupToken}
+                  onChange={e => setSetupToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength={6}
+                  className="tracking-[0.4em] text-center font-mono text-lg h-11"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setView('menu')}>Cancel</Button>
+              <Button onClick={handleEnable2FA} disabled={setupToken.length < 6 || isEnabling}>
+                {isEnabling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                Confirm &amp; Enable
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Main Wallet Page ──────────────────────────────────────────────────────────
+function WalletPageContent() {
+  const { organization } = useOrg();
+  const { toast } = useToast();
+
+  // Wallet state
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProvisioning, setIsProvisioning] = useState(false);
+
+  // Domiciliary account creation
+  const [addAccountOpen, setAddAccountOpen] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'GBP' | 'EUR'>('USD');
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+
+  // Manage account
+  const [manageAccount, setManageAccount] = useState<WalletData['virtual_accounts'][number] | null>(null);
+  const [manageOpen, setManageOpen] = useState(false);
+
+  // Unified transactions
+  const [transactions, setTransactions] = useState<TxItem[]>([]);
+  const [txLoading, setTxLoading] = useState(true);
+  const [txFilter, setTxFilter] = useState<'all' | 'inflow' | 'outflow'>('all');
+  const [txCurrency, setTxCurrency] = useState('all');
+  const [txSearch, setTxSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const fetchWallet = useCallback(async () => {
+    if (!organization) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/org/wallet');
+      if (res.ok) setWalletData(await res.json());
+    } catch {}
+    setIsLoading(false);
+  }, [organization]);
+
+  const fetchTransactions = useCallback(async () => {
+    if (!organization) return;
+    setTxLoading(true);
+    try {
+      // Fetch inbound wallet transactions + outbound payments in parallel
+      const [walletRes, paymentsRes] = await Promise.all([
+        fetch('/api/org/wallet/transactions?limit=50'),
+        fetch('/api/payments?limit=50&page=1'),
+      ]);
+
+      const merged: TxItem[] = [];
+
+      if (walletRes.ok) {
+        const d = await walletRes.json();
+        for (const tx of (d.transactions ?? [])) {
+          merged.push({
+            id: tx.id,
+            type: 'inflow',
+            amount: Number(tx.amount),
+            currency: tx.currency,
+            description: tx.type === 'usdc_deposit' ? 'USDC Payment Received' : 'Wire Transfer Received',
+            reference: tx.reference || null,
+            status: tx.status,
+            date: tx.created_at,
+            source: 'wallet',
+          });
+        }
+      }
+
+      if (paymentsRes.ok) {
+        const d = await paymentsRes.json();
+        for (const p of (d.payments ?? [])) {
+          merged.push({
+            id: p.id,
+            type: 'outflow',
+            amount: Number(p.amount),
+            currency: p.currency,
+            description: `Payment to ${p.payee_name}`,
+            reference: p.reference_number || null,
+            status: p.status,
+            date: p.payment_date || p.created_at,
+            source: 'payments',
+          });
+        }
+      }
+
+      // Sort by date descending
+      merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setTransactions(merged);
+    } catch {}
+    setTxLoading(false);
+  }, [organization]);
+
+  useEffect(() => { fetchWallet(); fetchTransactions(); }, [fetchWallet, fetchTransactions]);
+
+  const handleProvisionWallet = async () => {
+    setIsProvisioning(true);
+    try {
+      const res = await fetch('/api/org/wallet', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast({ title: 'USDC wallet activated' });
+      fetchWallet();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
+
+  const handleAddAccount = async () => {
+    setIsAddingAccount(true);
+    try {
+      const res = await fetch('/api/org/virtual-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency: selectedCurrency }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast({ title: `${selectedCurrency} account created`, description: `Account issued in ${organization?.name || 'your organisation'}'s name.` });
+      setAddAccountOpen(false);
+      fetchWallet();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsAddingAccount(false);
+    }
+  };
+
+  const existingCurrencies = (walletData?.virtual_accounts ?? []).map(a => a.currency);
+
+  const filteredTx = transactions.filter(tx => {
+    if (txFilter !== 'all' && tx.type !== txFilter) return false;
+    if (txCurrency !== 'all' && tx.currency !== txCurrency) return false;
+    if (txSearch && !tx.description.toLowerCase().includes(txSearch.toLowerCase()) && !(tx.reference ?? '').toLowerCase().includes(txSearch.toLowerCase())) return false;
+    if (dateFrom && tx.date < dateFrom) return false;
+    if (dateTo && tx.date > dateTo + 'T23:59:59') return false;
+    return true;
+  });
+
+  const allCurrencies = [...new Set(transactions.map(t => t.currency))];
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <div className="flex-1 space-y-6 p-4 sm:p-6">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+            <Wallet className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold leading-tight">OriginTrace Wallet</h1>
+            <p className="text-sm text-muted-foreground">Receive payments, manage FX balances, and disburse to farmers</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => { fetchWallet(); fetchTransactions(); }}>
+          <RefreshCw className="h-4 w-4 mr-1.5" />Refresh
+        </Button>
       </div>
 
-      {/* Payment Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={open=>{if(!open){setEditDialogOpen(false);setEditingPayment(null);}}}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Payment</DialogTitle>
-            <DialogDescription>Update the payment record for <span className="font-medium">{editingPayment?.payee_name}</span></DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-1">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Amount</Label>
-                <Input type="number" step="0.01" value={editForm.amount} onChange={e=>setEditForm(f=>({...f,amount:e.target.value}))} placeholder="0.00"/>
+      {/* ── Wallet Stats ── */}
+      {walletData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* NGN */}
+          <Card className="card-accent-emerald hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">NGN Balance</p>
+                  <p className="text-2xl font-bold mt-0.5 leading-tight">
+                    {walletData.ngn.balance !== null ? `₦${Number(walletData.ngn.balance).toLocaleString()}` : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Available for farmer disbursements</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0"><Wallet className="h-5 w-5" /></div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Currency</Label>
-                <Select value={editForm.currency} onValueChange={v=>setEditForm(f=>({...f,currency:v}))}>
-                  <SelectTrigger><SelectValue/></SelectTrigger>
-                  <SelectContent>{SUPPORTED_CURRENCIES.map(c=><SelectItem key={c} value={c}>{CURRENCY_LABELS[c]||c}</SelectItem>)}</SelectContent>
-                </Select>
+            </CardContent>
+          </Card>
+
+          {/* USDC */}
+          <Card className="card-accent-blue hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">USDC Balance</p>
+                  <p className="text-2xl font-bold mt-0.5 leading-tight">
+                    {walletData.usdc.provisioned ? `${Number(walletData.usdc.balance).toFixed(2)} USDC` : '—'}
+                  </p>
+                  {walletData.usdc.provisioned && walletData.usdc.deposit_address ? (
+                    <div className="flex items-center gap-1 mt-1">
+                      <code className="text-xs font-mono text-muted-foreground truncate max-w-[130px]">{walletData.usdc.deposit_address}</code>
+                      <CopyButton text={walletData.usdc.deposit_address} />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">Not activated</p>
+                  )}
+                </div>
+                <div className="h-10 w-10 rounded-lg icon-bg-blue flex items-center justify-center shrink-0"><Coins className="h-5 w-5" /></div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Method</Label>
-                <Select value={editForm.payment_method} onValueChange={v=>setEditForm(f=>({...f,payment_method:v}))}>
-                  <SelectTrigger><SelectValue/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Status</Label>
-                <Select value={editForm.status} onValueChange={v=>setEditForm(f=>({...f,status:v}))}>
-                  <SelectTrigger><SelectValue/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="reversed">Reversed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Payment Date</Label>
-                <Input type="date" value={editForm.payment_date} onChange={e=>setEditForm(f=>({...f,payment_date:e.target.value}))}/>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Reference #</Label>
-                <Input value={editForm.reference_number} onChange={e=>setEditForm(f=>({...f,reference_number:e.target.value}))} placeholder="Optional"/>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Notes</Label>
-              <Textarea value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder="Optional notes"/>
+              {!walletData.usdc.provisioned && (
+                <Button size="sm" className="mt-3 w-full h-8 text-xs" onClick={handleProvisionWallet} disabled={isProvisioning}>
+                  {isProvisioning && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}Activate USDC Wallet
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Foreign Currency Accounts ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold">Foreign Currency Accounts</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Receive USD, GBP, or EUR directly from international buyers in your organisation's name</p>
+          </div>
+          {(walletData?.virtual_accounts ?? []).length < 3 && (
+            <Button size="sm" onClick={() => setAddAccountOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />Create Account
+            </Button>
+          )}
+        </div>
+
+        {(walletData?.virtual_accounts ?? []).length === 0 ? (
+          <div className="flex items-start gap-3 rounded-xl border border-dashed bg-muted/20 p-5">
+            <Info className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">No foreign currency accounts yet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Create a USD, GBP, or EUR account to start receiving wire transfers from international buyers. Accounts are issued in {organization?.name || "your organisation"}'s name.</p>
             </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {walletData!.virtual_accounts.map(acct => (
+              <Card key={acct.account_id} className="border hover:shadow-md transition-all">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{CURRENCY_FLAGS[acct.currency] ?? '🏦'}</span>
+                    <span className="font-semibold text-sm">{acct.currency}</span>
+                    <Badge variant="secondary" className="text-xs ml-auto">Active</Badge>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span className="font-medium">{acct.bank_name}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-muted-foreground">Account</span><div className="flex items-center gap-1"><span className="font-mono">{acct.account_number}</span><CopyButton text={acct.account_number} /></div></div>
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={() => { setManageAccount(acct); setManageOpen(true); }}>
+                    <Settings className="h-3.5 w-3.5 mr-1.5" />Manage Account
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Transactions ── */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3">Transactions</h2>
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <div className="flex rounded-lg border overflow-hidden text-xs">
+            {(['all', 'inflow', 'outflow'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setTxFilter(f)}
+                className={`px-3 py-1.5 font-medium transition-colors ${txFilter === f ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50'}`}
+              >
+                {f === 'all' ? 'All' : f === 'inflow' ? '⬇ Inflow' : '⬆ Outflow'}
+              </button>
+            ))}
+          </div>
+
+          {allCurrencies.length > 1 && (
+            <Select value={txCurrency} onValueChange={setTxCurrency}>
+              <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All currencies</SelectItem>
+                {allCurrencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Input
+            placeholder="Search…"
+            value={txSearch}
+            onChange={e => setTxSearch(e.target.value)}
+            className="h-8 w-36 text-xs"
+          />
+
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 w-36 text-xs" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-8 w-36 text-xs" />
+
+          {(txSearch || dateFrom || dateTo || txCurrency !== 'all' || txFilter !== 'all') && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setTxSearch(''); setDateFrom(''); setDateTo(''); setTxCurrency('all'); setTxFilter('all'); }}>
+              Clear
+            </Button>
+          )}
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            {txLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : filteredTx.length === 0 ? (
+              <div className="text-center py-12">
+                <ArrowDownToLine className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">No transactions found</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {filteredTx.map(tx => (
+                  <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-green-50' : 'bg-rose-50'}`}>
+                      {tx.type === 'inflow'
+                        ? <ArrowDownToLine className="h-4 w-4 text-green-600" />
+                        : <ArrowUpFromLine className="h-4 w-4 text-rose-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{tx.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.reference && <span>Ref: {tx.reference} · </span>}
+                        {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`font-semibold text-sm ${tx.type === 'inflow' ? 'text-green-700' : 'text-rose-600'}`}>
+                        {tx.type === 'inflow' ? '+' : '−'}{Number(tx.amount).toLocaleString()} {tx.currency}
+                      </p>
+                      <Badge variant="secondary" className={`text-xs mt-0.5 ${tx.status === 'completed' || tx.status === 'confirmed' ? 'text-green-600' : 'text-amber-600'}`}>
+                        {tx.status === 'completed' || tx.status === 'confirmed'
+                          ? <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+                          : <Clock className="h-3 w-3 mr-1 inline" />}
+                        {tx.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Dialogs ── */}
+      {/* Create domiciliary account */}
+      <Dialog open={addAccountOpen} onOpenChange={setAddAccountOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Create Domiciliary Account</DialogTitle>
+            <DialogDescription>
+              A dedicated foreign currency account will be issued in the name of <strong>{organization?.name || 'your organisation'}</strong>. Buyers wire directly to this account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Select value={selectedCurrency} onValueChange={v => setSelectedCurrency(v as 'USD' | 'GBP' | 'EUR')}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(['USD', 'GBP', 'EUR'] as const).map(c => (
+                    <SelectItem key={c} value={c} disabled={existingCurrencies.includes(c)}>
+                      {CURRENCY_FLAGS[c]} {c}{existingCurrencies.includes(c) ? ' (already active)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2.5">OriginTrace provisions this account and links it to your shipments for seamless reconciliation.</p>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={()=>{setEditDialogOpen(false);setEditingPayment(null);}}>Cancel</Button>
-            <Button onClick={handleEdit} disabled={isEditing}>{isEditing?<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Saving…</>:'Save Changes'}</Button>
+            <Button variant="outline" onClick={() => setAddAccountOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddAccount} disabled={isAddingAccount}>
+              {isAddingAccount && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create Account
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Farmer Bank Accounts section */}
-      <div className="border-t pt-6">
-        <FarmerBankAccountsTab />
-      </div>
-
-    </TierGate>
-  );
-}
-
-// ─── Farmer Bank Accounts Tab Component ──────────────────────────────────────
-
-function FarmerBankAccountsTab() {
-  const { toast } = useToast();
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [banks, setBanks] = useState<{ id: number; name: string; code: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [resolvedName, setResolvedName] = useState('');
-  const [form, setForm] = useState({
-    farmer_name: '', account_number: '', bank_code: '', bank_name: '',
-  });
-
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/farmer-bank-accounts').then(r => r.json()),
-      fetch('/api/org/kyc/banks').then(r => r.json()),
-    ]).then(([accs, bankData]) => {
-      setAccounts(accs.accounts ?? []);
-      setBanks(bankData.banks ?? []);
-    }).finally(() => setIsLoading(false));
-  }, []);
-
-  const handleVerify = async () => {
-    if (!form.account_number || !form.bank_code) {
-      toast({ title: 'Missing fields', description: 'Enter account number and select bank.', variant: 'destructive' });
-      return;
-    }
-    setIsVerifying(true);
-    setResolvedName('');
-    try {
-      const r = await fetch('/api/org/kyc/verify-bank', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_number: form.account_number, bank_code: form.bank_code }),
-      });
-      const d = await r.json();
-      if (!r.ok) { toast({ title: 'Verification failed', description: d.error, variant: 'destructive' }); return; }
-      setResolvedName(d.accountName);
-    } finally { setIsVerifying(false); }
-  };
-
-  const handleSave = async () => {
-    if (!resolvedName) { toast({ title: 'Verify account first', variant: 'destructive' }); return; }
-    setIsSaving(true);
-    try {
-      const r = await fetch('/api/farmer-bank-accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, account_name: resolvedName, is_verified: true }),
-      });
-      const d = await r.json();
-      if (!r.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
-      setAccounts(a => [d.account, ...a]);
-      setDialogOpen(false);
-      setForm({ farmer_name: '', account_number: '', bank_code: '', bank_name: '' });
-      setResolvedName('');
-      toast({ title: 'Bank account saved' });
-    } finally { setIsSaving(false); }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold">Farmer Bank Accounts</h3>
-          <p className="text-sm text-muted-foreground">Verified NGN bank accounts for Paystack bank transfer disbursements</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1.5"/>Add Account</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Add Farmer Bank Account</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-2">
-              <div><Label>Farmer Name</Label><Input value={form.farmer_name} onChange={e => setForm(f => ({...f, farmer_name: e.target.value}))} /></div>
-              <div><Label>Bank</Label>
-                <Select value={form.bank_code} onValueChange={v => { const b = banks.find(b => b.code === v); setForm(f => ({...f, bank_code: v, bank_name: b?.name ?? ''})); setResolvedName(''); }}>
-                  <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
-                  <SelectContent className="max-h-56">{banks.map(b => <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Account Number</Label><Input value={form.account_number} onChange={e => { setForm(f => ({...f, account_number: e.target.value})); setResolvedName(''); }} maxLength={10} /></div>
-              {resolvedName && (
-                <div className="flex items-center gap-2 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
-                  <CheckCircle className="h-4 w-4" /> Verified: <strong>{resolvedName}</strong>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleVerify} disabled={isVerifying}>
-                  {isVerifying && <Loader2 className="h-4 w-4 animate-spin mr-1.5"/>}Verify
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving || !resolvedName}>
-                  {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-1.5"/>}Save Account
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : accounts.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <Landmark className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3"/>
-          <p className="text-sm text-muted-foreground">No farmer bank accounts yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">Add verified bank accounts to enable NGN direct bank transfer disbursements.</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Farmer Name</TableHead><TableHead>Bank</TableHead>
-              <TableHead>Account Number</TableHead><TableHead>Account Name</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {accounts.map(a => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.farmer_name}</TableCell>
-                  <TableCell>{a.bank_name}</TableCell>
-                  <TableCell className="font-mono text-sm">{a.account_number}</TableCell>
-                  <TableCell>{a.account_name}</TableCell>
-                  <TableCell>
-                    {a.is_verified
-                      ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5"><CheckCircle className="h-3 w-3"/>Verified</span>
-                      : <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Unverified</span>
-                    }
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PaymentsPageWithTabs() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const activeTab = searchParams.get('tab') ?? 'transactions';
-
-  const switchTab = (tab: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    // Preserve contract deep-link params when switching tabs
-    params.set('tab', tab);
-    router.replace(`/app/payments?${params.toString()}`);
-  };
-
-  return (
-    <div className="flex-1 space-y-0">
-      <div className="border-b px-6 pt-6 pb-0">
-        <h1 className="text-xl font-semibold mb-4 sr-only">Payments</h1>
-        <Tabs value={activeTab} onValueChange={switchTab}>
-          <TabsList className="h-9">
-            <TabsTrigger value="transactions" className="text-sm">Transactions</TabsTrigger>
-            <TabsTrigger value="disbursements" className="text-sm">Disbursements</TabsTrigger>
-            <TabsTrigger value="wallet" className="text-sm">Wallet</TabsTrigger>
-          </TabsList>
-          <TabsContent value="transactions" className="mt-0">
-            <PaymentsPageInner />
-          </TabsContent>
-          <TabsContent value="disbursements" className="mt-0">
-            <DisbursementsContent />
-          </TabsContent>
-          <TabsContent value="wallet" className="mt-0">
-            <WalletContent />
-          </TabsContent>
-        </Tabs>
-      </div>
+      {/* Manage account */}
+      <ManageAccountDialog
+        open={manageOpen}
+        onOpenChange={setManageOpen}
+        account={manageAccount}
+        orgName={organization?.name || 'Your Organisation'}
+      />
     </div>
   );
 }
 
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-      <PaymentsPageWithTabs />
-    </Suspense>
+    <TierGate feature="payments" requiredTier="basic" featureLabel="Wallet & Payments">
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+        <WalletPageContent />
+      </Suspense>
+    </TierGate>
   );
 }
