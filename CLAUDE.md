@@ -1,15 +1,5 @@
 # OriginTrace — Claude Code Project Guide
 
-## Superpowers
-
-This project uses the [Superpowers](https://github.com/obra/superpowers) skill system.
-
-**At the start of every session**, invoke the `using-superpowers` skill to load the workflow rules. Before any feature work, use `brainstorming`. Before implementation, use `writing-plans`. Use `test-driven-development` for all feature work and bug fixes. Use `systematic-debugging` before proposing any fix.
-
-Skills available: `using-superpowers`, `brainstorming`, `writing-plans`, `test-driven-development`, `systematic-debugging`, `subagent-driven-development`, `executing-plans`, `requesting-code-review`, `receiving-code-review`, `dispatching-parallel-agents`, `using-git-worktrees`, `finishing-a-development-branch`, `verification-before-completion`
-
----
-
 ## Project Overview
 
 **OriginTrace** is a Next.js 16 (App Router) agricultural supply chain traceability platform built for African commodity cooperatives and agri-businesses.
