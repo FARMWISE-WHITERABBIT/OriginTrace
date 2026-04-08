@@ -77,22 +77,30 @@ async function createDealForContact(contactId: string, data: HubSpotLeadData): P
 }
 
 /**
- * Update a HubSpot deal's pipeline stage.
+ * Pipeline stage map — code alias → HubSpot stage ID
  *
- * Stage IDs mapped to default HubSpot pipeline:
- *   new_lead            → appointmentscheduled  (form submitted)
- *   meeting_scheduled   → presentationscheduled (Cal.com booking confirmed)
- *   meeting_rescheduled → presentationscheduled (meeting moved)
- *   no_show             → <custom stage ID>     set NO_SHOW_STAGE_ID env var
- *   nurture_dropped     → closedlost            (no response after 3 emails)
+ * Full pipeline order:
+ *  1. appointmentscheduled  — demo form submitted / discovery call booked
+ *  2. [no_show stage]       — prospect missed discovery call (custom stage, set NO_SHOW_STAGE_ID)
+ *  3. presentationscheduled — platform demo scheduled
+ *  4. decisionmakerboughtin — post-demo, decision maker engaged
+ *  5. contractsent          — contract sent
+ *  6. [pilot_setup stage]   — pilot being configured (custom stage, set PILOT_SETUP_STAGE_ID)
+ *  7. closedwon             — pilot converted
+ *  8. closedlost            — lost / unresponsive
+ *
+ * Custom stages to add in HubSpot → CRM → Deals → Pipeline settings:
+ *  - "No Show"    — after appointmentscheduled, before presentationscheduled
+ *  - "Pilot Setup" — after contractsent, before closedwon
  */
 const STAGE_MAP: Record<string, string> = {
   new_lead:            'appointmentscheduled',
-  meeting_scheduled:   'presentationscheduled',
-  meeting_rescheduled: 'presentationscheduled',
+  meeting_scheduled:   'appointmentscheduled',
+  meeting_rescheduled: 'appointmentscheduled',
+  // No show = missed discovery call. Falls back to appointmentscheduled until
+  // the custom "No Show" stage is created and NO_SHOW_STAGE_ID is set.
+  no_show:             process.env.NO_SHOW_STAGE_ID || 'appointmentscheduled',
   nurture_dropped:     'closedlost',
-  // no_show maps to a custom stage — set NO_SHOW_STAGE_ID in env
-  no_show:             process.env.NO_SHOW_STAGE_ID || 'closedlost',
 };
 export async function updateDealStage(dealId: string, stage: string): Promise<void> {
   try {
