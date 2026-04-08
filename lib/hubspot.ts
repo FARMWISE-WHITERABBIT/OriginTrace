@@ -4,7 +4,6 @@
 
 const HUBSPOT_TOKEN = process.env.HUBSPOT_API_TOKEN ?? '';
 const PIPELINE_ID   = 'default';
-const DEAL_STAGE_ID = 'appointmentscheduled';
 
 async function hubspot(path: string, options: RequestInit = {}): Promise<any> {
   if (!HUBSPOT_TOKEN) throw new Error('HUBSPOT_API_TOKEN not set');
@@ -16,7 +15,9 @@ async function hubspot(path: string, options: RequestInit = {}): Promise<any> {
       ...((options.headers as Record<string, string>) || {}),
     },
   });
-  return res.json();
+  const json = await res.json();
+  if (!res.ok) throw new Error(`HubSpot API error ${res.status}: ${json?.message || JSON.stringify(json)}`);
+  return json;
 }
 
 export interface HubSpotLeadData {

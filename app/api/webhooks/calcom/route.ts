@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('lead_nurture_jobs')
         .update({
-          status: triggerEvent === 'BOOKING_RESCHEDULED' ? 'booked' : 'booked',
+          status: 'booked',
           meeting_at: meetingAt.toISOString(),
           calcom_booking_uid: bookingUid,
         })

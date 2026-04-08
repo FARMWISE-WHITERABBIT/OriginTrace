@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   const { data: jobs24h } = await supabase
     .from('lead_nurture_jobs')
-    .select('id, lead_email, lead_name, lead_phone, meeting_at, hubspot_deal_id')
+    .select('id, lead_email, lead_name, lead_phone, meeting_at, hubspot_deal_id, reminders_sent')
     .eq('status', 'booked')
     .gte('meeting_at', window24hStart.toISOString())
     .lte('meeting_at', window24hEnd.toISOString())
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     await supabase
       .from('lead_nurture_jobs')
-      .update({ reminders_sent: { '24h': true } })
+      .update({ reminders_sent: { ...(job.reminders_sent || {}), '24h': true } })
       .eq('id', job.id);
 
     results.reminders_24h++;
