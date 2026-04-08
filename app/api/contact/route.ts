@@ -98,6 +98,13 @@ export async function POST(request: NextRequest) {
     // ── Create lead nurture job ───────────────────────────────────────────────
     try {
       const supabase = createAdminClient();
+      // Deactivate any existing active job for this email to prevent duplicate sequences
+      await supabase
+        .from('lead_nurture_jobs')
+        .update({ status: 'replaced' })
+        .eq('lead_email', email)
+        .eq('status', 'active');
+
       await supabase.from('lead_nurture_jobs').insert({
         lead_email:      email,
         lead_name:       full_name,

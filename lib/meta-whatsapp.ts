@@ -10,7 +10,7 @@
  *   META_WA_ACCESS_TOKEN      — long-lived system user token
  */
 
-const BASE_URL = 'https://graph.facebook.com/v18.0';
+const BASE_URL = 'https://graph.facebook.com/v21.0';
 
 function getConfig(): { phoneNumberId: string; token: string } | null {
   const phoneNumberId = process.env.META_WA_PHONE_NUMBER_ID;

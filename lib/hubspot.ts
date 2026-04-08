@@ -5,6 +5,33 @@
 const HUBSPOT_TOKEN = process.env.HUBSPOT_API_TOKEN ?? '';
 const PIPELINE_ID   = 'default';
 
+/**
+ * Pipeline stage map — code alias → HubSpot stage ID
+ *
+ * Full pipeline order:
+ *  1. appointmentscheduled  — demo form submitted / discovery call booked
+ *  2. [no_show stage]       — prospect missed discovery call (custom stage, set NO_SHOW_STAGE_ID)
+ *  3. presentationscheduled — platform demo scheduled
+ *  4. decisionmakerboughtin — post-demo, decision maker engaged
+ *  5. contractsent          — contract sent
+ *  6. [pilot_setup stage]   — pilot being configured (custom stage, set PILOT_SETUP_STAGE_ID)
+ *  7. closedwon             — pilot converted
+ *  8. closedlost            — lost / unresponsive
+ *
+ * Custom stages to add in HubSpot → CRM → Deals → Pipeline settings:
+ *  - "No Show"     — after appointmentscheduled, before presentationscheduled
+ *  - "Pilot Setup" — after contractsent, before closedwon
+ */
+const STAGE_MAP: Record<string, string> = {
+  new_lead:            'appointmentscheduled',
+  meeting_scheduled:   'appointmentscheduled',
+  meeting_rescheduled: 'appointmentscheduled',
+  // No show = missed discovery call. Falls back to appointmentscheduled until
+  // the custom "No Show" stage is created and NO_SHOW_STAGE_ID is set.
+  no_show:             process.env.NO_SHOW_STAGE_ID || 'appointmentscheduled',
+  nurture_dropped:     'closedlost',
+};
+
 async function hubspot(path: string, options: RequestInit = {}): Promise<any> {
   if (!HUBSPOT_TOKEN) throw new Error('HUBSPOT_API_TOKEN not set');
   const res = await fetch(`https://api.hubapi.com${path}`, {
@@ -77,31 +104,9 @@ async function createDealForContact(contactId: string, data: HubSpotLeadData): P
 }
 
 /**
- * Pipeline stage map — code alias → HubSpot stage ID
- *
- * Full pipeline order:
- *  1. appointmentscheduled  — demo form submitted / discovery call booked
- *  2. [no_show stage]       — prospect missed discovery call (custom stage, set NO_SHOW_STAGE_ID)
- *  3. presentationscheduled — platform demo scheduled
- *  4. decisionmakerboughtin — post-demo, decision maker engaged
- *  5. contractsent          — contract sent
- *  6. [pilot_setup stage]   — pilot being configured (custom stage, set PILOT_SETUP_STAGE_ID)
- *  7. closedwon             — pilot converted
- *  8. closedlost            — lost / unresponsive
- *
- * Custom stages to add in HubSpot → CRM → Deals → Pipeline settings:
- *  - "No Show"    — after appointmentscheduled, before presentationscheduled
- *  - "Pilot Setup" — after contractsent, before closedwon
+ * Update a HubSpot deal's pipeline stage.
+ * Uses STAGE_MAP to translate internal stage aliases to real HubSpot stage IDs.
  */
-const STAGE_MAP: Record<string, string> = {
-  new_lead:            'appointmentscheduled',
-  meeting_scheduled:   'appointmentscheduled',
-  meeting_rescheduled: 'appointmentscheduled',
-  // No show = missed discovery call. Falls back to appointmentscheduled until
-  // the custom "No Show" stage is created and NO_SHOW_STAGE_ID is set.
-  no_show:             process.env.NO_SHOW_STAGE_ID || 'appointmentscheduled',
-  nurture_dropped:     'closedlost',
-};
 export async function updateDealStage(dealId: string, stage: string): Promise<void> {
   try {
     const dealstage = STAGE_MAP[stage] ?? stage;
