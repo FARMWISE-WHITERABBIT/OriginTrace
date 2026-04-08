@@ -67,7 +67,7 @@ async function createDealForContact(contactId: string, data: HubSpotLeadData): P
     body: JSON.stringify({ properties: {
       dealname:   dealName,
       pipeline:   PIPELINE_ID,
-      dealstage:  'new_lead',
+      dealstage:  STAGE_MAP['new_lead'],
       closedate:  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     }}),
   }) as { id?: string; message?: string };
@@ -78,18 +78,28 @@ async function createDealForContact(contactId: string, data: HubSpotLeadData): P
 
 /**
  * Update a HubSpot deal's pipeline stage.
- * Call after key funnel events: booking, no-show, nurture dropped, etc.
  *
- * Stage keys used in this project:
- *   new_lead | meeting_scheduled | meeting_rescheduled | no_show | nurture_dropped
- *
- * These must exist as custom stages in your HubSpot pipeline (one-time UI setup).
+ * Stage IDs mapped to default HubSpot pipeline:
+ *   new_lead            → appointmentscheduled  (form submitted)
+ *   meeting_scheduled   → presentationscheduled (Cal.com booking confirmed)
+ *   meeting_rescheduled → presentationscheduled (meeting moved)
+ *   no_show             → <custom stage ID>     set NO_SHOW_STAGE_ID env var
+ *   nurture_dropped     → closedlost            (no response after 3 emails)
  */
+const STAGE_MAP: Record<string, string> = {
+  new_lead:            'appointmentscheduled',
+  meeting_scheduled:   'presentationscheduled',
+  meeting_rescheduled: 'presentationscheduled',
+  nurture_dropped:     'closedlost',
+  // no_show maps to a custom stage — set NO_SHOW_STAGE_ID in env
+  no_show:             process.env.NO_SHOW_STAGE_ID || 'closedlost',
+};
 export async function updateDealStage(dealId: string, stage: string): Promise<void> {
   try {
+    const dealstage = STAGE_MAP[stage] ?? stage;
     await hubspot(`/crm/v3/objects/deals/${dealId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ properties: { dealstage: stage } }),
+      body: JSON.stringify({ properties: { dealstage } }),
     });
   } catch (err) {
     console.error('[HubSpot] updateDealStage failed (non-fatal):', err);
