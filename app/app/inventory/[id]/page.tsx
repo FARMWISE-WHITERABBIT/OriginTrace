@@ -169,7 +169,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
   const location = batch.community || batch.state || batch.farm?.community;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

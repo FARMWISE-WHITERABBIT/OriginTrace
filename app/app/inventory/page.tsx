@@ -411,7 +411,7 @@ export default function InventoryPage() {
                       onClick={() => handleRowClick(batch)}
                       data-testid={`batch-row-${batch.id}`}
                     >
-                      <TableCell onClick={e => { e.stopPropagation(); toggleSelect(batch.id); }}>
+                      <TableCell onClick={e => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(batch.id)}
                           onCheckedChange={() => toggleSelect(batch.id)}

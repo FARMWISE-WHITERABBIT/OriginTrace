@@ -165,7 +165,7 @@ export default function DPPDetailPage({ params: paramsPromise }: { params: Promi
   const claimEntries = Object.entries(claims).filter(([, v]) => v !== null && v !== undefined && v !== false);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

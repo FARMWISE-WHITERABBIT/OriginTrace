@@ -14,8 +14,13 @@ export async function PATCH(
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
     const body = await request.json();
-    const allowed = ['facility_name', 'facility_location', 'notes'];
-    const updates: Record<string, string> = {};
+    const allowed = [
+      'facility_name', 'facility_location', 'notes',
+      // Dispatch output fields
+      'dispatch_destination', 'dispatch_vehicle_ref',
+      'dispatch_driver_phone', 'dispatched_output_at', 'dispatch_notes',
+    ];
+    const updates: Record<string, any> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
     }

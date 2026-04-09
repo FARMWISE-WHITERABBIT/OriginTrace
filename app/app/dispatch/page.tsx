@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,6 +19,7 @@ import {
   Send,
   FileText,
   Ship,
+  Factory,
 } from 'lucide-react';
 import Link from 'next/link';
 import { TierGate } from '@/components/tier-gate';
@@ -71,8 +73,10 @@ function DispatchContent() {
   const router = useRouter();
 
   // Support single: ?batch=id  OR  multi: ?batches=id1,id2,id3
-  const batchIdParam  = searchParams.get('batch');
-  const batchesParam  = searchParams.get('batches');
+  // Also supports: ?processing_run_id=id  (dispatch processed output to warehouse)
+  const batchIdParam        = searchParams.get('batch');
+  const batchesParam        = searchParams.get('batches');
+  const processingRunIdParam = searchParams.get('processing_run_id');
   const batchIds: string[] = batchesParam
     ? batchesParam.split(',').map(s => s.trim()).filter(Boolean)
     : batchIdParam
@@ -85,17 +89,22 @@ function DispatchContent() {
   const [destination, setDestination] = useState('');
   const [vehicleRef, setVehicleRef] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
+  const [dispatchNotes, setDispatchNotes] = useState('');
   const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchedIds, setDispatchedIds] = useState<string[]>([]);
   const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
+  // Processing run dispatch mode
+  const [processingRun, setProcessingRun] = useState<any>(null);
+  const [processingRunDispatched, setProcessingRunDispatched] = useState(false);
   const { profile, organization } = useOrg();
   const { toast } = useToast();
 
   useEffect(() => {
     if (batchIds.length === 0) {
-      setIsLoading(false);
+      // Let the processingRun useEffect manage loading state in PR mode
+      if (!processingRunIdParam) setIsLoading(false);
       return;
     }
 
@@ -164,6 +173,26 @@ function DispatchContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchesParam, batchIdParam]);
 
+  useEffect(() => {
+    if (!processingRunIdParam) return;
+
+    async function fetchProcessingRun() {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/processing-runs/${processingRunIdParam}`);
+        if (!res.ok) throw new Error('Failed to load processing run');
+        const data = await res.json();
+        setProcessingRun(data.run);
+      } catch (err: any) {
+        toast({ title: 'Error', description: err.message || 'Failed to load processing run', variant: 'destructive' });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProcessingRun();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingRunIdParam]);
+
   const handleDispatch = async () => {
     if (batches.length === 0 || !destination.trim() || !confirmDispatch) return;
     setIsDispatching(true);
@@ -208,6 +237,34 @@ function DispatchContent() {
     }
   };
 
+  const handleProcessingRunDispatch = async () => {
+    if (!processingRun || !destination.trim() || !confirmDispatch) return;
+    setIsDispatching(true);
+    try {
+      const res = await fetch(`/api/processing-runs/${processingRunIdParam}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dispatch_destination: destination.trim(),
+          dispatch_vehicle_ref: vehicleRef.trim() || null,
+          dispatch_driver_phone: driverPhone.trim() || null,
+          dispatched_output_at: new Date().toISOString(),
+          dispatch_notes: dispatchNotes.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        throw new Error(j.error || 'Failed to dispatch');
+      }
+      toast({ title: 'Dispatched', description: `Processing output dispatched to ${destination}` });
+      setProcessingRunDispatched(true);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to dispatch', variant: 'destructive' });
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -216,9 +273,175 @@ function DispatchContent() {
     );
   }
 
-  if (batchIds.length === 0) {
+  if (batchIds.length === 0 && !processingRunIdParam) {
     router.replace('/app/inventory');
     return null;
+  }
+
+  // ── Processing Run Dispatch Mode ──────────────────────────────────────────
+  if (processingRunIdParam && batchIds.length === 0) {
+    if (!processingRun) {
+      return (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Processing Run Not Found</h2>
+          <p className="text-muted-foreground mb-4">Could not load the processing run.</p>
+          <Link href="/app/processing">
+            <Button><ArrowLeft className="h-4 w-4 mr-2" />Back to Processing</Button>
+          </Link>
+        </div>
+      );
+    }
+
+    const alreadyDispatched = !!processingRun.dispatched_output_at;
+
+    if (processingRunDispatched || alreadyDispatched) {
+      return (
+        <div className="text-center py-12">
+          <Truck className="h-12 w-12 mx-auto text-green-600 mb-4" />
+          <h2 className="text-xl font-semibold mb-2">
+            {processingRunDispatched ? 'Output Dispatched' : 'Already Dispatched'}
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {processingRunDispatched
+              ? `Processing output dispatched to ${destination}.`
+              : `This run's output was already dispatched${processingRun.dispatch_destination ? ` to ${processingRun.dispatch_destination}` : ''}.`}
+          </p>
+          <Link href={`/app/processing/${processingRunIdParam}`}>
+            <Button><ArrowLeft className="h-4 w-4 mr-2" />Back to Processing Run</Button>
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href={`/app/processing/${processingRunIdParam}`}>
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Dispatch Processing Output</h1>
+            <p className="text-muted-foreground">
+              {processingRun.run_code || `Run #${(processingRunIdParam as string).slice(0, 8)}`}
+              {processingRun.commodity ? ` · ${processingRun.commodity}` : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="card-accent-blue">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                  <Truck className="h-4 w-4" />
+                </div>
+                Dispatch Details
+              </CardTitle>
+              <CardDescription>Record handover for the processing-to-warehouse leg</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pr-destination">Destination *</Label>
+                <Input
+                  id="pr-destination"
+                  placeholder="e.g., Lagos Warehouse, Export Terminal"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pr-vehicle">Vehicle Reference</Label>
+                <Input
+                  id="pr-vehicle"
+                  placeholder="e.g., Plate number, truck ID"
+                  value={vehicleRef}
+                  onChange={(e) => setVehicleRef(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pr-driver">Driver Phone</Label>
+                <Input
+                  id="pr-driver"
+                  placeholder="e.g., +234…"
+                  value={driverPhone}
+                  onChange={(e) => setDriverPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pr-notes">Dispatch Notes</Label>
+                <Textarea
+                  id="pr-notes"
+                  placeholder="Any additional handover notes…"
+                  value={dispatchNotes}
+                  onChange={(e) => setDispatchNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 mt-2">
+                <Checkbox
+                  id="pr-confirm"
+                  checked={confirmDispatch}
+                  onCheckedChange={(checked) => setConfirmDispatch(checked === true)}
+                />
+                <label htmlFor="pr-confirm" className="text-sm cursor-pointer">
+                  I confirm the processed output has been loaded and is ready for transport.
+                </label>
+              </div>
+              <Button
+                className="w-full min-h-[48px]"
+                onClick={handleProcessingRunDispatch}
+                disabled={isDispatching || !destination.trim() || !confirmDispatch}
+              >
+                {isDispatching ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Dispatch Output
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="card-accent-emerald">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-emerald shrink-0">
+                  <Factory className="h-4 w-4" />
+                </div>
+                Run Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                {[
+                  { label: 'Run Code',      value: processingRun.run_code || '—' },
+                  { label: 'Commodity',     value: processingRun.commodity || '—' },
+                  { label: 'Facility',      value: processingRun.facility_name || '—' },
+                  { label: 'Location',      value: processingRun.facility_location || '—' },
+                  { label: 'Status',        value: processingRun.status || '—' },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{row.label}</span>
+                    <span className="text-xs font-medium">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              {processingRun.output_weight_kg > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/8 border border-primary/20">
+                  <span className="text-sm font-semibold text-primary">Output Weight</span>
+                  <span className="font-bold text-xl text-primary">
+                    {Number(processingRun.output_weight_kg).toFixed(1)} kg
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (batches.length === 0) {

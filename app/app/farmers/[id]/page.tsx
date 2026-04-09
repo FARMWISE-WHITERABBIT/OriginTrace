@@ -342,7 +342,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const totalDirectPayments = (payments || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

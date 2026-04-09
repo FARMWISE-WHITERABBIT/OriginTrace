@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Factory, CheckCircle2, AlertTriangle, Package,
   Loader2, MapPin, Calendar, Scale, Boxes, ArrowRight,
-  QrCode, Layers, Pencil, X, Save, Ship,
+  QrCode, Layers, Pencil, X, Save, Ship, Truck,
 } from 'lucide-react';
 import { AddToShipmentDialog } from '@/components/shipments/add-to-shipment-dialog';
 
@@ -144,7 +144,7 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
   const recoveryPct = Math.min(100, (recovery / Math.max(standard, 1)) * 100);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -180,6 +180,21 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
                 <Package className="h-3.5 w-3.5 mr-1.5" />Create Finished Good
               </Button>
             </Link>
+          )}
+          {/* Dispatch processed output to a warehouse / onward location */}
+          {run.output_weight_kg > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/app/dispatch?processing_run_id=${run.id}`)}
+            >
+              <Truck className="h-3.5 w-3.5 mr-1.5" />Dispatch Output
+            </Button>
+          )}
+          {finishedGoods.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setAddToShipmentOpen(true)}>
+              <Ship className="h-3.5 w-3.5 mr-1.5" />Add to Shipment
+            </Button>
           )}
         </div>
       </div>
@@ -361,17 +376,6 @@ export default function ProcessingRunDetailPage({ params: paramsPromise }: { par
               <CardDescription>Export-ready products produced from this run</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {finishedGoods.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setAddToShipmentOpen(true)}
-                  className="gap-1.5"
-                >
-                  <Ship className="h-3.5 w-3.5" />
-                  Add to Shipment
-                </Button>
-              )}
               {finishedGoods.length === 0 && (
                 <Link href={`/app/pedigree?processing_run_id=${run.id}`}>
                   <Button size="sm" variant="outline">
