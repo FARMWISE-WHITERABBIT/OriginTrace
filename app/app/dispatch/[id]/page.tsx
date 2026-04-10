@@ -18,7 +18,13 @@ import {
   Weight,
   ShoppingBag,
   Ship,
+  Phone,
+  Clock,
+  CalendarClock,
+  ClipboardCheck,
+  Users,
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { AddToShipmentDialog } from '@/components/shipments/add-to-shipment-dialog';
 
@@ -33,6 +39,10 @@ interface BatchDispatchDetail {
   vehicle_reference: string | null;
   dispatched_at: string | null;
   dispatched_by: string | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  expected_arrival_at: string | null;
+  dispatch_recorded_at: string | null;
   created_at: string;
   farm: {
     id: string;
@@ -47,6 +57,7 @@ function DispatchDetailContent() {
   const router = useRouter();
   const { toast } = useToast();
   const [batch, setBatch] = useState<BatchDispatchDetail | null>(null);
+  const [contributions, setContributions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [addToShipmentOpen, setAddToShipmentOpen] = useState(false);
 
@@ -69,11 +80,16 @@ function DispatchDetailContent() {
           vehicle_reference: b.vehicle_reference ?? null,
           dispatched_at: b.dispatched_at ?? null,
           dispatched_by: b.dispatched_by ?? null,
+          driver_name: b.driver_name ?? null,
+          driver_phone: b.driver_phone ?? null,
+          expected_arrival_at: b.expected_arrival_at ?? null,
+          dispatch_recorded_at: b.dispatch_recorded_at ?? null,
           created_at: b.created_at,
           farm: farmData
             ? { id: farmData.id, farmer_name: farmData.farmer_name ?? 'Unknown', community: farmData.community ?? '—', phone: farmData.phone }
             : { id: '', farmer_name: 'Unknown', community: '—' },
         });
+        setContributions(data.contributions || []);
       } catch (err: any) {
         toast({ title: 'Error', description: err.message, variant: 'destructive' });
       } finally {
@@ -156,11 +172,29 @@ function DispatchDetailContent() {
               value={batch.vehicle_reference || '—'}
             />
             <InfoRow
-              icon={<Calendar className="h-3.5 w-3.5" />}
-              label="Dispatched"
-              value={batch.dispatched_at
-                ? new Date(batch.dispatched_at).toLocaleString()
-                : '—'}
+              icon={<User className="h-3.5 w-3.5" />}
+              label="Driver"
+              value={batch.driver_name || '—'}
+            />
+            <InfoRow
+              icon={<Phone className="h-3.5 w-3.5" />}
+              label="Driver Phone"
+              value={batch.driver_phone || '—'}
+            />
+            <InfoRow
+              icon={<Clock className="h-3.5 w-3.5" />}
+              label="Departure Time"
+              value={batch.dispatched_at ? new Date(batch.dispatched_at).toLocaleString('en-GB') : '—'}
+            />
+            <InfoRow
+              icon={<CalendarClock className="h-3.5 w-3.5" />}
+              label="Expected Arrival"
+              value={batch.expected_arrival_at ? new Date(batch.expected_arrival_at).toLocaleString('en-GB') : '—'}
+            />
+            <InfoRow
+              icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+              label="Recorded At"
+              value={batch.dispatch_recorded_at ? new Date(batch.dispatch_recorded_at).toLocaleString('en-GB') : '—'}
             />
             {!isDispatched && (
               <div className="pt-2">
@@ -221,6 +255,48 @@ function DispatchDetailContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Contributors */}
+        {contributions.length > 0 && (
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="h-7 w-7 rounded-lg icon-bg-violet flex items-center justify-center shrink-0">
+                  <Users className="h-3.5 w-3.5" />
+                </div>
+                Contributors
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Farmer</TableHead>
+                    <TableHead>Community</TableHead>
+                    <TableHead className="text-right">Bags</TableHead>
+                    <TableHead className="text-right">Weight (kg)</TableHead>
+                    <TableHead>Compliance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contributions.map((c, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{c.farmer_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{c.community || '—'}</TableCell>
+                      <TableCell className="text-right font-mono">{c.bag_count}</TableCell>
+                      <TableCell className="text-right font-mono">{Number(c.weight_kg).toFixed(1)}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.compliance_status === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                          {c.compliance_status || 'pending'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Actions */}

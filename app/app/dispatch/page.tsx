@@ -89,6 +89,14 @@ function DispatchContent() {
   const [destination, setDestination] = useState('');
   const [vehicleRef, setVehicleRef] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
+  const [driverName, setDriverName] = useState('');
+  const [dispatchedAt, setDispatchedAt] = useState(() => {
+    // Default to current local datetime for the datetime-local input
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  const [expectedArrivalAt, setExpectedArrivalAt] = useState('');
   const [dispatchNotes, setDispatchNotes] = useState('');
   const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -206,6 +214,10 @@ function DispatchContent() {
               action: 'dispatch',
               dispatch_destination: destination.trim(),
               vehicle_reference: vehicleRef.trim() || null,
+              driver_name: driverName.trim() || null,
+              driver_phone: driverPhone.trim() || null,
+              dispatched_at: dispatchedAt ? new Date(dispatchedAt).toISOString() : null,
+              expected_arrival_at: expectedArrivalAt ? new Date(expectedArrivalAt).toISOString() : null,
             }),
           }).then(r => r.json().then(j => ({ ok: r.ok, json: j, id: batch.id })))
         )
@@ -248,7 +260,9 @@ function DispatchContent() {
           dispatch_destination: destination.trim(),
           dispatch_vehicle_ref: vehicleRef.trim() || null,
           dispatch_driver_phone: driverPhone.trim() || null,
-          dispatched_output_at: new Date().toISOString(),
+          dispatch_driver_name: driverName.trim() || null,
+          dispatched_output_at: dispatchedAt ? new Date(dispatchedAt).toISOString() : new Date().toISOString(),
+          expected_arrival_at: expectedArrivalAt ? new Date(expectedArrivalAt).toISOString() : null,
           dispatch_notes: dispatchNotes.trim() || null,
         }),
       });
@@ -369,6 +383,35 @@ function DispatchContent() {
                   value={driverPhone}
                   onChange={(e) => setDriverPhone(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pr-driverName">Driver Name</Label>
+                <Input
+                  id="pr-driverName"
+                  placeholder="e.g., John Doe"
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="pr-dispatchedAt">Dispatched At</Label>
+                  <Input
+                    id="pr-dispatchedAt"
+                    type="datetime-local"
+                    value={dispatchedAt}
+                    onChange={(e) => setDispatchedAt(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pr-expectedArrival">Expected Arrival</Label>
+                  <Input
+                    id="pr-expectedArrival"
+                    type="datetime-local"
+                    value={expectedArrivalAt}
+                    onChange={(e) => setExpectedArrivalAt(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pr-notes">Dispatch Notes</Label>
@@ -573,6 +616,37 @@ function DispatchContent() {
                 onChange={(e) => setDriverPhone(e.target.value)}
                 data-testid="input-driver-phone"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driverName">Driver Name</Label>
+              <Input
+                id="driverName"
+                placeholder="e.g., John Doe"
+                value={driverName}
+                onChange={(e) => setDriverName(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="dispatchedAt">Dispatched At</Label>
+                <Input
+                  id="dispatchedAt"
+                  type="datetime-local"
+                  value={dispatchedAt}
+                  onChange={(e) => setDispatchedAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expectedArrival">Expected Arrival</Label>
+                <Input
+                  id="expectedArrival"
+                  type="datetime-local"
+                  value={expectedArrivalAt}
+                  onChange={(e) => setExpectedArrivalAt(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 mt-4">
