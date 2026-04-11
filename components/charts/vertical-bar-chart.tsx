@@ -4,7 +4,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
-import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface VerticalBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -18,6 +19,11 @@ interface VerticalBarChartProps {
   barLabel?: string;
   valueFormatter?: (value: number) => string;
 }
+
+const TICK_STYLE = {
+  fontSize: 11,
+  fill: 'hsl(var(--muted-foreground))',
+};
 
 export function VerticalBarChart({
   data,
@@ -33,36 +39,74 @@ export function VerticalBarChart({
 }: VerticalBarChartProps) {
   const useMultiColor = !color;
 
+  if (!data.length) {
+    return (
+      <div
+        style={{
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'hsl(var(--muted-foreground))',
+          fontSize: '13px',
+        }}
+      >
+        No data available
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
         {showGrid && (
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <CartesianGrid
+            strokeDasharray="4 4"
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.7}
+            vertical={false}
+          />
         )}
         <XAxis
           dataKey={categoryKey}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.6 }}
           interval={0}
-          angle={data.length > 6 ? -45 : 0}
+          angle={data.length > 6 ? -40 : 0}
           textAnchor={data.length > 6 ? 'end' : 'middle'}
-          height={data.length > 6 ? 60 : 30}
+          height={data.length > 6 ? 56 : 28}
+          dy={4}
         />
-        <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+        <YAxis
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={TOOLTIP_STYLE}
-          formatter={(value: unknown) => [
-            valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
-            barLabel || dataKey,
-          ]}
+          content={
+            <ChartTooltip
+              valueFormatter={valueFormatter ? (v) => valueFormatter(v) : undefined}
+            />
+          }
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
         />
-        {showLegend && <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />}
+        {showLegend && (
+          <Legend
+            wrapperStyle={{ fontSize: '11px', paddingTop: '8px', color: 'hsl(var(--muted-foreground))' }}
+          />
+        )}
         <Bar
           dataKey={dataKey}
           name={barLabel || dataKey}
           fill={color || colors[0]}
           radius={[4, 4, 0, 0]}
-          maxBarSize={60}
+          maxBarSize={52}
+          isAnimationActive
+          animationDuration={500}
+          animationEasing="ease-out"
+          style={{ cursor: 'pointer' }}
         >
           {useMultiColor &&
             data.map((_, index) => (

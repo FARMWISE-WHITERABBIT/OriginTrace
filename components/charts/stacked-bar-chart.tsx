@@ -4,7 +4,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface StackedBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -15,6 +16,11 @@ interface StackedBarChartProps {
   showLegend?: boolean;
   valueFormatter?: (value: number) => string;
 }
+
+const TICK_STYLE = {
+  fontSize: 11,
+  fill: 'hsl(var(--muted-foreground))',
+};
 
 export function StackedBarChart({
   data,
@@ -27,42 +33,63 @@ export function StackedBarChart({
 }: StackedBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
         {showGrid && (
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <CartesianGrid
+            strokeDasharray="4 4"
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.7}
+            vertical={false}
+          />
         )}
         <XAxis
           dataKey={categoryKey}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.6 }}
+          dy={4}
         />
-        <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+        <YAxis
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={TOOLTIP_STYLE}
-          formatter={(value: unknown, name: unknown) => [
-            valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
-            String(name),
-          ]}
+          content={
+            <ChartTooltip
+              valueFormatter={valueFormatter ? (v, n) => valueFormatter(v) : undefined}
+            />
+          }
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
         />
         {showLegend && (
           <Legend
             verticalAlign="bottom"
-            iconType="rect"
-            iconSize={10}
-            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+            iconType="circle"
+            iconSize={7}
+            wrapperStyle={{ fontSize: '11px', paddingTop: '10px', color: 'hsl(var(--muted-foreground))' }}
           />
         )}
-        {series.map((s, index) => (
-          <Bar
-            key={s.dataKey}
-            dataKey={s.dataKey}
-            name={s.label}
-            stackId="stack"
-            fill={s.color || VIZ_COLORS[index % VIZ_COLORS.length]}
-            radius={index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-            maxBarSize={60}
-          />
-        ))}
+        {series.map((s, index) => {
+          const isFirst = index === 0;
+          const isLast = index === series.length - 1;
+          return (
+            <Bar
+              key={s.dataKey}
+              dataKey={s.dataKey}
+              name={s.label}
+              stackId="stack"
+              fill={s.color || VIZ_COLORS[index % VIZ_COLORS.length]}
+              // Round top of full stack only
+              radius={isLast ? [4, 4, 0, 0] : isFirst ? [0, 0, 0, 0] : [0, 0, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={500}
+              animationEasing="ease-out"
+            />
+          );
+        })}
       </BarChart>
     </ResponsiveContainer>
   );
