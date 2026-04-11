@@ -53,11 +53,12 @@ export type TierFeature =
   | 'contracts'
   | 'spot_market'
   | 'enterprise_api'
-  | 'digital_product_passport';
+  | 'digital_product_passport'
+  | 'api_access';
 
 /** Minimal org row shape needed for the existence check. */
 export interface OrgRow {
-  id: string | number;
+  id?: string | number;
   subscription_tier?: string | null;
 }
 
@@ -118,6 +119,7 @@ const FEATURE_MIN_TIER: Record<TierFeature, SubscriptionTier> = {
   data_vault:              'enterprise',
   enterprise_api:          'enterprise',
   digital_product_passport:'enterprise',
+  api_access:              'enterprise',
 };
 
 // ---------------------------------------------------------------------------

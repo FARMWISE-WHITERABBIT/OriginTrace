@@ -88,13 +88,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Failed to update shipment' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: shipment }, {
-      status: 200,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: shipment }, { status: 200 });
   } catch (error) {
     console.error('V1 Shipments PATCH API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

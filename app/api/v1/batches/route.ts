@@ -54,11 +54,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: batches || [],
       meta: { total: count || 0, limit, offset },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
     });
   } catch (error) {
     console.error('V1 Batches API error:', error);
@@ -146,13 +141,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create batch' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: batch }, {
-      status: 201,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: batch }, { status: 201 });
   } catch (error) {
     console.error('V1 Batches POST API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

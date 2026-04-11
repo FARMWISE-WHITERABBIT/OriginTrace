@@ -54,11 +54,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: farms || [],
       meta: { total: count || 0, limit, offset },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
     });
   } catch (error) {
     console.error('V1 Farms API error:', error);
@@ -131,13 +126,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create farm' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: farm }, {
-      status: 201,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: farm }, { status: 201 });
   } catch (error) {
     console.error('V1 Farms POST API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
