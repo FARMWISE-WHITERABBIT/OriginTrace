@@ -124,6 +124,18 @@ export async function GET(
       payments = merged;
     } catch { /* payments table may not exist */ }
 
+    // Bank accounts for this farmer
+    let bankAccounts: any[] = [];
+    try {
+      const { data: baData } = await supabase
+        .from('farmer_bank_accounts')
+        .select('id, account_number, account_name, bank_code, bank_name, is_verified, created_at')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false });
+      bankAccounts = baData ?? [];
+    } catch { /* table not yet migrated */ }
+
     return NextResponse.json({
       farm,
       ledger: ledger ?? null,
@@ -134,6 +146,7 @@ export async function GET(
       activity: activity ?? [],
       disbursements: disbursements ?? [],
       payments: payments ?? [],
+      bankAccounts,
     });
 
   } catch (err: any) {

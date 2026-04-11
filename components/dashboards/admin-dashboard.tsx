@@ -15,7 +15,7 @@ import {
 import {
   Package, Map, Users, Scale,
   TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck,
-  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf
+  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf, Banknote, Clock,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -86,9 +86,19 @@ interface AuditScore {
   components: Record<string, { score: number; detail: string }>;
 }
 
+interface AlertItem {
+  type: string;
+  label: string;
+  count: number;
+  priority: 'high' | 'medium';
+  href: string;
+  action: string;
+}
+
 export function AdminDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
+  const [operationalAlerts, setOperationalAlerts] = useState<AlertItem[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
@@ -97,12 +107,17 @@ export function AdminDashboard() {
     if (!organization) return;
     setIsLoading(true);
     try {
-      const [analyticsRes, auditRes] = await Promise.all([
+      const [analyticsRes, auditRes, alertsRes] = await Promise.all([
         fetch(`/api/analytics?period=${period}&section=all`),
         fetch('/api/audit-readiness'),
+        fetch('/api/alerts'),
       ]);
       if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
       if (auditRes.ok) setAuditScore(await auditRes.json());
+      if (alertsRes.ok) {
+        const alertsJson = await alertsRes.json();
+        setOperationalAlerts(alertsJson.alerts ?? []);
+      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
@@ -175,6 +190,12 @@ export function AdminDashboard() {
     },
   ];
 
+  const OPERATIONAL_ALERT_ICONS: Record<string, any> = {
+    stale_disbursements: Banknote,
+    awaiting_payment_shipments: Clock,
+    low_escrow: AlertTriangle,
+  };
+
   const flagItems = [
     ...(analytics?.compliance.flaggedBatches
       ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle, href: '/app/yield-alerts', action: 'Review' }]
@@ -191,6 +212,13 @@ export function AdminDashboard() {
     ...((analytics?.documentHealth || []).filter(d => d.status === 'Expiring Soon').map(d => ({
       label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText, href: '/app/documents?status=expiring_soon', action: 'Review',
     }))),
+    ...operationalAlerts.map(a => ({
+      label: a.label,
+      priority: a.priority,
+      icon: OPERATIONAL_ALERT_ICONS[a.type] ?? AlertTriangle,
+      href: a.href,
+      action: a.action,
+    })),
   ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
 
   const commodityPieData = (analytics?.commodityBreakdown || []).map(c => ({
