@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
@@ -52,6 +53,12 @@ import {
   TrendingUp,
   Package,
   Search,
+  Tag,
+  ChevronDown,
+  Trash2,
+  Calendar,
+  Globe,
+  User,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -583,6 +590,331 @@ function BulkPayDialog({
   );
 }
 
+// ── Price Agreements ──────────────────────────────────────────────────────────
+
+interface PriceAgreementRow {
+  id: string;
+  farm_id: number | string | null;
+  commodity: string;
+  price_per_kg: number;
+  currency: string;
+  effective_from: string;
+  effective_to: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+interface FarmOption {
+  id: number | string;
+  farmer_name: string;
+  community: string | null;
+}
+
+const CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'USDC'] as const;
+const KNOWN_COMMODITIES = ['Cashew', 'Cocoa', 'Coffee', 'Sesame', 'Sheanut', 'Palm Oil', 'Soybean', 'Maize', 'Rice'];
+
+function isAgreementActive(a: PriceAgreementRow): boolean {
+  const today = new Date().toISOString().split('T')[0];
+  return a.effective_from <= today && (a.effective_to === null || a.effective_to >= today);
+}
+
+function PriceAgreementDialog({
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onDone: () => void;
+}) {
+  const { toast } = useToast();
+  const [scope, setScope] = useState<'org' | 'farm'>('org');
+  const [commodity, setCommodity] = useState('');
+  const [pricePerKg, setPricePerKg] = useState('');
+  const [currency, setCurrency] = useState('NGN');
+  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().split('T')[0]);
+  const [effectiveTo, setEffectiveTo] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Farm picker state (only used when scope === 'farm')
+  const [farms, setFarms] = useState<FarmOption[]>([]);
+  const [isFetchingFarms, setIsFetchingFarms] = useState(false);
+  const [farmSearch, setFarmSearch] = useState('');
+  const [selectedFarm, setSelectedFarm] = useState<FarmOption | null>(null);
+
+  useEffect(() => {
+    if (!open || scope !== 'farm') return;
+    setIsFetchingFarms(true);
+    fetch('/api/farms?limit=500')
+      .then((r) => r.json())
+      .then((d) => setFarms(d.farms ?? []))
+      .catch(() => {})
+      .finally(() => setIsFetchingFarms(false));
+  }, [open, scope]);
+
+  const filteredFarms = farms.filter((f) => {
+    if (!farmSearch.trim()) return true;
+    const q = farmSearch.toLowerCase();
+    return (
+      f.farmer_name.toLowerCase().includes(q) ||
+      f.community?.toLowerCase().includes(q) ||
+      String(f.id).includes(q)
+    );
+  });
+
+  const handleSave = async () => {
+    if (!commodity.trim() || !pricePerKg || Number(pricePerKg) <= 0) return;
+    if (scope === 'farm' && !selectedFarm) return;
+    setIsSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        commodity: commodity.trim(),
+        price_per_kg: Number(pricePerKg),
+        currency,
+        effective_from: effectiveFrom || new Date().toISOString().split('T')[0],
+        effective_to: effectiveTo || null,
+        notes: notes.trim() || null,
+      };
+      if (scope === 'farm' && selectedFarm) {
+        body.farm_id = selectedFarm.id;
+      }
+
+      const res = await fetch('/api/farmer-price-agreements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+
+      toast({
+        title: 'Price agreement saved',
+        description: `${titleCase(commodity)} · ${currency} ${Number(pricePerKg).toLocaleString()}/kg${scope === 'farm' ? ` for ${selectedFarm!.farmer_name}` : ' (org-wide)'}`,
+      });
+      onOpenChange(false);
+      onDone();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    setScope('org');
+    setCommodity('');
+    setPricePerKg('');
+    setCurrency('NGN');
+    setEffectiveFrom(new Date().toISOString().split('T')[0]);
+    setEffectiveTo('');
+    setNotes('');
+    setSelectedFarm(null);
+    setFarmSearch('');
+  };
+
+  const canSave = commodity.trim() && Number(pricePerKg) > 0 && (scope === 'org' || !!selectedFarm);
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-lg icon-bg-violet flex items-center justify-center shrink-0">
+              <Tag className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base">New Price Agreement</DialogTitle>
+              <DialogDescription className="text-sm mt-0.5">
+                Set the price per kg used when calculating farmer disbursements.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          {/* Scope toggle */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide">Scope</Label>
+            <div className="flex rounded-lg border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setScope('org'); setSelectedFarm(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm transition-colors ${scope === 'org' ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted/50 text-muted-foreground'}`}
+              >
+                <Globe className="h-3.5 w-3.5" />Org-wide
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope('farm')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm transition-colors ${scope === 'farm' ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted/50 text-muted-foreground'}`}
+              >
+                <User className="h-3.5 w-3.5" />Farm-specific
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {scope === 'org'
+                ? 'Applies to all farms with no specific agreement for this commodity.'
+                : 'Overrides the org-wide rate for one farm.'}
+            </p>
+          </div>
+
+          {/* Farm picker (farm-specific only) */}
+          {scope === 'farm' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide">Farm</Label>
+              {selectedFarm ? (
+                <div className="rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">{selectedFarm.farmer_name}</p>
+                    {selectedFarm.community && (
+                      <p className="text-xs text-blue-700">{selectedFarm.community}</p>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 shrink-0" onClick={() => setSelectedFarm(null)}>
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Search farmer or community…"
+                      value={farmSearch}
+                      onChange={(e) => setFarmSearch(e.target.value)}
+                      className="h-9 pl-8 text-sm"
+                    />
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    {isFetchingFarms ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredFarms.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-muted-foreground">
+                        {farms.length === 0 ? 'No farms found' : 'No farms match your search'}
+                      </div>
+                    ) : (
+                      <div className="divide-y max-h-40 overflow-y-auto">
+                        {filteredFarms.map((f) => (
+                          <button
+                            key={String(f.id)}
+                            type="button"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/40 transition-colors"
+                            onClick={() => setSelectedFarm(f)}
+                          >
+                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground">
+                              {f.farmer_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium leading-tight truncate">{f.farmer_name}</p>
+                              {f.community && <p className="text-xs text-muted-foreground">{f.community}</p>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Commodity + Price row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide">Commodity *</Label>
+              <Select value={commodity} onValueChange={setCommodity}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {KNOWN_COMMODITIES.map((c) => (
+                    <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide">Price / kg *</Label>
+              <div className="flex gap-1.5">
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="h-9 w-20 text-sm shrink-0"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={pricePerKg}
+                  onChange={(e) => setPricePerKg(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Date range */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide flex items-center gap-1">
+                <Calendar className="h-3 w-3" />Effective From
+              </Label>
+              <Input
+                type="date"
+                value={effectiveFrom}
+                onChange={(e) => setEffectiveFrom(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide flex items-center gap-1">
+                <Calendar className="h-3 w-3" />Effective To
+                <span className="text-muted-foreground font-normal normal-case">(optional)</span>
+              </Label>
+              <Input
+                type="date"
+                value={effectiveTo}
+                onChange={(e) => setEffectiveTo(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide">
+              Notes <span className="text-muted-foreground font-normal normal-case">(optional)</span>
+            </Label>
+            <Textarea
+              placeholder="e.g. Q2 2026 agreed rate, post-harvest premium…"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="text-sm resize-none h-16"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving || !canSave}>
+            {isSaving ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</>
+            ) : (
+              <><Tag className="h-4 w-4 mr-2" />Save Agreement</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function DisbursementsContent() {
   const { organization } = useOrg();
@@ -597,6 +929,10 @@ export function DisbursementsContent() {
   const [batchIdFilter, setBatchIdFilter] = useState('');
   const [calcOpen, setCalcOpen] = useState(false);
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  const [agreements, setAgreements] = useState<PriceAgreementRow[]>([]);
+  const [isLoadingAgreements, setIsLoadingAgreements] = useState(false);
+  const [pricesOpen, setPricesOpen] = useState(false);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
 
   const fetchDisbursements = useCallback(async () => {
     if (!organization) return;
@@ -616,6 +952,37 @@ export function DisbursementsContent() {
   }, [organization, statusFilter, batchIdFilter]);
 
   useEffect(() => { fetchDisbursements(); }, [fetchDisbursements]);
+
+  const fetchAgreements = useCallback(async () => {
+    if (!organization) return;
+    setIsLoadingAgreements(true);
+    try {
+      const res = await fetch('/api/farmer-price-agreements');
+      if (res.ok) {
+        const d = await res.json();
+        setAgreements(d.agreements ?? []);
+      }
+    } catch {}
+    setIsLoadingAgreements(false);
+  }, [organization]);
+
+  useEffect(() => {
+    if (pricesOpen) fetchAgreements();
+  }, [pricesOpen, fetchAgreements]);
+
+  const handleDeleteAgreement = async (id: string) => {
+    try {
+      const res = await fetch(`/api/farmer-price-agreements?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Delete failed');
+      }
+      setAgreements((prev) => prev.filter((a) => a.id !== id));
+      toast({ title: 'Agreement removed' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const pendingRows = disbursements.filter((d) => d.status === 'pending');
   const approvedRows = disbursements.filter((d) => d.status === 'approved');
@@ -784,6 +1151,111 @@ export function DisbursementsContent() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Price Agreements panel */}
+      <Card>
+        <CardHeader className="py-3 px-5">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              className="flex items-center gap-2 text-sm font-medium hover:text-foreground/80 transition-colors"
+              onClick={() => setPricesOpen((v) => !v)}
+            >
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              Price Agreements
+              {agreements.length > 0 && (
+                <Badge variant="secondary" className="text-xs h-5 px-1.5">{agreements.length}</Badge>
+              )}
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${pricesOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setPriceDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />New Rate
+            </Button>
+          </div>
+        </CardHeader>
+
+        {pricesOpen && (
+          <CardContent className="px-5 pb-4 pt-0">
+            {isLoadingAgreements ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : agreements.length === 0 ? (
+              <div className="text-center py-6 space-y-2">
+                <p className="text-sm text-muted-foreground">No price agreements configured.</p>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Without a price agreement, disbursement calculations will produce <span className="font-medium text-amber-600">NGN 0</span> for every farmer.
+                </p>
+                <Button size="sm" variant="outline" className="mt-1 gap-1" onClick={() => setPriceDialogOpen(true)}>
+                  <Tag className="h-3.5 w-3.5" />Add First Rate
+                </Button>
+              </div>
+            ) : (
+              (() => {
+                // Group by commodity
+                const byCommodity = new Map<string, PriceAgreementRow[]>();
+                for (const a of agreements) {
+                  const key = a.commodity;
+                  if (!byCommodity.has(key)) byCommodity.set(key, []);
+                  byCommodity.get(key)!.push(a);
+                }
+                return (
+                  <div className="space-y-3">
+                    {[...byCommodity.entries()].map(([commodity, rows]) => (
+                      <div key={commodity}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                          {titleCase(commodity)}
+                        </p>
+                        <div className="border rounded-lg divide-y overflow-hidden">
+                          {rows.map((a) => {
+                            const active = isAgreementActive(a);
+                            return (
+                              <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                                <div className={`h-2 w-2 rounded-full shrink-0 ${active ? 'bg-green-500' : 'bg-muted-foreground/30'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-semibold tabular-nums">
+                                      {a.currency} {Number(a.price_per_kg).toLocaleString(undefined, { minimumFractionDigits: 2 })}/kg
+                                    </span>
+                                    <Badge
+                                      variant="secondary"
+                                      className={`text-xs h-5 gap-1 ${a.farm_id ? 'text-violet-700 bg-violet-50' : 'text-blue-700 bg-blue-50'}`}
+                                    >
+                                      {a.farm_id ? <><User className="h-2.5 w-2.5" />Farm-specific</> : <><Globe className="h-2.5 w-2.5" />Org-wide</>}
+                                    </Badge>
+                                    {!active && (
+                                      <Badge variant="secondary" className="text-xs h-5 text-muted-foreground">Expired</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    From {new Date(a.effective_from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {a.effective_to
+                                      ? ` → ${new Date(a.effective_to).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                      : ' · No expiry'}
+                                    {a.notes && ` · ${a.notes}`}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                                  title="Remove agreement"
+                                  onClick={() => handleDeleteAgreement(a.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* Filters row */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -974,6 +1446,12 @@ export function DisbursementsContent() {
       )}
 
       <CalculateDialog open={calcOpen} onOpenChange={setCalcOpen} onDone={fetchDisbursements} />
+
+      <PriceAgreementDialog
+        open={priceDialogOpen}
+        onOpenChange={setPriceDialogOpen}
+        onDone={() => { fetchAgreements(); if (!pricesOpen) setPricesOpen(true); }}
+      />
 
       <PayDialog
         open={payDialogOpen}
