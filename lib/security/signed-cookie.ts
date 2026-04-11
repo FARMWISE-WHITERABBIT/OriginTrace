@@ -16,6 +16,11 @@ function getSecret(): string {
   return secret;
 }
 
+/** Returns true when the signing secret is available. */
+export function isCookieSecretConfigured(): boolean {
+  return !!(process.env.IMPERSONATION_COOKIE_SECRET || process.env.NEXTAUTH_SECRET);
+}
+
 async function hmac(payload: string, secret: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
