@@ -53,11 +53,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: shipments || [],
       meta: { total: count || 0, limit, offset },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
     });
   } catch (error) {
     console.error('V1 Shipments API error:', error);
