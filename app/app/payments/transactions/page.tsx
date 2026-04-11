@@ -312,7 +312,7 @@ function RecordPaymentDialog({
 }
 
 // ── Main Page Content ──────────────────────────────────────────────────────────
-function TransactionsContent() {
+export function TransactionsContent() {
   const { organization } = useOrg();
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);

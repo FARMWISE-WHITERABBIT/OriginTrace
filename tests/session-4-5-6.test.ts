@@ -275,7 +275,7 @@ describe('Session 6 — webhook retry cron route exists', () => {
 describe('Session 6 — DB migration exists', () => {
   it('migration file for webhook reliability columns exists', () => {
     const src = readFileSync(
-      join(__dirname, '..', 'migrations/20260311_webhook_reliability.sql'),
+      join(__dirname, '..', 'supabase/migrations/20260311_webhook_reliability.sql'),
       'utf8'
     );
     expect(src).toContain('next_retry_at');
@@ -299,7 +299,7 @@ describe('Session 6 — WEBHOOK_EVENTS catalog unchanged', () => {
     }
   });
 
-  it('has exactly 27 event types', () => {
-    expect(WEBHOOK_EVENTS.length).toBe(27);
+  it('has exactly 31 event types', () => {
+    expect(WEBHOOK_EVENTS.length).toBe(31);
   });
 });

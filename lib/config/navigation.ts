@@ -148,9 +148,7 @@ const appNavigation: NavigationConfig = {
       label: 'FINANCE',
       allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
       items: [
-        { title: 'Wallet', url: '/app/payments', icon: Wallet, tourId: 'nav-wallet', allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
-        { title: 'Disbursements', url: '/app/payments/disbursements', icon: Banknote, tourId: 'nav-disbursements', allowedRoles: ['admin', 'aggregator'], requiredTier: 'basic', tierFeature: 'payments' },
-        { title: 'Transactions', url: '/app/payments/transactions', icon: DollarSign, tourId: 'nav-transactions', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'payments' },
+        { title: 'Payments', url: '/app/payments', icon: DollarSign, tourId: 'nav-payments', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'payments' },
       ],
     },
 
