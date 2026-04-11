@@ -1,15 +1,43 @@
 /**
- * POST /api/escrow
- * Initialize a new escrow account for a shipment/contract deal.
- * Roles: admin, aggregator
+ * GET  /api/escrow?shipment_id=xxx — fetch active escrow for a shipment
+ * POST /api/escrow                  — Initialize a new escrow account
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { createEscrow } from '@/lib/services/escrow';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const ALLOWED_ROLES = ['admin', 'aggregator'];
+
+export async function GET(request: NextRequest) {
+  try {
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
+
+    const { searchParams } = new URL(request.url);
+    const shipmentId = searchParams.get('shipment_id');
+    if (!shipmentId) return NextResponse.json({ error: 'shipment_id required' }, { status: 400 });
+
+    const supabase = createAdminClient();
+    const { data: escrow, error } = await supabase
+      .from('escrow_accounts')
+      .select('id, amount_usd, status, milestone_config, created_at')
+      .eq('org_id', profile.org_id)
+      .eq('shipment_id', shipmentId)
+      .in('status', ['active', 'disputed'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) return NextResponse.json({ escrow: null });
+    return NextResponse.json({ escrow: escrow ?? null });
+  } catch {
+    return NextResponse.json({ escrow: null });
+  }
+}
 
 const createEscrowSchema = z.object({
   shipment_id: z.string().uuid().optional(),

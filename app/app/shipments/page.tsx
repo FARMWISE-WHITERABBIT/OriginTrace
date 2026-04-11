@@ -46,7 +46,16 @@ interface Shipment {
   created_at: string;
   item_count?: number;
   linked_contracts?: Array<{ id: number; contract_reference: string }>;
+  payment_status?: string;
 }
+
+const PAYMENT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  pending_setup:     { label: 'Payment Pending Setup', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  awaiting_payment:  { label: 'Awaiting Payment',      className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  partially_funded:  { label: 'Partially Funded',      className: 'bg-violet-50 text-violet-700 border-violet-200' },
+  funded:            { label: 'Funded',                 className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  released:          { label: 'Released',               className: 'bg-slate-100 text-slate-600 border-slate-200' },
+};
 
 const DECISION_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2; colorClass: string }> = {
   go:          { label: 'GO',          variant: 'default',     icon: CheckCircle2,  colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -497,6 +506,18 @@ export default function ShipmentsPage() {
                         {decision.label}
                       </Badge>
                     </div>
+
+                    {/* Payment status badge */}
+                    {shipment.payment_status && shipment.payment_status !== 'none' && PAYMENT_STATUS_CONFIG[shipment.payment_status] && (
+                      <div>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] h-5 px-1.5 font-medium border ${PAYMENT_STATUS_CONFIG[shipment.payment_status].className}`}
+                        >
+                          {PAYMENT_STATUS_CONFIG[shipment.payment_status].label}
+                        </Badge>
+                      </div>
+                    )}
 
                     {/* Destination */}
                     {(shipment.destination_country || shipment.destination_port) && (

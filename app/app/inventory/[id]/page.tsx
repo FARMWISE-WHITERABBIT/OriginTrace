@@ -16,7 +16,7 @@ import {
   ArrowLeft, Package, Loader2, MapPin, User, Scale,
   CheckCircle2, AlertTriangle, Clock, Factory, Truck,
   FileText, Layers, Leaf, Activity, Pencil, Save, X,
-  FlaskConical, Plus,
+  FlaskConical, Plus, Banknote,
 } from 'lucide-react';
 
 interface BatchDetail {
@@ -542,6 +542,65 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
           )}
         </CardContent>
       </Card>
+
+      {/* Disbursement Prompt — shown for completed/resolved batches with contributors */}
+      {canDispatch && contributions.length > 0 && (
+        <Card className="card-accent-emerald">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <Banknote className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Farmer Disbursements</CardTitle>
+                  <CardDescription>
+                    {contributions.length} farmer{contributions.length !== 1 ? 's' : ''} contributed to this batch — pay them for their supply
+                  </CardDescription>
+                </div>
+              </div>
+              <Link href={`/app/payments?tab=disbursements&batch_id=${batch.id}`}>
+                <Button size="sm">
+                  <Banknote className="h-3.5 w-3.5 mr-1.5" />
+                  Manage Disbursements
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {contributions.slice(0, 5).map((c) => (
+                <div key={c.farm_id} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-border/40 last:border-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate font-medium">{c.farmer_name}</span>
+                    {c.community && (
+                      <span className="text-xs text-muted-foreground truncate hidden sm:inline">· {c.community}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                    <span>{Number(c.weight_kg).toLocaleString()} kg</span>
+                    <span>{c.bag_count} bags</span>
+                    {c.compliance_status && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${c.compliance_status === 'compliant' ? 'text-green-700' : 'text-amber-700'}`}
+                      >
+                        {c.compliance_status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {contributions.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  +{contributions.length - 5} more contributors
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Activity Timeline */}
       <Card>
