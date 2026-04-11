@@ -46,6 +46,7 @@ import {
   Wallet,
   Banknote,
   ScrollText,
+  Truck,
 } from 'lucide-react';
 import type { AppRole } from '@/lib/rbac';
 import type { SubscriptionTier, TierFeature } from '@/lib/config/tier-gating';
@@ -137,7 +138,7 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Smart Collect', url: '/app/collect', icon: PlusCircle, tourId: 'nav-collect', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'smart_collect' },
         { title: 'Inventory', url: '/app/inventory', icon: Warehouse, tourId: 'nav-inventory', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'inventory' },
-        { title: 'Dispatch Batches', url: '/app/dispatch', icon: Package, tourId: 'nav-dispatch', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
+        { title: 'Dispatch', url: '/app/inventory?tab=dispatch', icon: Truck, tourId: 'nav-dispatch', allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'], requiredTier: 'basic', tierFeature: 'dispatch' },
         { title: 'Yield Alerts', url: '/app/yield-alerts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-yield-alerts', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'basic', tierFeature: 'yield_alerts' },
         { title: 'Sync', url: '/app/sync', icon: RefreshCw, badge: 'sync', tourId: 'nav-sync', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'sync_dashboard' },
       ],

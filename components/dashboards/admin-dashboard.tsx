@@ -19,7 +19,37 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS } from '@/lib/chart-colors';
+import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS, VIZ_COLORS } from '@/lib/chart-colors';
+
+// Semantic colors for known African export commodities
+const COMMODITY_HUE: Record<string, string> = {
+  cashew:    '#D97706', // amber  — cashew shell colour
+  cocoa:     '#6D3B2A', // dark brown — cocoa bean
+  coffee:    '#92400E', // espresso brown
+  sesame:    '#B45309', // golden amber
+  sheanut:   '#78716C', // stone-grey
+  shea:      '#78716C',
+  palm:      '#EA580C', // orange-red
+  soybean:   '#65A30D', // lime green
+  soya:      '#65A30D',
+  cotton:    '#94A3B8', // slate
+  maize:     '#CA8A04', // golden yellow
+  rubber:    '#475569', // dark slate
+  sorghum:   '#C2410C', // burnt orange
+  unknown:   '#94A3B8',
+};
+
+function commodityColor(name: string, fallbackIndex: number): string {
+  const key = name.toLowerCase().trim();
+  return COMMODITY_HUE[key] ?? VIZ_COLORS[fallbackIndex % VIZ_COLORS.length];
+}
+
+function capitalizeWords(str: string): string {
+  return str
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
 
 const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
   ssr: false,
@@ -231,9 +261,10 @@ export function AdminDashboard() {
     })),
   ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
 
-  const commodityPieData = (analytics?.commodityBreakdown || []).map(c => ({
-    name: c.name,
+  const commodityPieData = (analytics?.commodityBreakdown || []).map((c, i) => ({
+    name: capitalizeWords(c.name),
     value: Math.round(c.weight),
+    color: commodityColor(c.name, i),
   }));
 
   const complianceDonutData = (analytics?.farmComplianceBreakdown || []).map(item => ({
@@ -444,13 +475,41 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : commodityPieData.length > 0 ? (
-              <PieDonutChart
-                data={commodityPieData}
-                donut
-                height={280}
-                showLabels={false}
-                labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
-              />
+              <>
+                <PieDonutChart
+                  data={commodityPieData}
+                  donut
+                  height={220}
+                  showLabels={false}
+                  showLegend={false}
+                  labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
+                />
+                {/* Commodity breakdown list — typed, coloured, properly capitalised */}
+                <div className="mt-3 space-y-1.5">
+                  {(() => {
+                    const total = commodityPieData.reduce((s, c) => s + c.value, 0);
+                    return commodityPieData.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: c.color }}
+                          />
+                          <span className="truncate font-medium text-foreground/80">{c.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {c.value.toLocaleString()} kg
+                          </span>
+                          <span className="text-xs font-semibold text-foreground tabular-nums w-10 text-right">
+                            {total > 0 ? Math.round((c.value / total) * 100) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </>
             ) : (
               <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
                 No commodity data available
