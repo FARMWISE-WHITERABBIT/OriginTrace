@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { hasTierAccess, getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
+import { getRequiredTier, TIER_LABELS, type TierFeature } from '@/lib/config/tier-gating';
+import { hasTierAccess, canAccessOrg } from '@/modules/identity-access/domain/tier-policy';
 
 export async function enforceTier(orgId: number | string, feature: TierFeature): Promise<NextResponse | null> {
   try {
@@ -12,8 +13,13 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
       .eq('id', orgId)
       .single();
 
-    // undefined → no tier set → hasTierAccess grants full access
-    const tier = (org?.subscription_tier as string) || undefined;
+    // Org not found → fail-closed (ADR-002: genuine auth error, return 403)
+    if (!canAccessOrg(org ?? null)) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 403 });
+    }
+
+    // null / undefined tier → fail-open (ADR-002: ops error, grant access)
+    const tier = (org?.subscription_tier as string) || null;
 
     if (!hasTierAccess(tier, feature)) {
       const requiredTier = getRequiredTier(feature);
@@ -60,7 +66,10 @@ export async function checkTierAccess(
       .eq('id', resolvedOrgId)
       .single();
 
-    const tier = (org?.subscription_tier as string) || undefined;
+    // Org not found → fail-closed per ADR-002
+    if (!canAccessOrg(org ?? null)) return false;
+
+    const tier = (org?.subscription_tier as string) || null;
     return hasTierAccess(tier, feature);
   } catch {
     return false;

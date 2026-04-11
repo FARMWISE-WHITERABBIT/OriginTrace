@@ -17,6 +17,11 @@
  */
 import { createAdminClient } from '@/lib/supabase/admin';
 import crypto from 'crypto';
+import {
+  WEBHOOK_EVENTS as _CATALOG_EVENTS,
+  type PlatformEventType,
+} from '@/modules/integrations/domain/event-catalog';
+import { WEBHOOK_MAX_ATTEMPTS, webhookBackoffMs } from '@/lib/platform/scheduling/cron-policy';
 
 export async function dispatchWebhookEvent(
   orgId: string,
@@ -98,16 +103,16 @@ export async function attemptDelivery(
     clearTimeout(timeout);
     responseStatus = response.status;
     responseBody = await response.text().catch(() => '');
-    status = response.ok ? 'delivered' : (attempt >= MAX_ATTEMPTS ? 'failed' : 'pending');
+    status = response.ok ? 'delivered' : (attempt >= WEBHOOK_MAX_ATTEMPTS ? 'failed' : 'pending');
   } catch (error) {
     responseBody = error instanceof Error ? error.message : 'Unknown error';
-    status = attempt >= MAX_ATTEMPTS ? 'failed' : 'pending';
+    status = attempt >= WEBHOOK_MAX_ATTEMPTS ? 'failed' : 'pending';
   }
 
   // Calculate next_retry_at using exponential back-off
   const nextRetryAt =
     status === 'pending'
-      ? new Date(Date.now() + backoffMs(attempt)).toISOString()
+      ? new Date(Date.now() + webhookBackoffMs(attempt)).toISOString()
       : null;
 
   await supabase.from('webhook_deliveries').upsert({
@@ -124,61 +129,27 @@ export async function attemptDelivery(
   }, { onConflict: 'id' });
 }
 
-/** Maximum delivery attempts before a delivery is permanently failed. */
-export const MAX_ATTEMPTS = 5;
+/**
+ * Maximum delivery attempts — imported from canonical cron policy (ADR-004).
+ * @deprecated Import WEBHOOK_MAX_ATTEMPTS from '@/lib/platform/scheduling/cron-policy' directly.
+ */
+export const MAX_ATTEMPTS = WEBHOOK_MAX_ATTEMPTS;
 
 /**
- * Exponential back-off with jitter (seconds → ms).
- *   attempt 1 → 60 s
- *   attempt 2 → 300 s (5 min)
- *   attempt 3 → 1 800 s (30 min)
- *   attempt 4 → 7 200 s (2 h)
+ * Exponential back-off — imported from canonical cron policy (ADR-004).
+ * @deprecated Import webhookBackoffMs from '@/lib/platform/scheduling/cron-policy' directly.
  */
 export function backoffMs(attempt: number): number {
-  const base = 60_000; // 1 min
-  const jitter = Math.random() * 5_000;
-  return Math.min(base * Math.pow(5, attempt - 1) + jitter, 8 * 60 * 60 * 1000);
+  return webhookBackoffMs(attempt);
 }
 
-export const WEBHOOK_EVENTS = [
-  // Shipments
-  'shipment.created',
-  'shipment.updated',
-  'shipment.scored',
-  // Collection
-  'batch.created',
-  // Documents
-  'document.uploaded',
-  'document.expired',
-  // Compliance
-  'compliance.changed',
-  'lab_result.uploaded',
-  'lab_result.non_compliant',
-  // Payments
-  'payment.received',
-  'payment.recorded',
-  'payment.disbursed',
-  'payment.transfer_completed',
-  'payment.transfer_failed',
-  // Farms
-  'farm.approved',
-  'farm.rejected',
-  // Certifications
-  'certification.expiring',
-  // Trade
-  'tender.created',
-  'tender.awarded',
-  // Evidence
-  'evidence_package.created',
-  // KYC
-  'kyc.submitted',
-  'kyc.approved',
-  'kyc.rejected',
-  // Escrow
-  'escrow.held',
-  'escrow.released',
-  'escrow.disputed',
-  'dispute.resolved',
-] as const;
+/**
+ * Full catalog of platform events — re-exported from the canonical event catalog (ADR-003).
+ * @deprecated Import WEBHOOK_EVENTS from '@/modules/integrations/domain/event-catalog' directly.
+ */
+export const WEBHOOK_EVENTS = _CATALOG_EVENTS;
 
-export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
+/**
+ * @deprecated Use PlatformEventType from '@/modules/integrations/domain/event-catalog'.
+ */
+export type WebhookEventType = PlatformEventType;

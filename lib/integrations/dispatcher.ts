@@ -3,17 +3,16 @@
  * OriginTrace events occur. Called from the same places as dispatchWebhookEvent.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  type PlatformEventType,
+  type IntegrationEventType as _IntegrationEventType,
+} from '@/modules/integrations/domain/event-catalog';
 
-export type IntegrationEventType =
-  | 'farm.approved'
-  | 'farm.rejected'
-  | 'farm.created'
-  | 'batch.created'
-  | 'batch.completed'
-  | 'shipment.created'
-  | 'shipment.status_changed'
-  | 'compliance.changed'
-  | 'deforestation.alert';
+/**
+ * @deprecated Use PlatformEventType from '@/modules/integrations/domain/event-catalog'.
+ * Re-exported here for backwards compatibility with existing callers.
+ */
+export type IntegrationEventType = PlatformEventType;
 
 interface DispatchResult {
   integration_id: string;
