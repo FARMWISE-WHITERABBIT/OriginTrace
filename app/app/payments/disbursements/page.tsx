@@ -50,6 +50,8 @@ import {
   Plus,
   Users,
   TrendingUp,
+  Package,
+  Search,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -81,6 +83,25 @@ const STATUS_CONFIG = {
   failed: { label: 'Failed', icon: XCircle, className: 'text-red-600 bg-red-50' },
 };
 
+const BATCH_STATUS_BADGE: Record<string, string> = {
+  dispatched: 'text-blue-700 bg-blue-50',
+  aggregated: 'text-violet-700 bg-violet-50',
+  completed:  'text-green-700 bg-green-50',
+};
+
+interface BatchOption {
+  id: number;
+  batch_code: string | null;
+  commodity: string | null;
+  total_weight: number | null;
+  status: string;
+  farm: { farmer_name: string; community: string | null } | null;
+}
+
+function titleCase(str: string) {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // ── Calculate Disbursements Dialog ────────────────────────────────────────────
 function CalculateDialog({
   open,
@@ -92,19 +113,49 @@ function CalculateDialog({
   onDone: () => void;
 }) {
   const { toast } = useToast();
-  const [batchId, setBatchId] = useState('');
+  const [batches, setBatches] = useState<BatchOption[]>([]);
+  const [isFetchingBatches, setIsFetchingBatches] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<BatchOption | null>(null);
+  const [batchSearch, setBatchSearch] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
   const [result, setResult] = useState<{ created: number; updated: number; farmers: number; total: number } | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    setIsFetchingBatches(true);
+    fetch('/api/batches?limit=200')
+      .then((r) => r.json())
+      .then((d) => {
+        const eligible = (d.batches || []).filter((b: BatchOption) =>
+          ['dispatched', 'aggregated', 'completed'].includes(b.status)
+        );
+        setBatches(eligible);
+      })
+      .catch(() => {})
+      .finally(() => setIsFetchingBatches(false));
+  }, [open]);
+
+  const filteredBatches = batches.filter((b) => {
+    if (!batchSearch.trim()) return true;
+    const q = batchSearch.toLowerCase();
+    return (
+      b.batch_code?.toLowerCase().includes(q) ||
+      b.commodity?.toLowerCase().includes(q) ||
+      b.farm?.farmer_name?.toLowerCase().includes(q) ||
+      b.farm?.community?.toLowerCase().includes(q) ||
+      String(b.id).includes(q)
+    );
+  });
+
   const handleCalculate = async () => {
-    if (!batchId.trim()) return;
+    if (!selectedBatch) return;
     setIsCalculating(true);
     setResult(null);
     try {
       const res = await fetch('/api/disbursements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batch_id: parseInt(batchId, 10) }),
+        body: JSON.stringify({ batch_id: selectedBatch.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Calculation failed');
@@ -118,7 +169,7 @@ function CalculateDialog({
 
       toast({
         title: 'Disbursements calculated',
-        description: `${data.created ?? 0} new, ${data.updated ?? 0} updated for batch #${batchId}`,
+        description: `${data.created ?? 0} new, ${data.updated ?? 0} updated for ${selectedBatch.batch_code ?? `Batch #${selectedBatch.id}`}`,
       });
       onDone();
     } catch (err: any) {
@@ -130,13 +181,14 @@ function CalculateDialog({
 
   const handleClose = () => {
     onOpenChange(false);
-    setBatchId('');
+    setSelectedBatch(null);
+    setBatchSearch('');
     setResult(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
             <div className="h-10 w-10 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
@@ -145,7 +197,7 @@ function CalculateDialog({
             <div>
               <DialogTitle className="text-base">Calculate Disbursements</DialogTitle>
               <DialogDescription className="text-sm mt-0.5">
-                Compute farmer payments for a collection batch using configured pricing.
+                Select a dispatched batch to compute farmer payments using configured pricing.
               </DialogDescription>
             </div>
           </div>
@@ -166,24 +218,115 @@ function CalculateDialog({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              All farmers with entries are now in <span className="font-medium">Pending</span> status. Review and approve them below.
+              All farmers are now in <span className="font-medium">Pending</span> status. Review and approve them below.
             </p>
           </div>
         ) : (
           <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Batch ID *</Label>
-              <Input
-                type="number"
-                placeholder="e.g. 42"
-                value={batchId}
-                onChange={(e) => setBatchId(e.target.value)}
-                className="h-9"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter the numeric ID of the collection batch. You can find it on the Inventory page.
-              </p>
-            </div>
+            {/* Selected batch confirmation chip */}
+            {selectedBatch ? (
+              <div className="rounded-lg border border-blue-100 bg-blue-50/50 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                    <Package className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-semibold text-blue-900 leading-tight">
+                      {selectedBatch.batch_code ?? `#${selectedBatch.id}`}
+                    </p>
+                    <p className="text-xs text-blue-700 truncate mt-0.5">
+                      {selectedBatch.commodity ? titleCase(selectedBatch.commodity) : '—'}
+                      {selectedBatch.total_weight
+                        ? ` · ${Number(selectedBatch.total_weight).toLocaleString()} kg`
+                        : ''}
+                      {selectedBatch.farm?.farmer_name
+                        ? ` · ${selectedBatch.farm.farmer_name}`
+                        : ''}
+                      {selectedBatch.farm?.community
+                        ? `, ${selectedBatch.farm.community}`
+                        : ''}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-blue-600 hover:text-blue-900 shrink-0"
+                  onClick={() => setSelectedBatch(null)}
+                >
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search by batch code, commodity, or farmer…"
+                    value={batchSearch}
+                    onChange={(e) => setBatchSearch(e.target.value)}
+                    className="h-9 pl-8 text-sm"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Batch list */}
+                <div className="border rounded-lg overflow-hidden">
+                  {isFetchingBatches ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredBatches.length === 0 ? (
+                    <div className="text-center py-10 text-sm text-muted-foreground">
+                      {batches.length === 0
+                        ? 'No dispatched or aggregated batches found'
+                        : 'No batches match your search'}
+                    </div>
+                  ) : (
+                    <div className="divide-y max-h-60 overflow-y-auto">
+                      {filteredBatches.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+                          onClick={() => setSelectedBatch(b)}
+                        >
+                          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-mono font-medium leading-tight">
+                              {b.batch_code ?? `#${b.id}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {b.commodity ? titleCase(b.commodity) : '—'}
+                              {b.total_weight
+                                ? ` · ${Number(b.total_weight).toLocaleString()} kg`
+                                : ''}
+                              {b.farm?.farmer_name ? ` · ${b.farm.farmer_name}` : ''}
+                              {b.farm?.community ? `, ${b.farm.community}` : ''}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs shrink-0 ${BATCH_STATUS_BADGE[b.status] ?? 'text-muted-foreground bg-muted'}`}
+                          >
+                            {b.status}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {batches.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Showing {filteredBatches.length} of {batches.length} eligible batch{batches.length !== 1 ? 'es' : ''}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -192,7 +335,7 @@ function CalculateDialog({
             {result ? 'Close' : 'Cancel'}
           </Button>
           {!result && (
-            <Button onClick={handleCalculate} disabled={isCalculating || !batchId.trim()}>
+            <Button onClick={handleCalculate} disabled={isCalculating || !selectedBatch}>
               {isCalculating ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Calculating…</>
               ) : (
@@ -522,6 +665,20 @@ export function DisbursementsContent() {
     }
   };
 
+  // Unique batches derived from loaded disbursements — used for the filter dropdown
+  const uniqueBatches = Array.from(
+    new Map(
+      disbursements.map((d) => [
+        d.batch_id,
+        {
+          id: d.batch_id,
+          code: d.collection_batches?.batch_code ?? `#${d.batch_id}`,
+          commodity: d.collection_batches?.commodity ?? '',
+        },
+      ])
+    ).values()
+  ).sort((a, b) => a.id - b.id);
+
   const visibleRows = disbursements.filter((d) =>
     statusFilter === 'all' || d.status === statusFilter
   );
@@ -641,12 +798,20 @@ export function DisbursementsContent() {
           </SelectContent>
         </Select>
 
-        <Input
-          placeholder="Filter by batch ID"
-          value={batchIdFilter}
-          onChange={(e) => setBatchIdFilter(e.target.value)}
-          className="h-8 w-40 text-sm"
-        />
+        <Select value={batchIdFilter || 'all'} onValueChange={(v) => setBatchIdFilter(v === 'all' ? '' : v)}>
+          <SelectTrigger className="h-8 w-44 text-sm"><SelectValue placeholder="All batches" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All batches</SelectItem>
+            {uniqueBatches.map((b) => (
+              <SelectItem key={b.id} value={String(b.id)}>
+                <span className="font-mono">{b.code}</span>
+                {b.commodity && (
+                  <span className="ml-1.5 text-muted-foreground">· {titleCase(b.commodity)}</span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {pendingRows.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
