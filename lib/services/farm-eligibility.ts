@@ -15,6 +15,7 @@
 export type EligibilityStatus = 'eligible' | 'conditional' | 'blocked';
 export type EligibilityCode =
   | 'FARM_REJECTED'
+  | 'UNRESOLVED_BOUNDARY_CONFLICT'
   | 'MISSING_GPS_BOUNDARY'
   | 'FAILED_DEFORESTATION_CHECK'
   | 'MISSING_FARMER_CONSENT'
@@ -36,6 +37,8 @@ export interface FarmRecord {
   } | null;
   consent_timestamp: string | null;
   eligibility_status?: EligibilityStatus | null;
+  /** Set by the farm_conflicts trigger when an unresolved overlap is detected */
+  conflict_status?: 'none' | 'conflict' | 'detected' | 'clear' | null;
 }
 
 export interface FarmEligibilityResult {
@@ -92,6 +95,19 @@ export function checkFarmEligibility(
     addBlocker(
       'FARM_REJECTED',
       'Farm compliance status is REJECTED. An administrator must review this farm before it can contribute produce.'
+    );
+  }
+
+  // ── Rule 1b: Unresolved GPS boundary conflict → blocked for EUDR batches ──
+  // When a conflict exists the GPS polygon data is in question. EUDR Article 3
+  // requires verifiable geospatial data — an unresolved conflict invalidates it.
+  if (
+    isEUDRBound &&
+    (farm.conflict_status === 'conflict' || farm.conflict_status === 'detected')
+  ) {
+    addBlocker(
+      'UNRESOLVED_BOUNDARY_CONFLICT',
+      'Farm has an unresolved GPS boundary conflict. The geospatial data cannot be verified until an administrator resolves the conflict. EUDR-bound batches require verified GPS traceability (Article 3).'
     );
   }
 
