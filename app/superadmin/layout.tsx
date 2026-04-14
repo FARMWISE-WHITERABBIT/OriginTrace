@@ -22,6 +22,12 @@ import {
   CreditCard,
   CalendarDays,
   ChevronRight,
+  BookOpen,
+  BadgeDollarSign,
+  Lock,
+  FileText,
+  Globe,
+  Server,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -40,33 +46,38 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Overview',
     items: [
-      { href: '/superadmin', label: 'Command Tower', icon: BarChart3 },
+      { href: '/superadmin', label: 'Platform Dashboard', icon: BarChart3 },
     ],
   },
   {
-    title: 'Tenants & Users',
+    title: 'Tenants',
     items: [
-      { href: '/superadmin/organizations', label: 'Tenants', icon: Building2 },
-      { href: '/superadmin/users', label: 'Users', icon: Users },
-      { href: '/superadmin/tenant-health', label: 'Tenant Health', icon: Activity },
+      { href: '/superadmin/tenants', label: 'All Tenants', icon: Building2 },
+      { href: '/superadmin/billing', label: 'Subscriptions', icon: CreditCard },
+      { href: '/superadmin/users', label: 'User Management', icon: Users },
+      { href: '/superadmin/buyer-orgs', label: 'Buyer Organizations', icon: Handshake },
     ],
   },
   {
-    title: 'Platform',
+    title: 'Compliance',
     items: [
-      { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
+      { href: '/superadmin/reference-data', label: 'Reference Data', icon: BookOpen },
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
-      { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
       { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
     ],
   },
   {
-    title: 'System',
+    title: 'Platform Ops',
     items: [
-      { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
-      { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
-      { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },
+      { href: '/superadmin/sync', label: 'Sync Status', icon: RefreshCw },
+      { href: '/superadmin/health', label: 'System Health', icon: Server },
       { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
+    ],
+  },
+  {
+    title: 'Security',
+    items: [
+      { href: '/superadmin/audit', label: 'Audit Log', icon: FileText },
     ],
   },
 ];
