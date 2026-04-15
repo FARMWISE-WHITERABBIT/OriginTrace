@@ -4,18 +4,6 @@ import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
 import { getSystemAdmin } from '@/lib/superadmin-rbac';
 
-async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from('system_admins')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single();
-    return !!data;
-  } catch { return false; }
-}
-
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
@@ -26,8 +14,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isSuperAdmin = await isSystemAdmin(supabase, user.id);
-    if (!isSuperAdmin) {
+    const adminRecord = await getSystemAdmin(user.id);
+    if (!adminRecord) {
       return NextResponse.json({ error: 'Forbidden: Superadmin access required' }, { status: 403 });
     }
     

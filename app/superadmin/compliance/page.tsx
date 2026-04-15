@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, XCircle, AlertTriangle, FileText, Globe, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, Globe, ShieldCheck, FileText, Loader2, Save } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,9 +26,10 @@ interface MarketRuleset {
   color: string;
   description: string;
   docs: DocRequirement[];
+  savedAt?: string | null;
 }
 
-// ── Default rulesets (editable in-UI; in production, persist to DB) ───────────
+// ── Defaults (used when no DB row exists yet for a market) ────────────────────
 
 const DEFAULT_RULESETS: MarketRuleset[] = [
   {
@@ -111,18 +112,84 @@ const DEFAULT_RULESETS: MarketRuleset[] = [
 export default function CompliancePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { toast } = useToast();
   const activeTab = searchParams.get('tab') ?? 'eudr';
 
   const [rulesets, setRulesets] = useState<MarketRuleset[]>(DEFAULT_RULESETS);
+  const [loadingDb, setLoadingDb] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [dirtyMarkets, setDirtyMarkets] = useState<Set<string>>(new Set());
+
+  // Load saved rulesets from DB and merge over defaults
+  const loadRulesets = useCallback(async () => {
+    setLoadingDb(true);
+    try {
+      const res = await fetch('/api/superadmin/compliance-rulesets');
+      if (!res.ok) return;
+      const { rulesets: saved } = await res.json();
+      if (!Array.isArray(saved) || saved.length === 0) return;
+
+      setRulesets(prev => prev.map(market => {
+        const dbRow = saved.find((r: any) => r.market_id === market.id);
+        if (!dbRow) return market;
+        return {
+          ...market,
+          docs: Array.isArray(dbRow.docs) ? dbRow.docs : market.docs,
+          savedAt: dbRow.updated_at,
+        };
+      }));
+    } catch {
+      // Non-fatal — fall back to defaults
+    } finally {
+      setLoadingDb(false);
+    }
+  }, []);
+
+  useEffect(() => { loadRulesets(); }, [loadRulesets]);
 
   function toggleRequirement(marketId: string, docId: string) {
     setRulesets(prev => prev.map(m => m.id !== marketId ? m : {
       ...m,
       docs: m.docs.map(d => d.id !== docId ? d : { ...d, required: !d.required }),
     }));
+    setDirtyMarkets(prev => new Set(prev).add(marketId));
+  }
+
+  async function saveRuleset() {
+    if (!currentMarket) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/superadmin/compliance-rulesets', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          market_id: currentMarket.id,
+          market_name: currentMarket.name,
+          short_code: currentMarket.shortCode,
+          description: currentMarket.description,
+          docs: currentMarket.docs,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Save failed', description: err.error ?? 'Unknown error', variant: 'destructive' });
+        return;
+      }
+
+      const { ruleset } = await res.json();
+      setRulesets(prev => prev.map(m => m.id !== currentMarket.id ? m : { ...m, savedAt: ruleset.updated_at }));
+      setDirtyMarkets(prev => { const s = new Set(prev); s.delete(currentMarket.id); return s; });
+      toast({ title: 'Ruleset saved', description: `${currentMarket.name} requirements updated.` });
+    } catch (err: any) {
+      toast({ title: 'Save failed', description: err.message ?? 'Network error', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   }
 
   const currentMarket = rulesets.find(m => m.id === activeTab) ?? rulesets[0];
+  const isDirty = dirtyMarkets.has(currentMarket?.id ?? '');
 
   return (
     <div className="space-y-6">
@@ -133,17 +200,23 @@ export default function CompliancePage() {
         <p className="text-slate-400">Configure document and data requirements per export market</p>
       </div>
 
-      <div className="rounded-lg bg-amber-950/30 border border-amber-800/50 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
-        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-        Changes here are in-memory only (demonstration). Persistence to database requires the compliance_rulesets migration.
-      </div>
+      {loadingDb ? (
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />Loading saved rulesets…
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 mb-2">
         {rulesets.map(m => (
-          <button key={m.id}
+          <button
+            key={m.id}
             onClick={() => router.replace(`?tab=${m.id}`)}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${m.id === activeTab ? m.color : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}>
+            className={`relative px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${m.id === activeTab ? m.color : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}
+          >
             {m.shortCode}
+            {dirtyMarkets.has(m.id) && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-400" title="Unsaved changes" />
+            )}
           </button>
         ))}
       </div>
@@ -163,14 +236,21 @@ export default function CompliancePage() {
               <div className="text-right shrink-0">
                 <p className="text-xs text-slate-500">{currentMarket.docs.filter(d => d.required).length} required</p>
                 <p className="text-xs text-slate-600">{currentMarket.docs.filter(d => !d.required).length} optional</p>
+                {currentMarket.savedAt && (
+                  <p className="text-[10px] text-slate-600 mt-1">
+                    Saved {new Date(currentMarket.savedAt).toLocaleDateString('en-GB')}
+                  </p>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {currentMarket.docs.map(doc => (
-                <div key={doc.id}
-                  className={`flex items-center justify-between gap-4 px-4 py-3 rounded-lg border transition-colors ${doc.required ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-800/20 border-slate-800'}`}>
+                <div
+                  key={doc.id}
+                  className={`flex items-center justify-between gap-4 px-4 py-3 rounded-lg border transition-colors ${doc.required ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-800/20 border-slate-800'}`}
+                >
                   <div className="flex items-center gap-3">
                     {doc.required
                       ? <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
@@ -182,9 +262,11 @@ export default function CompliancePage() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <Label className="text-xs text-slate-500">{doc.required ? 'Required' : 'Optional'}</Label>
-                    <Switch checked={doc.required}
+                    <Switch
+                      checked={doc.required}
                       onCheckedChange={() => toggleRequirement(currentMarket.id, doc.id)}
-                      data-testid={`switch-${currentMarket.id}-${doc.id}`} />
+                      data-testid={`switch-${currentMarket.id}-${doc.id}`}
+                    />
                   </div>
                 </div>
               ))}
@@ -195,9 +277,14 @@ export default function CompliancePage() {
                 <FileText className="h-3.5 w-3.5" />
                 These rules feed into the farm eligibility gate on batch creation.
               </p>
-              <Button className="bg-[#2E7D6B] hover:bg-[#1F5F52]" size="sm"
-                onClick={() => alert('Save to DB — requires compliance_rulesets migration')}>
-                Save Ruleset
+              <Button
+                className="bg-[#2E7D6B] hover:bg-[#1F5F52]"
+                size="sm"
+                onClick={saveRuleset}
+                disabled={saving || !isDirty}
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                {saving ? 'Saving…' : isDirty ? 'Save Ruleset' : 'Saved'}
               </Button>
             </div>
           </CardContent>

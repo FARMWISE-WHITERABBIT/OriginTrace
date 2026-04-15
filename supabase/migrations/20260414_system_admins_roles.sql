@@ -57,15 +57,17 @@ CREATE INDEX IF NOT EXISTS idx_superadmin_impersonation_superadmin ON superadmin
 CREATE INDEX IF NOT EXISTS idx_superadmin_impersonation_org ON superadmin_impersonation_actions (target_org_id);
 CREATE INDEX IF NOT EXISTS idx_superadmin_impersonation_created ON superadmin_impersonation_actions (created_at DESC);
 
--- 4. RLS: system_admins can only read their own row; platform_admin can read all
+-- 4. RLS policies (idempotent — drop before recreate)
 ALTER TABLE superadmin_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE superadmin_impersonation_actions ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS (used by API routes via createAdminClient / createServiceClient)
+DROP POLICY IF EXISTS "Service role full access to superadmin_sessions" ON superadmin_sessions;
 CREATE POLICY "Service role full access to superadmin_sessions"
   ON superadmin_sessions FOR ALL
   TO service_role USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access to superadmin_impersonation_actions" ON superadmin_impersonation_actions;
 CREATE POLICY "Service role full access to superadmin_impersonation_actions"
   ON superadmin_impersonation_actions FOR ALL
   TO service_role USING (true) WITH CHECK (true);
