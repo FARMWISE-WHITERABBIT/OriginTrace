@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS superadmin_impersonation_actions (
   session_id UUID REFERENCES superadmin_sessions(id) ON DELETE SET NULL,
   superadmin_id UUID NOT NULL REFERENCES system_admins(id) ON DELETE CASCADE,
   superadmin_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_org_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
+  target_org_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
   target_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   action TEXT NOT NULL,                     -- e.g. 'impersonation.started', 'impersonation.ended', 'page.viewed'
   resource_type TEXT,                       -- 'organization', 'farm', 'batch', etc.
