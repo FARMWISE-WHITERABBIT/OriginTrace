@@ -15,19 +15,16 @@ import {
   X,
   Shield,
   Zap,
-  Activity,
-  AlertCircle,
-  Wheat,
   Handshake,
   CreditCard,
   CalendarDays,
   ChevronRight,
   BookOpen,
-  BadgeDollarSign,
-  Lock,
   FileText,
-  Globe,
   Server,
+  DollarSign,
+  ShieldCheck,
+  Satellite,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -61,7 +58,9 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Compliance',
     items: [
+      { href: '/superadmin/compliance', label: 'Market Rulesets', icon: ShieldCheck },
       { href: '/superadmin/reference-data', label: 'Reference Data', icon: BookOpen },
+      { href: '/superadmin/traces', label: 'TRACES Monitor', icon: Satellite },
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
       { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
     ],
@@ -69,6 +68,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Platform Ops',
     items: [
+      { href: '/superadmin/revenue', label: 'Revenue Dashboard', icon: DollarSign },
+      { href: '/superadmin/payment-ops', label: 'Payment Operations', icon: CreditCard },
       { href: '/superadmin/sync', label: 'Sync Status', icon: RefreshCw },
       { href: '/superadmin/health', label: 'System Health', icon: Server },
       { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
