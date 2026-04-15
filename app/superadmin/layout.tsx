@@ -85,14 +85,38 @@ const NAV_SECTIONS: NavSection[] = [
 // Flat list for mobile header label lookup
 const ALL_NAV_ITEMS = NAV_SECTIONS.flatMap(s => s.items);
 
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export default function SuperadminLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const inactivityTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoginPage = pathname === '/superadmin/login';
+
+  // ── Inactivity timeout ────────────────────────────────────────────────────
+  const resetInactivityTimer = React.useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(async () => {
+      const client = createClient();
+      if (client) await client.auth.signOut();
+      router.push('/superadmin/login?reason=timeout');
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthorized || isLoginPage) return;
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetInactivityTimer, { passive: true }));
+    resetInactivityTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetInactivityTimer));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [isAuthorized, isLoginPage, resetInactivityTimer]);
 
   useEffect(() => {
     if (isLoginPage) {
