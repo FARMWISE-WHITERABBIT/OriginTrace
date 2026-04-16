@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, TrendingUp, DollarSign, Users, RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Loader2, TrendingUp, DollarSign, Users, ArrowDownRight } from 'lucide-react';
+import { TIER_ORDER, TIER_MRR_USD, TIER_BADGE_STYLES } from '@/lib/tier-config';
 
 interface OrgRevRow {
   id: number;
@@ -14,20 +15,6 @@ interface OrgRevRow {
   created_at: string;
   mrr_usd: number;
 }
-
-const TIER_MRR: Record<string, number> = {
-  starter: 0,
-  basic: 99,
-  pro: 299,
-  enterprise: 899,
-};
-
-const TIER_STYLES: Record<string, string> = {
-  starter:    'bg-slate-700 text-slate-300 border-slate-600',
-  basic:      'bg-blue-900/50 text-blue-300 border-blue-700',
-  pro:        'bg-purple-900/50 text-purple-300 border-purple-700',
-  enterprise: 'bg-amber-900/50 text-amber-300 border-amber-700',
-};
 
 export default function RevenueDashboardPage() {
   const [orgs, setOrgs] = useState<OrgRevRow[]>([]);
@@ -48,7 +35,7 @@ export default function RevenueDashboardPage() {
           subscription_status: o.subscription_status ?? 'active',
           created_at: o.created_at,
           mrr_usd: o.subscription_status === 'active' || o.subscription_status === 'trial'
-            ? (TIER_MRR[o.subscription_tier ?? 'starter'] ?? 0) : 0,
+            ? (TIER_MRR_USD[o.subscription_tier as keyof typeof TIER_MRR_USD ?? 'starter'] ?? 0) : 0,
         }));
         setOrgs(rows);
       }
@@ -61,11 +48,11 @@ export default function RevenueDashboardPage() {
   const paidOrgs = activeOrgs.filter(o => o.subscription_tier !== 'starter');
   const churnedOrgs = orgs.filter(o => o.subscription_status === 'cancelled' || o.subscription_status === 'suspended');
 
-  const tierBreakdown = Object.entries(TIER_MRR).map(([tier, price]) => ({
-    tier,
-    count: orgs.filter(o => o.subscription_tier === tier && o.subscription_status === 'active').length,
-    mrr: orgs.filter(o => o.subscription_tier === tier && o.subscription_status === 'active').length * price,
-  }));
+  const tierBreakdown = TIER_ORDER.map(tier => {
+    const price = TIER_MRR_USD[tier];
+    const count = orgs.filter(o => o.subscription_tier === tier && o.subscription_status === 'active').length;
+    return { tier, count, mrr: count * price };
+  });
 
   return (
     <div className="space-y-6">
@@ -120,10 +107,10 @@ export default function RevenueDashboardPage() {
                   {tierBreakdown.map(t => (
                     <TableRow key={t.tier} className="border-slate-700">
                       <TableCell>
-                        <Badge variant="outline" className={`capitalize text-xs ${TIER_STYLES[t.tier] ?? ''}`}>{t.tier}</Badge>
+                        <Badge variant="outline" className={`capitalize text-xs ${TIER_BADGE_STYLES[t.tier] ?? ''}`}>{t.tier}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-slate-300">{t.count}</TableCell>
-                      <TableCell className="text-right text-slate-400">${TIER_MRR[t.tier]}</TableCell>
+                      <TableCell className="text-right text-slate-400">${TIER_MRR_USD[t.tier as keyof typeof TIER_MRR_USD]}</TableCell>
                       <TableCell className="text-right font-medium text-white">${t.mrr.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
@@ -158,7 +145,7 @@ export default function RevenueDashboardPage() {
                       <TableRow key={org.id} className="border-slate-700 hover:bg-slate-800/40">
                         <TableCell className="font-medium text-white">{org.name}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`capitalize text-xs ${TIER_STYLES[org.subscription_tier] ?? ''}`}>
+                          <Badge variant="outline" className={`capitalize text-xs ${TIER_BADGE_STYLES[org.subscription_tier] ?? ''}`}>
                             {org.subscription_tier}
                           </Badge>
                         </TableCell>
