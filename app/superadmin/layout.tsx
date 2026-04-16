@@ -61,8 +61,14 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/superadmin/compliance', label: 'Market Rulesets', icon: ShieldCheck },
       { href: '/superadmin/reference-data', label: 'Reference Data', icon: BookOpen },
       { href: '/superadmin/traces', label: 'TRACES Monitor', icon: Satellite },
+    ],
+  },
+  {
+    title: 'Platform Config',
+    items: [
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
       { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
+      { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
     ],
   },
   {
@@ -72,12 +78,12 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/superadmin/payment-ops', label: 'Payment Operations', icon: CreditCard },
       { href: '/superadmin/sync', label: 'Sync Status', icon: RefreshCw },
       { href: '/superadmin/health', label: 'System Health', icon: Server },
-      { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
     ],
   },
   {
     title: 'Security',
     items: [
+      { href: '/superadmin/admin-users', label: 'Admin Users', icon: Shield },
       { href: '/superadmin/audit', label: 'Audit Log', icon: FileText },
     ],
   },

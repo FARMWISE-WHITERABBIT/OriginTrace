@@ -12,10 +12,6 @@ interface TracesTenant {
   org_name: string;
   subscription_tier: string;
   dds_enabled: boolean;
-  last_submission: string | null;
-  submissions_30d: number;
-  pending_submissions: number;
-  failed_submissions: number;
   status: 'healthy' | 'warning' | 'critical' | 'inactive';
 }
 
@@ -25,15 +21,6 @@ const STATUS_CONFIG = {
   critical: { label: 'Critical', badge: 'bg-red-900/40 text-red-300 border-red-700',        icon: XCircle, dot: 'bg-red-400' },
   inactive: { label: 'Inactive', badge: 'bg-slate-700 text-slate-400 border-slate-600',     icon: Clock, dot: 'bg-slate-500' },
 };
-
-function deriveStatus(org: { subscription_tier: string; dds_enabled: boolean; submissions_30d: number; failed_submissions: number; last_submission: string | null }): TracesTenant['status'] {
-  if (!org.dds_enabled || org.subscription_tier === 'starter') return 'inactive';
-  if (org.failed_submissions > 0) return 'critical';
-  if (!org.last_submission) return 'warning';
-  const daysSince = (Date.now() - new Date(org.last_submission).getTime()) / 86400000;
-  if (daysSince > 30) return 'warning';
-  return 'healthy';
-}
 
 export default function TracesMonitorPage() {
   const [tenants, setTenants] = useState<TracesTenant[]>([]);
@@ -47,25 +34,18 @@ export default function TracesMonitorPage() {
       const res = await fetch('/api/superadmin?resource=organizations');
       if (res.ok) {
         const data = await res.json();
-        // Scaffold — derive DDS status from org data; in production this
-        // would join against a dds_submissions table
         const rows: TracesTenant[] = (data.organizations ?? []).map((o: any) => {
           const dds_enabled = ['pro', 'enterprise'].includes(o.subscription_tier ?? '');
-          const submissions_30d = dds_enabled ? Math.floor(Math.random() * 15) : 0;
-          const failed_submissions = dds_enabled && Math.random() < 0.15 ? 1 : 0;
-          const last_submission = dds_enabled && submissions_30d > 0
-            ? new Date(Date.now() - Math.random() * 25 * 86400000).toISOString() : null;
-          const base = { subscription_tier: o.subscription_tier ?? 'starter', dds_enabled, submissions_30d, failed_submissions, last_submission };
+          // Status derived from tier eligibility only until dds_submissions table is connected:
+          // - pro/enterprise → 'warning' (eligible but no live submission data yet)
+          // - starter/basic → 'inactive' (DDS not included in their tier)
+          const status: TracesTenant['status'] = dds_enabled ? 'warning' : 'inactive';
           return {
             org_id: o.id,
             org_name: o.name,
             subscription_tier: o.subscription_tier ?? 'starter',
             dds_enabled,
-            last_submission,
-            submissions_30d,
-            pending_submissions: dds_enabled ? Math.floor(Math.random() * 3) : 0,
-            failed_submissions,
-            status: deriveStatus(base),
+            status,
           };
         });
         setTenants(rows.sort((a, b) => {
@@ -99,14 +79,17 @@ export default function TracesMonitorPage() {
 
       <div className="rounded-lg bg-blue-950/30 border border-blue-800/50 px-4 py-3 text-sm text-blue-300 flex items-start gap-2">
         <Info className="h-4 w-4 shrink-0 mt-0.5" />
-        Scaffold view — DDS submission data is simulated. Connect <code className="font-mono text-xs bg-blue-900/40 px-1 rounded">dds_submissions</code> table for live data.
+        Live DDS submission counts require a <code className="font-mono text-xs bg-blue-900/40 px-1 rounded">dds_submissions</code> table.
+        Status currently reflects DDS eligibility by subscription tier — Pro and Enterprise are DDS-enabled.
+        Connect the table to unlock submission counts, failure rates, and last-submission dates.
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
       ) : (
         <>
-          {/* Status summary */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {(Object.entries(counts) as [keyof typeof STATUS_CONFIG, number][]).map(([status, count]) => {
               const cfg = STATUS_CONFIG[status];
@@ -127,8 +110,10 @@ export default function TracesMonitorPage() {
 
           <Card className="bg-slate-900 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white text-base">Per-Tenant DDS Status</CardTitle>
-              <CardDescription className="text-slate-400">Pro and Enterprise tenants only submit DDS</CardDescription>
+              <CardTitle className="text-white text-base">Per-Tenant DDS Eligibility</CardTitle>
+              <CardDescription className="text-slate-400">
+                Pro and Enterprise tenants are DDS-enabled. Submission history requires a connected <code className="font-mono text-xs">dds_submissions</code> table.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -136,11 +121,8 @@ export default function TracesMonitorPage() {
                   <TableRow className="border-slate-700">
                     <TableHead className="text-slate-400">Organization</TableHead>
                     <TableHead className="text-slate-400">Tier</TableHead>
-                    <TableHead className="text-slate-400">DDS Status</TableHead>
-                    <TableHead className="text-slate-400 text-right">30d Submissions</TableHead>
-                    <TableHead className="text-slate-400 text-right">Pending</TableHead>
-                    <TableHead className="text-slate-400 text-right">Failed</TableHead>
-                    <TableHead className="text-slate-400">Last Submitted</TableHead>
+                    <TableHead className="text-slate-400">DDS Eligible</TableHead>
+                    <TableHead className="text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -151,26 +133,28 @@ export default function TracesMonitorPage() {
                       <TableRow key={t.org_id} className="border-slate-700 hover:bg-slate-800/40">
                         <TableCell className="font-medium text-white">{t.org_name}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs capitalize border-slate-600 text-slate-400">{t.subscription_tier}</Badge>
+                          <Badge variant="outline" className="text-xs capitalize border-slate-600 text-slate-400">
+                            {t.subscription_tier}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {t.dds_enabled
+                            ? <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Enabled</span>
+                            : <span className="text-xs text-slate-500">Not included</span>}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={`text-xs ${cfg.badge}`}>
                             <StatusIcon className="h-3 w-3 mr-1" />{cfg.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right text-slate-300">{t.submissions_30d}</TableCell>
-                        <TableCell className="text-right">
-                          {t.pending_submissions > 0 ? <span className="text-amber-400 font-medium">{t.pending_submissions}</span> : <span className="text-slate-600">0</span>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {t.failed_submissions > 0 ? <span className="text-red-400 font-medium">{t.failed_submissions}</span> : <span className="text-slate-600">0</span>}
-                        </TableCell>
-                        <TableCell className="text-slate-400 text-sm">
-                          {t.last_submission ? new Date(t.last_submission).toLocaleDateString('en-GB') : <span className="text-slate-600">—</span>}
-                        </TableCell>
                       </TableRow>
                     );
                   })}
+                  {tenants.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-10 text-slate-500">No tenants found</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
