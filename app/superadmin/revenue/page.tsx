@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, TrendingUp, DollarSign, Users, ArrowDownRight } from 'lucide-react';
-import { TIER_ORDER, TIER_MRR_USD, TIER_BADGE_STYLES } from '@/lib/tier-config';
+import { TIER_ORDER, TIER_MRR_USD, TIER_BADGE_STYLES, type TierKey } from '@/lib/tier-config';
 
 interface OrgRevRow {
   id: number;
@@ -35,7 +35,7 @@ export default function RevenueDashboardPage() {
           subscription_status: o.subscription_status ?? 'active',
           created_at: o.created_at,
           mrr_usd: o.subscription_status === 'active' || o.subscription_status === 'trial'
-            ? (TIER_MRR_USD[o.subscription_tier as keyof typeof TIER_MRR_USD ?? 'starter'] ?? 0) : 0,
+            ? (TIER_MRR_USD[(o.subscription_tier ?? 'starter') as TierKey] ?? 0) : 0,
         }));
         setOrgs(rows);
       }
@@ -145,7 +145,7 @@ export default function RevenueDashboardPage() {
                       <TableRow key={org.id} className="border-slate-700 hover:bg-slate-800/40">
                         <TableCell className="font-medium text-white">{org.name}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`capitalize text-xs ${TIER_BADGE_STYLES[org.subscription_tier] ?? ''}`}>
+                          <Badge variant="outline" className={`capitalize text-xs ${TIER_BADGE_STYLES[(org.subscription_tier as TierKey)] ?? ''}`}>
                             {org.subscription_tier}
                           </Badge>
                         </TableCell>
