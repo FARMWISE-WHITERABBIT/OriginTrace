@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function SuccessPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A1F5C] via-[#0052A3] to-[#0066B2] flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-gradient-to-br from-[#0A2E25] via-[#1F5F52] to-[#2E7D6B] flex flex-col items-center justify-center px-4 py-16">
 
       {/* Triple-brand logos */}
       <div className="flex items-center justify-center gap-4 mb-10 flex-wrap">
@@ -61,26 +61,26 @@ export default function SuccessPage() {
           </p>
 
           {/* Event details box */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-6 space-y-3">
-            <p className="text-blue-700 text-xs font-semibold uppercase tracking-wider">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 mb-6 space-y-3">
+            <p className="text-emerald-700 text-xs font-semibold uppercase tracking-wider">
               Event Details
             </p>
             <div className="flex items-start gap-2.5">
-              <Calendar className="h-4 w-4 text-[#0052A3] shrink-0 mt-0.5" />
+              <Calendar className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-slate-800">Thursday, 23rd April 2026</p>
                 <p className="text-xs text-slate-500">9:00 AM prompt</p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
-              <MapPin className="h-4 w-4 text-[#0052A3] shrink-0 mt-0.5" />
+              <MapPin className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-slate-800">Union Bank, Ogui Road, Enugu</p>
                 <p className="text-xs text-slate-500">Top Floor, Union Bank, Ogui Road, Enugu</p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
-              <Lightbulb className="h-4 w-4 text-[#0052A3] shrink-0 mt-0.5" />
+              <Lightbulb className="h-4 w-4 text-[#1F5F52] shrink-0 mt-0.5" />
               <p className="text-sm text-slate-600 italic">
                 &ldquo;Empowering Nigerian Exporters for Sustainable Growth in Global Market&rdquo;
               </p>
@@ -90,14 +90,14 @@ export default function SuccessPage() {
           <p className="text-xs text-slate-400 mb-6 text-center leading-relaxed">
             Please check your spam folder if you don&apos;t see the confirmation email.
             For enquiries:{' '}
-            <a href="mailto:info@origintrace.trade" className="text-[#0052A3] hover:underline">
+            <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] hover:underline">
               info@origintrace.trade
             </a>
           </p>
 
           <Link
             href="/events/export-readiness"
-            className="block text-center text-sm text-[#0052A3] hover:underline font-medium"
+            className="block text-center text-sm text-[#1F5F52] hover:underline font-medium"
           >
             ← Register another attendee
           </Link>

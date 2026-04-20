@@ -113,7 +113,7 @@ export default function ExportReadinessRegistrationPage() {
   const isExporting = form.currentlyExporting === 'yes';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A1F5C] via-[#0052A3] to-[#0066B2] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#0A2E25] via-[#1F5F52] to-[#2E7D6B] flex flex-col">
 
       {/* Top nav */}
       <header className="px-6 py-4 flex items-center justify-between">
@@ -162,7 +162,7 @@ export default function ExportReadinessRegistrationPage() {
 
           {/* Hero card */}
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6 text-center">
-            <p className="text-blue-200 text-xs font-semibold tracking-widest uppercase mb-2">
+            <p className="text-emerald-300 text-xs font-semibold tracking-widest uppercase mb-2">
               One Day Capacity Building Training
             </p>
             <h1 className="text-white text-2xl font-bold leading-tight mb-1">
@@ -203,7 +203,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="fullName" name="fullName" type="text" required
                     placeholder="e.g. Amara Okafor"
                     value={form.fullName} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -214,7 +214,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="email" name="email" type="email" required
                     placeholder="you@example.com"
                     value={form.email} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -225,7 +225,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="phone" name="phone" type="tel" required
                     placeholder="e.g. 08012345678"
                     value={form.phone} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -236,7 +236,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="organization" name="organization" type="text" required
                     placeholder="e.g. ABC Agro Exports Ltd"
                     value={form.organization} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -247,7 +247,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="role" name="role" type="text" required
                     placeholder="e.g. Export Manager"
                     value={form.role} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -257,7 +257,7 @@ export default function ExportReadinessRegistrationPage() {
                   <select
                     id="state" name="state" required
                     value={form.state} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition bg-white"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition bg-white"
                   >
                     <option value="" disabled>Select your state</option>
                     {NIGERIAN_STATES.map(s => (
@@ -286,7 +286,7 @@ export default function ExportReadinessRegistrationPage() {
                           checked={form.currentlyExporting === val}
                           onChange={handleChange}
                           required
-                          className="accent-[#0052A3]"
+                          className="accent-[#1F5F52]"
                         />
                         <span className="text-sm text-slate-700 capitalize">{val}</span>
                       </label>
@@ -305,7 +305,7 @@ export default function ExportReadinessRegistrationPage() {
                     id="exportProducts" name="exportProducts" type="text" required
                     placeholder={isExporting ? 'e.g. Cashew nuts, Cocoa beans' : 'e.g. Shea butter, Leather goods'}
                     value={form.exportProducts} onChange={handleChange}
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0052A3] focus:border-transparent transition"
+                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F5F52] focus:border-transparent transition"
                   />
                 </div>
 
@@ -324,7 +324,7 @@ export default function ExportReadinessRegistrationPage() {
                           checked={form.nepcRegistered === val}
                           onChange={handleChange}
                           required
-                          className="accent-[#0052A3]"
+                          className="accent-[#1F5F52]"
                         />
                         <span className="text-sm text-slate-700 capitalize">{val}</span>
                       </label>
@@ -343,7 +343,7 @@ export default function ExportReadinessRegistrationPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[#0052A3] hover:bg-[#003D82] text-white font-semibold py-3 px-6 rounded-xl text-sm transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                  className="w-full bg-[#1F5F52] hover:bg-[#174D42] text-white font-semibold py-3 px-6 rounded-xl text-sm transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
                 >
                   {submitting ? 'Registering…' : 'Register Now →'}
                 </button>
@@ -352,7 +352,7 @@ export default function ExportReadinessRegistrationPage() {
               <div className="px-6 pb-5 text-center">
                 <p className="text-xs text-slate-400">
                   A confirmation email will be sent to you. For enquiries:{' '}
-                  <a href="mailto:info@origintrace.trade" className="text-[#0052A3] hover:underline">
+                  <a href="mailto:info@origintrace.trade" className="text-[#1F5F52] hover:underline">
                     info@origintrace.trade
                   </a>
                 </p>
