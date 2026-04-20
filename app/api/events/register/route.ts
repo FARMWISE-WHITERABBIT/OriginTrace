@@ -40,9 +40,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const eventSlug = parsed.data.slug && ALLOWED_SLUGS.has(parsed.data.slug)
-    ? parsed.data.slug
-    : 'yexdep-2026';
+  const rawSlug = parsed.data.slug;
+  if (!rawSlug || !ALLOWED_SLUGS.has(rawSlug)) {
+    return NextResponse.json({ error: 'Invalid or missing event slug.' }, { status: 400 });
+  }
+  const eventSlug = rawSlug;
 
   const emailCtx = getEventEmailContext(eventSlug);
 
