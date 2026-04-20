@@ -66,17 +66,17 @@ const EXPORT_READINESS_CONTEXT: EventEmailContext = {
   venueAddress:   'Top Floor, Union Bank, Ogui Road, Enugu',
   theme:          'Empowering Nigerian Exporters for Sustainable Growth in Global Market',
   dayWord:        'Thursday',
-  headerColor:    '#0052A3',
-  accentColor:    '#0052A3',
-  bannerBg:       '#DBEAFE',
-  bannerBorder:   '#BFDBFE',
-  bannerText:     '#1E3A8A',
+  headerColor:    '#1F5F52',
+  accentColor:    '#1F5F52',
+  bannerBg:       '#D1FAE5',
+  bannerBorder:   '#A7F3D0',
+  bannerText:     '#065F46',
   detailsBg:      '#F8FAFC',
   detailsBorder:  '#E2E8F0',
-  detailsAccent:  '#0052A3',
-  regBg:          '#EFF6FF',
-  regBorder:      '#BFDBFE',
-  regLabel:       '#1E3A8A',
+  detailsAccent:  '#1F5F52',
+  regBg:          '#F0FDF9',
+  regBorder:      '#A7F3D0',
+  regLabel:       '#065F46',
 };
 
 export function getEventEmailContext(slug: string): EventEmailContext {
@@ -195,7 +195,7 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData, ctx: Ev
               </table>
 
               <p style="margin:0 0 8px;color:#4B5563;font-size:14px;line-height:1.6;">
-                Please arrive on time. For enquiries, contact us at <a href="mailto:info@origintrace.trade" style="color:${ctx.accentColor};font-weight:500;">info@origintrace.trade</a>.
+                Please arrive on time. For enquiries, contact us at <a href="mailto:hello@origintrace.trade" style="color:${ctx.accentColor};font-weight:500;">hello@origintrace.trade</a>.
               </p>
             </td>
           </tr>
