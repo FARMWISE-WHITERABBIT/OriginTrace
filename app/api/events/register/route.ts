@@ -4,13 +4,13 @@ import { sendEmail } from '@/lib/email/resend-client';
 import {
   buildRegistrantConfirmationEmail,
   buildAdminNotificationEmail,
+  getEventEmailContext,
 } from '@/lib/email/event-registration-templates';
 import { env } from '@/lib/env';
 import { z } from 'zod';
 
-const EVENT_SLUG = 'yexdep-2026';
-
 const registrationSchema = z.object({
+  slug:               z.string().max(100).optional(),
   fullName:           z.string().min(2).max(120),
   email:              z.string().email(),
   phone:              z.string().min(7).max(20),
@@ -21,6 +21,8 @@ const registrationSchema = z.object({
   exportProducts:     z.string().min(1).max(300),
   nepcRegistered:     z.enum(['yes', 'no']),
 });
+
+const ALLOWED_SLUGS = new Set(['yexdep-2026', 'export-readiness-2026']);
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -38,13 +40,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const eventSlug = parsed.data.slug && ALLOWED_SLUGS.has(parsed.data.slug)
+    ? parsed.data.slug
+    : 'yexdep-2026';
+
+  const emailCtx = getEventEmailContext(eventSlug);
+
   const supabase = getAdminClient();
 
   // Check registration window from events table
   const { data: rawEventRow } = await supabase
     .from('events')
     .select('registration_open, registration_closes_at')
-    .eq('slug', EVENT_SLUG)
+    .eq('slug', eventSlug)
     .single();
 
   const eventRow = rawEventRow as unknown as { registration_open: boolean; registration_closes_at: string | null } | null;
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   // Insert registration — unique constraint on (email, event_slug) prevents duplicates
   const { error: insertError } = await supabase.from('event_registrations').insert({
-    event_slug:          EVENT_SLUG,
+    event_slug:          eventSlug,
     full_name:           fullName,
     email:               email.toLowerCase(),
     phone,
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
   const { count } = await supabase
     .from('event_registrations')
     .select('id', { count: 'exact', head: true })
-    .eq('event_slug', EVENT_SLUG);
+    .eq('event_slug', eventSlug);
 
   const registrationData = {
     fullName, email, phone, organization, role, state,
@@ -109,8 +117,8 @@ export async function POST(request: NextRequest) {
   const emailPromises: Promise<{ success: boolean; error?: string }>[] = [
     sendEmail({
       to: email,
-      subject: 'Registration Confirmed – YEXDEP 2026 | OriginTrace × NEPC',
-      html: buildRegistrantConfirmationEmail(registrationData),
+      subject: `Registration Confirmed – ${emailCtx.shortTitle} | OriginTrace`,
+      html: buildRegistrantConfirmationEmail(registrationData, emailCtx),
     }),
   ];
 
@@ -119,8 +127,8 @@ export async function POST(request: NextRequest) {
     emailPromises.push(
       sendEmail({
         to: adminEmail,
-        subject: `New YEXDEP Registration: ${fullName} (${organization})`,
-        html: buildAdminNotificationEmail(registrationData, count ?? 0),
+        subject: `New ${emailCtx.shortTitle} Registration: ${fullName} (${organization})`,
+        html: buildAdminNotificationEmail(registrationData, count ?? 0, emailCtx),
         replyTo: email,
       })
     );
