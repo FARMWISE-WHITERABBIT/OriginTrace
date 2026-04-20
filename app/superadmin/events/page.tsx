@@ -299,20 +299,17 @@ export default function SuperadminEventsPage() {
   async function handleExport(slug: string) {
     setExporting(slug);
     try {
-      const adminKey = prompt('Enter admin key to export registrations:');
-      if (!adminKey) return;
-      const res = await fetch(`/api/events/export?slug=${slug}`, {
-        headers: { 'x-admin-key': adminKey },
-      });
+      const res = await fetch(`/api/superadmin/events/export?slug=${encodeURIComponent(slug)}`);
       if (!res.ok) {
-        toast({ title: 'Export failed', description: 'Check your admin key', variant: 'destructive' });
+        toast({ title: 'Export failed', description: 'Could not download registrations', variant: 'destructive' });
         return;
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${slug}_registrations.xlsx`;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `${slug.toUpperCase().replace(/-/g, '_')}_Registrations_${date}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {
