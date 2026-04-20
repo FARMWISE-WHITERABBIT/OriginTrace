@@ -365,7 +365,24 @@ export default function ExportReadinessRegistrationPage() {
             <p className="text-white/40 text-xs">
               Hosted by NEPC South East Regional Office in collaboration with Union Bank and OriginTrace
             </p>
-            <p className="text-white/25 text-xs">
+            <div className="mt-4 bg-white/8 border border-white/15 rounded-xl px-5 py-4 text-left space-y-3">
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-widest text-center mb-3">Contact Persons</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Mr. Udechukwu Ugochukwu</span>
+                  <a href="tel:07068770596" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">07068770596</a>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Dr. Kenechukwu Uzo</span>
+                  <a href="tel:08034431863" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">08034431863</a>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Mr. Hilary Akhidenor</span>
+                  <a href="tel:08055302764" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">08055302764</a>
+                </div>
+              </div>
+            </div>
+            <p className="text-white/25 text-xs pt-2">
               <Link href="/events" className="hover:text-white/50 transition-colors">
                 ← Back to all events
               </Link>

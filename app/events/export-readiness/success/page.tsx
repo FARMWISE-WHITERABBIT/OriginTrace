@@ -95,6 +95,25 @@ export default function SuccessPage() {
             </a>
           </p>
 
+          {/* Contact persons */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3 text-center">Contact Persons</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Mr. Udechukwu Ugochukwu</span>
+                <a href="tel:07068770596" className="text-sm font-medium text-[#1F5F52] hover:underline">07068770596</a>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Dr. Kenechukwu Uzo</span>
+                <a href="tel:08034431863" className="text-sm font-medium text-[#1F5F52] hover:underline">08034431863</a>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Mr. Hilary Akhidenor</span>
+                <a href="tel:08055302764" className="text-sm font-medium text-[#1F5F52] hover:underline">08055302764</a>
+              </div>
+            </div>
+          </div>
+
           <Link
             href="/events/export-readiness"
             className="block text-center text-sm text-[#1F5F52] hover:underline font-medium"
