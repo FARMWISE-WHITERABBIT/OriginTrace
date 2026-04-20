@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   CalendarDays, Plus, Loader2, Pencil, Trash2, Users,
   Download, ToggleLeft, ToggleRight, ExternalLink, RefreshCw,
-  UserCheck, Search, CheckCircle2,
+  UserCheck, Search, CheckCircle2, Mail,
 } from 'lucide-react';
 
 interface EventItem {
@@ -85,6 +85,7 @@ export default function SuperadminEventsPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   // Check-in sheet state
@@ -317,7 +318,29 @@ export default function SuperadminEventsPage() {
     }
   }
 
-  function isOpen(event: EventItem): boolean {
+  async function handleResendConfirmations(slug: string, eventTitle: string) {
+    if (!confirm(`Resend confirmation emails to ALL registrants for "${eventTitle}"?\n\nThis will email every person who registered, even if they already received one.`)) return;
+    setResending(slug);
+    try {
+      const res = await fetch('/api/superadmin/events/resend-confirmations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Failed', description: data.error ?? 'Could not send emails', variant: 'destructive' });
+        return;
+      }
+      toast({
+        title: `Emails sent: ${data.sent} of ${data.total}`,
+        description: data.failed > 0 ? `${data.failed} failed — check Vercel logs` : 'All confirmation emails delivered successfully.',
+        variant: data.failed > 0 ? 'destructive' : 'default',
+      });
+    } finally {
+      setResending(null);
+    }
+  }
     if (!event.registration_open) return false;
     if (event.registration_closes_at && new Date() > new Date(event.registration_closes_at)) return false;
     return true;
@@ -578,6 +601,19 @@ export default function SuperadminEventsPage() {
                           {event.registration_open
                             ? <ToggleRight className="h-4 w-4" />
                             : <ToggleLeft className="h-4 w-4" />}
+                        </Button>
+
+                        {/* Resend confirmation emails */}
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => handleResendConfirmations(event.slug, event.title)}
+                          disabled={resending === event.slug}
+                          title="Resend confirmation emails to all registrants"
+                          className="text-slate-400 hover:text-amber-400 h-8 w-8 p-0"
+                        >
+                          {resending === event.slug
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Mail className="h-4 w-4" />}
                         </Button>
 
                         {/* Export */}
