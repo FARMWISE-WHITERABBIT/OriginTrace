@@ -141,14 +141,9 @@ export default function ExportReadinessRegistrationPage() {
               priority
             />
             <span className="text-white/30 text-2xl font-light select-none">×</span>
-            <Image
-              src="/images/union-bank-logo.png"
-              alt="Union Bank"
-              width={120}
-              height={36}
-              style={{ width: 'auto', height: '32px', mixBlendMode: 'screen' }}
-              priority
-            />
+            <span className="inline-block bg-white text-[#0052A3] font-bold text-sm px-3 py-1.5 rounded leading-none tracking-wide">
+              Union Bank
+            </span>
             <span className="text-white/30 text-2xl font-light select-none">×</span>
             <Image
               src="/images/logo-white.png"
