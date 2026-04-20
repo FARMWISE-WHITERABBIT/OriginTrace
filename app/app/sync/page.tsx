@@ -24,6 +24,8 @@ import {
   MapPin,
   Wheat,
   Scale,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
 
@@ -66,6 +68,8 @@ export default function SyncDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [discardConfirmId, setDiscardConfirmId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [serverMetrics, setServerMetrics] = useState<{
     pendingConflicts: number;
     unsyncedBags: number;
@@ -163,6 +167,34 @@ export default function SyncDashboardPage() {
     }
   };
 
+  const handleDiscard = async (batchId: string) => {
+    try {
+      const { deleteBatch } = await import('@/lib/offline/sync-store');
+      await deleteBatch(batchId);
+      setDiscardConfirmId(null);
+      await loadData();
+      toast({ title: 'Discarded', description: 'Batch removed from local queue.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to discard batch.', variant: 'destructive' });
+    }
+  };
+
+  const getErrorGuidance = (errorMessage?: string): string => {
+    if (!errorMessage) return 'An unknown error occurred. Try retrying when online.';
+    const msg = errorMessage.toLowerCase();
+    if (msg.includes('farm') && (msg.includes('not found') || msg.includes('does not exist')))
+      return 'The farm record no longer exists on the server. Discard this batch.';
+    if (msg.includes('duplicate') || msg.includes('already') || msg.includes('already_synced'))
+      return 'This batch was already received by the server. Safe to discard.';
+    if (msg.includes('validation') || msg.includes('invalid') || msg.includes('required'))
+      return 'The batch data failed validation. Check the details below, then retry or discard.';
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout'))
+      return 'Network error during sync. Retry when you have a stable connection.';
+    if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('forbidden'))
+      return 'You do not have permission to sync this batch. Contact your admin.';
+    return 'Sync failed. Retry when online or discard if the data is no longer needed.';
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-4 w-4 text-amber-500" />;
@@ -252,30 +284,19 @@ export default function SyncDashboardPage() {
       )}
 
       <div className="grid grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-amber-600 font-mono" data-testid="text-stat-pending">{stats.pending}</div>
-            <div className="text-xs text-muted-foreground">Pending</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-600 font-mono" data-testid="text-stat-syncing">{stats.syncing}</div>
-            <div className="text-xs text-muted-foreground">Syncing</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-green-600 font-mono" data-testid="text-stat-synced">{stats.synced}</div>
-            <div className="text-xs text-muted-foreground">Synced</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-red-600 font-mono" data-testid="text-stat-error">{stats.error}</div>
-            <div className="text-xs text-muted-foreground">Failed</div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Pending', value: stats.pending, accent: 'card-accent-amber', color: 'text-amber-600', testId: 'text-stat-pending' },
+          { label: 'Syncing', value: stats.syncing, accent: 'card-accent-blue', color: 'text-blue-600', testId: 'text-stat-syncing' },
+          { label: 'Synced', value: stats.synced, accent: 'card-accent-emerald', color: 'text-green-600', testId: 'text-stat-synced' },
+          { label: 'Failed', value: stats.error, accent: 'card-accent-red', color: 'text-red-600', testId: 'text-stat-error' },
+        ].map(s => (
+          <Card key={s.label} className={s.accent}>
+            <CardContent className="pt-4 pb-3 text-center">
+              <div className={`text-2xl font-bold font-mono ${s.color}`} data-testid={s.testId}>{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="flex gap-3">
@@ -380,9 +401,6 @@ export default function SyncDashboardPage() {
                             {batch.batch_id}
                           </div>
                         )}
-                        {batch.error_message && (
-                          <div className="text-xs text-destructive mt-1" data-testid={`text-batch-error-${batch.id}`}>{batch.error_message}</div>
-                        )}
                         {batch.synced_at && (
                           <div className="text-xs text-green-600 dark:text-green-400">Synced {formatTime(batch.synced_at)}</div>
                         )}
@@ -394,15 +412,95 @@ export default function SyncDashboardPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRetry(batch.id)}
-                          disabled={!isOnline}
-                          data-testid={`button-retry-${batch.id}`}
+                          onClick={() => setExpandedId(expandedId === batch.id ? null : batch.id)}
+                          data-testid={`button-expand-${batch.id}`}
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          {expandedId === batch.id
+                            ? <ChevronUp className="h-4 w-4" />
+                            : <ChevronDown className="h-4 w-4" />}
                         </Button>
                       )}
                     </div>
                   </div>
+
+                  {batch.status === 'error' && expandedId === batch.id && (
+                    <div className="mt-3 pt-3 border-t space-y-3">
+                      <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Sync Error
+                        </div>
+                        {batch.error_message && (
+                          <p className="text-xs text-muted-foreground font-mono break-all" data-testid={`text-batch-error-${batch.id}`}>
+                            {batch.error_message}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">{getErrorGuidance(batch.error_message)}</p>
+                      </div>
+
+                      {(batch.contributors && batch.contributors.length > 0) && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contributors</p>
+                          {batch.contributors.map((c, i) => (
+                            <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                              <span>{c.farmer_name}</span>
+                              <span>{c.bag_count} bags · {c.weight_kg} kg</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {discardConfirmId === batch.id ? (
+                        <div className="rounded-md bg-muted p-3 space-y-2">
+                          <p className="text-xs font-medium">Discard this batch? This cannot be undone.</p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1 h-7 text-xs"
+                              onClick={() => handleDiscard(batch.id)}
+                              data-testid={`button-discard-confirm-${batch.id}`}
+                            >
+                              Yes, Discard
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-7 text-xs"
+                              onClick={() => setDiscardConfirmId(null)}
+                              data-testid={`button-discard-cancel-${batch.id}`}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-7 text-xs"
+                            onClick={() => handleRetry(batch.id)}
+                            disabled={!isOnline}
+                            data-testid={`button-retry-${batch.id}`}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Retry
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => setDiscardConfirmId(batch.id)}
+                            data-testid={`button-discard-${batch.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Discard
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

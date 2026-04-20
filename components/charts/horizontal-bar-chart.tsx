@@ -1,24 +1,10 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-];
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface HorizontalBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -32,20 +18,13 @@ interface HorizontalBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
-
 export function HorizontalBarChart({
   data,
   dataKey,
   categoryKey,
   height = 300,
   color,
-  colors = ORIGIN_TRACE_COLORS,
+  colors = VIZ_COLORS,
   showGrid = true,
   barLabel,
   valueFormatter,
@@ -60,11 +39,7 @@ export function HorizontalBarChart({
         margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
       >
         {showGrid && (
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="stroke-border"
-            horizontal={false}
-          />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
         )}
         <XAxis type="number" tick={{ fontSize: 12 }} className="text-muted-foreground" />
         <YAxis
@@ -72,10 +47,10 @@ export function HorizontalBarChart({
           dataKey={categoryKey}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
-          width={100}
+          width={110}
         />
         <Tooltip
-          contentStyle={tooltipStyle}
+          contentStyle={TOOLTIP_STYLE}
           formatter={(value: unknown) => [
             valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
             barLabel || dataKey,
@@ -86,7 +61,7 @@ export function HorizontalBarChart({
           name={barLabel || dataKey}
           fill={color || colors[0]}
           radius={[0, 4, 4, 0]}
-          maxBarSize={30}
+          maxBarSize={28}
         >
           {data.map((_, index) => (
             <Cell

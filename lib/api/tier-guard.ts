@@ -12,7 +12,8 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
       .eq('id', orgId)
       .single();
 
-    const tier = (org?.subscription_tier as string) || 'starter';
+    // undefined → no tier set → hasTierAccess grants full access
+    const tier = (org?.subscription_tier as string) || undefined;
 
     if (!hasTierAccess(tier, feature)) {
       const requiredTier = getRequiredTier(feature);
@@ -59,7 +60,7 @@ export async function checkTierAccess(
       .eq('id', resolvedOrgId)
       .single();
 
-    const tier = (org?.subscription_tier as string) || 'starter';
+    const tier = (org?.subscription_tier as string) || undefined;
     return hasTierAccess(tier, feature);
   } catch {
     return false;

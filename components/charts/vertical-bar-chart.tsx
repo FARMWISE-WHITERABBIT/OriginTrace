@@ -1,25 +1,10 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-];
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface VerticalBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -34,26 +19,19 @@ interface VerticalBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
-
 export function VerticalBarChart({
   data,
   dataKey,
   categoryKey,
   height = 300,
   color,
-  colors = ORIGIN_TRACE_COLORS,
+  colors = VIZ_COLORS,
   showGrid = true,
   showLegend = false,
   barLabel,
   valueFormatter,
 }: VerticalBarChartProps) {
-  const useMultiColor = !color && colors.length > 0;
+  const useMultiColor = !color;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -72,13 +50,13 @@ export function VerticalBarChart({
         />
         <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
         <Tooltip
-          contentStyle={tooltipStyle}
+          contentStyle={TOOLTIP_STYLE}
           formatter={(value: unknown) => [
             valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
             barLabel || dataKey,
           ]}
         />
-        {showLegend && <Legend wrapperStyle={{ fontSize: '12px' }} />}
+        {showLegend && <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />}
         <Bar
           dataKey={dataKey}
           name={barLabel || dataKey}
@@ -88,10 +66,7 @@ export function VerticalBarChart({
         >
           {useMultiColor &&
             data.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={colors[index % colors.length]}
-              />
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
         </Bar>
       </BarChart>

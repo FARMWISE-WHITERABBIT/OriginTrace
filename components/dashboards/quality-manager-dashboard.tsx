@@ -23,6 +23,7 @@ import {
   PieDonutChart,
   VerticalBarChart,
 } from '@/components/charts';
+import { VIZ_COLORS, GRADE_COLORS } from '@/lib/chart-colors';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -173,46 +174,46 @@ export function QualityManagerDashboard() {
     fetchChartData();
   }, [fetchChartData]);
 
-  const complianceCards = [
-    { title: 'Approved Farms', value: stats.approvedFarms, icon: CheckCircle, color: 'text-green-600' },
-    { title: 'Pending Review', value: stats.pendingFarms, icon: Clock, color: 'text-orange-600' },
-    { title: 'Rejected Farms', value: stats.rejectedFarms, icon: XCircle, color: 'text-red-600' },
-    { title: 'Yield Alerts', value: stats.yieldAlertCount, icon: AlertTriangle, color: 'text-yellow-600' },
-  ];
+  const LAB_COLORS   = [GRADE_COLORS.A, GRADE_COLORS.E];
+  const RISK_COLORS  = [GRADE_COLORS.E, GRADE_COLORS.D, GRADE_COLORS.A, GRADE_COLORS.B, GRADE_COLORS.C];
 
-  const GRADE_COLORS = ['#16a34a', '#f59e0b', '#ef4444', '#4ade80', '#86efac'];
-  const LAB_COLORS = ['#16a34a', '#ef4444'];
-  const RISK_COLORS = ['#ef4444', '#f59e0b', '#15803d', '#4ade80', '#86efac'];
+  const complianceCards = [
+    { title: 'Approved Farms', value: stats.approvedFarms,   icon: CheckCircle,  iconClass: 'icon-bg-green',  accent: 'card-accent-green' },
+    { title: 'Pending Review', value: stats.pendingFarms,    icon: Clock,        iconClass: 'icon-bg-amber',  accent: 'card-accent-amber' },
+    { title: 'Rejected Farms', value: stats.rejectedFarms,   icon: XCircle,      iconClass: 'icon-bg-red',    accent: 'card-accent-red' },
+    { title: 'Yield Alerts',   value: stats.yieldAlertCount, icon: AlertTriangle,iconClass: 'icon-bg-amber',  accent: 'card-accent-amber' },
+  ];
 
   return (
     <div className="space-y-4" data-testid="quality-manager-dashboard">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div />
-        <div className="flex items-center gap-1" data-testid="quality-period-selector">
+      <div className="flex items-center justify-end flex-wrap gap-2">
+        <div className="segmented-control" data-testid="quality-period-selector">
           {PERIOD_OPTIONS.map((opt) => (
-            <Button
+            <button
               key={opt.value}
-              variant={period === opt.value ? 'default' : 'outline'}
-              size="sm"
+              className="segmented-control-item"
+              data-active={period === opt.value}
               onClick={() => setPeriod(opt.value)}
               data-testid={`button-qm-period-${opt.value}`}
             >
               {opt.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {complianceCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
+              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                {isLoading ? '—' : stat.value}
               </div>
             </CardContent>
           </Card>
@@ -244,7 +245,7 @@ export function QualityManagerDashboard() {
                 categoryKey="grade"
                 height={280}
                 barLabel="Bags"
-                colors={GRADE_COLORS}
+                colors={Object.values(GRADE_COLORS)}
               />
             )}
           </CardContent>

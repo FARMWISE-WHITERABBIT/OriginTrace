@@ -44,12 +44,18 @@ import {
   CircleCheckBig,
   FileDown,
   RotateCw,
+  FlaskConical,
+  Share2,
+  Copy,
+  CheckCircle,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DocumentUpload } from '@/components/document-upload';
+import { CostTracker } from '@/components/shipments/cost-tracker';
+import { ShipmentPipeline } from '@/components/shipments/shipment-pipeline';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 
 
@@ -72,6 +78,69 @@ interface ShipmentDetail {
   notes: string | null;
   estimated_ship_date: string | null;
   created_at: string;
+  // 9-stage pipeline fields
+  current_stage: number;
+  stage_data: Record<string, any>;
+  stage_history: any[];
+  // Stage 1 — Preparation
+  purchase_order_number: string | null;
+  purchase_order_date: string | null;
+  contract_price_per_mt: number | null;
+  total_shipment_value_usd: number | null;
+  // Stage 2 — Quality & Certification
+  inspection_body: string | null;
+  inspection_date: string | null;
+  inspection_certificate_number: string | null;
+  inspection_result: string | null;
+  inspection_fees_ngn: number | null;
+  phyto_lab_costs_ngn: number | null;
+  // Stage 3 — Documentation
+  doc_status: Record<string, any>;
+  // Stage 4 — Customs & Clearance
+  clearing_agent_name: string | null;
+  clearing_agent_contact: string | null;
+  customs_declaration_number: string | null;
+  exit_certificate_number: string | null;
+  customs_fees_ngn: number | null;
+  port_handling_charges_ngn: number | null;
+  certification_costs_ngn: number | null;
+  // Stage 5 — Freight & Vessel
+  freight_forwarder_name: string | null;
+  freight_forwarder_contact: string | null;
+  shipping_line: string | null;
+  vessel_name: string | null;
+  imo_number: string | null;
+  voyage_number: string | null;
+  booking_reference: string | null;
+  port_of_loading: string | null;
+  port_of_discharge: string | null;
+  etd: string | null;
+  eta: string | null;
+  freight_cost_usd: number | null;
+  freight_insurance_usd: number | null;
+  // Stage 6 — Container Stuffing
+  container_number: string | null;
+  container_seal_number: string | null;
+  container_type: string | null;
+  // Stage 7 — Departure
+  actual_departure_date: string | null;
+  bill_of_lading_number: string | null;
+  // Stage 8 — Arrival
+  actual_arrival_date: string | null;
+  prenotif_eu_traces: string | null;
+  prenotif_eu_traces_ref: string | null;
+  prenotif_uk_ipaffs: string | null;
+  prenotif_uk_ipaffs_ref: string | null;
+  prenotif_us_fda: string | null;
+  prenotif_us_fda_ref: string | null;
+  prenotif_cn_gacc: string | null;
+  prenotif_cn_gacc_ref: string | null;
+  prenotif_uae_esma: string | null;
+  prenotif_uae_esma_ref: string | null;
+  // Stage 9 — Close
+  shipment_outcome: string | null;
+  rejection_reason: string | null;
+  usd_ngn_rate: number | null;
 }
 
 interface ShipmentItem {
@@ -529,6 +598,11 @@ export default function ShipmentDetailPage() {
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
+  // Lab results + evidence packages
+  const [labResults, setLabResults] = useState<any[]>([]);
+  const [evidencePackages, setEvidencePackages] = useState<any[]>([]);
+  const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const fetchActivity = async () => {
     if (activityFetched || !shipmentId) return;
@@ -561,6 +635,41 @@ export default function ShipmentDetailPage() {
       setIsLoading(false);
     }
   }, [shipmentId, organization, orgLoading, toast]);
+
+  const fetchLabResultsAndEvidence = useCallback(async () => {
+    if (!shipmentId) return;
+    try {
+      const [labRes, evRes] = await Promise.all([
+        fetch(`/api/lab-results?shipment_id=${shipmentId}&page_size=20`),
+        fetch(`/api/shipments/${shipmentId}/evidence-package`),
+      ]);
+      if (labRes.ok) { const d = await labRes.json(); setLabResults(d.results ?? []); }
+      if (evRes.ok) { const d = await evRes.json(); setEvidencePackages(d.packages ?? []); }
+    } catch (e) { console.error('Failed to fetch lab/evidence:', e); }
+  }, [shipmentId]);
+
+  const generateEvidencePackage = async () => {
+    if (!shipmentId) return;
+    setIsGeneratingEvidence(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentId}/evidence-package`, { method: 'POST' });
+      const d = await res.json();
+      if (!res.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
+      // Download PDF
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${d.pdf}`;
+      link.download = d.fileName;
+      link.click();
+      toast({ title: 'Evidence package generated', description: `Shareable link: ${d.shareableUrl}` });
+      fetchLabResultsAndEvidence();
+    } finally { setIsGeneratingEvidence(false); }
+  };
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
 
   const fetchOutcomes = useCallback(async () => {
     if (!organization) return;
@@ -601,7 +710,8 @@ export default function ShipmentDetailPage() {
     fetchOutcomes();
     fetchColdChain();
     fetchLots();
-  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots]);
+    fetchLabResultsAndEvidence();
+  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots, fetchLabResultsAndEvidence]);
 
   const updateField = async (field: string, value: unknown) => {
     setIsSaving(true);
@@ -739,11 +849,14 @@ export default function ShipmentDetailPage() {
   const score = readiness?.overall_score ?? 0;
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => router.push('/app/shipments')} aria-label="Back to shipments" data-testid="button-back">
           <ArrowLeft className="h-4 w-4" />
         </Button>
+        <div className="flex items-center justify-center h-9 w-9 rounded-lg icon-bg-blue shrink-0">
+          <Ship className="h-4 w-4" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-semibold font-mono" data-testid="text-shipment-code">
@@ -755,9 +868,7 @@ export default function ShipmentDetailPage() {
             {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {shipment.destination_country && `${shipment.destination_country}`}
-            {shipment.commodity && ` - ${shipment.commodity}`}
-            {shipment.buyer_company && ` - ${shipment.buyer_company}`}
+            {[shipment.destination_country, shipment.commodity, shipment.buyer_company].filter(Boolean).join(' · ')}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5 shrink-0">
@@ -765,15 +876,20 @@ export default function ShipmentDetailPage() {
         </Button>
       </div>
 
-      <Card className={`${decision.bgColor} border-0`}>
-        <CardContent className="py-6">
+      <Card className={`${decision.bgColor} border-l-4 ${
+        readiness?.decision === 'go' ? 'border-l-green-500' :
+        readiness?.decision === 'conditional' ? 'border-l-yellow-500' :
+        readiness?.decision === 'no_go' ? 'border-l-red-500' :
+        'border-l-muted-foreground/30'
+      }`}>
+        <CardContent className="py-5">
           <div className="flex items-center justify-between gap-6 flex-wrap">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-background flex items-center justify-center">
-                <DecisionIcon className={`h-7 w-7 ${decision.color}`} />
+              <div className="h-12 w-12 rounded-xl bg-background flex items-center justify-center shadow-sm border border-border/50">
+                <DecisionIcon className={`h-6 w-6 ${decision.color}`} />
               </div>
               <div>
-                <p className={`text-xl font-bold ${decision.color}`} data-testid="text-decision-label">
+                <p className={`text-lg font-bold ${decision.color}`} data-testid="text-decision-label">
                   {decision.label}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">
@@ -801,13 +917,15 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
+      <ShipmentPipeline shipment={shipment} onRefresh={fetchShipment} />
 
       {/* Linear Supply Chain Traceability Timeline */}
-      <Card data-testid="card-supply-chain-graph">
+      <Card className="card-accent-emerald" data-testid="card-supply-chain-graph">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Layers className="h-4 w-4" />
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <Layers className="h-3.5 w-3.5" />
+            </div>
             Supply Chain Traceability
           </CardTitle>
           <CardDescription>
@@ -816,7 +934,10 @@ export default function ShipmentDetailPage() {
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Add shipment items to see the traceability chain.</p>
+            <div className="empty-state py-8">
+              <div className="empty-state-icon"><Layers className="h-5 w-5" /></div>
+              <p className="text-sm text-muted-foreground">Add shipment items to see the traceability chain.</p>
+            </div>
           ) : (() => {
             const batchItems = items.filter(i => i.item_type === 'batch');
             const fgItems = items.filter(i => i.item_type === 'finished_good');
@@ -824,7 +945,7 @@ export default function ShipmentDetailPage() {
             const steps = [
               { label: 'Farms', value: totalFarms || '—', sub: 'source farms', icon: MapPin, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/20', link: '/app/farms' },
               { label: 'Batches', value: batchItems.length || '—', sub: 'collection batches', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/20', link: '/app/inventory' },
-              { label: 'Processing', value: fgItems.length > 0 ? '✓' : '—', sub: 'processing runs', icon: PackageCheck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20', link: '/app/processing' },
+              { label: 'Processing', value: fgItems.length > 0 ? <CheckCircle2 className="h-4 w-4 inline" /> : '—', sub: 'processing runs', icon: PackageCheck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20', link: '/app/processing' },
               { label: 'Finished Good', value: fgItems.length || '—', sub: 'finished goods', icon: CircleCheckBig, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20', link: '/app/pedigree' },
               { label: 'Shipment', value: '1', sub: shipment.status, icon: Ship, color: 'text-primary', bg: 'bg-primary/5', link: null },
             ];
@@ -863,12 +984,14 @@ export default function ShipmentDetailPage() {
 
       {/* Readiness Action Center — unified prioritised action list */}
       {readiness && (readiness.risk_flags.length > 0 || readiness.remediation_items.length > 0 || readiness.dimensions.length > 0) && (
-        <Card data-testid="card-action-center">
+        <Card className="card-accent-amber" data-testid="card-action-center">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" />
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                  </div>
                   Readiness Action Center
                 </CardTitle>
                 <CardDescription>What needs to happen before this shipment can go</CardDescription>
@@ -1013,9 +1136,14 @@ export default function ShipmentDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="card-accent-violet">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Target Regulations</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                <Globe className="h-3.5 w-3.5" />
+              </div>
+              Target Regulations
+            </CardTitle>
             <CardDescription>Select regulations applicable to this shipment</CardDescription>
           </CardHeader>
           <CardContent>
@@ -1037,11 +1165,16 @@ export default function ShipmentDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-accent-blue">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-base">Export Documentation</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                    <FileText className="h-3.5 w-3.5" />
+                  </div>
+                  Export Documentation
+                </CardTitle>
                 <CardDescription>Mark documents that are ready for this shipment</CardDescription>
               </div>
               <Dialog open={uploadDocOpen} onOpenChange={(open) => { setUploadDocOpen(open); if (!open) setUploadDocType(''); }}>
@@ -1121,9 +1254,14 @@ export default function ShipmentDetailPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="card-accent-emerald">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Storage & Handling Controls</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <ShieldCheck className="h-3.5 w-3.5" />
+            </div>
+            Storage & Handling Controls
+          </CardTitle>
           <CardDescription>Confirm warehouse and handling compliance</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1145,19 +1283,24 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <CardTitle className="text-base">Shipment Items ({items.length})</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <Package className="h-3.5 w-3.5" />
+                </div>
+                Shipment Items ({items.length})
+              </CardTitle>
               <CardDescription>Batches and finished goods included in this shipment</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <div className="empty-state py-8">
+              <div className="empty-state-icon"><Package className="h-5 w-5" /></div>
               <p className="text-sm text-muted-foreground">
                 No items added yet. Use the API to add batches or finished goods to this shipment.
               </p>
@@ -1214,12 +1357,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-red">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <History className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-red shrink-0">
+                  <History className="h-3.5 w-3.5" />
+                </div>
                 Shipment Outcomes ({outcomes.length})
               </CardTitle>
               <CardDescription>Record border inspection results and rejection history</CardDescription>
@@ -1266,12 +1411,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <ThermometerSnowflake className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <ThermometerSnowflake className="h-3.5 w-3.5" />
+                </div>
                 Cold Chain Monitoring
               </CardTitle>
               <CardDescription>Temperature and humidity tracking for this shipment</CardDescription>
@@ -1287,22 +1434,17 @@ export default function ShipmentDetailPage() {
         <CardContent>
           {coldChainSummary && coldChainSummary.total_entries > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.avg_temp !== null ? `${coldChainSummary.avg_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Avg Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.min_temp !== null ? `${coldChainSummary.min_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Min Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.max_temp !== null ? `${coldChainSummary.max_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Max Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className={`text-lg font-bold ${coldChainSummary.alert_count > 0 ? 'text-red-600' : 'text-green-600'}`}>{coldChainSummary.alert_count}</p>
-                <p className="text-xs text-muted-foreground">Alerts</p>
-              </div>
+              {[
+                { label: 'Avg Temp', value: coldChainSummary.avg_temp !== null ? `${coldChainSummary.avg_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Min Temp', value: coldChainSummary.min_temp !== null ? `${coldChainSummary.min_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Max Temp', value: coldChainSummary.max_temp !== null ? `${coldChainSummary.max_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Alerts', value: String(coldChainSummary.alert_count), color: coldChainSummary.alert_count > 0 ? 'text-red-600' : 'text-green-600' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                  <span className={`font-bold text-sm ${s.color}`}>{s.value}</span>
+                </div>
+              ))}
             </div>
           )}
           {coldChainLogs.length === 0 ? (
@@ -1327,12 +1469,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-violet">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <Layers className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Layers className="h-3.5 w-3.5" />
+                </div>
                 Lot Management ({lots.length})
               </CardTitle>
               <CardDescription>Group batches into lots with mass balance validation</CardDescription>
@@ -1385,9 +1529,14 @@ export default function ShipmentDetailPage() {
 
       <div className="h-px w-full bg-border" />
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Shipment Details</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+              <Ship className="h-3.5 w-3.5" />
+            </div>
+            Shipment Details
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1457,11 +1606,149 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Lab Results */}
+      <Card className="card-accent-emerald">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <FlaskConical className="h-3.5 w-3.5" />
+                </div>
+                Lab Results ({labResults.length})
+              </CardTitle>
+              <CardDescription>Pesticide residue and quality test results for this shipment</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/app/lab-results?prefillShipmentId=${shipmentId}`}>
+                <Plus className="h-4 w-4 mr-1" /> Upload Lab Result
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {labResults.length === 0 ? (
+            <div className="text-center py-6">
+              <FlaskConical className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No lab results linked to this shipment.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {labResults.map((lr: any) => (
+                <div key={lr.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{lr.test_type?.replace(/_/g, ' ')}</span>
+                      <Badge
+                        variant={lr.overall_result === 'pass' ? 'default' : lr.overall_result === 'fail' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {lr.overall_result?.toUpperCase()}
+                      </Badge>
+                      {lr.mrl_flags && Array.isArray(lr.mrl_flags) && lr.mrl_flags.length > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {lr.mrl_flags.length} MRL exceedance{lr.mrl_flags.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {lr.lab_provider} · {lr.test_date ? new Date(lr.test_date).toLocaleDateString() : '—'}
+                      {lr.result_value != null && ` · ${lr.result_value} ${lr.result_unit || ''}`}
+                    </p>
+                  </div>
+                  {lr.certificate_number && (
+                    <Badge variant="outline" className="text-xs shrink-0">Cert #{lr.certificate_number}</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cost of Export & Net Margin */}
+      <CostTracker shipmentId={shipment.id} />
+
+      {/* Evidence Package */}
+      <Card className="card-accent-violet">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Share2 className="h-3.5 w-3.5" />
+                </div>
+                Evidence Packages
+              </CardTitle>
+              <CardDescription>Shareable border-detention evidence bundles (valid 7 days)</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateEvidencePackage}
+              disabled={isGeneratingEvidence}
+            >
+              {isGeneratingEvidence ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Generating…</>
+              ) : (
+                <><FileDown className="h-4 w-4 mr-1" />Generate Package</>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {evidencePackages.length === 0 ? (
+            <div className="text-center py-6">
+              <Share2 className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No evidence packages generated yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {evidencePackages.map((pkg: any) => {
+                const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/app/evidence/${pkg.token}`;
+                const expired = new Date(pkg.expires_at) < new Date();
+                return (
+                  <div key={pkg.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px]">{pkg.token}</span>
+                        {expired ? (
+                          <Badge variant="destructive" className="text-xs">Expired</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />Active
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Expires {new Date(pkg.expires_at).toLocaleDateString()} · {pkg.view_count ?? 0} views
+                      </p>
+                    </div>
+                    {!expired && (
+                      <Button variant="ghost" size="sm" onClick={() => copyUrl(shareUrl)} className="shrink-0">
+                        {copiedUrl === shareUrl ? (
+                          <><CheckCircle className="h-4 w-4 mr-1 text-green-600" />Copied</>
+                        ) : (
+                          <><Copy className="h-4 w-4 mr-1" />Copy Link</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="h-4 w-4" />Activity
+              <div className="h-7 w-7 rounded-md flex items-center justify-center bg-muted shrink-0">
+                <History className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              Activity
             </CardTitle>
             {!activityFetched && (
               <Button variant="outline" size="sm" onClick={fetchActivity}>Load Activity</Button>

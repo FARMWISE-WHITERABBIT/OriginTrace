@@ -2,7 +2,10 @@
 import { Suspense } from 'react';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DisbursementsContent } from './disbursements/page';
+import { WalletContent } from './wallet/page';
 import { PaymentTableSkeleton } from '@/components/skeletons';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useCurrency, SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/hooks/use-currency';
@@ -18,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
 import { downloadCSV } from '@/lib/export/csv-export';
-import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil } from 'lucide-react';
+import { Loader2, Plus, Search, Banknote, Hash, TrendingUp, Download, ChevronLeft, ChevronRight, Smartphone, Link2, Pencil, Landmark, CheckCircle, ArrowDown, ArrowUp, CreditCard } from 'lucide-react';
 
 interface Payment { id:string; payee_name:string; payee_type:string; farm_id?:string|null; amount:number; currency:string; payment_method:string; reference_number:string|null; linked_entity_type:string|null; linked_entity_id:string|null; payment_date:string; status:string; notes:string|null; created_at:string; }
 interface FarmerOption { id:string; name:string; community?:string; commodity?:string; }
@@ -61,7 +64,9 @@ function PaymentsPageInner() {
   const [page,setPage]=useState(1);
   const [totalPages,setTotalPages]=useState(1);
   const [totalCount,setTotalCount]=useState(0);
-  const [disburseForm,setDisburseForm]=useState({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:''});
+  const [disburseForm,setDisburseForm]=useState({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:'',farmer_bank_account_id:''});
+  const [bankAccounts,setBankAccounts]=useState<{id:string;farmer_name:string;account_name:string;account_number:string;bank_name:string}[]>([]);
+  const [bankAccountsLoading,setBankAccountsLoading]=useState(false);
   const mkForm=useCallback(()=>({payee_type:'farmer',farm_id:'',payee_name:'',amount:'',currency:orgCurrency,payment_method:'cash',reference_number:'',linked_entity_type:'',linked_entity_id:'',payment_date:new Date().toISOString().split('T')[0],notes:''}),[orgCurrency]);
   const [form,setForm]=useState(mkForm);
   const [editingPayment,setEditingPayment]=useState<Payment|null>(null);
@@ -165,11 +170,32 @@ function PaymentsPageInner() {
   };
 
   const handleDisburse=async()=>{
-    if(!disburseForm.phone||!disburseForm.amount){toast({title:'Missing fields',description:'Phone and amount are required.',variant:'destructive'});return;}
+    const isTransfer=disburseForm.provider==='paystack_transfer';
+    if(isTransfer&&!disburseForm.farmer_bank_account_id){toast({title:'Missing fields',description:'Select a farmer bank account.',variant:'destructive'});return;}
+    if(!isTransfer&&(!disburseForm.phone||!disburseForm.amount)){toast({title:'Missing fields',description:'Phone and amount are required.',variant:'destructive'});return;}
+    if(!disburseForm.amount){toast({title:'Missing fields',description:'Amount is required.',variant:'destructive'});return;}
     setIsDisbursing(true);
-    try{const r=await fetch('/api/payments/disburse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...disburseForm,amount:parseFloat(disburseForm.amount)})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');toast({title:'Disbursement sent',description:`TxID: ${d.disbursement?.transactionId}`});setDisburseOpen(false);setDisburseForm({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:''});}
+    try{
+      const body:any={...disburseForm,amount:parseFloat(disburseForm.amount)};
+      if(!isTransfer)delete body.farmer_bank_account_id;
+      if(isTransfer)delete body.phone;
+      const r=await fetch('/api/payments/disburse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Failed');
+      const desc=isTransfer?`Transfer ${d.disbursement?.transferCode}`:`TxID: ${d.disbursement?.transactionId}`;
+      toast({title:'Disbursement sent',description:desc});
+      setDisburseOpen(false);
+      setDisburseForm({phone:'',amount:'',currency:'NGN',provider:'mtn_momo',payee_name:'',notes:'',farmer_bank_account_id:''});
+      fetchPayments();
+    }
     catch(err:any){toast({title:'Error',description:err.message,variant:'destructive'});}
     finally{setIsDisbursing(false);}
+  };
+
+  const loadBankAccounts=async()=>{
+    setBankAccountsLoading(true);
+    try{const r=await fetch('/api/farmer-bank-accounts');if(r.ok){const d=await r.json();setBankAccounts(d.accounts??[]);}}
+    finally{setBankAccountsLoading(false);}
   };
 
   const handleExportCSV=()=>{const headers=['Date','Payee','Type','Farm ID','Amount','Currency','Method','Reference','Linked To','Status'];const rows=payments.map(p=>[p.payment_date,p.payee_name,PAYEE_LABELS[p.payee_type]||p.payee_type,p.farm_id||'',String(p.amount),p.currency,METHOD_LABELS[p.payment_method]||p.payment_method,p.reference_number||'',p.linked_entity_type||'',p.status].map(esc).join(','));downloadCSV([headers.map(esc).join(','),...rows].join('\n'),`payments-${new Date().toISOString().split('T')[0]}.csv`);};
@@ -182,9 +208,14 @@ function PaymentsPageInner() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Payment Tracking</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Record and track payments to farmers, aggregators, and suppliers</p>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold leading-tight">Payment Operations</h2>
+              <p className="text-sm text-muted-foreground">Record and track payments to farmers, aggregators, and suppliers</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" onClick={handleExportCSV} disabled={payments.length===0} data-testid="button-export-csv"><Download className="h-4 w-4 mr-2"/>Export CSV</Button>
@@ -193,15 +224,38 @@ function PaymentsPageInner() {
             <Dialog open={disburseOpen} onOpenChange={setDisburseOpen}>
               <DialogTrigger asChild><Button variant="outline" data-testid="button-disburse"><Smartphone className="h-4 w-4 mr-2"/>Disburse</Button></DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Mobile Money Disbursement</DialogTitle><DialogDescription>Send payment to a farmer's mobile wallet.</DialogDescription></DialogHeader>
+                <DialogHeader><DialogTitle>Disburse Payment</DialogTitle><DialogDescription>Send payment via mobile money or direct bank transfer.</DialogDescription></DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-1.5"><Label>Payee Name</Label><Input placeholder="Farmer name" value={disburseForm.payee_name} onChange={e=>setDisburseForm(f=>({...f,payee_name:e.target.value}))} data-testid="input-disburse-name"/></div>
-                  <div className="space-y-1.5"><Label>Phone Number</Label><Input placeholder="+2348012345678" value={disburseForm.phone} onChange={e=>setDisburseForm(f=>({...f,phone:e.target.value}))} data-testid="input-disburse-phone"/></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label>Amount</Label><Input type="number" placeholder="0" value={disburseForm.amount} onChange={e=>setDisburseForm(f=>({...f,amount:e.target.value}))} data-testid="input-disburse-amount"/></div>
-                    <div className="space-y-1.5"><Label>Currency</Label><Select value={disburseForm.currency} onValueChange={v=>setDisburseForm(f=>({...f,currency:v}))}><SelectTrigger data-testid="select-disburse-currency"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="NGN">NGN</SelectItem><SelectItem value="GHS">GHS</SelectItem><SelectItem value="XOF">XOF</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
+                  <div className="space-y-1.5"><Label>Payment Method</Label>
+                    <Select value={disburseForm.provider} onValueChange={v=>{setDisburseForm(f=>({...f,provider:v,farmer_bank_account_id:''}));if(v==='paystack_transfer')loadBankAccounts();}} data-testid="select-disburse-provider">
+                      <SelectTrigger><SelectValue/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
+                        <SelectItem value="opay">OPay</SelectItem>
+                        <SelectItem value="palmpay">PalmPay</SelectItem>
+                        <SelectItem value="paystack_transfer"><span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5"/>NGN Bank Transfer (Paystack)</span></SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-1.5"><Label>Provider</Label><Select value={disburseForm.provider} onValueChange={v=>setDisburseForm(f=>({...f,provider:v}))}><SelectTrigger data-testid="select-disburse-provider"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="mtn_momo">MTN MoMo</SelectItem><SelectItem value="opay">OPay</SelectItem><SelectItem value="palmpay">PalmPay</SelectItem></SelectContent></Select></div>
+                  <div className="space-y-1.5"><Label>Payee Name</Label><Input placeholder="Farmer name" value={disburseForm.payee_name} onChange={e=>setDisburseForm(f=>({...f,payee_name:e.target.value}))} data-testid="input-disburse-name"/></div>
+                  {disburseForm.provider==='paystack_transfer'?(
+                    <div className="space-y-1.5"><Label>Farmer Bank Account</Label>
+                      {bankAccountsLoading?<p className="text-xs text-muted-foreground">Loading accounts…</p>:bankAccounts.length===0?(
+                        <p className="text-xs text-muted-foreground">No bank accounts found. <a href="/app/payments?tab=accounts" className="underline text-primary">Add one first.</a></p>
+                      ):(
+                        <Select value={disburseForm.farmer_bank_account_id} onValueChange={v=>{const acc=bankAccounts.find(a=>a.id===v);setDisburseForm(f=>({...f,farmer_bank_account_id:v,payee_name:acc?.farmer_name??f.payee_name}));}}>
+                          <SelectTrigger><SelectValue placeholder="Select account"/></SelectTrigger>
+                          <SelectContent>{bankAccounts.map(a=><SelectItem key={a.id} value={a.id}>{a.farmer_name} — {a.bank_name} {a.account_number}</SelectItem>)}</SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  ):(
+                    <div className="space-y-1.5"><Label>Phone Number</Label><Input placeholder="+2348012345678" value={disburseForm.phone} onChange={e=>setDisburseForm(f=>({...f,phone:e.target.value}))} data-testid="input-disburse-phone"/></div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5"><Label>Amount (NGN)</Label><Input type="number" placeholder="0" value={disburseForm.amount} onChange={e=>setDisburseForm(f=>({...f,amount:e.target.value}))} data-testid="input-disburse-amount"/></div>
+                    <div className="space-y-1.5"><Label>Currency</Label><Select value={disburseForm.currency} onValueChange={v=>setDisburseForm(f=>({...f,currency:v}))}><SelectTrigger data-testid="select-disburse-currency"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="NGN">NGN</SelectItem><SelectItem value="GHS">GHS</SelectItem><SelectItem value="XOF">XOF</SelectItem></SelectContent></Select></div>
+                  </div>
                   <div className="space-y-1.5"><Label>Notes</Label><Textarea placeholder="Optional" value={disburseForm.notes} onChange={e=>setDisburseForm(f=>({...f,notes:e.target.value}))} rows={2}/></div>
                 </div>
                 <DialogFooter><Button variant="outline" onClick={()=>setDisburseOpen(false)}>Cancel</Button><Button onClick={handleDisburse} disabled={isDisbursing} data-testid="button-confirm-disburse">{isDisbursing&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}Send Payment</Button></DialogFooter>
@@ -306,11 +360,52 @@ function PaymentsPageInner() {
         {isSummaryLoading?(<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[1,2,3].map(i=><Card key={i}><CardContent className="pt-4 pb-4 h-[72px] flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardContent></Card>)}</div>)
         :summary?(
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center shrink-0"><Banknote className="h-5 w-5 text-green-600 dark:text-green-400"/></div><div data-testid="text-total-paid">{currencyEntries.length>0?currencyEntries.map(([,amt])=><p key={String(amt)} className="text-lg font-bold leading-tight">{format(amt)}</p>):<p className="text-lg font-bold">{format(0)}</p>}<p className="text-xs text-muted-foreground">Total Paid</p></div></div></CardContent></Card>
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0"><Hash className="h-5 w-5 text-muted-foreground"/></div><div><p className="text-2xl font-bold" data-testid="text-payment-count">{summary.totalCount}</p><p className="text-xs text-muted-foreground">Total Payments</p></div></div></CardContent></Card>
-            <Card><CardContent className="pt-4 pb-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400"/></div><div><p className="text-lg font-bold" data-testid="text-average-amount">{format(summary.averageAmount)}</p><p className="text-xs text-muted-foreground">Average Payment</p></div></div></CardContent></Card>
+            <Card className="card-accent-emerald transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div data-testid="text-total-paid">{currencyEntries.length>0?currencyEntries.map(([,amt])=><p key={String(amt)} className="text-lg font-bold leading-tight">{format(amt)}</p>):<p className="text-lg font-bold">{format(0)}</p>}<p className="text-xs text-muted-foreground">Total Paid</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-emerald"><Banknote className="h-5 w-5"/></div></div></CardContent></Card>
+            <Card className="card-accent-blue transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-2xl font-bold" data-testid="text-payment-count">{summary.totalCount}</p><p className="text-xs text-muted-foreground">Total Payments</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-blue"><Hash className="h-5 w-5"/></div></div></CardContent></Card>
+            <Card className="card-accent-violet transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"><CardContent className="pt-4 pb-4"><div className="flex items-center justify-between gap-3"><div><p className="text-lg font-bold" data-testid="text-average-amount">{format(summary.averageAmount)}</p><p className="text-xs text-muted-foreground">Average Payment</p></div><div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 icon-bg-violet"><TrendingUp className="h-5 w-5"/></div></div></CardContent></Card>
           </div>
         ):null}
+
+        {/* Payment Flows */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Outbound</p>
+                  <p className="text-base font-semibold leading-tight mt-0.5">Farmer Disbursements</p>
+                  {summary && currencyEntries.length > 0
+                    ? currencyEntries.map(([, amt]) => (
+                        <p key={String(amt)} className="text-2xl font-bold mt-1 leading-tight">{format(amt)}</p>
+                      ))
+                    : <p className="text-2xl font-bold mt-1">{format(0)}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">Total paid out</p>
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+                  <ArrowDown className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Inbound</p>
+                  <p className="text-base font-semibold leading-tight mt-0.5">Buyer Receipts</p>
+                  <p className="text-sm text-muted-foreground mt-1">Stablecoin &amp; wire transfers</p>
+                  <a href="/app/payments?tab=wallet" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1 font-medium">
+                    Track via Wallet <ArrowUp className="h-3 w-3" />
+                  </a>
+                </div>
+                <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                  <ArrowUp className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
@@ -337,7 +432,7 @@ function PaymentsPageInner() {
           </div></CardContent></Card>
         )
         :payments.length===0?(
-          <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4"><Banknote className="h-7 w-7 text-muted-foreground"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
+          <Card><CardContent className="flex flex-col items-center justify-center py-16 text-center"><div className="empty-state-icon mb-4"><Banknote className="h-6 w-6"/></div><h3 className="font-semibold mb-1">No payments recorded</h3><p className="text-sm text-muted-foreground mb-5 max-w-xs">Record payments to farmers and suppliers. Each payment links to the farmer record for full traceability.</p><Button onClick={()=>setDialogOpen(true)} data-testid="button-record-first-payment"><Plus className="h-4 w-4 mr-2"/>Record First Payment</Button></CardContent></Card>
         ):(
           <>
             <Card><CardContent className="p-0"><div className="overflow-x-auto">
@@ -440,14 +535,198 @@ function PaymentsPageInner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Farmer Bank Accounts section */}
+      <div className="border-t pt-6">
+        <FarmerBankAccountsTab />
+      </div>
+
     </TierGate>
+  );
+}
+
+// ─── Farmer Bank Accounts Tab Component ──────────────────────────────────────
+
+function FarmerBankAccountsTab() {
+  const { toast } = useToast();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [banks, setBanks] = useState<{ id: number; name: string; code: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [resolvedName, setResolvedName] = useState('');
+  const [form, setForm] = useState({
+    farmer_name: '', account_number: '', bank_code: '', bank_name: '',
+  });
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/farmer-bank-accounts').then(r => r.json()),
+      fetch('/api/org/kyc/banks').then(r => r.json()),
+    ]).then(([accs, bankData]) => {
+      setAccounts(accs.accounts ?? []);
+      setBanks(bankData.banks ?? []);
+    }).finally(() => setIsLoading(false));
+  }, []);
+
+  const handleVerify = async () => {
+    if (!form.account_number || !form.bank_code) {
+      toast({ title: 'Missing fields', description: 'Enter account number and select bank.', variant: 'destructive' });
+      return;
+    }
+    setIsVerifying(true);
+    setResolvedName('');
+    try {
+      const r = await fetch('/api/org/kyc/verify-bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_number: form.account_number, bank_code: form.bank_code }),
+      });
+      const d = await r.json();
+      if (!r.ok) { toast({ title: 'Verification failed', description: d.error, variant: 'destructive' }); return; }
+      setResolvedName(d.accountName);
+    } finally { setIsVerifying(false); }
+  };
+
+  const handleSave = async () => {
+    if (!resolvedName) { toast({ title: 'Verify account first', variant: 'destructive' }); return; }
+    setIsSaving(true);
+    try {
+      const r = await fetch('/api/farmer-bank-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, account_name: resolvedName, is_verified: true }),
+      });
+      const d = await r.json();
+      if (!r.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
+      setAccounts(a => [d.account, ...a]);
+      setDialogOpen(false);
+      setForm({ farmer_name: '', account_number: '', bank_code: '', bank_name: '' });
+      setResolvedName('');
+      toast({ title: 'Bank account saved' });
+    } finally { setIsSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">Farmer Bank Accounts</h3>
+          <p className="text-sm text-muted-foreground">Verified NGN bank accounts for Paystack bank transfer disbursements</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm"><Plus className="h-4 w-4 mr-1.5"/>Add Account</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Add Farmer Bank Account</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div><Label>Farmer Name</Label><Input value={form.farmer_name} onChange={e => setForm(f => ({...f, farmer_name: e.target.value}))} /></div>
+              <div><Label>Bank</Label>
+                <Select value={form.bank_code} onValueChange={v => { const b = banks.find(b => b.code === v); setForm(f => ({...f, bank_code: v, bank_name: b?.name ?? ''})); setResolvedName(''); }}>
+                  <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
+                  <SelectContent className="max-h-56">{banks.map(b => <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Account Number</Label><Input value={form.account_number} onChange={e => { setForm(f => ({...f, account_number: e.target.value})); setResolvedName(''); }} maxLength={10} /></div>
+              {resolvedName && (
+                <div className="flex items-center gap-2 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+                  <CheckCircle className="h-4 w-4" /> Verified: <strong>{resolvedName}</strong>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleVerify} disabled={isVerifying}>
+                  {isVerifying && <Loader2 className="h-4 w-4 animate-spin mr-1.5"/>}Verify
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving || !resolvedName}>
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-1.5"/>}Save Account
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : accounts.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <Landmark className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3"/>
+          <p className="text-sm text-muted-foreground">No farmer bank accounts yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">Add verified bank accounts to enable NGN direct bank transfer disbursements.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Farmer Name</TableHead><TableHead>Bank</TableHead>
+              <TableHead>Account Number</TableHead><TableHead>Account Name</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {accounts.map(a => (
+                <TableRow key={a.id}>
+                  <TableCell className="font-medium">{a.farmer_name}</TableCell>
+                  <TableCell>{a.bank_name}</TableCell>
+                  <TableCell className="font-mono text-sm">{a.account_number}</TableCell>
+                  <TableCell>{a.account_name}</TableCell>
+                  <TableCell>
+                    {a.is_verified
+                      ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5"><CheckCircle className="h-3 w-3"/>Verified</span>
+                      : <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Unverified</span>
+                    }
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaymentsPageWithTabs() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') ?? 'transactions';
+
+  const switchTab = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    // Preserve contract deep-link params when switching tabs
+    params.set('tab', tab);
+    router.replace(`/app/payments?${params.toString()}`);
+  };
+
+  return (
+    <div className="flex-1 space-y-0">
+      <div className="border-b px-6 pt-6 pb-0">
+        <h1 className="text-xl font-semibold mb-4 sr-only">Payments</h1>
+        <Tabs value={activeTab} onValueChange={switchTab}>
+          <TabsList className="h-9">
+            <TabsTrigger value="transactions" className="text-sm">Transactions</TabsTrigger>
+            <TabsTrigger value="disbursements" className="text-sm">Disbursements</TabsTrigger>
+            <TabsTrigger value="wallet" className="text-sm">Wallet</TabsTrigger>
+          </TabsList>
+          <TabsContent value="transactions" className="mt-0">
+            <PaymentsPageInner />
+          </TabsContent>
+          <TabsContent value="disbursements" className="mt-0">
+            <DisbursementsContent />
+          </TabsContent>
+          <TabsContent value="wallet" className="mt-0">
+            <WalletContent />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 }
 
 export default function PaymentsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-      <PaymentsPageInner />
+      <PaymentsPageWithTabs />
     </Suspense>
   );
 }

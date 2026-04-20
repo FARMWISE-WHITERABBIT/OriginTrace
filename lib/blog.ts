@@ -24,7 +24,8 @@ export type BlogSection =
   | { type: 'callout'; variant: 'info' | 'warning' | 'tip' | 'deadline'; title: string; text: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'image'; src: string; alt: string; caption?: string }
-  | { type: 'cta'; heading: string; text: string; buttonText: string; href: string };
+  | { type: 'cta'; heading: string; text: string; buttonText: string; href: string }
+  | { type: 'references'; items: { label: string; url: string; publisher?: string }[] };
 
 import { posts } from '@/content/blog/index';
 

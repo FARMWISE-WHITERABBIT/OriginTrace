@@ -148,16 +148,15 @@ function calculatePolygonArea(polygon: any): number {
   return area / 10000;
 }
 
-function getFallbackResult(areaHectares: number, countryCode: string = 'NG'): DeforestationResult {
+function getFallbackResult(_areaHectares: number, countryCode: string = 'NG'): DeforestationResult {
   const risk = COUNTRY_RISK_MAP[countryCode] || COUNTRY_RISK_MAP['DEFAULT'];
-  const estimatedLossHa = Math.round(areaHectares * (risk.forest_loss_percentage / 100) * 100) / 100;
 
   return {
-    deforestation_free: risk.risk_level === 'low',
-    forest_loss_hectares: estimatedLossHa,
-    forest_loss_percentage: risk.forest_loss_percentage,
+    deforestation_free: false,
+    forest_loss_hectares: 0,
+    forest_loss_percentage: 0,
     analysis_date: new Date().toISOString(),
-    data_source: 'EUDR Country Risk Benchmarking (fallback)',
+    data_source: `GFW unavailable — country risk: ${risk.risk_level.toUpperCase()} (manual review required)`,
     risk_level: risk.risk_level,
   };
 }

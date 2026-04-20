@@ -1,23 +1,10 @@
 'use client';
 
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-];
+import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
 
 interface TrendLineChartProps {
   data: Array<Record<string, string | number>>;
@@ -30,13 +17,6 @@ interface TrendLineChartProps {
   xTickFormatter?: (value: string) => string;
   valueFormatter?: (value: number) => string;
 }
-
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
-};
 
 export function TrendLineChart({
   data,
@@ -55,19 +35,15 @@ export function TrendLineChart({
         {gradientFill && (
           <defs>
             {series.map((s, index) => {
-              const fillColor =
-                s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length];
+              const color = s.color || VIZ_COLORS[index % VIZ_COLORS.length];
               return (
                 <linearGradient
                   key={`gradient-${s.dataKey}`}
                   id={`gradient-${s.dataKey}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
+                  x1="0" y1="0" x2="0" y2="1"
                 >
-                  <stop offset="5%" stopColor={fillColor} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={fillColor} stopOpacity={0} />
+                  <stop offset="5%"  stopColor={color} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               );
             })}
@@ -84,8 +60,8 @@ export function TrendLineChart({
         />
         <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
         <Tooltip
-          contentStyle={tooltipStyle}
-          labelStyle={{ color: 'hsl(var(--foreground))' }}
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
           formatter={(value: unknown, name: unknown) => [
             valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
             String(name),
@@ -96,21 +72,22 @@ export function TrendLineChart({
             verticalAlign="bottom"
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{ fontSize: '12px' }}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
           />
         )}
         {series.map((s, index) => {
-          const strokeColor =
-            s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length];
+          const color = s.color || VIZ_COLORS[index % VIZ_COLORS.length];
           return (
             <Area
               key={s.dataKey}
               type="monotone"
               dataKey={s.dataKey}
               name={s.label}
-              stroke={strokeColor}
+              stroke={color}
               fill={gradientFill ? `url(#gradient-${s.dataKey})` : 'none'}
               strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 0 }}
             />
           );
         })}

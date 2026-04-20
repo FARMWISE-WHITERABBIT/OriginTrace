@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     
     const emailMap: Record<string, string> = {};
     authUsers?.users?.forEach(u => {

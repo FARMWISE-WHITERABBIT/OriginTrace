@@ -89,7 +89,7 @@ async function handleChargeSuccess(supabase: any, data: any) {
     subscription_status:  'active',
   }).eq('id', link.org_id);
 
-  console.log(`[paystack-webhook] Upgraded org ${link.org_id} to ${tier} until ${expiresAt}`);
+  console.info(`[paystack-webhook] Upgraded org ${link.org_id} to ${tier} until ${expiresAt}`);
 
   // Audit trail
   await logSuperadminAction({
@@ -132,5 +132,5 @@ async function handleSubscriptionDisabled(supabase: any, data: any) {
     grace_period_ends_at: gracePeriodEnds,
   }).eq('id', profile.org_id);
 
-  console.log(`[paystack-webhook] Subscription disabled for org ${profile.org_id}, grace period until ${gracePeriodEnds}`);
+  console.info(`[paystack-webhook] Subscription disabled for org ${profile.org_id}, grace period until ${gracePeriodEnds}`);
 }

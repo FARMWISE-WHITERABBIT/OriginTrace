@@ -141,18 +141,26 @@ export function backoffMs(attempt: number): number {
 }
 
 export const WEBHOOK_EVENTS = [
+  // Shipments
   'shipment.created',
   'shipment.updated',
   'shipment.scored',
+  // Collection
   'batch.created',
+  // Documents
   'document.uploaded',
   'document.expired',
+  // Compliance
   'compliance.changed',
+  // Payments
   'payment.recorded',
   'payment.disbursed',
+  // Farms
   'farm.approved',
   'farm.rejected',
+  // Certifications
   'certification.expiring',
+  // Trade
   'tender.created',
   'tender.awarded',
 ] as const;

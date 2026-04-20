@@ -11,7 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle, MapPin, User, Calendar, CheckCircle2, XCircle, Merge, Eye, Layers, Crosshair, RefreshCw } from 'lucide-react';
+import {
+  Layers, AlertTriangle, CheckCircle2, XCircle, Merge, Eye, MapPin, User, Calendar,
+  Crosshair, RefreshCw, Loader2, ScanSearch, Users, Info, X, Shield,
+} from 'lucide-react';
 import { TierGate } from '@/components/tier-gate';
 
 interface Farm {
@@ -37,7 +40,21 @@ interface Conflict {
   farm_b: Farm;
 }
 
-function buildPolygonPath(ctx: CanvasRenderingContext2D, coords: number[][], toPixel: (lng: number, lat: number) => { x: number; y: number }) {
+interface ScanResult {
+  scanned: number;
+  new_conflicts: number;
+  skipped_existing: number;
+}
+
+// ─── Canvas helpers ────────────────────────────────────────────────────────────
+
+type Coord = [number, number];
+
+function buildPolygonPath(
+  ctx: CanvasRenderingContext2D,
+  coords: number[][],
+  toPixel: (lng: number, lat: number) => { x: number; y: number },
+) {
   if (coords.length < 3) return;
   ctx.beginPath();
   const first = toPixel(coords[0][0], coords[0][1]);
@@ -54,7 +71,7 @@ function drawConflictCanvas(
   farmA: Farm,
   farmB: Farm,
   overlayMode: boolean,
-  compact: boolean = false
+  compact: boolean = false,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -187,6 +204,8 @@ function drawConflictCanvas(
   }
 }
 
+// ─── Canvas components ─────────────────────────────────────────────────────────
+
 function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm; overlayMode: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -229,385 +248,594 @@ function MiniOverlapCanvas({ farmA, farmB }: { farmA: Farm; farmB: Farm }) {
   );
 }
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatOverlap(ratio: number) {
+  return `${Math.round(ratio * 100)}%`;
+}
+
+function getSeverity(ratio: number): { label: string; variant: 'outline' | 'secondary' | 'destructive' } {
+  const pct = ratio * 100;
+  if (pct < 20) return { label: 'Low Risk', variant: 'outline' };
+  if (pct <= 50) return { label: 'Medium Risk', variant: 'secondary' };
+  return { label: 'High Risk', variant: 'destructive' };
+}
+
+// ─── FarmCard ──────────────────────────────────────────────────────────────────
+
+function FarmCard({ farm, label, color }: { farm: Farm; label: string; color: 'red' | 'blue' }) {
+  const borderCls = color === 'red' ? 'border-red-500' : 'border-blue-500';
+  const badgeCls = color === 'red'
+    ? 'bg-red-50 text-red-700 border-red-200'
+    : 'bg-blue-50 text-blue-700 border-blue-200';
+  const vertices = farm.boundary?.coordinates?.[0]?.length
+    ? farm.boundary.coordinates[0].length - 1
+    : 0;
+
+  return (
+    <Card className={`border-2 ${borderCls}`}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-semibold leading-tight">{farm.farmer_name}</CardTitle>
+          <Badge variant="outline" className={`text-xs shrink-0 ${badgeCls}`}>{label}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <MapPin className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{farm.community || 'Unknown community'}</span>
+        </div>
+        <div className="flex items-start gap-2 text-muted-foreground">
+          <User className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="truncate">{farm.agent?.full_name || 'Unknown agent'}</p>
+            {farm.agent?.user_id && (
+              <p className="font-mono text-xs text-muted-foreground/70" data-testid={`text-agent-id-${farm.id}`}>
+                {farm.agent.user_id.slice(0, 8)}…
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Calendar className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-mono text-xs">{new Date(farm.created_at).toLocaleDateString()}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+          <div>
+            <p className="text-muted-foreground">Commodity</p>
+            <p className="font-medium capitalize">{farm.commodity || '—'}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Area</p>
+            <p className="font-mono font-medium">{farm.area_hectares?.toFixed(2) ?? '—'} ha</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+          <div className="flex items-center gap-1.5">
+            <Crosshair className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-muted-foreground">GPS Accuracy</p>
+              <p className="font-mono font-medium">
+                {farm.gps_accuracy ? `${farm.gps_accuracy.toFixed(1)} m` : 'N/A'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-muted-foreground">Synced</p>
+              <p className="font-mono font-medium">
+                {farm.synced_at ? new Date(farm.synced_at).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="pt-2 border-t text-xs">
+          <p className="text-muted-foreground">Vertices</p>
+          <p className="font-mono font-medium">{vertices} pts</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
 export default function ConflictsPage() {
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [overlayMode, setOverlayMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanBannerDismissed, setScanBannerDismissed] = useState(false);
   const { toast } = useToast();
+
+  const fetchConflicts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/conflicts');
+      if (res.ok) {
+        const data = await res.json();
+        setConflicts(data.conflicts || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch conflicts:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchConflicts();
-  }, []);
+  }, [fetchConflicts]);
 
-  const fetchConflicts = async () => {
+  const handleScan = async () => {
+    setIsScanning(true);
+    setScanBannerDismissed(false);
     try {
-      const response = await fetch('/api/conflicts');
-      if (response.ok) {
-        const data = await response.json();
-        setConflicts(data.conflicts || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch conflicts:', error);
+      const res = await fetch('/api/conflicts/scan', { method: 'POST' });
+      if (!res.ok) throw new Error('Scan failed');
+      const data: ScanResult = await res.json();
+      setScanResult(data);
+      toast({
+        title: 'Scan complete',
+        description: `${data.new_conflicts} new conflict${data.new_conflicts !== 1 ? 's' : ''} found across ${data.scanned} farms`,
+      });
+      await fetchConflicts();
+    } catch {
+      toast({ title: 'Scan failed', description: 'Could not complete boundary scan', variant: 'destructive' });
     } finally {
-      setIsLoading(false);
+      setIsScanning(false);
     }
   };
 
   const resolveConflict = async (action: 'keep_a' | 'keep_b' | 'merge' | 'dismiss') => {
     if (!selectedConflict) return;
-
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/conflicts', {
+      const res = await fetch('/api/conflicts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conflict_id: selectedConflict.id,
-          action,
-          notes: resolutionNotes
-        })
+        body: JSON.stringify({ conflict_id: selectedConflict.id, action, notes: resolutionNotes }),
       });
+      if (!res.ok) throw new Error('Resolution failed');
 
-      if (response.ok) {
-        const actionLabels = {
-          keep_a: `Accepted ${selectedConflict.farm_a.farmer_name}'s farm`,
-          keep_b: `Accepted ${selectedConflict.farm_b.farmer_name}'s farm`,
-          merge: 'Marked as neighboring farms',
-          dismiss: 'Flagged for re-mapping'
-        };
-        toast({ title: 'Conflict Resolved', description: actionLabels[action] });
-        fetchConflicts();
-        setSelectedConflict(null);
-        setResolutionNotes('');
-      } else {
-        throw new Error('Failed to resolve');
-      }
-    } catch (error) {
+      const actionLabels: Record<string, string> = {
+        keep_a: `Accepted ${selectedConflict.farm_a.farmer_name}'s boundary`,
+        keep_b: `Accepted ${selectedConflict.farm_b.farmer_name}'s boundary`,
+        merge: 'Marked as neighboring farms',
+        dismiss: 'Flagged for re-mapping',
+      };
+      toast({ title: 'Conflict resolved', description: actionLabels[action] });
+      await fetchConflicts();
+      setSelectedConflict(null);
+      setResolutionNotes('');
+    } catch {
       toast({ title: 'Error', description: 'Failed to resolve conflict', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const formatOverlap = (ratio: number) => {
-    return `${Math.round(ratio * 100)}%`;
-  };
+  // Derived stats
+  const pendingCount = conflicts.filter(c => c.status === 'pending').length;
+  const resolvedCount = conflicts.filter(c => c.status !== 'pending').length;
+  const total = pendingCount + resolvedCount;
+  const resolutionRate = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
 
-  const FarmCard = ({ farm, label, color }: { farm: Farm; label: string; color: string }) => (
-    <Card className={`border-2 ${color === 'red' ? 'border-red-500' : 'border-blue-500'}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{farm.farmer_name}</CardTitle>
-          <Badge variant={color === 'red' ? 'destructive' : 'default'}>{label}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span>{farm.community || 'Unknown community'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <span>Agent: {farm.agent?.full_name || 'Unknown'}</span>
-            {farm.agent?.user_id && (
-              <p className="font-mono text-xs text-muted-foreground" data-testid={`text-agent-id-${farm.id}`}>
-                ID: {farm.agent.user_id.slice(0, 8)}...
-              </p>
-            )}
+  if (isLoading) {
+    return (
+      <TierGate feature="boundary_conflicts" requiredTier="pro" featureLabel="Boundary Conflicts">
+        <div className="space-y-6">
+          <div className="h-8 w-64 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map(i => <div key={i} className="h-28 bg-muted animate-pulse rounded-xl" />)}
+          </div>
+          <div className="rounded-md border border-border overflow-hidden">
+            <table className="w-full">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <th key={i} className="px-4 py-3">
+                      <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border">
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <div className="h-4 bg-muted animate-pulse rounded" style={{ width: `${50 + j * 10}%` }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="font-mono text-xs">{new Date(farm.created_at).toLocaleDateString()}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-          <div>
-            <span className="text-muted-foreground">Commodity</span>
-            <p className="font-medium capitalize">{farm.commodity || '-'}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Area</span>
-            <p className="font-mono font-medium">{farm.area_hectares?.toFixed(2) || '-'} ha</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-          <div className="flex items-center gap-1.5">
-            <Crosshair className="h-3.5 w-3.5 text-muted-foreground" />
-            <div>
-              <span className="text-muted-foreground text-xs">GPS Accuracy</span>
-              <p className="font-mono text-xs font-medium">
-                {farm.gps_accuracy ? `${farm.gps_accuracy.toFixed(1)}m` : 'N/A'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-            <div>
-              <span className="text-muted-foreground text-xs">Synced</span>
-              <p className="font-mono text-xs font-medium">
-                {farm.synced_at ? new Date(farm.synced_at).toLocaleDateString() : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Vertices</span>
-          <p className="font-mono text-xs">{farm.boundary?.coordinates?.[0]?.length ? farm.boundary.coordinates[0].length - 1 : 0} pts</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+      </TierGate>
+    );
+  }
 
   return (
     <TierGate feature="boundary_conflicts" requiredTier="pro" featureLabel="Boundary Conflicts">
-    {isLoading ? (
-      <div className="rounded-md border border-border overflow-hidden"><table className="w-full"><thead className="border-b border-border bg-muted/30"><tr>{Array.from({length:4}).map((_,i)=><th key={i} className="px-4 py-3"><div className="h-3 w-16 bg-muted animate-pulse rounded"/></th>)}</tr></thead><tbody>{Array.from({length:5}).map((_,i)=><tr key={i} className="border-b border-border">{Array.from({length:4}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-muted animate-pulse rounded" style={{width:`${60+j*15}%`}}/></td>)}</tr>)}</tbody></table></div>
-    ) : (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-page-title">
-          <Layers className="h-6 w-6 text-amber-500" />
-          Conflict Judge
-        </h1>
-        <p className="text-muted-foreground">Visualize and resolve spatial overlaps between farm boundaries</p>
-      </div>
+      <div className="space-y-6">
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Pending Conflicts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono" data-testid="text-pending-count">{conflicts.length}</div>
-            <p className="text-xs text-muted-foreground">Require admin resolution</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Detection Rule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Farms flagged when boundaries overlap by more than <span className="font-mono font-semibold">10%</span> of combined area.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Resolution Options</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>Accept A/B - Keep one boundary</li>
-              <li>Neighbors - Both boundaries valid</li>
-              <li>Re-map - Flag for field visit</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Conflict Queue</CardTitle>
-          <CardDescription>Click on a conflict to review and resolve</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Preview</TableHead>
-                <TableHead>Farm A</TableHead>
-                <TableHead>Farm B</TableHead>
-                <TableHead>Community</TableHead>
-                <TableHead className="text-center">Overlap</TableHead>
-                <TableHead>Detected</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {conflicts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 text-green-500" />
-                      <span>No pending conflicts - all boundaries are clear</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                conflicts.map((conflict) => (
-                  <TableRow key={conflict.id} data-testid={`conflict-row-${conflict.id}`}>
-                    <TableCell>
-                      <MiniOverlapCanvas farmA={conflict.farm_a} farmB={conflict.farm_b} />
-                    </TableCell>
-                    <TableCell className="font-medium">{conflict.farm_a.farmer_name}</TableCell>
-                    <TableCell className="font-medium">{conflict.farm_b.farmer_name}</TableCell>
-                    <TableCell>{conflict.farm_a.community || conflict.farm_b.community || '-'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="destructive" className="font-mono">{formatOverlap(conflict.overlap_ratio)}</Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{new Date(conflict.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="View conflict"
-                        onClick={() => {
-                          setSelectedConflict(conflict);
-                          setResolutionNotes('');
-                          setOverlayMode(true);
-                        }}
-                        data-testid={`button-review-conflict-${conflict.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Sheet open={!!selectedConflict} onOpenChange={(open) => !open && setSelectedConflict(null)}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg icon-bg-amber flex items-center justify-center shrink-0">
               <Layers className="h-5 w-5" />
-              Resolve Boundary Conflict
-            </SheetTitle>
-            <SheetDescription>
-              Compare both farm polygons and decide which boundary to keep
-            </SheetDescription>
-          </SheetHeader>
-
-          {selectedConflict && (
-            <div className="space-y-6 py-6">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <p className="text-sm text-muted-foreground">Overlap Ratio</p>
-                  <p className="text-2xl font-bold font-mono text-amber-600" data-testid="text-overlap-ratio">
-                    {formatOverlap(selectedConflict.overlap_ratio)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="overlay-mode"
-                    checked={overlayMode}
-                    onCheckedChange={setOverlayMode}
-                    data-testid="switch-overlay-mode"
-                  />
-                  <Label htmlFor="overlay-mode">Overlay</Label>
-                </div>
-              </div>
-
-              <OverlapCanvas
-                farmA={selectedConflict.farm_a}
-                farmB={selectedConflict.farm_b}
-                overlayMode={overlayMode}
-              />
-
-              <Tabs defaultValue="compare" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="compare" data-testid="tab-compare">Side by Side</TabsTrigger>
-                  <TabsTrigger value="details" data-testid="tab-geojson">GeoJSON Data</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="compare" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FarmCard farm={selectedConflict.farm_a} label="Farm A" color="red" />
-                    <FarmCard farm={selectedConflict.farm_b} label="Farm B" color="blue" />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="details">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm">Farm A - {selectedConflict.farm_a.farmer_name}</h4>
-                      <pre className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-32" data-testid="text-geojson-a">
-                        {JSON.stringify(selectedConflict.farm_a.boundary, null, 2)}
-                      </pre>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm">Farm B - {selectedConflict.farm_b.farmer_name}</h4>
-                      <pre className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-32" data-testid="text-geojson-b">
-                        {JSON.stringify(selectedConflict.farm_b.boundary, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <div className="space-y-2">
-                <Label htmlFor="resolution-notes">Resolution Notes</Label>
-                <Textarea
-                  id="resolution-notes"
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Add notes about your decision..."
-                  rows={2}
-                  data-testid="textarea-resolution-notes"
-                />
-              </div>
             </div>
-          )}
-
-          <SheetFooter className="flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <Button
-                variant="outline"
-                onClick={() => resolveConflict('keep_a')}
-                disabled={isProcessing}
-                className="border-red-500 text-red-600"
-                data-testid="button-keep-a"
-              >
-                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Accept A
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => resolveConflict('keep_b')}
-                disabled={isProcessing}
-                className="border-blue-500 text-blue-600"
-                data-testid="button-keep-b"
-              >
-                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Accept B
-              </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+                Boundary Conflict Monitor
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Detect and resolve overlapping GPS farm boundaries
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <Button
-                variant="secondary"
-                onClick={() => resolveConflict('merge')}
-                disabled={isProcessing}
-                data-testid="button-merge"
-              >
-                <Merge className="h-4 w-4 mr-2" />
-                Mark as Neighbors
-              </Button>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={fetchConflicts} data-testid="button-refresh">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button size="sm" onClick={handleScan} disabled={isScanning} data-testid="button-scan">
+              {isScanning
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <ScanSearch className="h-4 w-4 mr-2" />}
+              {isScanning ? 'Scanning…' : 'Scan for Conflicts'}
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Last-scan inline info strip ── */}
+        {scanResult && !isScanning && (
+          <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800" data-testid="banner-scan-info">
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              Scanned <span className="font-semibold">{scanResult.scanned}</span> farms
+              &nbsp;·&nbsp;
+              <span className="font-semibold">{scanResult.new_conflicts}</span> new conflicts found
+              &nbsp;·&nbsp;
+              <span className="font-semibold">{scanResult.skipped_existing}</span> already tracked
+            </span>
+          </div>
+        )}
+
+        {/* ── Stats strip ── */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="card-accent-amber transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Conflicts</CardTitle>
+              <div className="h-9 w-9 rounded-lg icon-bg-amber flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono" data-testid="text-pending-count">
+                {pendingCount}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Require admin resolution</p>
+            </CardContent>
+          </Card>
+
+          <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Detection Threshold</CardTitle>
+              <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center">
+                <Crosshair className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono">&ge; 10%</div>
+              <p className="text-xs text-muted-foreground mt-0.5">Minimum overlap to flag</p>
+            </CardContent>
+          </Card>
+
+          <Card className="card-accent-green transition-all hover:shadow-md hover:-translate-y-0.5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolution Rate</CardTitle>
+              <div className="h-9 w-9 rounded-lg icon-bg-green flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono" data-testid="text-resolution-rate">
+                {resolutionRate}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {resolvedCount} of {total} resolved
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── Scan complete banner ── */}
+        {scanResult && !scanBannerDismissed && (
+          <Card className="card-accent-green border-green-200 bg-green-50" data-testid="banner-scan-complete">
+            <CardContent className="flex items-center justify-between py-3 px-4">
+              <div className="flex items-center gap-2 text-green-800 text-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {scanResult.new_conflicts > 0 ? (
+                  <span>
+                    Scan complete &middot; <span className="font-semibold">{scanResult.scanned}</span> farms analysed
+                    &nbsp;&middot;&nbsp;
+                    <span className="font-semibold">{scanResult.new_conflicts}</span> new conflict{scanResult.new_conflicts !== 1 ? 's' : ''} flagged
+                  </span>
+                ) : (
+                  <span>No new conflicts found across <span className="font-semibold">{scanResult.scanned}</span> farms</span>
+                )}
+              </div>
               <Button
                 variant="ghost"
-                onClick={() => resolveConflict('dismiss')}
-                disabled={isProcessing}
-                data-testid="button-dismiss"
+                size="icon"
+                className="h-6 w-6 text-green-700 hover:text-green-900 hover:bg-green-100"
+                onClick={() => setScanBannerDismissed(true)}
+                data-testid="button-dismiss-scan-banner"
               >
-                <XCircle className="h-4 w-4 mr-2" />
-                Flag for Re-mapping
+                <X className="h-4 w-4" />
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Conflict Queue ── */}
+        <Card className="card-accent-amber">
+          <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-4">
+            <div className="h-9 w-9 rounded-lg icon-bg-amber flex items-center justify-center shrink-0">
+              <Layers className="h-5 w-5" />
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
-    )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <CardTitle>Conflict Queue</CardTitle>
+                <Badge variant="secondary" className="font-mono text-xs">{conflicts.length}</Badge>
+              </div>
+              <CardDescription>Click Review to inspect and resolve each overlap</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {conflicts.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="font-medium text-foreground">All clear — no boundary conflicts detected</p>
+                <p className="text-sm text-muted-foreground">Run a scan to check for new overlaps</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[72px]">Preview</TableHead>
+                    <TableHead>Farm A</TableHead>
+                    <TableHead>Farm B</TableHead>
+                    <TableHead>Community</TableHead>
+                    <TableHead className="text-center">Overlap %</TableHead>
+                    <TableHead>Detected</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {conflicts.map((conflict) => (
+                    <TableRow key={conflict.id} data-testid={`conflict-row-${conflict.id}`}>
+                      <TableCell>
+                        <MiniOverlapCanvas farmA={conflict.farm_a} farmB={conflict.farm_b} />
+                      </TableCell>
+                      <TableCell className="font-medium">{conflict.farm_a.farmer_name}</TableCell>
+                      <TableCell className="font-medium">{conflict.farm_b.farmer_name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {conflict.farm_a.community || conflict.farm_b.community || '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="destructive"
+                          className="font-mono tabular-nums"
+                          data-testid={`badge-overlap-${conflict.id}`}
+                        >
+                          {formatOverlap(conflict.overlap_ratio)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {new Date(conflict.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            setSelectedConflict(conflict);
+                            setResolutionNotes('');
+                            setOverlayMode(true);
+                          }}
+                          data-testid={`button-review-conflict-${conflict.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Review
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Review Sheet ── */}
+        <Sheet open={!!selectedConflict} onOpenChange={(open) => !open && setSelectedConflict(null)}>
+          <SheetContent className="sm:max-w-2xl overflow-y-auto">
+            {selectedConflict && (
+              <>
+                <SheetHeader className="space-y-1">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-amber-500" />
+                    Review Conflict #{selectedConflict.id}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {selectedConflict.farm_a.farmer_name} vs {selectedConflict.farm_b.farmer_name}
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="space-y-5 py-5">
+                  {/* Overlap ratio + severity + overlay toggle */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap rounded-lg border bg-muted/30 px-4 py-3">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Overlap</p>
+                        <p
+                          className={`text-3xl font-bold font-mono tabular-nums ${
+                            selectedConflict.overlap_ratio >= 0.3 ? 'text-red-600' : 'text-amber-600'
+                          }`}
+                          data-testid="text-overlap-ratio"
+                        >
+                          {formatOverlap(selectedConflict.overlap_ratio)}
+                        </p>
+                      </div>
+                      <Badge variant={getSeverity(selectedConflict.overlap_ratio).variant} className="self-end mb-1">
+                        {getSeverity(selectedConflict.overlap_ratio).label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="overlay-mode" className="text-sm text-muted-foreground">Overlay Mode</Label>
+                      <Switch
+                        id="overlay-mode"
+                        checked={overlayMode}
+                        onCheckedChange={setOverlayMode}
+                        data-testid="switch-overlay-mode"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Canvas */}
+                  <OverlapCanvas
+                    farmA={selectedConflict.farm_a}
+                    farmB={selectedConflict.farm_b}
+                    overlayMode={overlayMode}
+                  />
+
+                  {/* Tabs */}
+                  <Tabs defaultValue="compare" className="w-full">
+                    <TabsList className="segmented-control w-full grid grid-cols-2">
+                      <TabsTrigger value="compare" className="segmented-control-item" data-testid="tab-compare">
+                        Side by Side
+                      </TabsTrigger>
+                      <TabsTrigger value="geojson" className="segmented-control-item" data-testid="tab-geojson">
+                        GeoJSON
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="compare" className="mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FarmCard farm={selectedConflict.farm_a} label="Farm A" color="red" />
+                        <FarmCard farm={selectedConflict.farm_b} label="Farm B" color="blue" />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="geojson" className="mt-4 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">
+                          Farm A — {selectedConflict.farm_a.farmer_name}
+                        </h4>
+                        <pre
+                          className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-36 border"
+                          data-testid="text-geojson-a"
+                        >
+                          {JSON.stringify(selectedConflict.farm_a.boundary, null, 2)}
+                        </pre>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">
+                          Farm B — {selectedConflict.farm_b.farmer_name}
+                        </h4>
+                        <pre
+                          className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-36 border"
+                          data-testid="text-geojson-b"
+                        >
+                          {JSON.stringify(selectedConflict.farm_b.boundary, null, 2)}
+                        </pre>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Resolution Notes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="resolution-notes">Resolution Notes</Label>
+                    <Textarea
+                      id="resolution-notes"
+                      value={resolutionNotes}
+                      onChange={(e) => setResolutionNotes(e.target.value)}
+                      placeholder="Add notes about your decision…"
+                      rows={2}
+                      data-testid="textarea-resolution-notes"
+                    />
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <SheetFooter className="flex-col gap-2 pt-2 border-t">
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      className="border-green-500 text-green-700 hover:bg-green-50 gap-2"
+                      onClick={() => resolveConflict('keep_a')}
+                      disabled={isProcessing}
+                      data-testid="button-keep-a"
+                    >
+                      {isProcessing
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <CheckCircle2 className="h-4 w-4" />}
+                      Accept Farm A
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-blue-500 text-blue-700 hover:bg-blue-50 gap-2"
+                      onClick={() => resolveConflict('keep_b')}
+                      disabled={isProcessing}
+                      data-testid="button-keep-b"
+                    >
+                      {isProcessing
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <CheckCircle2 className="h-4 w-4" />}
+                      Accept Farm B
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <Button
+                      variant="secondary"
+                      className="gap-2"
+                      onClick={() => resolveConflict('merge')}
+                      disabled={isProcessing}
+                      data-testid="button-merge"
+                    >
+                      <Users className="h-4 w-4" />
+                      Mark as Neighbors
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="gap-2"
+                      onClick={() => resolveConflict('dismiss')}
+                      disabled={isProcessing}
+                      data-testid="button-dismiss"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Flag for Re-mapping
+                    </Button>
+                  </div>
+                </SheetFooter>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+
+      </div>
     </TierGate>
   );
 }

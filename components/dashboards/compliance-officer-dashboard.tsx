@@ -16,6 +16,7 @@ import {
   FolderOpen,
   CheckCircle,
   AlertTriangle,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,6 +36,12 @@ interface ComplianceStats {
   }>;
 }
 
+interface AuditScore {
+  overall: number;
+  grade: string;
+  components: Record<string, { score: number; detail: string }>;
+}
+
 export function ComplianceOfficerDashboard() {
   const [stats, setStats] = useState<ComplianceStats>({
     totalFarms: 0,
@@ -46,6 +53,7 @@ export function ComplianceOfficerDashboard() {
     complianceFilesCount: 0,
     recentActivity: [],
   });
+  const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
 
@@ -54,11 +62,12 @@ export function ComplianceOfficerDashboard() {
       if (!organization) return;
 
       try {
-        const res = await fetch('/api/dashboard?role=compliance_officer');
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
-        }
+        const [dashRes, auditRes] = await Promise.all([
+          fetch('/api/dashboard?role=compliance_officer'),
+          fetch('/api/audit-readiness'),
+        ]);
+        if (dashRes.ok) setStats(await dashRes.json());
+        if (auditRes.ok) setAuditScore(await auditRes.json());
       } catch (error) {
         console.error('Failed to fetch compliance stats:', error);
       } finally {
@@ -70,24 +79,26 @@ export function ComplianceOfficerDashboard() {
   }, [organization]);
 
   const statCards = [
-    { title: 'Compliance Rate', value: `${stats.complianceRate}%`, icon: ShieldCheck, color: 'text-green-600' },
-    { title: 'Pending Reviews', value: stats.pendingFarms, icon: Clock, color: 'text-orange-600' },
-    { title: 'DDS Exports', value: stats.ddsExportCount, icon: FileDown, color: 'text-blue-600' },
-    { title: 'Documents', value: stats.complianceFilesCount, icon: FileText, color: 'text-purple-600' },
+    { title: 'Compliance Rate', value: `${stats.complianceRate}%`, icon: ShieldCheck, iconClass: 'icon-bg-green',  accent: 'card-accent-green' },
+    { title: 'Pending Reviews', value: stats.pendingFarms,          icon: Clock,       iconClass: 'icon-bg-amber',  accent: 'card-accent-amber' },
+    { title: 'DDS Exports',     value: stats.ddsExportCount,        icon: FileDown,    iconClass: 'icon-bg-blue',   accent: 'card-accent-blue' },
+    { title: 'Documents',       value: stats.complianceFilesCount,  icon: FileText,    iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
   ];
 
   return (
     <div className="space-y-6" data-testid="compliance-officer-dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
+              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                {isLoading ? '—' : stat.value}
               </div>
             </CardContent>
           </Card>
@@ -168,6 +179,56 @@ export function ComplianceOfficerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Audit Readiness Score */}
+      <Card data-testid="audit-readiness-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-green-600" />
+            Audit Readiness Score
+          </CardTitle>
+          <CardDescription>5-component readiness across traceability, lab coverage, and document health</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading || !auditScore ? (
+            <p className="text-sm text-muted-foreground">Loading audit score…</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className={`text-5xl font-bold w-20 h-20 rounded-full flex items-center justify-center border-4 ${
+                  auditScore.grade === 'A' ? 'border-green-500 text-green-700' :
+                  auditScore.grade === 'B' ? 'border-blue-500 text-blue-700' :
+                  auditScore.grade === 'C' ? 'border-amber-500 text-amber-700' :
+                  'border-red-500 text-red-700'
+                }`} data-testid="audit-grade">
+                  {auditScore.grade}
+                </div>
+                <div>
+                  <p className="text-3xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
+                  <p className="text-sm text-muted-foreground">Overall audit readiness</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(auditScore.components).map(([key, comp]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="font-medium">{comp.score}%</span>
+                    </div>
+                    <Progress value={comp.score} className="h-1.5" />
+                  </div>
+                ))}
+              </div>
+              <Link href="/app/analytics/reports">
+                <Button variant="outline" size="sm" className="w-full mt-2">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Generate Audit Report
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { dispatchIntegrationEvent } from '@/lib/integrations/dispatcher';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { parsePagination } from '@/lib/api/validation';
 import { z } from 'zod';
@@ -24,7 +25,7 @@ const farmCreateSchema = z.object({
 });
 
 const farmPatchSchema = z.object({
-  id: z.number({ required_error: 'Farm ID is required' }),
+  id: z.string().uuid({ message: 'Farm ID must be a valid UUID' }),
   compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
   compliance_notes: z.string().optional(),
 });
@@ -264,6 +265,7 @@ export async function PATCH(request: NextRequest) {
       .from('farms')
       .update(updateData)
       .eq('id', id)
+      .eq('org_id', profile.org_id)
       .select()
       .single();
 
@@ -289,22 +291,26 @@ export async function PATCH(request: NextRequest) {
       });
 
       const webhookEvent = compliance_status === 'approved' ? 'farm.approved' : 'farm.rejected';
-      dispatchWebhookEvent(String(profile.org_id), webhookEvent, {
+      const integrationEventPayload = {
         farm_id: id,
         compliance_status,
         compliance_notes,
         farmer_name: updatedFarm.farmer_name,
         community: updatedFarm.community,
-      });
+      };
+      dispatchWebhookEvent(String(profile.org_id), webhookEvent, integrationEventPayload);
+      dispatchIntegrationEvent(String(profile.org_id), webhookEvent as 'farm.approved' | 'farm.rejected', integrationEventPayload);
     }
 
     if (compliance_status && compliance_status !== 'pending') {
-      dispatchWebhookEvent(String(profile.org_id), 'compliance.changed', {
+      const compliancePayload = {
         resource_type: 'farm',
         farm_id: id,
         new_status: compliance_status,
         compliance_notes,
-      });
+      };
+      dispatchWebhookEvent(String(profile.org_id), 'compliance.changed', compliancePayload);
+      dispatchIntegrationEvent(String(profile.org_id), 'compliance.changed', compliancePayload);
     }
 
     return NextResponse.json({ farm: updatedFarm });

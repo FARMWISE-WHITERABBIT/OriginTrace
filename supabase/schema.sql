@@ -1565,7 +1565,8 @@ INSERT INTO yield_benchmarks (commodity, country, region, avg_yield_per_hectare,
   ('Cashew', 'Ghana', 'Bono', 0.70, 0.35, 1.20, 'FAO', 2024),
   ('Sesame', 'Nigeria', 'Nassarawa', 0.45, 0.20, 0.80, 'FAO', 2024),
   ('Shea', 'Nigeria', 'Niger', 0.25, 0.10, 0.50, 'Global Shea Alliance', 2024),
-  ('Shea', 'Ghana', 'Northern', 0.30, 0.12, 0.55, 'Global Shea Alliance', 2024)
+  ('Shea', 'Ghana', 'Northern', 0.30, 0.12, 0.55, 'Global Shea Alliance', 2024),
+  ('Gum Arabic', 'Nigeria', 'North Nigeria', 0.40, 0.20, 0.65, 'FAO/NRC (0.4 kg/tree/year)', 2024)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
@@ -1829,7 +1830,8 @@ VALUES
   ('00000000-0000-0000-0000-000000000009', NULL, 'Ginger', 'ginger', 'root_crop', '0910.11', 'Zingiber officinale', false, true),
   ('00000000-0000-0000-0000-000000000010', NULL, 'Plantain', 'plantain', 'tree_crop', '0803.90', 'Musa paradisiaca', false, true),
   ('00000000-0000-0000-0000-000000000011', NULL, 'Hibiscus', 'hibiscus', 'flower_crop', '0604.20', 'Hibiscus sabdariffa', false, true),
-  ('00000000-0000-0000-0000-000000000012', NULL, 'Turmeric', 'turmeric', 'root_crop', '0910.30', 'Curcuma longa', false, true)
+  ('00000000-0000-0000-0000-000000000012', NULL, 'Turmeric', 'turmeric', 'root_crop', '0910.30', 'Curcuma longa', false, true),
+  ('00000000-0000-0000-0000-000000000013', NULL, 'Gum Arabic', 'gum_arabic', 'tree_crop', '1301.20', 'Acacia senegal', false, true)
 ON CONFLICT (org_id, slug) DO NOTHING;
 
 -- ============================================

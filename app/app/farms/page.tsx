@@ -20,7 +20,7 @@ import dynamic from 'next/dynamic';
 import {
   Loader2, Search, MapPin, User, Phone, Calendar, Ruler,
   FileCheck, ShieldCheck, ShieldAlert, AlertTriangle, Map,
-  Check, X, Clock, FileText, ExternalLink, LayoutList, Globe,
+  Check, X, Clock, FileText, ExternalLink, LayoutList, Globe, Download,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
 import { TierGate } from '@/components/tier-gate';
@@ -90,6 +90,32 @@ export default function FarmsPage() {
   useEffect(() => { fetchFarms(); }, [fetchFarms]);
 
   const pendingCount = farms.filter(f => f.compliance_status === 'pending').length;
+
+  const exportFarmsCsv = () => {
+    const rows = filteredFarms.map(f => ({
+      farmer_name: f.farmer_name,
+      farmer_id: f.farmer_id ?? '',
+      phone: f.phone ?? '',
+      community: f.community,
+      commodity: f.commodity ?? '',
+      area_hectares: f.area_hectares ?? '',
+      compliance_status: f.compliance_status,
+      boundary_mapped: f.boundary ? 'Yes' : 'No',
+      registered_at: new Date(f.created_at).toLocaleDateString(),
+    }));
+    const headers = Object.keys(rows[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => headers.map(h => JSON.stringify((r as any)[h] ?? '')).join(',')),
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `farms-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const filteredFarms = farms.filter(farm => {
     const q = searchQuery.toLowerCase();
@@ -369,6 +395,11 @@ export default function FarmsPage() {
                     {STATUS_FILTERS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {filteredFarms.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={exportFarmsCsv} data-testid="button-export-farms">
+                    <Download className="h-4 w-4 mr-1.5" />Export CSV
+                  </Button>
+                )}
               </div>
               <Card>
                 <CardContent className="p-0">
@@ -461,7 +492,7 @@ export default function FarmsPage() {
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {farms.filter(f => f.compliance_status === 'pending').map(farm => (
-                        <Card key={farm.id} className="hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
+                        <Card key={farm.id} className="card-accent-amber hover:shadow-md transition-shadow" data-testid={`compliance-card-${farm.id}`}>
                           <div className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                               <div>
