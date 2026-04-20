@@ -341,6 +341,8 @@ export default function SuperadminEventsPage() {
       setResending(null);
     }
   }
+
+  function isOpen(event: EventItem): boolean {
     if (!event.registration_open) return false;
     if (event.registration_closes_at && new Date() > new Date(event.registration_closes_at)) return false;
     return true;
