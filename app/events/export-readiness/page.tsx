@@ -22,9 +22,9 @@ interface RegistrationForm {
   organization: string;
   role: string;
   state: string;
-  currentlyExporting: string;   // 'yes' | 'no' | ''
+  currentlyExporting: string;
   exportProducts: string;
-  nepcRegistered: string;       // 'yes' | 'no' | ''
+  nepcRegistered: string;
 }
 
 interface EventStatus {
@@ -38,7 +38,7 @@ function ClosedBanner() {
       <AlertCircle className="h-10 w-10 text-amber-300 mx-auto mb-4" />
       <h2 className="text-white text-xl font-bold mb-2">Registration is now closed</h2>
       <p className="text-white/70 text-sm leading-relaxed">
-        The registration window for YEXDEP 2026 has ended. We look forward to seeing you at future events.
+        The registration window for this event has ended. We look forward to seeing you at future events.
       </p>
       <Link
         href="/events"
@@ -50,7 +50,7 @@ function ClosedBanner() {
   );
 }
 
-export default function YexdepRegistrationPage() {
+export default function ExportReadinessRegistrationPage() {
   const router = useRouter();
   const [form, setForm] = useState<RegistrationForm>({
     fullName: '',
@@ -67,9 +67,8 @@ export default function YexdepRegistrationPage() {
   const [error, setError] = useState<string | null>(null);
   const [eventStatus, setEventStatus] = useState<EventStatus>({ registrationOpen: true, loaded: false });
 
-  // Check if registration is still open
   useEffect(() => {
-    fetch('/api/events/status?slug=yexdep-2026')
+    fetch('/api/events/status?slug=export-readiness-2026')
       .then(r => r.json())
       .then(data => setEventStatus({ registrationOpen: data.registrationOpen ?? true, loaded: true }))
       .catch(() => setEventStatus({ registrationOpen: true, loaded: true }));
@@ -89,7 +88,7 @@ export default function YexdepRegistrationPage() {
       const res = await fetch('/api/events/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, slug: 'yexdep-2026' }),
+        body: JSON.stringify({ ...form, slug: 'export-readiness-2026' }),
       });
 
       const json = await res.json();
@@ -103,7 +102,7 @@ export default function YexdepRegistrationPage() {
         return;
       }
 
-      router.push('/events/yexdep/success');
+      router.push('/events/export-readiness/success');
     } catch {
       setError('Network error. Please check your connection and try again.');
     } finally {
@@ -131,17 +130,8 @@ export default function YexdepRegistrationPage() {
       <main className="flex-1 flex items-start justify-center px-4 py-6 pb-16">
         <div className="w-full max-w-lg">
 
-          {/* Dual-brand logos */}
-          <div className="flex items-center justify-center gap-5 mb-8">
-            <Image
-              src="/images/logo-white.png"
-              alt="OriginTrace"
-              width={130}
-              height={34}
-              style={{ width: 'auto', height: '30px' }}
-              priority
-            />
-            <span className="text-white/30 text-2xl font-light select-none">×</span>
+          {/* Triple-brand logos: NEPC × Union Bank × OriginTrace */}
+          <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
             <Image
               src="/images/nepc-logo.png"
               alt="Nigerian Export Promotion Council"
@@ -150,26 +140,46 @@ export default function YexdepRegistrationPage() {
               style={{ width: 'auto', height: '36px', filter: 'brightness(0) invert(1)' }}
               priority
             />
+            <span className="text-white/30 text-2xl font-light select-none">×</span>
+            <Image
+              src="/images/union-bank-logo.png"
+              alt="Union Bank"
+              width={120}
+              height={36}
+              style={{ width: 'auto', height: '32px', mixBlendMode: 'screen' }}
+              priority
+            />
+            <span className="text-white/30 text-2xl font-light select-none">×</span>
+            <Image
+              src="/images/logo-white.png"
+              alt="OriginTrace"
+              width={130}
+              height={34}
+              style={{ width: 'auto', height: '28px' }}
+              priority
+            />
           </div>
 
           {/* Hero card */}
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6 text-center">
             <p className="text-emerald-300 text-xs font-semibold tracking-widest uppercase mb-2">
-              Youth Export Development Programme
+              One Day Capacity Building Training
             </p>
-            <h1 className="text-white text-2xl font-bold leading-tight mb-1">YEXDEP 2026</h1>
+            <h1 className="text-white text-2xl font-bold leading-tight mb-1">
+              Export Readiness &amp; Mentorship Training
+            </h1>
             <p className="text-white/70 text-sm italic mb-5">
-              &ldquo;From Passion to Port: Unlocking Youth Export Potential&rdquo;
+              &ldquo;Empowering Nigerian Exporters for Sustainable Growth in Global Market&rdquo;
             </p>
             <div className="flex flex-wrap justify-center gap-2.5 text-xs text-white/80">
               <span className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Wed, 25 March 2026
+                <Calendar className="h-3.5 w-3.5" /> Thu, 23 April 2026
               </span>
               <span className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
                 <Clock className="h-3.5 w-3.5" /> 9:00 AM prompt
               </span>
               <span className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                <MapPin className="h-3.5 w-3.5" /> NEPC Enugu
+                <MapPin className="h-3.5 w-3.5" /> Union Bank, Ogui Road, Enugu
               </span>
             </div>
           </div>
@@ -284,7 +294,7 @@ export default function YexdepRegistrationPage() {
                   </div>
                 </div>
 
-                {/* What are you exporting / want to export */}
+                {/* Export products */}
                 <div>
                   <label htmlFor="exportProducts" className="block text-sm font-medium text-slate-700 mb-1">
                     {isExporting
@@ -353,9 +363,26 @@ export default function YexdepRegistrationPage() {
           {/* Footer */}
           <div className="mt-8 text-center space-y-1">
             <p className="text-white/40 text-xs">
-              Hosted by Nigerian Export Promotion Council in partnership with OriginTrace
+              Hosted by NEPC South East Regional Office in collaboration with Union Bank and OriginTrace
             </p>
-            <p className="text-white/25 text-xs">
+            <div className="mt-4 bg-white/8 border border-white/15 rounded-xl px-5 py-4 text-left space-y-3">
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-widest text-center mb-3">Contact Persons</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Mr. Udechukwu Ugochukwu</span>
+                  <a href="tel:07068770596" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">07068770596</a>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Dr. Kenechukwu Uzo</span>
+                  <a href="tel:08034431863" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">08034431863</a>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/70 text-xs">Mr. Hilary Akhidenor</span>
+                  <a href="tel:08055302764" className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">08055302764</a>
+                </div>
+              </div>
+            </div>
+            <p className="text-white/25 text-xs pt-2">
               <Link href="/events" className="hover:text-white/50 transition-colors">
                 ← Back to all events
               </Link>

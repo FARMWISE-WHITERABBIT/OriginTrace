@@ -143,13 +143,29 @@ export function backoffMs(attempt: number): number {
   return webhookBackoffMs(attempt);
 }
 
-/**
- * Full catalog of platform events — re-exported from the canonical event catalog (ADR-003).
- * @deprecated Import WEBHOOK_EVENTS from '@/modules/integrations/domain/event-catalog' directly.
- */
-export const WEBHOOK_EVENTS = _CATALOG_EVENTS;
+export const WEBHOOK_EVENTS = [
+  // Shipments
+  'shipment.created',
+  'shipment.updated',
+  'shipment.scored',
+  // Collection
+  'batch.created',
+  // Documents
+  'document.uploaded',
+  'document.expired',
+  // Compliance
+  'compliance.changed',
+  // Payments
+  'payment.recorded',
+  'payment.disbursed',
+  // Farms
+  'farm.approved',
+  'farm.rejected',
+  // Certifications
+  'certification.expiring',
+  // Trade
+  'tender.created',
+  'tender.awarded',
+] as const;
 
-/**
- * @deprecated Use PlatformEventType from '@/modules/integrations/domain/event-catalog'.
- */
-export type WebhookEventType = PlatformEventType;
+export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
