@@ -19,15 +19,14 @@ import crypto from 'crypto';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: shipmentId } = await params;
     const supabase = createServiceClient();
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
-
-    const shipmentId = params.id;
 
     // ── Fetch shipment ───────────────────────────────────────────────────────
     const { data: shipment, error: shipmentError } = await supabase
@@ -173,12 +172,13 @@ export async function POST(
  * List existing (non-expired) evidence packages for a shipment.
  */
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
@@ -186,7 +186,7 @@ export async function GET(
       .from('evidence_packages')
       .select('id, token, expires_at, views, created_at')
       .eq('org_id', profile.org_id)
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .gte('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 

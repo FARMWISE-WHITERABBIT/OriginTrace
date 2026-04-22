@@ -56,6 +56,40 @@ const STATUS_FILTERS = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
+// ── Profile completeness ─────────────────────────────────────────────────────
+// Score out of 100 based on how complete the farm record is.
+const COMPLETENESS_FIELDS: Array<{ key: keyof Farm; weight: number; label: string }> = [
+  { key: 'phone',           weight: 20, label: 'Phone' },
+  { key: 'farmer_id',       weight: 15, label: 'Farmer ID' },
+  { key: 'area_hectares',   weight: 15, label: 'Area (ha)' },
+  { key: 'boundary',        weight: 30, label: 'GPS Boundary' },
+  { key: 'legality_doc_url',weight: 20, label: 'Legality Doc' },
+];
+
+function computeCompleteness(farm: Farm): { score: number; missing: string[] } {
+  let score = 0;
+  const missing: string[] = [];
+  for (const f of COMPLETENESS_FIELDS) {
+    if (farm[f.key]) score += f.weight;
+    else missing.push(f.label);
+  }
+  return { score, missing };
+}
+
+function CompletenessChip({ farm }: { farm: Farm }) {
+  const { score, missing } = computeCompleteness(farm);
+  const color = score === 100 ? 'text-emerald-700 bg-emerald-50' : score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50';
+  const title = score === 100 ? 'Profile complete' : `Missing: ${missing.join(', ')}`;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${color}`}
+      title={title}
+    >
+      {score}%
+    </span>
+  );
+}
+
 export default function FarmsPage() {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -292,8 +326,11 @@ export default function FarmsPage() {
                       <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{
                         backgroundColor: farm.compliance_status === 'approved' ? '#16a34a' : farm.compliance_status === 'rejected' ? '#dc2626' : '#f59e0b'
                       }} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{farm.farmer_name}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{farm.farmer_name}</p>
+                          <CompletenessChip farm={farm} />
+                        </div>
                         <p className="text-xs text-muted-foreground truncate">{farm.community}{farm.area_hectares ? ` · ${farm.area_hectares.toFixed(1)}ha` : ''}</p>
                         {!farm.boundary && <p className="text-[10px] text-amber-500 mt-0.5">No boundary</p>}
                       </div>
@@ -423,6 +460,7 @@ export default function FarmsPage() {
                             <TableHead>Area (ha)</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Boundary</TableHead>
+                            <TableHead>Profile</TableHead>
                             <TableHead>Registered</TableHead>
                             <TableHead className="w-16" />
                           </TableRow>
@@ -448,6 +486,9 @@ export default function FarmsPage() {
                                 {farm.boundary
                                   ? <span className="text-xs text-green-600 flex items-center gap-1"><MapPin className="h-3 w-3" />Mapped</span>
                                   : <span className="text-xs text-muted-foreground">Not mapped</span>}
+                              </TableCell>
+                              <TableCell>
+                                <CompletenessChip farm={farm} />
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">
                                 {new Date(farm.created_at).toLocaleDateString()}

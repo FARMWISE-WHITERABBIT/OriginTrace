@@ -284,16 +284,14 @@ export async function warmCaches(orgId?: number): Promise<{
 
   if (orgId) {
     try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient()!;
-      const { data } = await supabase
-        .from('farms')
-        .select('id, farmer_name, community, commodity, area_hectares, compliance_status, boundary, phone')
-        .eq('org_id', orgId)
-        .order('farmer_name');
-      if (data) {
-        await cacheFarmsFull(orgId, data);
-        results.farms = true;
+      // Use the admin-backed API endpoint to avoid RLS issues with the browser Supabase client
+      const farmsRes = await fetch('/api/collect/farmers');
+      if (farmsRes.ok) {
+        const { farms: farmsData } = await farmsRes.json();
+        if (farmsData?.length > 0) {
+          await cacheFarmsFull(orgId, farmsData);
+          results.farms = true;
+        }
       }
     } catch {}
   }

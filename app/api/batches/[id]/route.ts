@@ -109,15 +109,20 @@ export async function PATCH(
         return NextResponse.json({ error: 'dispatch_destination is required' }, { status: 400 });
       }
 
+      const now = new Date().toISOString();
       const dispatchUpdates: Record<string, any> = {
         status: 'dispatched',
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       };
-      // Only set these if the columns exist — fall back gracefully
-      if (body.dispatch_destination) dispatchUpdates.dispatch_destination = body.dispatch_destination;
-      if (body.vehicle_reference)    dispatchUpdates.vehicle_reference    = body.vehicle_reference;
-      dispatchUpdates.dispatched_at = new Date().toISOString();
-      dispatchUpdates.dispatched_by = user.id;
+      if (body.dispatch_destination)  dispatchUpdates.dispatch_destination  = body.dispatch_destination;
+      if (body.vehicle_reference)     dispatchUpdates.vehicle_reference     = body.vehicle_reference;
+      if (body.driver_name)           dispatchUpdates.driver_name           = body.driver_name;
+      if (body.driver_phone)          dispatchUpdates.driver_phone          = body.driver_phone;
+      if (body.expected_arrival_at)   dispatchUpdates.expected_arrival_at   = body.expected_arrival_at;
+      // dispatched_at = user-specified time when dispatch actually happened; falls back to now
+      dispatchUpdates.dispatched_at        = body.dispatched_at || now;
+      dispatchUpdates.dispatch_recorded_at = now;   // always system time
+      dispatchUpdates.dispatched_by        = user.id;
 
       const { error } = await supabase
         .from('collection_batches')

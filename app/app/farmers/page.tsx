@@ -16,8 +16,9 @@ import {
   Loader2, Users, Search, MapPin, Package, TrendingUp,
   CheckCircle2, Clock, AlertCircle, LayoutList, LayoutGrid,
   ArrowUpDown, ChevronUp, ChevronDown, Scale, Star, Map,
-  Download, UserPlus, Eye,
+  Download, UserPlus, Eye, SlidersHorizontal, X,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TierGate } from '@/components/tier-gate';
 
 interface FarmerLedger {
@@ -83,6 +84,10 @@ export default function FarmersPage() {
   const [sortKey, setSortKey] = useState<SortKey>('farmer_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [commodityFilter, setCommodityFilter] = useState<string>('all');
+  const [communityFilter, setCommunityFilter] = useState<string>('all');
+  const [lastCollectionFilter, setLastCollectionFilter] = useState<string>('all');
+  const [frequencyFilter, setFrequencyFilter] = useState<string>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     fetchFarmers();
@@ -127,16 +132,46 @@ export default function FarmersPage() {
       : <ChevronDown className="h-3 w-3 ml-1 inline" />;
   };
 
-  // Unique commodities for filter
+  // Unique values for filters
   const uniqueCommodities = Array.from(new Set(farmers.map(f => f.commodity).filter(Boolean) as string[])).sort();
+  const uniqueCommunities = Array.from(new Set(farmers.map(f => f.community).filter(Boolean) as string[])).sort();
+
+  const activeFilterCount = [
+    commodityFilter !== 'all',
+    communityFilter !== 'all',
+    lastCollectionFilter !== 'all',
+    frequencyFilter !== 'all',
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setCommodityFilter('all');
+    setCommunityFilter('all');
+    setLastCollectionFilter('all');
+    setFrequencyFilter('all');
+  };
 
   const filtered = farmers.filter(f => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      f.farmer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.community?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.commodity?.toLowerCase().includes(searchQuery.toLowerCase());
+      f.farmer_name?.toLowerCase().includes(q) ||
+      f.community?.toLowerCase().includes(q) ||
+      f.commodity?.toLowerCase().includes(q);
     const matchesCommodity = commodityFilter === 'all' || f.commodity?.toLowerCase() === commodityFilter.toLowerCase();
-    return matchesSearch && matchesCommodity;
+    const matchesCommunity = communityFilter === 'all' || f.community?.toLowerCase() === communityFilter.toLowerCase();
+    const matchesFrequency = frequencyFilter === 'all' || f.delivery_frequency === frequencyFilter;
+    const matchesLastCollection = (() => {
+      if (lastCollectionFilter === 'all') return true;
+      if (lastCollectionFilter === 'never') return !f.last_delivery_date;
+      if (!f.last_delivery_date) return false;
+      const daysAgo = Math.floor((Date.now() - new Date(f.last_delivery_date).getTime()) / 86400000);
+      if (lastCollectionFilter === '30')   return daysAgo <= 30;
+      if (lastCollectionFilter === '90')   return daysAgo > 30 && daysAgo <= 90;
+      if (lastCollectionFilter === '180')  return daysAgo > 90 && daysAgo <= 180;
+      if (lastCollectionFilter === '180+') return daysAgo > 180;
+      return true;
+    })();
+    return matchesSearch && matchesCommodity && matchesCommunity && matchesFrequency && matchesLastCollection;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -291,22 +326,72 @@ export default function FarmersPage() {
             </Card>
           </div>
 
-          {/* Controls row: search + commodity filter + view toggle */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[220px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, community, commodity..."
-                aria-label="Search farmers"
-                className="pl-9"
-                data-testid="input-search-farmers"
-              />
+          {/* Controls row */}
+          <div className="space-y-3">
+            {/* Row 1: search + filter toggle + view toggle */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[220px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name, community, commodity..."
+                  aria-label="Search farmers"
+                  className="pl-9"
+                  data-testid="input-search-farmers"
+                />
+              </div>
+
+              <Button
+                variant={showAdvancedFilters ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowAdvancedFilters(v => !v)}
+                className="shrink-0 relative"
+                aria-label="Toggle filters"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary-foreground text-primary text-[10px] font-bold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              {(activeFilterCount > 0 || searchQuery) && (
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="shrink-0 text-muted-foreground">
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+
+              <div className="flex-1 hidden sm:block" />
+
+              <div className="segmented-control shrink-0">
+                <button
+                  className="segmented-control-item px-2.5"
+                  data-active={viewMode === 'table'}
+                  onClick={() => setViewMode('table')}
+                  title="Table view"
+                  data-testid="button-view-table"
+                  aria-label="Table view"
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  className="segmented-control-item px-2.5"
+                  data-active={viewMode === 'grid'}
+                  onClick={() => setViewMode('grid')}
+                  title="Card grid view"
+                  data-testid="button-view-grid"
+                  aria-label="Card grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Commodity filter — segmented control */}
+            {/* Row 2: commodity quick filter (always visible if commodities exist) */}
             {uniqueCommodities.length > 0 && (
               <div className="segmented-control flex-wrap gap-y-1">
                 <button
@@ -331,32 +416,60 @@ export default function FarmersPage() {
               </div>
             )}
 
-            {/* Spacer */}
-            <div className="flex-1 hidden sm:block" />
+            {/* Row 3: advanced filters panel */}
+            {showAdvancedFilters && (
+              <div className="rounded-lg border bg-muted/30 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Community */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Community</label>
+                  <Select value={communityFilter} onValueChange={setCommunityFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All communities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All communities</SelectItem>
+                      {uniqueCommunities.map(c => (
+                        <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* View toggle */}
-            <div className="segmented-control shrink-0">
-              <button
-                className="segmented-control-item px-2.5"
-                data-active={viewMode === 'table'}
-                onClick={() => setViewMode('table')}
-                title="Table view"
-                data-testid="button-view-table"
-                aria-label="Table view"
-              >
-                <LayoutList className="h-4 w-4" />
-              </button>
-              <button
-                className="segmented-control-item px-2.5"
-                data-active={viewMode === 'grid'}
-                onClick={() => setViewMode('grid')}
-                title="Card grid view"
-                data-testid="button-view-grid"
-                aria-label="Card grid view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-            </div>
+                {/* Last Collection */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Last Collection</label>
+                  <Select value={lastCollectionFilter} onValueChange={setLastCollectionFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Any time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any time</SelectItem>
+                      <SelectItem value="30">Last 30 days</SelectItem>
+                      <SelectItem value="90">31 – 90 days ago</SelectItem>
+                      <SelectItem value="180">91 – 180 days ago</SelectItem>
+                      <SelectItem value="180+">Over 6 months ago</SelectItem>
+                      <SelectItem value="never">Never collected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Delivery Frequency */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Delivery Frequency</label>
+                  <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All frequencies</SelectItem>
+                      <SelectItem value="high">High — active suppliers</SelectItem>
+                      <SelectItem value="medium">Medium — occasional</SelectItem>
+                      <SelectItem value="low">Low — infrequent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* TABLE VIEW */}
@@ -419,7 +532,7 @@ export default function FarmersPage() {
                               <>
                                 <p className="font-medium text-muted-foreground">No farmers match your search</p>
                                 <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
-                                <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearchQuery(''); setCommodityFilter('all'); }}>
+                                <Button variant="outline" size="sm" className="mt-3" onClick={clearAllFilters}>
                                   Clear filters
                                 </Button>
                               </>
@@ -516,7 +629,7 @@ export default function FarmersPage() {
                   <>
                     <p className="font-medium text-muted-foreground">No farmers match your search</p>
                     <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
-                    <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSearchQuery(''); setCommodityFilter('all'); }}>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={clearAllFilters}>
                       Clear filters
                     </Button>
                   </>

@@ -41,19 +41,27 @@ export interface LegacyRateLimitConfig {
 
 export const RATE_LIMIT_PRESETS = {
   /** Deforestation check — calls Global Forest Watch API */
-  deforestationCheck: { max: 20,  windowSecs: 60, keyPrefix: 'def' },
+  deforestationCheck: { max: 20,   windowSecs: 60,   keyPrefix: 'def' },
   /** OCR — calls OpenAI Vision API */
-  ocr:               { max: 10,  windowSecs: 60, keyPrefix: 'ocr' },
+  ocr:               { max: 10,   windowSecs: 60,   keyPrefix: 'ocr' },
   /** Analytics — large DB fan-out */
-  analytics:         { max: 60,  windowSecs: 60, keyPrefix: 'anl' },
+  analytics:         { max: 60,   windowSecs: 60,   keyPrefix: 'anl' },
   /** Auth endpoints */
-  auth:              { max: 10,  windowSecs: 60, keyPrefix: 'ath' },
+  auth:              { max: 10,   windowSecs: 60,   keyPrefix: 'ath' },
   /** Cron / background jobs */
-  cron:              { max: 5,   windowSecs: 60, keyPrefix: 'crn' },
+  cron:              { max: 5,    windowSecs: 60,   keyPrefix: 'crn' },
   /** Reports — heavy DB aggregation */
-  reports:           { max: 20,  windowSecs: 60, keyPrefix: 'rpt' },
+  reports:           { max: 20,   windowSecs: 60,   keyPrefix: 'rpt' },
   /** General API routes */
-  general:           { max: 120, windowSecs: 60, keyPrefix: 'gen' },
+  general:           { max: 120,  windowSecs: 60,   keyPrefix: 'gen' },
+  /**
+   * External API keys (v1/* routes) — per-hour window.
+   * Used as the DEFAULT when a key has no custom rateLimitPerHour set.
+   * v1 routes that read rateLimitPerHour from the API key record should
+   * build a RateLimitConfig inline:
+   *   { max: auth.rateLimitPerHour ?? 1000, windowSecs: 3600, keyPrefix: `apk:${auth.keyPrefix}` }
+   */
+  apiKey:            { max: 1000, windowSecs: 3600, keyPrefix: 'apk' },
 } as const;
 
 export type RateLimitPreset = keyof typeof RATE_LIMIT_PRESETS;

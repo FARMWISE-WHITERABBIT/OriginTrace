@@ -33,6 +33,7 @@ interface FarmerData {
   files: any[];
   payments: any[];
   disbursements: any[];
+  bankAccounts: any[];
 }
 
 const COMPLIANCE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -125,6 +126,17 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     payment_date: new Date().toISOString().split('T')[0],
     linked_batch_id: '',
     notes: '',
+  });
+
+  // Bank account management
+  const [bankAccountSheetOpen, setBankAccountSheetOpen] = useState(false);
+  const [savingBankAccount, setSavingBankAccount] = useState(false);
+  const [deletingBankAccountId, setDeletingBankAccountId] = useState<string | null>(null);
+  const [bankAccountForm, setBankAccountForm] = useState({
+    account_number: '',
+    account_name: '',
+    bank_code: '',
+    bank_name: '',
   });
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
@@ -323,6 +335,45 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     }
   }
 
+  async function handleAddBankAccount() {
+    if (!bankAccountForm.account_number || !bankAccountForm.account_name || !bankAccountForm.bank_code || !bankAccountForm.bank_name) {
+      toast({ title: 'All fields required', variant: 'destructive' });
+      return;
+    }
+    setSavingBankAccount(true);
+    try {
+      const res = await fetch(`/api/farmers/${id}/bank-accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bankAccountForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      setData(prev => prev ? { ...prev, bankAccounts: [json.account, ...(prev.bankAccounts || []).filter((a: any) => a.account_number !== json.account.account_number)] } : prev);
+      setBankAccountSheetOpen(false);
+      setBankAccountForm({ account_number: '', account_name: '', bank_code: '', bank_name: '' });
+      toast({ title: 'Bank account saved' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingBankAccount(false);
+    }
+  }
+
+  async function handleDeleteBankAccount(accountId: string) {
+    setDeletingBankAccountId(accountId);
+    try {
+      const res = await fetch(`/api/farmers/${id}/bank-accounts?account_id=${accountId}`, { method: 'DELETE' });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Failed'); }
+      setData(prev => prev ? { ...prev, bankAccounts: (prev.bankAccounts || []).filter((a: any) => a.id !== accountId) } : prev);
+      toast({ title: 'Bank account removed' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeletingBankAccountId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -333,7 +384,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   if (!data) { notFound(); return null; }
 
-  const { farm, ledger, batches, inputs, training, files, payments, disbursements } = data;
+  const { farm, ledger, batches, inputs, training, files, payments, disbursements, bankAccounts } = data;
   const statusCfg = COMPLIANCE_STATUS_CONFIG[farm.compliance_status] || COMPLIANCE_STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
   const completedTraining = training.filter((t: any) => t.status === 'completed').length;
@@ -342,7 +393,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
   const totalDirectPayments = (payments || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -983,6 +1034,65 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
               )}
             </CardContent>
           </Card>
+
+          {/* Bank accounts / Payment methods */}
+          <Card className="card-accent-violet">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><Banknote className="h-3.5 w-3.5" /></div>
+                  Payment Methods
+                </CardTitle>
+                {canEdit && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setBankAccountSheetOpen(true)}>
+                    <Plus className="h-3 w-3 mr-1" />Add Account
+                  </Button>
+                )}
+              </div>
+              <CardDescription className="mt-1">Bank accounts registered for farmer payouts and disbursements.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!bankAccounts || bankAccounts.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><Banknote className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No bank accounts on file</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add a bank account to enable direct disbursements.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={() => setBankAccountSheetOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Add Bank Account</Button>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {bankAccounts.map((acct: any) => (
+                    <div key={acct.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                          <Banknote className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{acct.bank_name} <span className="text-muted-foreground font-normal">({acct.bank_code})</span></p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{acct.account_number} · {acct.account_name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {acct.is_verified
+                          ? <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700">Verified</Badge>
+                          : <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-700">Unverified</Badge>}
+                        {canEdit && (
+                          <Button
+                            size="icon" variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            disabled={deletingBankAccountId === acct.id}
+                            onClick={() => handleDeleteBankAccount(acct.id)}
+                          >
+                            {deletingBankAccountId === acct.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── Activity Tab ── */}
@@ -1261,6 +1371,38 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <Button className="w-full" onClick={handleRecordPayment} disabled={savingPayment || !paymentForm.amount}>
               {savingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               Record Payment
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Add Bank Account Sheet ── */}
+      <Sheet open={bankAccountSheetOpen} onOpenChange={open => { if (!open) setBankAccountSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Add Bank Account</SheetTitle>
+            <SheetDescription>Register a bank account for {data?.farm?.farmer_name} to receive disbursements.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <Label className="text-xs">Bank Name</Label>
+              <Input value={bankAccountForm.bank_name} onChange={e => setBankAccountForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="e.g. Access Bank" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Bank Code</Label>
+              <Input value={bankAccountForm.bank_code} onChange={e => setBankAccountForm(p => ({ ...p, bank_code: e.target.value }))} placeholder="e.g. 044" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Account Number</Label>
+              <Input value={bankAccountForm.account_number} onChange={e => setBankAccountForm(p => ({ ...p, account_number: e.target.value }))} placeholder="10-digit account number" maxLength={20} className="mt-1 font-mono" />
+            </div>
+            <div>
+              <Label className="text-xs">Account Name</Label>
+              <Input value={bankAccountForm.account_name} onChange={e => setBankAccountForm(p => ({ ...p, account_name: e.target.value }))} placeholder="Name as it appears on the account" className="mt-1" />
+            </div>
+            <Button className="w-full" onClick={handleAddBankAccount} disabled={savingBankAccount || !bankAccountForm.account_number || !bankAccountForm.account_name || !bankAccountForm.bank_code || !bankAccountForm.bank_name}>
+              {savingBankAccount ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Bank Account
             </Button>
           </div>
         </SheetContent>

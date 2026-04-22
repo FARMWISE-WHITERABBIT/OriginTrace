@@ -141,6 +141,10 @@ interface ShipmentDetail {
   shipment_outcome: string | null;
   rejection_reason: string | null;
   usd_ngn_rate: number | null;
+  // Payment fields (Phase 1a migration)
+  payment_status: string | null;
+  payment_method: string | null;
+  payment_instruction_token: string | null;
 }
 
 interface ShipmentItem {
@@ -557,6 +561,165 @@ function ShipmentTimeline({ shipment, outcomes }: { shipment: ShipmentDetail; ou
   );
 }
 
+// ── Payment Status Config ────────────────────────────────────────────────────
+
+const PAYMENT_STATUS_CFG: Record<string, { label: string; className: string }> = {
+  none:             { label: 'Not Set Up',       className: 'bg-slate-100 text-slate-600' },
+  pending_setup:    { label: 'Pending Setup',     className: 'bg-amber-50 text-amber-700' },
+  awaiting_payment: { label: 'Awaiting Payment',  className: 'bg-blue-50 text-blue-700' },
+  partially_funded: { label: 'Partially Funded',  className: 'bg-violet-50 text-violet-700' },
+  funded:           { label: 'Funded',            className: 'bg-emerald-50 text-emerald-700' },
+  released:         { label: 'Released',          className: 'bg-green-50 text-green-700' },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  escrow_usdc:  'USDC Escrow',
+  swift_virtual: 'Wire Transfer (Virtual Account)',
+  manual:        'Manual / Offline',
+};
+
+interface EscrowAccount {
+  id: string;
+  amount_usd: number;
+  status: string;
+  milestone_config: Array<{ milestone_id: string; stage: string; amount: number; description: string; released_at?: string }>;
+  created_at: string;
+}
+
+function ShipmentPaymentCard({
+  shipment,
+  onSetupPayment,
+  onReleaseEscrow,
+  onCopyInstructionLink,
+}: {
+  shipment: ShipmentDetail;
+  onSetupPayment: () => void;
+  onReleaseEscrow: (escrow: EscrowAccount) => void;
+  onCopyInstructionLink: () => void;
+}) {
+  const [escrow, setEscrow] = useState<EscrowAccount | null>(null);
+  const [loadingEscrow, setLoadingEscrow] = useState(false);
+
+  useEffect(() => {
+    if (!shipment.id) return;
+    setLoadingEscrow(true);
+    fetch(`/api/escrow?shipment_id=${shipment.id}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.escrow) setEscrow(d.escrow); })
+      .catch(() => {})
+      .finally(() => setLoadingEscrow(false));
+  }, [shipment.id]);
+
+  const payStatus = shipment.payment_status || 'none';
+  const cfg = PAYMENT_STATUS_CFG[payStatus] ?? PAYMENT_STATUS_CFG.none;
+
+  const releasedMilestones  = (escrow?.milestone_config ?? []).filter((m) => m.released_at);
+  const pendingMilestones   = (escrow?.milestone_config ?? []).filter((m) => !m.released_at);
+  const releasedAmount      = releasedMilestones.reduce((s, m) => s + m.amount, 0);
+  const escrowTotal         = escrow?.amount_usd ?? 0;
+
+  return (
+    <Card className="card-accent-emerald">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <DollarSign className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Payment</CardTitle>
+              <CardDescription>Inbound buyer payment for this shipment</CardDescription>
+            </div>
+          </div>
+          <Badge className={`text-xs ${cfg.className}`}>{cfg.label}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Shipment value */}
+        {shipment.total_shipment_value_usd !== null && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Shipment Value</span>
+            <span className="font-semibold">
+              ${Number(shipment.total_shipment_value_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
+
+        {/* Payment method */}
+        {shipment.payment_method && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Payment Method</span>
+            <span className="font-medium">{PAYMENT_METHOD_LABELS[shipment.payment_method] ?? shipment.payment_method}</span>
+          </div>
+        )}
+
+        {/* Escrow section */}
+        {loadingEscrow ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading escrow…
+          </div>
+        ) : escrow ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Escrow Balance</span>
+                <span className="font-bold">${escrowTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Released</span>
+                <span className="text-emerald-700 font-medium">${releasedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              {/* Milestone list */}
+              {escrow.milestone_config.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {escrow.milestone_config.map((m) => (
+                    <div key={m.milestone_id} className="flex items-center gap-2 text-xs">
+                      {m.released_at
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      <span className={`flex-1 truncate ${m.released_at ? 'line-through text-muted-foreground' : ''}`}>{m.description}</span>
+                      <span className="font-mono tabular-nums shrink-0">${m.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Release action */}
+            {pendingMilestones.length > 0 && payStatus === 'funded' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => onReleaseEscrow(escrow)}
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                Release Milestone Funds
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {(payStatus === 'none') && (
+            <Button size="sm" className="flex-1" onClick={onSetupPayment}>
+              <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+              Set Up Payment
+            </Button>
+          )}
+          {(payStatus === 'awaiting_payment' || payStatus === 'partially_funded') && shipment.payment_instruction_token && (
+            <Button size="sm" variant="outline" className="flex-1" onClick={onCopyInstructionLink}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy Payment Link
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ShipmentDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -618,6 +781,10 @@ export default function ShipmentDetailPage() {
   const [coldChainDialogOpen, setColdChainDialogOpen] = useState(false);
   const [lotDialogOpen, setLotDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Payment card state
+  const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
+  const [releaseEscrow, setReleaseEscrow] = useState<EscrowAccount | null>(null);
+  const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
 
   const fetchShipment = useCallback(async () => {
     if (orgLoading || !organization) return;
@@ -1669,6 +1836,21 @@ export default function ShipmentDetailPage() {
       {/* Cost of Export & Net Margin */}
       <CostTracker shipmentId={shipment.id} />
 
+      {/* Payment Card */}
+      <ShipmentPaymentCard
+        shipment={shipment}
+        onSetupPayment={() => setPaymentSetupOpen(true)}
+        onReleaseEscrow={(e) => setReleaseEscrow(e)}
+        onCopyInstructionLink={() => {
+          if (!shipment.payment_instruction_token) return;
+          const link = `${window.location.origin}/app/payments/pay/${shipment.payment_instruction_token}`;
+          navigator.clipboard.writeText(link).catch(() => {});
+          setCopiedPaymentLink(true);
+          setTimeout(() => setCopiedPaymentLink(false), 2000);
+          toast({ title: 'Payment link copied', description: 'Share this link with the buyer.' });
+        }}
+      />
+
       {/* Evidence Package */}
       <Card className="card-accent-violet">
         <CardHeader className="pb-3">
@@ -1804,6 +1986,264 @@ export default function ShipmentDetailPage() {
         loading={isRemovingItem}
         onConfirm={doRemoveItem}
       />
+
+      {/* Payment Setup Modal */}
+      <PaymentSetupModal
+        open={paymentSetupOpen}
+        shipmentId={shipment.id}
+        shipmentValue={shipment.total_shipment_value_usd}
+        onOpenChange={setPaymentSetupOpen}
+        onSuccess={() => { setPaymentSetupOpen(false); fetchShipment(); }}
+      />
+
+      {/* Escrow Release Confirmation */}
+      {releaseEscrow && (
+        <EscrowReleaseModal
+          open={!!releaseEscrow}
+          escrow={releaseEscrow}
+          shipment={shipment}
+          onOpenChange={(v) => { if (!v) setReleaseEscrow(null); }}
+          onSuccess={() => { setReleaseEscrow(null); fetchShipment(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Payment Setup Modal ──────────────────────────────────────────────────────
+
+function PaymentSetupModal({
+  open,
+  shipmentId,
+  shipmentValue,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean;
+  shipmentId: string;
+  shipmentValue: number | null;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [method, setMethod] = useState<'escrow_usdc' | 'swift_virtual' | 'manual'>('escrow_usdc');
+  const [amount, setAmount] = useState(String(shipmentValue ?? ''));
+  const [milestones, setMilestones] = useState([
+    { stage: 'on_loading', amount: '', description: 'Payment on loading' },
+    { stage: 'on_delivery', amount: '', description: 'Payment on delivery' },
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    const amountNum = parseFloat(amount);
+    if (!amountNum || amountNum <= 0) {
+      toast({ title: 'Invalid amount', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const milestoneParsed = method === 'escrow_usdc'
+        ? milestones
+            .filter((m) => m.description && m.amount)
+            .map((m) => ({ stage: m.stage, amount: parseFloat(m.amount), description: m.description }))
+        : undefined;
+
+      const res = await fetch(`/api/shipments/${shipmentId}/payment-setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method: method,
+          amount_usd: amountNum,
+          milestones: milestoneParsed,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to set up payment');
+
+      toast({ title: 'Payment set up', description: `Method: ${method === 'escrow_usdc' ? 'USDC Escrow' : method === 'swift_virtual' ? 'Wire Transfer' : 'Manual'}` });
+      onSuccess();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set Up Payment</DialogTitle>
+          <DialogDescription>
+            Choose how the buyer will pay for this shipment.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {/* Method */}
+          <div className="space-y-2">
+            <Label>Payment Method</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="escrow_usdc">USDC Escrow (Recommended)</SelectItem>
+                <SelectItem value="swift_virtual">Wire Transfer (Virtual Account)</SelectItem>
+                <SelectItem value="manual">Manual / Offline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Amount */}
+          <div className="space-y-2">
+            <Label>Shipment Value (USD)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 50000"
+            />
+          </div>
+
+          {/* Milestones (escrow only) */}
+          {method === 'escrow_usdc' && (
+            <div className="space-y-2">
+              <Label>Payment Milestones</Label>
+              <div className="space-y-2">
+                {milestones.map((m, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_100px] gap-2">
+                    <Input
+                      placeholder="Description"
+                      value={m.description}
+                      onChange={(e) => setMilestones((ms) => ms.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="USD"
+                      value={m.amount}
+                      onChange={(e) => setMilestones((ms) => ms.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))}
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setMilestones((ms) => [...ms, { stage: `stage_${ms.length + 1}`, amount: '', description: '' }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />Add Milestone
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Confirm Setup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Escrow Release Modal ─────────────────────────────────────────────────────
+
+function EscrowReleaseModal({
+  open,
+  escrow,
+  shipment,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean;
+  escrow: EscrowAccount;
+  shipment: ShipmentDetail;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [isReleasing, setIsReleasing] = useState(false);
+
+  const pendingMilestones = escrow.milestone_config.filter((m) => !m.released_at);
+
+  const handleRelease = async () => {
+    if (!selectedMilestone) {
+      toast({ title: 'Select a milestone to release', variant: 'destructive' });
+      return;
+    }
+    setIsReleasing(true);
+    try {
+      const res = await fetch(`/api/escrow/${escrow.id}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ milestone_id: selectedMilestone }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to release milestone');
+      toast({ title: 'Milestone released', description: 'Funds have been released.' });
+      onSuccess();
+    } catch (err: any) {
+      toast({ title: 'Release failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsReleasing(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Release Milestone Funds</DialogTitle>
+          <DialogDescription>
+            Select a milestone to release funds to your wallet.
+            Shipment: <strong>{shipment.shipment_code}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="rounded-lg border p-3 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Escrow Balance</span>
+              <span className="font-bold">${Number(escrow.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Select Milestone to Release</Label>
+            {pendingMilestones.map((m) => (
+              <button
+                key={m.milestone_id}
+                type="button"
+                onClick={() => setSelectedMilestone(m.milestone_id)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  selectedMilestone === m.milestone_id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-muted-foreground/50'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">{m.description}</span>
+                  <span className="text-sm font-bold">${m.amount.toLocaleString()}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">{m.stage}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={handleRelease}
+            disabled={isReleasing || !selectedMilestone}
+          >
+            {isReleasing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Release Funds
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

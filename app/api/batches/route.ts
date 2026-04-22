@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Fetch full farm record including compliance gate fields
     const { data: farm, error: farmError } = await supabase
       .from('farms')
-      .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp')
+      .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp, conflict_status')
       .eq('id', farm_id)
       .eq('org_id', profile.org_id)
       .single();

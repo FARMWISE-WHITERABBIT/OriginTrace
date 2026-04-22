@@ -181,10 +181,38 @@ export function AggregatorDashboard() {
   }, [fetchTrends]);
 
   const statCards = [
-    { title: 'Total Batches',  value: stats.totalBatches, icon: Package, iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
-    { title: 'Open Batches',   value: stats.collectingBatches + stats.resolvedBatches, icon: Clock, iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
-    { title: 'Dispatched',     value: stats.dispatchedBatches, icon: Truck,   iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
-    { title: 'Field Agents',   value: stats.activeAgents, icon: Users,   iconClass: 'icon-bg-violet',  accent: 'card-accent-violet' },
+    {
+      title: 'Total Batches',
+      value: stats.totalBatches,
+      icon: Package,
+      iconClass: 'icon-bg-blue',
+      accent: 'card-accent-blue',
+      subtitle: 'All time',
+    },
+    {
+      title: 'Open Batches',
+      value: stats.collectingBatches + stats.resolvedBatches,
+      icon: Clock,
+      iconClass: 'icon-bg-amber',
+      accent: 'card-accent-amber',
+      subtitle: 'Needs attention',
+    },
+    {
+      title: 'Dispatched',
+      value: stats.dispatchedBatches,
+      icon: Truck,
+      iconClass: 'icon-bg-emerald',
+      accent: 'card-accent-emerald',
+      subtitle: 'Completed',
+    },
+    {
+      title: 'Field Agents',
+      value: stats.activeAgents,
+      icon: Users,
+      iconClass: 'icon-bg-violet',
+      accent: 'card-accent-violet',
+      subtitle: 'Active',
+    },
   ];
 
   const weightCards = [
@@ -196,9 +224,38 @@ export function AggregatorDashboard() {
 
   return (
     <div data-testid="aggregator-dashboard">
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Collection Hub</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Aggregation pipeline and batch performance</p>
+        </div>
+        <div className="flex items-center gap-3" data-testid="aggregator-period-selector">
+          <div className="segmented-control">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className="segmented-control-item"
+                data-active={trendPeriod === opt.value}
+                onClick={() => setTrendPeriod(opt.value)}
+                data-testid={`button-agg-period-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {weightTrend !== 0 && <TrendIndicator value={weightTrend} />}
+        </div>
+      </div>
+
+      {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card
+            key={stat.title}
+            className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`}
+            data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}
+          >
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
               <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
@@ -206,39 +263,39 @@ export function AggregatorDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+              <div
+                className="text-3xl font-bold tabular-nums tracking-tight"
+                data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}
+              >
                 {isLoading ? '—' : stat.value}
+              </div>
+              <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{stat.subtitle || 'vs last period'}</span>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card data-testid="card-volume-trends" className="mt-4">
+      {/* ANALYTICS section divider */}
+      <div className="flex items-center gap-3 my-6 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+        <div className="flex-1 h-px bg-border" />
+        <span>ANALYTICS</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Volume Trends */}
+      <Card data-testid="card-volume-trends">
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Volume Trends
-              </CardTitle>
-              <CardDescription>Collection weight over time</CardDescription>
-            </div>
-            <div className="flex items-center gap-3" data-testid="aggregator-period-selector">
-              <div className="segmented-control">
-                {PERIOD_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    className="segmented-control-item"
-                    data-active={trendPeriod === opt.value}
-                    onClick={() => setTrendPeriod(opt.value)}
-                    data-testid={`button-agg-period-${opt.value}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                <BarChart3 className="h-3.5 w-3.5" />
               </div>
-              {weightTrend !== 0 && <TrendIndicator value={weightTrend} />}
+              <div>
+                <CardTitle className="text-sm font-semibold">Volume Trends</CardTitle>
+                <CardDescription className="text-xs">Collection weight over time</CardDescription>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -286,14 +343,26 @@ export function AggregatorDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 mt-4">
+      {/* COMMODITY & QUALITY section divider */}
+      <div className="flex items-center gap-3 my-6 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+        <div className="flex-1 h-px bg-border" />
+        <span>COMMODITY &amp; QUALITY</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Commodity Distribution + Grade Distribution */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card data-testid="card-commodity-distribution">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wheat className="h-5 w-5" />
-              Commodity Distribution
-            </CardTitle>
-            <CardDescription>Collection volume by commodity</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                <Wheat className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Commodity Distribution</CardTitle>
+                <CardDescription className="text-xs">Collection volume by commodity</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isTrendLoading ? (
@@ -317,11 +386,15 @@ export function AggregatorDashboard() {
 
         <Card data-testid="card-grade-distribution">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Grade Distribution
-            </CardTitle>
-            <CardDescription>Bags by quality grade</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                <BarChart3 className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Grade Distribution</CardTitle>
+                <CardDescription className="text-xs">Bags by quality grade</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isTrendLoading ? (
@@ -346,14 +419,26 @@ export function AggregatorDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 mt-4">
+      {/* AGENT PERFORMANCE section divider */}
+      <div className="flex items-center gap-3 my-6 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+        <div className="flex-1 h-px bg-border" />
+        <span>AGENT PERFORMANCE</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Agent Performance Ranking + Deforestation Risk */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card data-testid="card-agent-ranking">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Agent Performance Ranking
-            </CardTitle>
-            <CardDescription>Top agents by collection weight (kg)</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                <Users className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Agent Performance Ranking</CardTitle>
+                <CardDescription className="text-xs">Top agents by collection weight (kg)</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isTrendLoading ? (
@@ -379,11 +464,15 @@ export function AggregatorDashboard() {
 
         <Card data-testid="card-deforestation-risk">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Leaf className="h-5 w-5" />
-              Deforestation Risk
-            </CardTitle>
-            <CardDescription>Farm risk distribution</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-red shrink-0">
+                <Leaf className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Deforestation Risk</CardTitle>
+                <CardDescription className="text-xs">Farm risk distribution</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isTrendLoading ? (
@@ -406,24 +495,40 @@ export function AggregatorDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
+      {/* BATCH STATUS section divider */}
+      <div className="flex items-center gap-3 my-6 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+        <div className="flex-1 h-px bg-border" />
+        <span>BATCH STATUS</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Weight Summary + Compliance Health */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scale className="h-5 w-5" />
-              Weight Summary
-            </CardTitle>
-            <CardDescription>Collection volumes by time period</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                <Scale className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Weight Summary</CardTitle>
+                <CardDescription className="text-xs">Collection volumes by time period</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {weightCards.map((item) => (
-                <div key={item.label} className="text-center p-4 rounded-md bg-muted/50" data-testid={`weight-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                  <p className="text-sm text-muted-foreground">{item.label}</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {isLoading ? '...' : item.value.toLocaleString()}
+                <div
+                  key={item.label}
+                  className="flex flex-col p-4 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/80 transition-colors"
+                  data-testid={`weight-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">{item.label}</p>
+                  <p className="text-2xl font-bold tabular-nums mt-1.5">
+                    {isLoading ? '—' : item.value.toLocaleString()}
                   </p>
-                  <p className="text-xs text-muted-foreground">kg</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">kg</p>
                 </div>
               ))}
             </div>
@@ -432,18 +537,22 @@ export function AggregatorDashboard() {
 
         <Card data-testid="card-compliance-health">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Compliance Health
-            </CardTitle>
-            <CardDescription>Batch quality status</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                <CheckCircle className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Compliance Health</CardTitle>
+                <CardDescription className="text-xs">Batch quality status</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <div className="text-4xl font-bold text-green-600" data-testid="value-compliance-score">
-                {isLoading ? '...' : `${stats.complianceScore}%`}
+              <div className="text-5xl font-bold tabular-nums text-green-600" data-testid="value-compliance-score">
+                {isLoading ? '—' : `${stats.complianceScore}%`}
               </div>
-              <p className="text-sm text-muted-foreground">Compliance Score</p>
+              <p className="text-sm text-muted-foreground mt-1">Compliance Score</p>
             </div>
             <Progress value={stats.complianceScore} className="h-2" />
             {stats.flaggedBatches > 0 && (
@@ -458,14 +567,19 @@ export function AggregatorDashboard() {
         </Card>
       </div>
 
+      {/* Open Batches + Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 mt-4">
         <Card data-testid="card-open-batches">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-500" />
-              Open Batches
-            </CardTitle>
-            <CardDescription>Batches awaiting resolution or dispatch</CardDescription>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                <Clock className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Open Batches</CardTitle>
+                <CardDescription className="text-xs">Batches awaiting resolution or dispatch</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -509,7 +623,7 @@ export function AggregatorDashboard() {
             <Link href="/app/verify">
               <Button variant="outline" className="w-full justify-start" data-testid="button-scan-verify">
                 <Package className="h-4 w-4 mr-2" />
-                Scan & Verify Bags
+                Scan &amp; Verify Bags
               </Button>
             </Link>
             <Link href="/app/traceability">
