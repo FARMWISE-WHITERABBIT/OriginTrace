@@ -217,6 +217,198 @@ export function buildRegistrantConfirmationEmail(data: RegistrationData, ctx: Ev
 </html>`;
 }
 
+export function buildDayBeforeReminderEmail(
+  data: { fullName: string },
+  ctx: EventEmailContext = YEXDEP_CONTEXT,
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomorrow: ${ctx.shortTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F0F7F4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0F7F4;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:${ctx.headerColor};padding:32px 40px;text-align:center;">
+              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">${ctx.partners}</p>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">${ctx.eventTitle}</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">${ctx.shortTitle}</p>
+            </td>
+          </tr>
+
+          <!-- Banner -->
+          <tr>
+            <td style="background-color:${ctx.bannerBg};padding:16px 40px;text-align:center;border-bottom:1px solid ${ctx.bannerBorder};">
+              <p style="margin:0;color:${ctx.bannerText};font-size:15px;font-weight:600;">&#x1F4C5; Your event is tomorrow &mdash; see you on ${ctx.dayWord}!</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+                Dear <strong style="color:#111827;">${data.fullName}</strong>,
+              </p>
+              <p style="margin:0 0 28px;color:#4B5563;font-size:15px;line-height:1.6;">
+                Just a quick reminder that <strong>${ctx.eventTitle}</strong> is happening <strong>tomorrow, ${ctx.date}</strong>. We're looking forward to welcoming you!
+              </p>
+
+              <!-- Event Details Box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${ctx.detailsBg};border:1px solid ${ctx.detailsBorder};border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 16px;color:${ctx.detailsAccent};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Event Details</p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;width:90px;vertical-align:top;">Date</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:500;">${ctx.date}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;vertical-align:top;">Time</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:500;">${ctx.time}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;vertical-align:top;">Venue</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:500;">${ctx.venue}<br>${ctx.venueAddress}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;vertical-align:top;">Theme</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-style:italic;">&ldquo;${ctx.theme}&rdquo;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What to bring -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${ctx.regBg};border:1px solid ${ctx.regBorder};border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 12px;color:${ctx.regLabel};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">What to Bring</p>
+                    <ul style="margin:0;padding:0 0 0 18px;color:#374151;font-size:14px;line-height:1.9;">
+                      <li>A valid ID (for check-in at the door)</li>
+                      <li>Writing materials</li>
+                      <li>This email (digital or printed)</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#4B5563;font-size:14px;line-height:1.6;">
+                Admission is <strong>free</strong> &mdash; your spot is reserved. Please arrive on time. For any enquiries, reach us at <a href="mailto:hello@origintrace.trade" style="color:${ctx.accentColor};font-weight:500;">hello@origintrace.trade</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F8FAFC;padding:20px 40px;text-align:center;border-top:1px solid #E5E7EB;">
+              <p style="margin:0;color:#9CA3AF;font-size:12px;">${ctx.partners}</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function buildDayOfReminderEmail(
+  data: { fullName: string },
+  ctx: EventEmailContext = YEXDEP_CONTEXT,
+): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Today: ${ctx.shortTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F0F7F4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0F7F4;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:${ctx.headerColor};padding:32px 40px;text-align:center;">
+              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">${ctx.partners}</p>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">${ctx.eventTitle}</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">${ctx.shortTitle}</p>
+            </td>
+          </tr>
+
+          <!-- Banner -->
+          <tr>
+            <td style="background-color:${ctx.bannerBg};padding:16px 40px;text-align:center;border-bottom:1px solid ${ctx.bannerBorder};">
+              <p style="margin:0;color:${ctx.bannerText};font-size:15px;font-weight:600;">&#x1F389; Today is the day &mdash; we can't wait to see you!</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+                Dear <strong style="color:#111827;">${data.fullName}</strong>,
+              </p>
+              <p style="margin:0 0 28px;color:#4B5563;font-size:15px;line-height:1.6;">
+                <strong>${ctx.eventTitle}</strong> kicks off today. Doors open at <strong>${ctx.time}</strong> &mdash; please arrive on time so you don't miss the opening session.
+              </p>
+
+              <!-- Getting There -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${ctx.detailsBg};border:1px solid ${ctx.detailsBorder};border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 16px;color:${ctx.detailsAccent};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Getting There</p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;width:90px;vertical-align:top;">Time</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:600;">${ctx.time}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;vertical-align:top;">Venue</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:500;">${ctx.venue}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#6B7280;font-size:13px;vertical-align:top;">Address</td>
+                        <td style="padding:6px 0;color:#111827;font-size:14px;font-weight:500;">${ctx.venueAddress}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#4B5563;font-size:14px;line-height:1.6;">
+                Please bring a valid ID &mdash; admission is <strong>free</strong> and your name is on the list. For urgent enquiries, reach us at <a href="mailto:hello@origintrace.trade" style="color:${ctx.accentColor};font-weight:500;">hello@origintrace.trade</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F8FAFC;padding:20px 40px;text-align:center;border-top:1px solid #E5E7EB;">
+              <p style="margin:0;color:#9CA3AF;font-size:12px;">${ctx.partners}</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function buildAdminNotificationEmail(data: RegistrationData, totalCount: number, ctx: EventEmailContext = YEXDEP_CONTEXT): string {
   const registeredAt = new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' });
 

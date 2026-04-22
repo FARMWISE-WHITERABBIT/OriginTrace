@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   CalendarDays, Plus, Loader2, Pencil, Trash2, Users,
   Download, ToggleLeft, ToggleRight, ExternalLink, RefreshCw,
-  UserCheck, Search, CheckCircle2, Mail,
+  UserCheck, Search, CheckCircle2, Mail, BellRing,
 } from 'lucide-react';
 
 interface EventItem {
@@ -39,6 +39,8 @@ interface EventItem {
   is_free: boolean;
   registration_open: boolean;
   registration_closes_at: string | null;
+  reminder_sent_day_before: boolean;
+  reminder_sent_day_of: boolean;
   created_at: string;
   registration_count: number;
 }
@@ -87,6 +89,11 @@ export default function SuperadminEventsPage() {
   const [exporting, setExporting] = useState<string | null>(null);
   const [resending, setResending] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+
+  // Reminder dialog state
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [reminderEvent, setReminderEvent] = useState<EventItem | null>(null);
+  const [sendingReminder, setSendingReminder] = useState<'day_before' | 'day_of' | null>(null);
 
   // Check-in sheet state
   const [checkinSheetOpen, setCheckinSheetOpen] = useState(false);
@@ -339,6 +346,32 @@ export default function SuperadminEventsPage() {
       });
     } finally {
       setResending(null);
+    }
+  }
+
+  async function handleSendReminder(type: 'day_before' | 'day_of') {
+    if (!reminderEvent) return;
+    setSendingReminder(type);
+    try {
+      const res = await fetch('/api/superadmin/events/send-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: reminderEvent.slug, type }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Failed', description: data.error ?? 'Could not send reminders', variant: 'destructive' });
+        return;
+      }
+      toast({
+        title: `Reminders sent: ${data.sent} of ${data.total}`,
+        description: data.failed > 0 ? `${data.failed} failed — check Vercel logs` : 'All reminder emails delivered successfully.',
+        variant: data.failed > 0 ? 'destructive' : 'default',
+      });
+      setReminderDialogOpen(false);
+      fetchEvents();
+    } finally {
+      setSendingReminder(null);
     }
   }
 
@@ -618,6 +651,16 @@ export default function SuperadminEventsPage() {
                             : <Mail className="h-4 w-4" />}
                         </Button>
 
+                        {/* Send reminder emails */}
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => { setReminderEvent(event); setReminderDialogOpen(true); }}
+                          title="Send reminder emails"
+                          className="text-slate-400 hover:text-violet-400 h-8 w-8 p-0"
+                        >
+                          <BellRing className="h-4 w-4" />
+                        </Button>
+
                         {/* Export */}
                         <Button
                           variant="ghost" size="sm"
@@ -842,6 +885,61 @@ export default function SuperadminEventsPage() {
             <Button onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder emails */}
+      <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <BellRing className="h-5 w-5 text-violet-400" />
+              Send Reminder Emails
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Choose which reminder to send to all registrants of{' '}
+              <strong className="text-white">{reminderEvent?.short_title ?? reminderEvent?.title}</strong>.
+              {reminderEvent?.reminder_sent_day_before && (
+                <span className="block mt-2 text-amber-400 text-xs">⚠ Day-before reminder already sent — sending again will re-email everyone.</span>
+              )}
+              {reminderEvent?.reminder_sent_day_of && (
+                <span className="block mt-1 text-amber-400 text-xs">⚠ Day-of reminder already sent — sending again will re-email everyone.</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-2">
+            <Button
+              onClick={() => handleSendReminder('day_before')}
+              disabled={sendingReminder !== null}
+              className="bg-violet-700 hover:bg-violet-600 text-white justify-start gap-3 h-14"
+            >
+              {sendingReminder === 'day_before'
+                ? <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                : <BellRing className="h-4 w-4 shrink-0" />}
+              <div className="text-left">
+                <p className="font-semibold text-sm">Day-before reminder</p>
+                <p className="text-xs text-violet-300 font-normal">Sends "Your event is tomorrow" to all registrants</p>
+              </div>
+            </Button>
+            <Button
+              onClick={() => handleSendReminder('day_of')}
+              disabled={sendingReminder !== null}
+              className="bg-violet-700 hover:bg-violet-600 text-white justify-start gap-3 h-14"
+            >
+              {sendingReminder === 'day_of'
+                ? <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                : <BellRing className="h-4 w-4 shrink-0" />}
+              <div className="text-left">
+                <p className="font-semibold text-sm">Day-of reminder</p>
+                <p className="text-xs text-violet-300 font-normal">Sends "Today is the day — doors open at 9 AM" to all registrants</p>
+              </div>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReminderDialogOpen(false)} className="text-slate-400 hover:text-white">
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
