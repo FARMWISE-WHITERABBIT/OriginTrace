@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
+import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 const settingsPatchSchema = z.object({
   name: z.string().min(2).optional(),
@@ -25,12 +26,11 @@ async function getImpersonatedOrgId(): Promise<number | null> {
   try {
     const cookieStore = await cookies();
     const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
-    
-    if (impersonationCookie) {
-      const data = JSON.parse(impersonationCookie.value);
-      if (new Date(data.expires_at) > new Date()) {
-        return data.org_id;
-      }
+    if (!impersonationCookie) return null;
+    // Cookie is HMAC-signed — must use verifyCookiePayload, not JSON.parse
+    const data = await verifyCookiePayload<{ org_id: number; expires_at: string }>(impersonationCookie.value);
+    if (data && new Date(data.expires_at) > new Date()) {
+      return data.org_id;
     }
   } catch (error) {
     console.error('Error reading impersonation cookie:', error);

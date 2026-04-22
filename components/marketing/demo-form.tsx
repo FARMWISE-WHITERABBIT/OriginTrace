@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -131,9 +132,9 @@ function SubmittedState({ name }: { name: string }) {
 }
 
 export function DemoFormWidget() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -181,8 +182,10 @@ export function DemoFormWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, source: 'demo' }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error('Submission failed');
-      setSubmitted(true);
+      // Redirect to booking confirm page while intent is hot
+      router.push(data.redirect || `/demo/confirm?name=${encodeURIComponent(formData.full_name)}&email=${encodeURIComponent(formData.email)}`);
     } catch {
       toast({
         title: 'Submission failed',
@@ -194,10 +197,6 @@ export function DemoFormWidget() {
     }
   }
 
-  // Success: render inline (no extra Nav/Footer — page.tsx already has them)
-  if (submitted) {
-    return <SubmittedState name={formData.full_name} />;
-  }
 
   return (
     <FadeIn direction="left" delay={0.2}>

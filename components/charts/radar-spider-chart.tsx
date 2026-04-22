@@ -4,7 +4,8 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip, Legend,
 } from 'recharts';
-import { VIZ_COLORS, TOOLTIP_STYLE } from '@/lib/chart-colors';
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface RadarSpiderChartProps {
   data: Array<Record<string, string | number>>;
@@ -25,20 +26,25 @@ export function RadarSpiderChart({
 }: RadarSpiderChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <RadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
-        <PolarGrid className="stroke-border" />
+      <RadarChart data={data} cx="50%" cy="50%" outerRadius="72%">
+        <PolarGrid
+          stroke="hsl(var(--border))"
+          strokeOpacity={0.7}
+        />
         <PolarAngleAxis
           dataKey={angleKey}
-          tick={{ fontSize: 11 }}
-          className="text-muted-foreground"
+          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+          tickLine={false}
         />
         <PolarRadiusAxis
           angle={90}
           domain={[0, maxValue || 'auto']}
-          tick={{ fontSize: 10 }}
-          className="text-muted-foreground"
+          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+          tickLine={false}
+          axisLine={false}
+          tickCount={4}
         />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
+        <Tooltip content={<ChartTooltip />} />
         {series.map((s, index) => {
           const color = s.color || VIZ_COLORS[index % VIZ_COLORS.length];
           return (
@@ -47,9 +53,11 @@ export function RadarSpiderChart({
               name={s.label}
               dataKey={s.dataKey}
               stroke={color}
-              fill={color}
-              fillOpacity={0.15}
               strokeWidth={2}
+              fill={color}
+              fillOpacity={0.18}
+              dot={{ r: 3, fill: color, strokeWidth: 0 }}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
             />
           );
         })}
@@ -57,8 +65,8 @@ export function RadarSpiderChart({
           <Legend
             verticalAlign="bottom"
             iconType="circle"
-            iconSize={8}
-            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+            iconSize={7}
+            wrapperStyle={{ fontSize: '11px', paddingTop: '10px', color: 'hsl(var(--muted-foreground))' }}
           />
         )}
       </RadarChart>

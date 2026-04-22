@@ -19,9 +19,10 @@ const FALLBACK_USD_NGN_RATE = 1650;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServiceClient();
     const { user, profile } = await getAuthenticatedProfile(request);
 
@@ -47,7 +48,7 @@ export async function GET(
         freight_insurance_usd,
         usd_ngn_rate
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', profile.org_id)
       .single();
 
@@ -56,7 +57,7 @@ export async function GET(
       const { data: base } = await supabase
         .from('shipments')
         .select('id, shipment_code, total_weight_kg')
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('org_id', profile.org_id)
         .single();
       shipment = base;
@@ -74,7 +75,7 @@ export async function GET(
     const { data: shipmentItems } = await supabase
       .from('shipment_items')
       .select('batch_id')
-      .eq('shipment_id', params.id)
+      .eq('shipment_id', id)
       .not('batch_id', 'is', null);
 
     const batchIds = (shipmentItems ?? [])
@@ -138,7 +139,7 @@ export async function GET(
     const companyProfitUsd = netToExporterUsd - farmerPaymentsTotalUsd;
 
     return NextResponse.json({
-      shipment_id: params.id,
+      shipment_id: id,
       shipment_code: shipment.shipment_code,
       usd_ngn_rate: rate,
       using_fallback_rate: usingFallbackRate,

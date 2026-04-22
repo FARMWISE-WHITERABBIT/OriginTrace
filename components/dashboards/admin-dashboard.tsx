@@ -15,11 +15,41 @@ import {
 import {
   Package, Map, Users, Scale,
   TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck,
-  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf
+  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf, Banknote, Clock,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS } from '@/lib/chart-colors';
+import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS, VIZ_COLORS } from '@/lib/chart-colors';
+
+// Semantic colors for known African export commodities
+const COMMODITY_HUE: Record<string, string> = {
+  cashew:    '#D97706', // amber  — cashew shell colour
+  cocoa:     '#6D3B2A', // dark brown — cocoa bean
+  coffee:    '#92400E', // espresso brown
+  sesame:    '#B45309', // golden amber
+  sheanut:   '#78716C', // stone-grey
+  shea:      '#78716C',
+  palm:      '#EA580C', // orange-red
+  soybean:   '#65A30D', // lime green
+  soya:      '#65A30D',
+  cotton:    '#94A3B8', // slate
+  maize:     '#CA8A04', // golden yellow
+  rubber:    '#475569', // dark slate
+  sorghum:   '#C2410C', // burnt orange
+  unknown:   '#94A3B8',
+};
+
+function commodityColor(name: string, fallbackIndex: number): string {
+  const key = name.toLowerCase().trim();
+  return COMMODITY_HUE[key] ?? VIZ_COLORS[fallbackIndex % VIZ_COLORS.length];
+}
+
+function capitalizeWords(str: string): string {
+  return str
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
 
 const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
   ssr: false,
@@ -86,9 +116,29 @@ interface AuditScore {
   components: Record<string, { score: number; detail: string }>;
 }
 
+interface AlertItem {
+  type: string;
+  label: string;
+  count: number;
+  priority: 'high' | 'medium';
+  href: string;
+  action: string;
+}
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+      <div className="flex-1 h-px bg-border" />
+      <span>{label}</span>
+      <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
+
 export function AdminDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
+  const [operationalAlerts, setOperationalAlerts] = useState<AlertItem[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
   const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
@@ -97,12 +147,17 @@ export function AdminDashboard() {
     if (!organization) return;
     setIsLoading(true);
     try {
-      const [analyticsRes, auditRes] = await Promise.all([
+      const [analyticsRes, auditRes, alertsRes] = await Promise.all([
         fetch(`/api/analytics?period=${period}&section=all`),
         fetch('/api/audit-readiness'),
+        fetch('/api/alerts'),
       ]);
       if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
       if (auditRes.ok) setAuditScore(await auditRes.json());
+      if (alertsRes.ok) {
+        const alertsJson = await alertsRes.json();
+        setOperationalAlerts(alertsJson.alerts ?? []);
+      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
@@ -175,6 +230,12 @@ export function AdminDashboard() {
     },
   ];
 
+  const OPERATIONAL_ALERT_ICONS: Record<string, any> = {
+    stale_disbursements: Banknote,
+    awaiting_payment_shipments: Clock,
+    low_escrow: AlertTriangle,
+  };
+
   const flagItems = [
     ...(analytics?.compliance.flaggedBatches
       ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle, href: '/app/yield-alerts', action: 'Review' }]
@@ -191,11 +252,19 @@ export function AdminDashboard() {
     ...((analytics?.documentHealth || []).filter(d => d.status === 'Expiring Soon').map(d => ({
       label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText, href: '/app/documents?status=expiring_soon', action: 'Review',
     }))),
+    ...operationalAlerts.map(a => ({
+      label: a.label,
+      priority: a.priority,
+      icon: OPERATIONAL_ALERT_ICONS[a.type] ?? AlertTriangle,
+      href: a.href,
+      action: a.action,
+    })),
   ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
 
-  const commodityPieData = (analytics?.commodityBreakdown || []).map(c => ({
-    name: c.name,
+  const commodityPieData = (analytics?.commodityBreakdown || []).map((c, i) => ({
+    name: capitalizeWords(c.name),
     value: Math.round(c.weight),
+    color: commodityColor(c.name, i),
   }));
 
   const complianceDonutData = (analytics?.farmComplianceBreakdown || []).map(item => ({
@@ -240,23 +309,34 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6" data-testid="admin-dashboard">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold" data-testid="text-dashboard-title">Dashboard Overview</h2>
-        <div className="segmented-control" data-testid="period-selector">
-          {PERIOD_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              className="segmented-control-item"
-              data-active={period === opt.value}
-              onClick={() => setPeriod(opt.value)}
-              data-testid={`button-period-${opt.value}`}
-            >
-              {opt.label}
-            </button>
-          ))}
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight" data-testid="text-dashboard-title">Operations Overview</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Real-time supply chain intelligence</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-xs text-green-600 dark:text-green-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+            Live
+          </div>
+          <div className="segmented-control" data-testid="period-selector">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className="segmented-control-item"
+                data-active={period === opt.value}
+                onClick={() => setPeriod(opt.value)}
+                data-testid={`button-period-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stat-cards-row">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
@@ -270,16 +350,18 @@ export function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                <div className="text-3xl font-bold tracking-tight tabular-nums" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
                   {stat.value}
                 </div>
-                <div className="flex items-center justify-between flex-wrap gap-1 mt-1">
-                  <p className="text-xs text-muted-foreground">{stat.description}</p>
-                  {stat.trend !== null && <TrendIndicator value={stat.trend} />}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    {stat.trend !== null && <TrendIndicator value={stat.trend} />}
+                  </div>
+                  <p className="text-xs text-muted-foreground hover:text-primary mt-1.5 transition-colors duration-150 cursor-pointer">
+                    {stat.action} →
+                  </p>
                 </div>
-                <p className="text-xs text-primary mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {stat.action} →
-                </p>
               </CardContent>
             </Card>
           </Link>
@@ -322,9 +404,9 @@ export function AdminDashboard() {
                     <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                     <span className="font-semibold">{comp.score}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div
-                      className={`h-1.5 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      className={`h-2 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
                       style={{ width: `${comp.score}%` }}
                     />
                   </div>
@@ -335,16 +417,26 @@ export function AdminDashboard() {
         </Card>
       )}
 
+      <SectionDivider label="Collection Analytics" />
+
+      {/* Volume Trends + Commodity Distribution */}
       <div className="grid gap-4 lg:grid-cols-3" data-testid="row-volume-commodity">
         <Card className="lg:col-span-2" data-testid="chart-volume-trends">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
-                <BarChart3 className="h-3.5 w-3.5" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Volume Trends</CardTitle>
+                  <CardDescription className="text-xs mt-0">Collection weight and bag count over time</CardDescription>
+                </div>
               </div>
-              Volume Trends
-            </CardTitle>
-            <CardDescription>Collection weight and bag count over time</CardDescription>
+              <Link href="/app/inventory" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : (
@@ -368,22 +460,56 @@ export function AdminDashboard() {
         </Card>
 
         <Card data-testid="chart-commodity-distribution">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Commodity Distribution
-            </CardTitle>
-            <CardDescription>Weight by commodity type</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <Package className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Commodity Distribution</CardTitle>
+                  <CardDescription className="text-xs mt-0">Weight by commodity type</CardDescription>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : commodityPieData.length > 0 ? (
-              <PieDonutChart
-                data={commodityPieData}
-                donut
-                height={280}
-                showLabels={false}
-                labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
-              />
+              <>
+                <PieDonutChart
+                  data={commodityPieData}
+                  donut
+                  height={220}
+                  showLabels={false}
+                  showLegend={false}
+                  labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
+                />
+                {/* Commodity breakdown list — typed, coloured, properly capitalised */}
+                <div className="mt-3 space-y-1.5">
+                  {(() => {
+                    const total = commodityPieData.reduce((s, c) => s + c.value, 0);
+                    return commodityPieData.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: c.color }}
+                          />
+                          <span className="truncate font-medium text-foreground/80">{c.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {c.value.toLocaleString()} kg
+                          </span>
+                          <span className="text-xs font-semibold text-foreground tabular-nums w-10 text-right">
+                            {total > 0 ? Math.round((c.value / total) * 100) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </>
             ) : (
               <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
                 No commodity data available
@@ -393,16 +519,21 @@ export function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Active Flags + Shipment Readiness */}
       <div className="grid gap-4 lg:grid-cols-2" data-testid="row-flags-shipments">
         <Card data-testid="card-active-flags" className="card-accent-amber">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-amber shrink-0">
-                <AlertTriangle className="h-4 w-4" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Active Flags Requiring Action</CardTitle>
+                  <CardDescription className="text-xs mt-0">Issues needing immediate attention</CardDescription>
+                </div>
               </div>
-              Active Flags Requiring Action
-            </CardTitle>
-            <CardDescription>Issues needing immediate attention</CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : flagItems.length > 0 ? (
@@ -449,12 +580,21 @@ export function AdminDashboard() {
         </Card>
 
         <Card data-testid="chart-shipment-readiness">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Ship className="h-5 w-5" />
-              Shipment Readiness Summary
-            </CardTitle>
-            <CardDescription>Go / Conditional / No-Go distribution</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Ship className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Shipment Readiness Summary</CardTitle>
+                  <CardDescription className="text-xs mt-0">Go / Conditional / No-Go distribution</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/shipments" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : shipmentDecisionData.length > 0 ? (
@@ -473,14 +613,26 @@ export function AdminDashboard() {
         </Card>
       </div>
 
+      <SectionDivider label="Compliance & Quality" />
+
+      {/* Compliance + Grade Distribution */}
       <div className="grid gap-4 lg:grid-cols-2" data-testid="row-compliance-grade">
         <Card data-testid="chart-compliance-breakdown">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5" />
-              Compliance Status Breakdown
-            </CardTitle>
-            <CardDescription>Farm compliance distribution</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Compliance Status Breakdown</CardTitle>
+                  <CardDescription className="text-xs mt-0">Farm compliance distribution</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/farms" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View farms →
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : complianceDonutData.length > 0 ? (
@@ -499,12 +651,18 @@ export function AdminDashboard() {
         </Card>
 
         <Card data-testid="chart-grade-distribution">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Grade Distribution
-            </CardTitle>
-            <CardDescription>Bag grades across inventory</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Grade Distribution</CardTitle>
+                  <CardDescription className="text-xs mt-0">Bag grades across inventory</CardDescription>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : gradeBarData.length > 0 ? (
@@ -526,31 +684,45 @@ export function AdminDashboard() {
 
       {/* Farm Polygon Overview Map */}
       <Card data-testid="farm-map-overview">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Farm Polygon Overview
-            </CardTitle>
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                <MapPin className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Farm Polygon Overview</CardTitle>
+                <CardDescription className="text-xs mt-0">GPS-mapped farm boundaries — colour coded by compliance status</CardDescription>
+              </div>
+            </div>
             <Button variant="outline" size="sm" asChild>
-              <a href="/app/farms/map">Open Map</a>
+              <a href="/app/farms/map">View Full Map →</a>
             </Button>
           </div>
-          <CardDescription>GPS-mapped farm boundaries — colour coded by compliance status</CardDescription>
         </CardHeader>
-        <CardContent className="p-0 pb-4 px-4">
+        <div className="border-t border-border/50 mx-6 mb-0" />
+        <CardContent className="p-0 pb-4 px-4 pt-4">
           <FarmMapOverview />
         </CardContent>
       </Card>
 
+      <SectionDivider label="Agent Performance" />
+
+      {/* Agent Performance + Document Health */}
       <div className="grid gap-4 lg:grid-cols-2" data-testid="row-agent-docs">
         <Card data-testid="chart-agent-performance">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Agent Performance
-            </CardTitle>
-            <CardDescription>Top agents by collection weight (kg)</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <Users className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Agent Performance</CardTitle>
+                  <CardDescription className="text-xs mt-0">Top agents by collection weight (kg)</CardDescription>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : agentBarData.length > 0 ? (
@@ -572,12 +744,21 @@ export function AdminDashboard() {
         </Card>
 
         <Card data-testid="chart-document-health">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Document Health
-            </CardTitle>
-            <CardDescription>Expiring and expired documents needing attention</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                  <FileText className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Document Health</CardTitle>
+                  <CardDescription className="text-xs mt-0">Expiring and expired documents needing attention</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/documents" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? loadingPlaceholder : docHealthData.length > 0 ? (

@@ -41,7 +41,7 @@ export async function GET(
       .select('*')
       .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
-      .order('outcome_date', { ascending: false });
+      .order('recorded_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching shipment outcomes:', error);
@@ -99,7 +99,7 @@ export async function POST(
       return NextResponse.json({ error: 'Outcome is required' }, { status: 400 });
     }
 
-    const validOutcomes = ['approved', 'rejected', 'delayed', 'conditional_release'];
+    const validOutcomes = ['accepted', 'approved', 'rejected', 'delayed', 'conditional', 'conditional_release', 'withdrawn'];
     if (!validOutcomes.includes(outcome)) {
       return NextResponse.json({ error: `Outcome must be one of: ${validOutcomes.join(', ')}` }, { status: 400 });
     }
@@ -139,7 +139,7 @@ export async function POST(
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    if (outcome === 'approved') {
+    if (outcome === 'approved' || outcome === 'accepted') {
       const { error: updateError } = await supabase
         .from('shipments')
         .update({ status: 'shipped' })

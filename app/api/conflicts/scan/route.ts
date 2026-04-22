@@ -75,12 +75,17 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const severity =
+        conflict.overlap_ratio > 0.50 ? 'critical' :
+        conflict.overlap_ratio > 0.25 ? 'high' : 'low';
+
       const { error: insertError } = await supabaseAdmin
         .from('farm_conflicts')
         .insert({
           farm_a_id: conflict.farm_a_id,
           farm_b_id: conflict.farm_b_id,
           overlap_ratio: conflict.overlap_ratio,
+          severity,
           status: 'pending',
         });
 

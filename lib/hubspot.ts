@@ -4,7 +4,33 @@
 
 const HUBSPOT_TOKEN = process.env.HUBSPOT_API_TOKEN ?? '';
 const PIPELINE_ID   = 'default';
-const DEAL_STAGE_ID = 'appointmentscheduled';
+
+/**
+ * Pipeline stage map — code alias → HubSpot stage ID
+ *
+ * Full pipeline order:
+ *  1. appointmentscheduled  — demo form submitted / discovery call booked
+ *  2. [no_show stage]       — prospect missed discovery call (custom stage, set NO_SHOW_STAGE_ID)
+ *  3. presentationscheduled — platform demo scheduled
+ *  4. decisionmakerboughtin — post-demo, decision maker engaged
+ *  5. contractsent          — contract sent
+ *  6. [pilot_setup stage]   — pilot being configured (custom stage, set PILOT_SETUP_STAGE_ID)
+ *  7. closedwon             — pilot converted
+ *  8. closedlost            — lost / unresponsive
+ *
+ * Custom stages to add in HubSpot → CRM → Deals → Pipeline settings:
+ *  - "No Show"     — after appointmentscheduled, before presentationscheduled
+ *  - "Pilot Setup" — after contractsent, before closedwon
+ */
+const STAGE_MAP: Record<string, string> = {
+  new_lead:            'appointmentscheduled',
+  meeting_scheduled:   'appointmentscheduled',
+  meeting_rescheduled: 'appointmentscheduled',
+  // No show = missed discovery call. Falls back to appointmentscheduled until
+  // the custom "No Show" stage is created and NO_SHOW_STAGE_ID is set.
+  no_show:             process.env.NO_SHOW_STAGE_ID || 'appointmentscheduled',
+  nurture_dropped:     'closedlost',
+};
 
 async function hubspot(path: string, options: RequestInit = {}): Promise<any> {
   if (!HUBSPOT_TOKEN) throw new Error('HUBSPOT_API_TOKEN not set');
@@ -16,7 +42,9 @@ async function hubspot(path: string, options: RequestInit = {}): Promise<any> {
       ...((options.headers as Record<string, string>) || {}),
     },
   });
-  return res.json();
+  const json = await res.json();
+  if (!res.ok) throw new Error(`HubSpot API error ${res.status}: ${json?.message || JSON.stringify(json)}`);
+  return json;
 }
 
 export interface HubSpotLeadData {
@@ -59,22 +87,43 @@ async function attachNote(contactId: string, body: string): Promise<void> {
   await hubspot(`/crm/v3/objects/notes/${note.id}/associations/contacts/${contactId}/note_to_contact`, { method: 'PUT' });
 }
 
-async function createDealForContact(contactId: string, data: HubSpotLeadData): Promise<void> {
+async function createDealForContact(contactId: string, data: HubSpotLeadData): Promise<string | null> {
   const dealName = `${data.company || data.organization_type || 'Unknown'} — OriginTrace Demo`;
   const deal = await hubspot('/crm/v3/objects/deals', {
     method: 'POST',
     body: JSON.stringify({ properties: {
       dealname:   dealName,
       pipeline:   PIPELINE_ID,
-      dealstage:  DEAL_STAGE_ID,
+      dealstage:  STAGE_MAP['new_lead'],
       closedate:  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     }}),
   }) as { id?: string; message?: string };
-  if (!deal.id) { console.error('[HubSpot] Deal creation failed:', deal.message); return; }
+  if (!deal.id) { console.error('[HubSpot] Deal creation failed:', deal.message); return null; }
   await hubspot(`/crm/v3/objects/deals/${deal.id}/associations/contacts/${contactId}/deal_to_contact`, { method: 'PUT' });
+  return deal.id;
 }
 
-export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void> {
+/**
+ * Update a HubSpot deal's pipeline stage.
+ * Uses STAGE_MAP to translate internal stage aliases to real HubSpot stage IDs.
+ */
+export async function updateDealStage(dealId: string, stage: string): Promise<void> {
+  try {
+    const dealstage = STAGE_MAP[stage] ?? stage;
+    await hubspot(`/crm/v3/objects/deals/${dealId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ properties: { dealstage } }),
+    });
+  } catch (err) {
+    console.error('[HubSpot] updateDealStage failed (non-fatal):', err);
+  }
+}
+
+/**
+ * Upsert a HubSpot contact and create a deal for new contacts.
+ * Returns the deal ID (null for existing contacts or on failure).
+ */
+export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<{ dealId: string | null }> {
   const { firstname, lastname } = splitName(data.full_name);
   const properties: Record<string, string> = { email: data.email, firstname, lastname, lifecyclestage: 'lead' };
   if (data.phone)             properties.phone    = data.phone;
@@ -107,5 +156,6 @@ export async function upsertHubSpotContact(data: HubSpotLeadData): Promise<void>
   }
 
   await attachNote(contactId, buildNoteBody(data));
-  if (isNew) await createDealForContact(contactId, data);
+  const dealId = isNew ? await createDealForContact(contactId, data) : null;
+  return { dealId };
 }
