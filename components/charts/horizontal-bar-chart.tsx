@@ -1,24 +1,11 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-];
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface HorizontalBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -32,11 +19,9 @@ interface HorizontalBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
+const TICK_STYLE = {
+  fontSize: 11,
+  fill: 'hsl(var(--muted-foreground))',
 };
 
 export function HorizontalBarChart({
@@ -45,48 +30,83 @@ export function HorizontalBarChart({
   categoryKey,
   height = 300,
   color,
-  colors = ORIGIN_TRACE_COLORS,
+  colors = VIZ_COLORS,
   showGrid = true,
   barLabel,
   valueFormatter,
 }: HorizontalBarChartProps) {
-  const dynamicHeight = Math.max(height, data.length * 40 + 40);
+  // Give each row 36px, with at least the requested height
+  const dynamicHeight = Math.max(height, data.length * 36 + 48);
+
+  // Compute Y-axis label width dynamically so long names don't clip
+  const maxLabelLen = Math.max(...data.map(d => String(d[categoryKey] ?? '').length));
+  const labelWidth = Math.min(Math.max(maxLabelLen * 6.5, 80), 160);
+
+  if (!data.length) {
+    return (
+      <div
+        style={{
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'hsl(var(--muted-foreground))',
+          fontSize: '13px',
+        }}
+      >
+        No data available
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={dynamicHeight}>
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+        margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
       >
         {showGrid && (
           <CartesianGrid
-            strokeDasharray="3 3"
-            className="stroke-border"
+            strokeDasharray="4 4"
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.7}
             horizontal={false}
           />
         )}
-        <XAxis type="number" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+        <XAxis
+          type="number"
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.6 }}
+        />
         <YAxis
           type="category"
           dataKey={categoryKey}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
-          width={100}
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={false}
+          width={labelWidth}
         />
         <Tooltip
-          contentStyle={tooltipStyle}
-          formatter={(value: unknown) => [
-            valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
-            barLabel || dataKey,
-          ]}
+          content={
+            <ChartTooltip
+              valueFormatter={valueFormatter ? (v) => valueFormatter(v) : undefined}
+            />
+          }
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
         />
         <Bar
           dataKey={dataKey}
           name={barLabel || dataKey}
           fill={color || colors[0]}
           radius={[0, 4, 4, 0]}
-          maxBarSize={30}
+          maxBarSize={24}
+          isAnimationActive
+          animationDuration={500}
+          animationEasing="ease-out"
+          style={{ cursor: 'pointer' }}
+          background={{ fill: 'hsl(var(--muted))', opacity: 0.35, radius: [0, 4, 4, 0] } as any}
         >
           {data.map((_, index) => (
             <Cell

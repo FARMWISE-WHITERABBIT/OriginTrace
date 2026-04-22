@@ -1,25 +1,11 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-];
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface VerticalBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -34,11 +20,9 @@ interface VerticalBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
+const TICK_STYLE = {
+  fontSize: 11,
+  fill: 'hsl(var(--muted-foreground))',
 };
 
 export function VerticalBarChart({
@@ -47,51 +31,86 @@ export function VerticalBarChart({
   categoryKey,
   height = 300,
   color,
-  colors = ORIGIN_TRACE_COLORS,
+  colors = VIZ_COLORS,
   showGrid = true,
   showLegend = false,
   barLabel,
   valueFormatter,
 }: VerticalBarChartProps) {
-  const useMultiColor = !color && colors.length > 0;
+  const useMultiColor = !color;
+
+  if (!data.length) {
+    return (
+      <div
+        style={{
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'hsl(var(--muted-foreground))',
+          fontSize: '13px',
+        }}
+      >
+        No data available
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
         {showGrid && (
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <CartesianGrid
+            strokeDasharray="4 4"
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.7}
+            vertical={false}
+          />
         )}
         <XAxis
           dataKey={categoryKey}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.6 }}
           interval={0}
-          angle={data.length > 6 ? -45 : 0}
+          angle={data.length > 6 ? -40 : 0}
           textAnchor={data.length > 6 ? 'end' : 'middle'}
-          height={data.length > 6 ? 60 : 30}
+          height={data.length > 6 ? 56 : 28}
+          dy={4}
         />
-        <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+        <YAxis
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={tooltipStyle}
-          formatter={(value: unknown) => [
-            valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
-            barLabel || dataKey,
-          ]}
+          content={
+            <ChartTooltip
+              valueFormatter={valueFormatter ? (v) => valueFormatter(v) : undefined}
+            />
+          }
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
         />
-        {showLegend && <Legend wrapperStyle={{ fontSize: '12px' }} />}
+        {showLegend && (
+          <Legend
+            wrapperStyle={{ fontSize: '11px', paddingTop: '8px', color: 'hsl(var(--muted-foreground))' }}
+          />
+        )}
         <Bar
           dataKey={dataKey}
           name={barLabel || dataKey}
           fill={color || colors[0]}
           radius={[4, 4, 0, 0]}
-          maxBarSize={60}
+          maxBarSize={52}
+          isAnimationActive
+          animationDuration={500}
+          animationEasing="ease-out"
+          style={{ cursor: 'pointer' }}
         >
           {useMultiColor &&
             data.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={colors[index % colors.length]}
-              />
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
         </Bar>
       </BarChart>

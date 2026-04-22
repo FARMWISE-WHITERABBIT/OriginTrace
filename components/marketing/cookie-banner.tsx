@@ -52,12 +52,14 @@ export function CookieBanner() {
     setStoredConsent('accepted');
     setConsent('accepted');
     enableGA();
+    try { (window as any).gtag?.('consent', 'update', { analytics_storage: 'granted', ad_storage: 'granted' }); } catch {}
   };
 
   const decline = () => {
     setStoredConsent('declined');
     setConsent('declined');
     disableGA();
+    try { (window as any).gtag?.('consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied' }); } catch {}
   };
 
   // Don't render on server or if already decided

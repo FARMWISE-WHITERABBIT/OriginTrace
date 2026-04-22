@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { hasTierAccess, canAccessOrg } from '@/modules/identity-access/domain/tier-policy';
 
 export function createServiceClient() {
   return createAdminClient();
@@ -39,21 +40,29 @@ export async function getAuthenticatedProfile(request?: NextRequest) {
   return { user, profile };
 }
 
+/**
+ * @deprecated Use enforceTier() from lib/api/tier-guard.ts in new API routes.
+ * This function is retained for legacy callers only and now delegates to the
+ * canonical tier policy (modules/identity-access/domain/tier-policy.ts).
+ */
 export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
   const { data: org } = await supabase
     .from('organizations')
     .select('subscription_tier, settings')
     .eq('id', orgId)
     .single();
-  if (!org) return false;
-  // subscription_tier is a top-level column; settings JSONB may also carry overrides
+
+  // Org not found → fail-closed (ADR-002: genuine auth error)
+  if (!canAccessOrg(org)) return false;
+
+  // Feature-flag override (legacy settings JSONB path, kept for backwards compat)
   const settings = (org as any).settings || {};
   const featureFlags = settings.feature_flags || {};
-  const hasFeatureFlag = featureFlags.shipment_readiness === true;
-  // Read tier from top-level column first, fall back to settings.subscription_tier
-  const tier = (org as any).subscription_tier || settings.subscription_tier || 'starter';
-  const tierLevels: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
-  return hasFeatureFlag || (tierLevels[tier] ?? 0) >= tierLevels['pro'];
+  if (featureFlags.shipment_readiness === true) return true;
+
+  // Delegate tier comparison to canonical policy — no inline tierLevels map
+  const tier = (org as any).subscription_tier || settings.subscription_tier || null;
+  return hasTierAccess(tier, 'shipment_readiness');
 }
 
 interface ApiKeyValidation {
@@ -125,6 +134,21 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
   };
 }
 
+/**
+ * @deprecated Use checkRateLimit from '@/lib/api/rate-limit' (async, Supabase-backed, atomic).
+ *
+ * Migration for v1/* routes:
+ *   const limited = await checkRateLimit(request, auth.orgId, {
+ *     max: auth.rateLimitPerHour ?? 1000,
+ *     windowSecs: 3600,
+ *     keyPrefix: `apk:${auth.keyPrefix}`,
+ *   });
+ *   if (limited) return limited;
+ *
+ * This implementation uses a SELECT + UPDATE pattern (race-prone) and a
+ * separate api_rate_limits table. The canonical implementation uses the
+ * atomic increment_rate_limit RPC.
+ */
 export async function checkRateLimit(keyPrefix: string, limitPerHour: number = 1000): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const supabase = getServiceSupabase();
   if (!supabase) {

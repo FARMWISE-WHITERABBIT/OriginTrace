@@ -71,24 +71,26 @@ export function LogisticsDashboard() {
   }, [organization]);
 
   const pipelineCards = [
-    { title: 'Total Shipments', value: stats.totalShipments, icon: Truck, color: 'text-blue-600' },
-    { title: 'Pending', value: stats.pendingShipments, icon: Clock, color: 'text-orange-600' },
-    { title: 'In Transit', value: stats.inTransitShipments, icon: Send, color: 'text-purple-600' },
-    { title: 'Delivered', value: stats.deliveredShipments, icon: CheckCircle, color: 'text-green-600' },
+    { title: 'Total Shipments', value: stats.totalShipments,     icon: Truck,        iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+    { title: 'Pending',         value: stats.pendingShipments,   icon: Clock,        iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
+    { title: 'In Transit',      value: stats.inTransitShipments, icon: Send,         iconClass: 'icon-bg-violet',  accent: 'card-accent-violet' },
+    { title: 'Delivered',       value: stats.deliveredShipments, icon: CheckCircle,  iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
   ];
 
   return (
     <div className="space-y-6" data-testid="logistics-dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {pipelineCards.map((stat) => (
-          <Card key={stat.title} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Card key={stat.title} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${stat.accent}`} data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                {isLoading ? '...' : stat.value}
+              <div className="text-2xl font-bold tracking-tight" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                {isLoading ? '—' : stat.value}
               </div>
             </CardContent>
           </Card>

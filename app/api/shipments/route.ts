@@ -23,12 +23,12 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -95,12 +95,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentWriteRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

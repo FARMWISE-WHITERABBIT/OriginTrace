@@ -2,33 +2,20 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
-
-async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from('system_admins')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    return !!data;
-  } catch (err) {
-    console.error('System admin check error:', err);
-    return false;
-  }
-}
+import { getSystemAdmin } from '@/lib/superadmin-rbac';
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const authClient = await createServerClient();
     const { data: { user }, error: userError } = await authClient.auth.getUser();
-    
+
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const isSuperAdmin = await isSystemAdmin(supabase, user.id);
-    if (!isSuperAdmin) {
+
+    const adminRecord = await getSystemAdmin(user.id);
+    if (!adminRecord) {
       return NextResponse.json({ error: 'Forbidden: Superadmin access required' }, { status: 403 });
     }
     
@@ -381,10 +368,41 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ sync_status: enrichedStatus });
       }
       
+      case 'kyc_record': {
+        const orgId = searchParams.get('org_id');
+        if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
+        const { data: kycRecord } = await supabase
+          .from('org_kyc_records')
+          .select('*')
+          .eq('org_id', orgId)
+          .maybeSingle();
+        return NextResponse.json({ kyc_record: kycRecord ?? null });
+      }
+
+      case 'audit_logs': {
+        const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200);
+        const offset = parseInt(searchParams.get('offset') ?? '0', 10);
+        const searchTerm = searchParams.get('search') ?? '';
+        const actionFilter = searchParams.get('action') ?? '';
+
+        let query = supabase
+          .from('superadmin_audit_logs')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        if (actionFilter) query = query.eq('action', actionFilter);
+        if (searchTerm) query = query.or(`action.ilike.%${searchTerm}%,target_label.ilike.%${searchTerm}%`);
+
+        const { data: logs, error: logsError, count } = await query;
+        if (logsError) return NextResponse.json({ error: logsError.message }, { status: 500 });
+        return NextResponse.json({ logs: logs ?? [], total: count ?? 0 });
+      }
+
       default:
         return NextResponse.json({ status: 'authorized', role: 'superadmin', user_id: user.id });
     }
-    
+
   } catch (error) {
     console.error('Superadmin API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -396,18 +414,24 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
     const authClient = await createServerClient();
     const { data: { user }, error: userError } = await authClient.auth.getUser();
-    
+
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const isSuperAdmin = await isSystemAdmin(supabase, user.id);
-    if (!isSuperAdmin) {
+
+    const adminRecord = await getSystemAdmin(user.id);
+    if (!adminRecord) {
       return NextResponse.json({ error: 'Forbidden: Superadmin access required' }, { status: 403 });
     }
-    
+
     const body = await request.json();
     const { action, org_id, target_user_id } = body;
+
+    // Role-based write guards
+    const tierChangeActions = ['update_org_status'];
+    if (tierChangeActions.includes(action) && adminRecord.role === 'support_agent') {
+      return NextResponse.json({ error: 'Forbidden: support_agent cannot modify org status or tier' }, { status: 403 });
+    }
     
     switch (action) {
       case 'update_org_status': {

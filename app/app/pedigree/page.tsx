@@ -365,70 +365,36 @@ export default function PedigreePage() {
       </div>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Package className="h-6 w-6 text-green-600" />
+        {[
+          { icon: Package,  label: 'Total Pedigrees', value: String(finishedGoods.length), iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+          { icon: CheckCircle, label: 'Verified', value: String(finishedGoods.filter(g => g.pedigree_verified).length), iconClass: 'icon-bg-blue', accent: 'card-accent-blue' },
+          { icon: Scale,    label: 'Total kg', value: finishedGoods.reduce((sum, g) => sum + (g.weight_kg || 0), 0).toLocaleString(), iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
+          { icon: Factory,  label: 'Processing Runs', value: String(processingRuns.length), iconClass: 'icon-bg-amber', accent: 'card-accent-amber' },
+        ].map(({ icon: Icon, label, value, iconClass, accent }) => (
+          <Card key={label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${accent}`}>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <p className="text-2xl font-bold tracking-tight">{value}</p>
+                </div>
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${iconClass}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold tracking-tight">{finishedGoods.length}</p>
-                <p className="text-sm text-muted-foreground">Total Pedigrees</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tracking-tight">
-                  {finishedGoods.filter(g => g.pedigree_verified).length}
-                </p>
-                <p className="text-sm text-muted-foreground">Verified</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Scale className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tracking-tight">
-                  {finishedGoods.reduce((sum, g) => sum + (g.weight_kg || 0), 0).toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground">Total kg</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Factory className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tracking-tight">{processingRuns.length}</p>
-                <p className="text-sm text-muted-foreground">Processing Runs</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card>
+      <Card className="card-accent-emerald">
         <CardHeader>
-          <CardTitle>Finished Goods Registry</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-emerald shrink-0">
+              <Package className="h-4 w-4" />
+            </div>
+            Finished Goods Registry
+          </CardTitle>
           <CardDescription>
             All finished goods with pedigree certificates for EU TRACES compliance
           </CardDescription>

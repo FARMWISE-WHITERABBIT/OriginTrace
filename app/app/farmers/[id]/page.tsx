@@ -20,8 +20,8 @@ import {
   Loader2, ArrowLeft, User, Phone, MapPin, Leaf, Package,
   GraduationCap, Pencil, Save, X, CheckCircle2, AlertCircle,
   TrendingUp, Calendar, FlaskConical, BookOpen, FileText,
-  Sprout, ShieldCheck, Clock, Activity, Plus, Trash2, IdCard,
-  Upload, ExternalLink,
+  Sprout, ShieldCheck, Clock, Activity, Plus, Trash2,
+  Upload, ExternalLink, DollarSign, Banknote, CreditCard, ArrowDownToLine, CheckCircle,
 } from 'lucide-react';
 
 interface FarmerData {
@@ -31,6 +31,9 @@ interface FarmerData {
   inputs: any[];
   training: any[];
   files: any[];
+  payments: any[];
+  disbursements: any[];
+  bankAccounts: any[];
 }
 
 const COMPLIANCE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -110,6 +113,30 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     status: 'not_started',
     score: '',
     completed_at: '',
+  });
+
+  // Payment recording
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    currency: 'NGN',
+    payment_method: 'bank_transfer',
+    reference_number: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    linked_batch_id: '',
+    notes: '',
+  });
+
+  // Bank account management
+  const [bankAccountSheetOpen, setBankAccountSheetOpen] = useState(false);
+  const [savingBankAccount, setSavingBankAccount] = useState(false);
+  const [deletingBankAccountId, setDeletingBankAccountId] = useState<string | null>(null);
+  const [bankAccountForm, setBankAccountForm] = useState({
+    account_number: '',
+    account_name: '',
+    bank_code: '',
+    bank_name: '',
   });
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'aggregator';
@@ -272,6 +299,81 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
     } finally { setDeletingTrainingId(null); }
   }
 
+  async function handleRecordPayment() {
+    if (!data || !paymentForm.amount) return;
+    setSavingPayment(true);
+    try {
+      const body: any = {
+        payee_name: data.farm.farmer_name,
+        payee_type: 'farmer',
+        amount: parseFloat(paymentForm.amount),
+        currency: paymentForm.currency,
+        payment_method: paymentForm.payment_method,
+        reference_number: paymentForm.reference_number || undefined,
+        payment_date: paymentForm.payment_date,
+        notes: paymentForm.notes || undefined,
+      };
+      if (paymentForm.linked_batch_id) {
+        body.linked_entity_type = 'collection_batch';
+        body.linked_entity_id = paymentForm.linked_batch_id; // UUID — pass as-is
+      }
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      setData(prev => prev ? { ...prev, payments: [json.payment, ...prev.payments] } : prev);
+      setPaymentSheetOpen(false);
+      setPaymentForm({ amount: '', currency: 'NGN', payment_method: 'bank_transfer', reference_number: '', payment_date: new Date().toISOString().split('T')[0], linked_batch_id: '', notes: '' });
+      toast({ title: 'Payment recorded' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
+  async function handleAddBankAccount() {
+    if (!bankAccountForm.account_number || !bankAccountForm.account_name || !bankAccountForm.bank_code || !bankAccountForm.bank_name) {
+      toast({ title: 'All fields required', variant: 'destructive' });
+      return;
+    }
+    setSavingBankAccount(true);
+    try {
+      const res = await fetch(`/api/farmers/${id}/bank-accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bankAccountForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      setData(prev => prev ? { ...prev, bankAccounts: [json.account, ...(prev.bankAccounts || []).filter((a: any) => a.account_number !== json.account.account_number)] } : prev);
+      setBankAccountSheetOpen(false);
+      setBankAccountForm({ account_number: '', account_name: '', bank_code: '', bank_name: '' });
+      toast({ title: 'Bank account saved' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingBankAccount(false);
+    }
+  }
+
+  async function handleDeleteBankAccount(accountId: string) {
+    setDeletingBankAccountId(accountId);
+    try {
+      const res = await fetch(`/api/farmers/${id}/bank-accounts?account_id=${accountId}`, { method: 'DELETE' });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Failed'); }
+      setData(prev => prev ? { ...prev, bankAccounts: (prev.bankAccounts || []).filter((a: any) => a.id !== accountId) } : prev);
+      toast({ title: 'Bank account removed' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeletingBankAccountId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -282,13 +384,16 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   if (!data) { notFound(); return null; }
 
-  const { farm, ledger, batches, inputs, training, files } = data;
+  const { farm, ledger, batches, inputs, training, files, payments, disbursements, bankAccounts } = data;
   const statusCfg = COMPLIANCE_STATUS_CONFIG[farm.compliance_status] || COMPLIANCE_STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
   const completedTraining = training.filter((t: any) => t.status === 'completed').length;
+  const totalDisbursed = (disbursements || []).filter((d: any) => d.status === 'disbursed').reduce((s: number, d: any) => s + (d.net_amount || 0), 0);
+  const pendingDisbursements = (disbursements || []).filter((d: any) => d.status === 'pending' || d.status === 'approved');
+  const totalDirectPayments = (payments || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -317,17 +422,23 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
       {/* ── Stats strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: Package,    label: 'Total Volume',    value: ledger ? `${Number(ledger.total_delivery_kg).toLocaleString()} kg` : '0 kg' },
-          { icon: TrendingUp, label: 'Total Batches',   value: ledger?.total_batches ?? batches.length },
-          { icon: Leaf,       label: 'Farm Area',       value: farm.area_hectares ? `${Number(farm.area_hectares).toFixed(2)} ha` : '—' },
-          { icon: GraduationCap, label: 'Training',     value: `${completedTraining} / ${training.length} completed` },
-        ].map(({ icon: Icon, label, value }) => (
-          <Card key={label} className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{label}</span>
-            </div>
-            <p className="text-lg font-bold">{value}</p>
+          { icon: Package,    label: 'Total Volume',    value: ledger ? `${Number(ledger.total_delivery_kg).toLocaleString()} kg` : '0 kg', iconClass: 'icon-bg-blue', accent: 'card-accent-blue' },
+          { icon: TrendingUp, label: 'Total Batches',   value: ledger?.total_batches ?? batches.length, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+          { icon: Leaf,       label: 'Farm Area',       value: farm.area_hectares ? `${Number(farm.area_hectares).toFixed(2)} ha` : '—', iconClass: 'icon-bg-green', accent: 'card-accent-green' },
+          { icon: GraduationCap, label: 'Training',     value: `${completedTraining} / ${training.length}`, iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
+        ].map(({ icon: Icon, label, value, iconClass, accent }) => (
+          <Card key={label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${accent}`}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <p className="text-lg font-bold">{value}</p>
+                </div>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${iconClass}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -353,6 +464,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             Batches
             {batches.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{batches.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5" />
+            Payments
+            {((disbursements?.length || 0) + (payments?.length || 0)) > 0 && (
+              <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{(disbursements?.length || 0) + (payments?.length || 0)}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" />Activity
             {activityEvents.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{activityEvents.length}</Badge>}
@@ -364,10 +482,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
           <div className="grid lg:grid-cols-2 gap-4">
 
             {/* Identity */}
-            <Card>
+            <Card className="card-accent-blue">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Identity</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><User className="h-3.5 w-3.5" /></div>
+                    Identity
+                  </CardTitle>
                   {canEdit && editingCard !== 'identity' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('identity')} data-testid="button-edit-farmer">
                       <Pencil className="h-3.5 w-3.5" />
@@ -432,10 +553,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* Location */}
-            <Card>
+            <Card className="card-accent-emerald">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />Location & Farm</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0"><MapPin className="h-3.5 w-3.5" /></div>
+                    Location & Farm
+                  </CardTitle>
                   {canEdit && editingCard !== 'location' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('location')}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -473,10 +597,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* Compliance status */}
-            <Card>
+            <Card className="card-accent-green">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Compliance Status</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-green shrink-0"><ShieldCheck className="h-3.5 w-3.5" /></div>
+                    Compliance Status
+                  </CardTitle>
                   {canEdit && editingCard !== 'compliance' && (
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('compliance')}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -519,10 +646,13 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             </Card>
 
             {/* KYC documents */}
-            <Card>
+            <Card className="card-accent-violet">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />KYC Documents</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><FileText className="h-3.5 w-3.5" /></div>
+                    KYC Documents
+                  </CardTitle>
                   {canEdit && (
                     <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setKycFile(null); setKycFileType('photo'); setKycSheetOpen(true); }}>
                       <Upload className="h-3 w-3 mr-1" />Upload
@@ -560,11 +690,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Inputs Tab ── */}
         <TabsContent value="inputs" className="mt-4">
-          <Card>
+          <Card className="card-accent-amber">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><Sprout className="h-4 w-4" />Agricultural Inputs</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0"><Sprout className="h-3.5 w-3.5" /></div>Agricultural Inputs</CardTitle>
                   <CardDescription className="mt-1">Fertilizers, pesticides, herbicides, seeds, and organic amendments. Required for Rainforest Alliance, EUDR, and GACC compliance records.</CardDescription>
                 </div>
                 {canEdit && (
@@ -623,11 +753,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Training Tab ── */}
         <TabsContent value="training" className="mt-4">
-          <Card>
+          <Card className="card-accent-violet">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><GraduationCap className="h-4 w-4" />Training Records</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><GraduationCap className="h-3.5 w-3.5" /></div>Training Records</CardTitle>
                   <CardDescription className="mt-1">Compliance and sustainability training modules. Required for Rainforest Alliance certification and EUDR due diligence records.</CardDescription>
                 </div>
                 {canEdit && (
@@ -685,11 +815,11 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
         {/* ── Batches Tab ── */}
         <TabsContent value="batches" className="mt-4">
-          <Card>
+          <Card className="card-accent-blue">
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" />Collection Batches</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><Package className="h-3.5 w-3.5" /></div>Collection Batches</CardTitle>
                   <CardDescription className="mt-1">All produce collected from this farm, linked for full supply chain traceability.</CardDescription>
                 </div>
                 {canEdit && (
@@ -744,12 +874,233 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
           </Card>
         </TabsContent>
 
+        {/* ── Payments Tab ── */}
+        <TabsContent value="payments" className="mt-4 space-y-4">
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Total Disbursed</p>
+                    <p className="text-lg font-bold">₦{totalDisbursed.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-emerald">
+                    <Banknote className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="card-accent-amber transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Pending</p>
+                    <p className="text-lg font-bold">{pendingDisbursements.length}</p>
+                    <p className="text-xs text-muted-foreground">disbursements</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-amber">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Direct Payments</p>
+                    <p className="text-lg font-bold">₦{totalDirectPayments.toLocaleString()}</p>
+                  </div>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 icon-bg-blue">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Disbursements from batches */}
+          <Card className="card-accent-emerald">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0"><ArrowDownToLine className="h-3.5 w-3.5" /></div>
+                  Batch Disbursements
+                </CardTitle>
+                <Link href="/app/payments/disbursements">
+                  <Button size="sm" variant="outline" className="h-7 text-xs">View All</Button>
+                </Link>
+              </div>
+              <CardDescription className="mt-1">Calculated disbursements linked to collection batches for this farmer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!disbursements || disbursements.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><Banknote className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No disbursements yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">Disbursements are calculated automatically when this farmer&apos;s produce is collected into a batch and the batch is processed.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {disbursements.map((d: any) => {
+                    const sc = d.status === 'disbursed' ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                      : d.status === 'approved' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      : d.status === 'failed' ? 'bg-red-500/10 text-red-700 dark:text-red-400'
+                      : 'bg-amber-500/10 text-amber-700 dark:text-amber-400';
+                    const batchCode = d.collection_batches?.batch_code || d.batch_id?.toString().slice(0,8) || '—';
+                    const commodity = d.collection_batches?.commodity;
+                    return (
+                      <div key={d.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-mono font-medium truncate">{batchCode}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {Number(d.weight_kg || 0).toLocaleString()} kg{commodity ? ` · ${commodity}` : ''}
+                              {d.price_per_kg ? ` · ₦${Number(d.price_per_kg).toLocaleString()}/kg` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-bold">₦{Number(d.net_amount || 0).toLocaleString()}</p>
+                            {d.deductions > 0 && <p className="text-xs text-muted-foreground">-₦{Number(d.deductions).toLocaleString()} deductions</p>}
+                          </div>
+                          <Badge variant="outline" className={`text-xs capitalize ${sc}`}>{d.status}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Direct payments */}
+          <Card className="card-accent-blue">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><CreditCard className="h-3.5 w-3.5" /></div>
+                  Direct Payments
+                </CardTitle>
+                {canEdit && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPaymentSheetOpen(true)}>
+                    <Plus className="h-3 w-3 mr-1" />Record Payment
+                  </Button>
+                )}
+              </div>
+              <CardDescription className="mt-1">Ad-hoc cash advances, bonus payments, or direct transfers to this farmer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!payments || payments.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><DollarSign className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No direct payments recorded</p>
+                  <p className="text-xs text-muted-foreground mt-1">Record cash advances, bonus payments, or direct transfers.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={() => setPaymentSheetOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Record First Payment</Button>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {payments.map((p: any) => {
+                    const methodLabel: Record<string, string> = { cash: 'Cash', bank_transfer: 'Bank Transfer', mobile_money: 'Mobile Money', cheque: 'Cheque' };
+                    return (
+                      <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{methodLabel[p.payment_method] || p.payment_method}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—'}
+                              {p.reference_number ? ` · Ref: ${p.reference_number}` : ''}
+                            </p>
+                            {p.notes && <p className="text-xs text-muted-foreground italic">{p.notes}</p>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold">{p.currency || 'NGN'} {Number(p.amount || 0).toLocaleString()}</p>
+                          <Badge variant="outline" className="text-xs capitalize bg-green-500/10 text-green-700 dark:text-green-400">{p.status || 'completed'}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Bank accounts / Payment methods */}
+          <Card className="card-accent-violet">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><Banknote className="h-3.5 w-3.5" /></div>
+                  Payment Methods
+                </CardTitle>
+                {canEdit && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setBankAccountSheetOpen(true)}>
+                    <Plus className="h-3 w-3 mr-1" />Add Account
+                  </Button>
+                )}
+              </div>
+              <CardDescription className="mt-1">Bank accounts registered for farmer payouts and disbursements.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!bankAccounts || bankAccounts.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><Banknote className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No bank accounts on file</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add a bank account to enable direct disbursements.</p>
+                  {canEdit && <Button size="sm" variant="outline" className="mt-4" onClick={() => setBankAccountSheetOpen(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Add Bank Account</Button>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {bankAccounts.map((acct: any) => (
+                    <div key={acct.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                          <Banknote className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{acct.bank_name} <span className="text-muted-foreground font-normal">({acct.bank_code})</span></p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{acct.account_number} · {acct.account_name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {acct.is_verified
+                          ? <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700">Verified</Badge>
+                          : <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-700">Unverified</Badge>}
+                        {canEdit && (
+                          <Button
+                            size="icon" variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            disabled={deletingBankAccountId === acct.id}
+                            onClick={() => handleDeleteBankAccount(acct.id)}
+                          >
+                            {deletingBankAccountId === acct.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ── Activity Tab ── */}
         <TabsContent value="activity" className="mt-4">
-          <Card>
+          <Card className="card-accent-green">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4" />Activity Timeline
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-green shrink-0"><Activity className="h-3.5 w-3.5" /></div>Activity Timeline
               </CardTitle>
               <CardDescription>Audit trail of changes to this farmer record</CardDescription>
             </CardHeader>
@@ -950,6 +1301,108 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
             <Button className="w-full" onClick={saveTraining} disabled={savingTraining || !trainingForm.module_name}>
               {savingTraining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               {editingTraining ? 'Save Changes' : 'Add Training Record'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Record Payment Sheet ── */}
+      <Sheet open={paymentSheetOpen} onOpenChange={open => { if (!open) setPaymentSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Record Direct Payment</SheetTitle>
+            <SheetDescription>Record a cash advance, bonus, or direct transfer to {data?.farm?.farmer_name}.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" step="0.01" value={paymentForm.amount} onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Currency</Label>
+                <Select value={paymentForm.currency} onValueChange={v => setPaymentForm(p => ({ ...p, currency: v }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NGN">NGN</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Payment Method</Label>
+              <Select value={paymentForm.payment_method} onValueChange={v => setPaymentForm(p => ({ ...p, payment_method: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Payment Date</Label>
+              <Input type="date" value={paymentForm.payment_date} onChange={e => setPaymentForm(p => ({ ...p, payment_date: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Reference Number</Label>
+              <Input value={paymentForm.reference_number} onChange={e => setPaymentForm(p => ({ ...p, reference_number: e.target.value }))} placeholder="e.g. TXN-2024-001 (optional)" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Linked Batch (optional)</Label>
+              <Select value={paymentForm.linked_batch_id} onValueChange={v => setPaymentForm(p => ({ ...p, linked_batch_id: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select a batch..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {(data?.batches || []).map((b: any) => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.batch_code || b.id.slice(0,8)} — {Number(b.total_weight).toLocaleString()} kg</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={paymentForm.notes} onChange={e => setPaymentForm(p => ({ ...p, notes: e.target.value }))} placeholder="e.g. Advance payment for Q1 harvest" rows={2} className="mt-1 text-sm" />
+            </div>
+            <Button className="w-full" onClick={handleRecordPayment} disabled={savingPayment || !paymentForm.amount}>
+              {savingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Record Payment
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Add Bank Account Sheet ── */}
+      <Sheet open={bankAccountSheetOpen} onOpenChange={open => { if (!open) setBankAccountSheetOpen(false); }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Add Bank Account</SheetTitle>
+            <SheetDescription>Register a bank account for {data?.farm?.farmer_name} to receive disbursements.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
+            <div>
+              <Label className="text-xs">Bank Name</Label>
+              <Input value={bankAccountForm.bank_name} onChange={e => setBankAccountForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="e.g. Access Bank" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Bank Code</Label>
+              <Input value={bankAccountForm.bank_code} onChange={e => setBankAccountForm(p => ({ ...p, bank_code: e.target.value }))} placeholder="e.g. 044" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">Account Number</Label>
+              <Input value={bankAccountForm.account_number} onChange={e => setBankAccountForm(p => ({ ...p, account_number: e.target.value }))} placeholder="10-digit account number" maxLength={20} className="mt-1 font-mono" />
+            </div>
+            <div>
+              <Label className="text-xs">Account Name</Label>
+              <Input value={bankAccountForm.account_name} onChange={e => setBankAccountForm(p => ({ ...p, account_name: e.target.value }))} placeholder="Name as it appears on the account" className="mt-1" />
+            </div>
+            <Button className="w-full" onClick={handleAddBankAccount} disabled={savingBankAccount || !bankAccountForm.account_number || !bankAccountForm.account_name || !bankAccountForm.bank_code || !bankAccountForm.bank_name}>
+              {savingBankAccount ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Bank Account
             </Button>
           </div>
         </SheetContent>

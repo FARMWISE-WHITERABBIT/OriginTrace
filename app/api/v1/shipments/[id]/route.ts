@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { validateApiKey, checkRateLimit } from '@/lib/api-auth';
+import { validateApiKey } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { z } from 'zod';
 
@@ -33,13 +34,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Insufficient scope. Required: write' }, { status: 403 });
     }
 
-    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-        { status: 429, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)) } }
-      );
-    }
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = updateShipmentSchema.safeParse(body);
@@ -88,13 +88,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Failed to update shipment' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: shipment }, {
-      status: 200,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: shipment }, { status: 200 });
   } catch (error) {
     console.error('V1 Shipments PATCH API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

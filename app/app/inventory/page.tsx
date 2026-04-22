@@ -22,9 +22,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { 
-  Package, 
-  Search, 
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Package,
+  Search,
   Filter,
   Clock,
   Loader2,
@@ -41,6 +42,12 @@ import {
   QrCode,
   Users,
   ChevronDown,
+  Navigation,
+  Phone,
+  Car,
+  CheckSquare,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateBatchManifestCSV, downloadCSV } from '@/lib/export/csv-export';
@@ -79,6 +86,8 @@ interface Bag {
 export default function InventoryPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // ── Tab control ──
+  const [activeTab, setActiveTab] = useState<string>('batches');
 
   const toggleSelect = (id: string) => setSelected(prev => {
     const n = new Set(prev);
@@ -91,6 +100,95 @@ export default function InventoryPage() {
       ? new Set()
       : new Set(ids)
   );
+
+  // ── Dispatch inline state ──
+  const [dispatchSelected, setDispatchSelected] = useState<Set<string>>(new Set());
+  const [dispatchDest, setDispatchDest]           = useState('');
+  const [dispatchVehicle, setDispatchVehicle]     = useState('');
+  const [dispatchDriver, setDispatchDriver]       = useState('');
+  const [dispatchDriverPhone, setDispatchDriverPhone] = useState('');
+  const [dispatchAt, setDispatchAt] = useState<string>(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  const [dispatchNotes, setDispatchNotes]         = useState('');
+  const [confirmDispatch, setConfirmDispatch]     = useState(false);
+  const [isDispatching, setIsDispatching]         = useState(false);
+  const [dispatchComplete, setDispatchComplete]   = useState(false);
+
+  const toggleDispatchSelect = (id: string) => setDispatchSelected(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  const openDispatchTab = (ids: string[]) => {
+    setDispatchSelected(new Set(ids));
+    setDispatchComplete(false);
+    setActiveTab('dispatch');
+  };
+
+  const handleDispatch = async () => {
+    if (dispatchSelected.size === 0 || !dispatchDest.trim() || !confirmDispatch) return;
+    setIsDispatching(true);
+    try {
+      const ids = [...dispatchSelected];
+      const results = await Promise.all(
+        ids.map(id =>
+          fetch(`/api/batches/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'dispatch',
+              dispatch_destination: dispatchDest.trim(),
+              vehicle_reference: dispatchVehicle.trim() || null,
+              driver_name: dispatchDriver.trim() || null,
+              driver_phone: dispatchDriverPhone.trim() || null,
+              dispatched_at: dispatchAt ? new Date(dispatchAt).toISOString() : null,
+            }),
+          }).then(r => r.json().then(j => ({ ok: r.ok, json: j, id })))
+        )
+      );
+      const failed = results.filter(r => !r.ok);
+      if (failed.length > 0) throw new Error(failed[0].json.error || 'Failed to dispatch one or more batches');
+      // Optimistically update batch statuses in the local state
+      setBatches(prev => prev.map(b => ids.includes(b.id) ? { ...b, status: 'dispatched' } : b));
+      toast({ title: 'Dispatched', description: `${ids.length} batch${ids.length !== 1 ? 'es' : ''} dispatched to ${dispatchDest}` });
+      setDispatchComplete(true);
+      setConfirmDispatch(false);
+    } catch (err: any) {
+      toast({ title: 'Dispatch Error', description: err.message || 'Failed to dispatch', variant: 'destructive' });
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
+  const resetDispatch = () => {
+    setDispatchSelected(new Set());
+    setDispatchDest('');
+    setDispatchVehicle('');
+    setDispatchDriver('');
+    setDispatchDriverPhone('');
+    setDispatchNotes('');
+    setConfirmDispatch(false);
+    setDispatchComplete(false);
+  };
+
+  // ── Read URL params on mount (deep link: /app/inventory?tab=dispatch&batch=X) ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam   = params.get('tab');
+    const batchParam = params.get('batch');
+    const batchesParam = params.get('batches');
+    if (tabParam === 'dispatch') {
+      setActiveTab('dispatch');
+      if (batchParam) setDispatchSelected(new Set([batchParam]));
+      else if (batchesParam) setDispatchSelected(new Set(batchesParam.split(',').filter(Boolean)));
+    }
+  }, []);
+
   // ── Bags sub-tab state ──
   const [bags, setBags] = useState<Bag[]>([]);
   const [bagsLoading, setBagsLoading] = useState(false);
@@ -255,9 +353,11 @@ export default function InventoryPage() {
   };
 
   const statusCounts = {
-    all: batches.length,
+    all:        batches.length,
     collecting: batches.filter(b => b.status === 'collecting').length,
-    resolved: batches.filter(b => b.status === 'resolved').length,
+    completed:  batches.filter(b => b.status === 'completed').length,
+    aggregated: batches.filter(b => b.status === 'aggregated').length,
+    resolved:   batches.filter(b => b.status === 'resolved').length,
     dispatched: batches.filter(b => b.status === 'dispatched').length,
   };
 
@@ -297,26 +397,30 @@ export default function InventoryPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="batches">
-        <TabsList>
-          <TabsTrigger value="batches">Batches</TabsTrigger>
-          <TabsTrigger value="bags" onClick={fetchBags}>Bags</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="h-9">
+          <TabsTrigger value="batches" className="text-sm">Batches</TabsTrigger>
+          <TabsTrigger value="bags" className="text-sm" onClick={fetchBags}>Bags</TabsTrigger>
+          <TabsTrigger value="dispatch" className="text-sm">
+            <Truck className="h-3.5 w-3.5 mr-1.5" />
+            Dispatch
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="batches" className="mt-4 space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'collecting', 'resolved', 'dispatched'] as const).map((status) => (
-          <Button
+      <div className="segmented-control" data-testid="status-filter-group">
+        {(['all', 'collecting', 'completed', 'aggregated', 'resolved', 'dispatched'] as const).map((status) => (
+          <button
             key={status}
-            variant={statusFilter === status ? 'default' : 'outline'}
-            size="sm"
+            className="segmented-control-item flex items-center gap-1.5"
+            data-active={statusFilter === status}
             onClick={() => setStatusFilter(status)}
             data-testid={`filter-${status}`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
-            <Badge variant="secondary" className="ml-2">
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${statusFilter === status ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
               {statusCounts[status]}
-            </Badge>
-          </Button>
+            </span>
+          </button>
         ))}
       </div>
 
@@ -359,18 +463,20 @@ export default function InventoryPage() {
               </table>
             </div>
           ) : filteredBatches.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Package className="h-6 w-6 text-muted-foreground" />
+              </div>
               {searchQuery || statusFilter !== 'all' ? (
                 <>
-                  <p className="font-medium text-muted-foreground">No batches match your filters</p>
-                  <p className="text-sm text-muted-foreground mt-1">Try clearing the search or changing the status filter</p>
+                  <p className="font-medium">No batches match your filters</p>
+                  <p className="text-sm mt-1">Try clearing the search or changing the status filter</p>
                 </>
               ) : (
                 <>
-                  <p className="font-medium">No collection batches yet</p>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Batches are created when a field agent completes a Smart Collect run. Each batch tracks weight, grade, and which farmers contributed.
+                  <p className="font-medium text-foreground">No collection batches yet</p>
+                  <p className="text-sm mt-1 max-w-xs">
+                    Batches are created when a field agent completes a Smart Collect run.
                   </p>
                   <Link href="/app/collect" className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:underline">
                     Start your first collection →
@@ -396,6 +502,7 @@ export default function InventoryPage() {
                     <TableHead>Weight</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Date</TableHead>
+                    <TableHead className="w-24 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -406,7 +513,7 @@ export default function InventoryPage() {
                       onClick={() => handleRowClick(batch)}
                       data-testid={`batch-row-${batch.id}`}
                     >
-                      <TableCell onClick={e => { e.stopPropagation(); toggleSelect(batch.id); }}>
+                      <TableCell onClick={e => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(batch.id)}
                           onCheckedChange={() => toggleSelect(batch.id)}
@@ -420,6 +527,30 @@ export default function InventoryPage() {
                       <TableCell><StatusBadge domain="batch" status={batch.status} /></TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {new Date(batch.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        {['completed', 'aggregated', 'resolved'].includes(batch.status) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => openDispatchTab([batch.id])}
+                          >
+                            <Truck className="h-3.5 w-3.5 mr-1" />
+                            Dispatch
+                          </Button>
+                        )}
+                        {batch.status === 'dispatched' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-muted-foreground"
+                            onClick={() => router.push(`/app/dispatch/${batch.id}`)}
+                          >
+                            <Truck className="h-3.5 w-3.5 mr-1 text-green-600" />
+                            View
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -435,6 +566,19 @@ export default function InventoryPage() {
         <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
           <span className="text-sm font-medium text-muted-foreground">{selected.size} batch{selected.size !== 1 ? 'es' : ''} selected</span>
           <div className="w-px h-4 bg-border" />
+          {(() => {
+            const dispatchable = filteredBatches.filter(b => selected.has(b.id) && ['completed', 'aggregated', 'resolved'].includes(b.status));
+            return dispatchable.length > 0 ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => { setSelected(new Set()); openDispatchTab(dispatchable.map(b => b.id)); }}
+              >
+                <Truck className="h-3.5 w-3.5 mr-1.5" />
+                Dispatch {dispatchable.length > 1 ? `${dispatchable.length} Batches` : 'Batch'}
+              </Button>
+            ) : null;
+          })()}
           <Button
             size="sm"
             variant="outline"
@@ -511,16 +655,18 @@ export default function InventoryPage() {
 
           {/* Stats strip */}
           {bags.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total', value: bags.length, color: '' },
-                { label: 'Unused', value: bags.filter(b => b.status === 'unused').length, color: 'text-blue-600' },
-                { label: 'Collected', value: bags.filter(b => b.status === 'collected').length, color: 'text-green-600' },
-                { label: 'Processed', value: bags.filter(b => b.status === 'processed').length, color: 'text-purple-600' },
+                { label: 'Total',     value: bags.length,                                       iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+                { label: 'Unused',    value: bags.filter(b => b.status === 'unused').length,    iconClass: 'icon-bg-neutral', accent: '' },
+                { label: 'Collected', value: bags.filter(b => b.status === 'collected').length, iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+                { label: 'Processed', value: bags.filter(b => b.status === 'processed').length, iconClass: 'icon-bg-violet', accent: 'card-accent-violet' },
               ].map(s => (
-                <Card key={s.label} className="text-center p-3">
-                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                <Card key={s.label} className={`${s.accent} transition-shadow hover:shadow-sm`}>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold tracking-tight">{s.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -577,6 +723,227 @@ export default function InventoryPage() {
               )}
             </CardContent>
           </Card>
+        </TierGate>
+      </TabsContent>
+
+      {/* ── DISPATCH TAB ── */}
+      <TabsContent value="dispatch" className="mt-4">
+        <TierGate feature="dispatch" requiredTier="basic" featureLabel="Dispatch">
+          {dispatchComplete ? (
+            // ── Success State ──
+            <Card>
+              <CardContent className="py-12 text-center space-y-4">
+                <div className="h-14 w-14 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold">Dispatch Complete</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {dispatchSelected.size} batch{dispatchSelected.size !== 1 ? 'es' : ''} dispatched to <span className="font-medium">{dispatchDest}</span>
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <Button variant="outline" onClick={resetDispatch}>
+                    Dispatch Another
+                  </Button>
+                  <Button onClick={() => setActiveTab('batches')}>
+                    Back to Inventory
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={`grid gap-4 ${dispatchSelected.size > 0 ? 'lg:grid-cols-[1fr_380px]' : ''}`}>
+              {/* ── Batch selector ── */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-primary" />
+                        Select Batches to Dispatch
+                      </CardTitle>
+                      <CardDescription className="mt-0.5">
+                        Choose completed or aggregated batches ready for dispatch
+                      </CardDescription>
+                    </div>
+                    {dispatchSelected.size > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-mono">
+                          {dispatchSelected.size} selected
+                        </Badge>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => setDispatchSelected(new Set())}>
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {(() => {
+                    const dispatchable = batches.filter(b => ['completed', 'aggregated', 'resolved'].includes(b.status));
+                    if (isLoading) {
+                      return <div className="flex items-center justify-center h-40"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+                    }
+                    if (dispatchable.length === 0) {
+                      return (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <Truck className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                          <p className="font-medium">No batches ready for dispatch</p>
+                          <p className="text-sm mt-1">Batches must be in <em>Completed</em> or <em>Aggregated</em> status before they can be dispatched.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-10">
+                                <Checkbox
+                                  checked={dispatchable.length > 0 && dispatchable.every(b => dispatchSelected.has(b.id))}
+                                  onCheckedChange={() => {
+                                    if (dispatchable.every(b => dispatchSelected.has(b.id))) {
+                                      setDispatchSelected(new Set());
+                                    } else {
+                                      setDispatchSelected(new Set(dispatchable.map(b => b.id)));
+                                    }
+                                  }}
+                                  aria-label="Select all dispatchable batches"
+                                />
+                              </TableHead>
+                              <TableHead>Batch</TableHead>
+                              <TableHead>Farmer</TableHead>
+                              <TableHead className="hidden sm:table-cell">Weight</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {dispatchable.map(batch => (
+                              <TableRow
+                                key={batch.id}
+                                className={`cursor-pointer ${dispatchSelected.has(batch.id) ? 'bg-primary/5' : 'hover:bg-muted/50'}`}
+                                onClick={() => toggleDispatchSelect(batch.id)}
+                              >
+                                <TableCell onClick={e => e.stopPropagation()}>
+                                  <Checkbox
+                                    checked={dispatchSelected.has(batch.id)}
+                                    onCheckedChange={() => toggleDispatchSelect(batch.id)}
+                                  />
+                                </TableCell>
+                                <TableCell className="font-mono text-xs font-medium">{batch.batch_code || batch.id.slice(0, 8)}</TableCell>
+                                <TableCell className="text-sm">{batch.farm?.farmer_name || '—'}</TableCell>
+                                <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                                  {batch.total_weight.toLocaleString()} kg
+                                </TableCell>
+                                <TableCell><StatusBadge domain="batch" status={batch.status} /></TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* ── Dispatch form (shown when selection is non-empty) ── */}
+              {dispatchSelected.size > 0 && (
+                <Card className="self-start">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Send className="h-4 w-4 text-primary" />
+                      Dispatch Details
+                    </CardTitle>
+                    <CardDescription>
+                      {(() => {
+                        const sel = batches.filter(b => dispatchSelected.has(b.id));
+                        const total = sel.reduce((s, b) => s + b.total_weight, 0);
+                        return `${sel.length} batch${sel.length !== 1 ? 'es' : ''} · ${total.toLocaleString()} kg total`;
+                      })()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dp-dest" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Destination <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="dp-dest"
+                          className="pl-8 h-9"
+                          placeholder="Warehouse, processing facility…"
+                          value={dispatchDest}
+                          onChange={e => setDispatchDest(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dp-vehicle" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicle Ref</Label>
+                        <div className="relative">
+                          <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input id="dp-vehicle" className="pl-8 h-9" placeholder="Plate / ref" value={dispatchVehicle} onChange={e => setDispatchVehicle(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dp-driver" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Driver</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input id="dp-driver" className="pl-8 h-9" placeholder="Driver name" value={dispatchDriver} onChange={e => setDispatchDriver(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dp-phone" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Driver Phone</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="dp-phone" type="tel" className="pl-8 h-9" placeholder="+234…" value={dispatchDriverPhone} onChange={e => setDispatchDriverPhone(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dp-at" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dispatch Date &amp; Time</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="dp-at" type="datetime-local" className="pl-8 h-9 text-sm" value={dispatchAt} onChange={e => setDispatchAt(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dp-notes" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notes</Label>
+                      <Textarea id="dp-notes" className="h-16 resize-none text-sm" placeholder="Optional notes…" value={dispatchNotes} onChange={e => setDispatchNotes(e.target.value)} />
+                    </div>
+
+                    <div className="flex items-start gap-2 pt-1">
+                      <Checkbox
+                        id="dp-confirm"
+                        checked={confirmDispatch}
+                        onCheckedChange={v => setConfirmDispatch(v === true)}
+                      />
+                      <Label htmlFor="dp-confirm" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                        I confirm the selected batches are ready for dispatch and all details are correct.
+                      </Label>
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      disabled={!dispatchDest.trim() || !confirmDispatch || isDispatching}
+                      onClick={handleDispatch}
+                    >
+                      {isDispatching
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Dispatching…</>
+                        : <><Truck className="h-4 w-4 mr-2" />Dispatch {dispatchSelected.size} Batch{dispatchSelected.size !== 1 ? 'es' : ''}</>
+                      }
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TierGate>
       </TabsContent>
       </Tabs>

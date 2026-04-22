@@ -20,7 +20,7 @@ export function useCollectionLogic() {
   const router = useRouter();
   const { organization, profile } = useOrg();
   const { toast } = useToast();
-  const supabase = createClient();
+  const supabase = createClient(); // used for offline quickAddFarmer
   const isOnline = useOnlineStatus();
 
   const [step, setStep] = useState(1);
@@ -141,18 +141,16 @@ export function useCollectionLogic() {
         setAllFarms(cached);
         setFarmsLoading(false);
       }
-      if (isOnline && supabase) {
+      if (isOnline) {
         try {
-          const { data, error } = await supabase
-            .from('farms')
-            .select('id, farmer_name, community, commodity, area_hectares, compliance_status, boundary')
-            .eq('org_id', organization.id)
-            .neq('compliance_status', 'rejected')
-            .order('farmer_name');
-          if (error) throw error;
-          if (data) {
-            setAllFarms(data);
-            await cacheFarmsFull(organization.id, data);
+          // Use the admin-backed API endpoint to avoid RLS issues with the browser client
+          const res = await fetch('/api/collect/farmers');
+          if (res.ok) {
+            const { farms: farmsData } = await res.json();
+            if (farmsData?.length > 0) {
+              setAllFarms(farmsData);
+              await cacheFarmsFull(organization.id, farmsData);
+            }
           }
         } catch (err) {
           console.error('Failed to load farms for collection:', err);
@@ -161,7 +159,7 @@ export function useCollectionLogic() {
       setFarmsLoading(false);
     }
     loadFarms();
-  }, [organization, supabase, isOnline]);
+  }, [organization, isOnline]);
 
   const filteredLGAs = useMemo(() => {
     if (!selectedState) return [];
