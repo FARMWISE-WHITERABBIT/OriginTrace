@@ -130,7 +130,7 @@ export default function PedigreeDetailPage({ params: paramsPromise }: { params: 
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

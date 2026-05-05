@@ -44,12 +44,18 @@ import {
   CircleCheckBig,
   FileDown,
   RotateCw,
+  FlaskConical,
+  Share2,
+  Copy,
+  CheckCircle,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DocumentUpload } from '@/components/document-upload';
+import { CostTracker } from '@/components/shipments/cost-tracker';
+import { ShipmentPipeline } from '@/components/shipments/shipment-pipeline';
 import type { ShipmentReadinessResult, ScoreDimension, RiskFlag, RemediationItem } from '@/lib/services/shipment-scoring';
 
 
@@ -72,6 +78,73 @@ interface ShipmentDetail {
   notes: string | null;
   estimated_ship_date: string | null;
   created_at: string;
+  // 9-stage pipeline fields
+  current_stage: number;
+  stage_data: Record<string, any>;
+  stage_history: any[];
+  // Stage 1 — Preparation
+  purchase_order_number: string | null;
+  purchase_order_date: string | null;
+  contract_price_per_mt: number | null;
+  total_shipment_value_usd: number | null;
+  // Stage 2 — Quality & Certification
+  inspection_body: string | null;
+  inspection_date: string | null;
+  inspection_certificate_number: string | null;
+  inspection_result: string | null;
+  inspection_fees_ngn: number | null;
+  phyto_lab_costs_ngn: number | null;
+  // Stage 3 — Documentation
+  doc_status: Record<string, any>;
+  // Stage 4 — Customs & Clearance
+  clearing_agent_name: string | null;
+  clearing_agent_contact: string | null;
+  customs_declaration_number: string | null;
+  exit_certificate_number: string | null;
+  customs_fees_ngn: number | null;
+  port_handling_charges_ngn: number | null;
+  certification_costs_ngn: number | null;
+  // Stage 5 — Freight & Vessel
+  freight_forwarder_name: string | null;
+  freight_forwarder_contact: string | null;
+  shipping_line: string | null;
+  vessel_name: string | null;
+  imo_number: string | null;
+  voyage_number: string | null;
+  booking_reference: string | null;
+  port_of_loading: string | null;
+  port_of_discharge: string | null;
+  etd: string | null;
+  eta: string | null;
+  freight_cost_usd: number | null;
+  freight_insurance_usd: number | null;
+  // Stage 6 — Container Stuffing
+  container_number: string | null;
+  container_seal_number: string | null;
+  container_type: string | null;
+  // Stage 7 — Departure
+  actual_departure_date: string | null;
+  bill_of_lading_number: string | null;
+  // Stage 8 — Arrival
+  actual_arrival_date: string | null;
+  prenotif_eu_traces: string | null;
+  prenotif_eu_traces_ref: string | null;
+  prenotif_uk_ipaffs: string | null;
+  prenotif_uk_ipaffs_ref: string | null;
+  prenotif_us_fda: string | null;
+  prenotif_us_fda_ref: string | null;
+  prenotif_cn_gacc: string | null;
+  prenotif_cn_gacc_ref: string | null;
+  prenotif_uae_esma: string | null;
+  prenotif_uae_esma_ref: string | null;
+  // Stage 9 — Close
+  shipment_outcome: string | null;
+  rejection_reason: string | null;
+  usd_ngn_rate: number | null;
+  // Payment fields (Phase 1a migration)
+  payment_status: string | null;
+  payment_method: string | null;
+  payment_instruction_token: string | null;
 }
 
 interface ShipmentItem {
@@ -488,6 +561,165 @@ function ShipmentTimeline({ shipment, outcomes }: { shipment: ShipmentDetail; ou
   );
 }
 
+// ── Payment Status Config ────────────────────────────────────────────────────
+
+const PAYMENT_STATUS_CFG: Record<string, { label: string; className: string }> = {
+  none:             { label: 'Not Set Up',       className: 'bg-slate-100 text-slate-600' },
+  pending_setup:    { label: 'Pending Setup',     className: 'bg-amber-50 text-amber-700' },
+  awaiting_payment: { label: 'Awaiting Payment',  className: 'bg-blue-50 text-blue-700' },
+  partially_funded: { label: 'Partially Funded',  className: 'bg-violet-50 text-violet-700' },
+  funded:           { label: 'Funded',            className: 'bg-emerald-50 text-emerald-700' },
+  released:         { label: 'Released',          className: 'bg-green-50 text-green-700' },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  escrow_usdc:  'USDC Escrow',
+  swift_virtual: 'Wire Transfer (Virtual Account)',
+  manual:        'Manual / Offline',
+};
+
+interface EscrowAccount {
+  id: string;
+  amount_usd: number;
+  status: string;
+  milestone_config: Array<{ milestone_id: string; stage: string; amount: number; description: string; released_at?: string }>;
+  created_at: string;
+}
+
+function ShipmentPaymentCard({
+  shipment,
+  onSetupPayment,
+  onReleaseEscrow,
+  onCopyInstructionLink,
+}: {
+  shipment: ShipmentDetail;
+  onSetupPayment: () => void;
+  onReleaseEscrow: (escrow: EscrowAccount) => void;
+  onCopyInstructionLink: () => void;
+}) {
+  const [escrow, setEscrow] = useState<EscrowAccount | null>(null);
+  const [loadingEscrow, setLoadingEscrow] = useState(false);
+
+  useEffect(() => {
+    if (!shipment.id) return;
+    setLoadingEscrow(true);
+    fetch(`/api/escrow?shipment_id=${shipment.id}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.escrow) setEscrow(d.escrow); })
+      .catch(() => {})
+      .finally(() => setLoadingEscrow(false));
+  }, [shipment.id]);
+
+  const payStatus = shipment.payment_status || 'none';
+  const cfg = PAYMENT_STATUS_CFG[payStatus] ?? PAYMENT_STATUS_CFG.none;
+
+  const releasedMilestones  = (escrow?.milestone_config ?? []).filter((m) => m.released_at);
+  const pendingMilestones   = (escrow?.milestone_config ?? []).filter((m) => !m.released_at);
+  const releasedAmount      = releasedMilestones.reduce((s, m) => s + m.amount, 0);
+  const escrowTotal         = escrow?.amount_usd ?? 0;
+
+  return (
+    <Card className="card-accent-emerald">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <DollarSign className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Payment</CardTitle>
+              <CardDescription>Inbound buyer payment for this shipment</CardDescription>
+            </div>
+          </div>
+          <Badge className={`text-xs ${cfg.className}`}>{cfg.label}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Shipment value */}
+        {shipment.total_shipment_value_usd !== null && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Shipment Value</span>
+            <span className="font-semibold">
+              ${Number(shipment.total_shipment_value_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
+
+        {/* Payment method */}
+        {shipment.payment_method && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Payment Method</span>
+            <span className="font-medium">{PAYMENT_METHOD_LABELS[shipment.payment_method] ?? shipment.payment_method}</span>
+          </div>
+        )}
+
+        {/* Escrow section */}
+        {loadingEscrow ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading escrow…
+          </div>
+        ) : escrow ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Escrow Balance</span>
+                <span className="font-bold">${escrowTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Released</span>
+                <span className="text-emerald-700 font-medium">${releasedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              {/* Milestone list */}
+              {escrow.milestone_config.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {escrow.milestone_config.map((m) => (
+                    <div key={m.milestone_id} className="flex items-center gap-2 text-xs">
+                      {m.released_at
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      <span className={`flex-1 truncate ${m.released_at ? 'line-through text-muted-foreground' : ''}`}>{m.description}</span>
+                      <span className="font-mono tabular-nums shrink-0">${m.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Release action */}
+            {pendingMilestones.length > 0 && payStatus === 'funded' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => onReleaseEscrow(escrow)}
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                Release Milestone Funds
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {(payStatus === 'none') && (
+            <Button size="sm" className="flex-1" onClick={onSetupPayment}>
+              <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+              Set Up Payment
+            </Button>
+          )}
+          {(payStatus === 'awaiting_payment' || payStatus === 'partially_funded') && shipment.payment_instruction_token && (
+            <Button size="sm" variant="outline" className="flex-1" onClick={onCopyInstructionLink}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy Payment Link
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ShipmentDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -529,6 +761,11 @@ export default function ShipmentDetailPage() {
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
+  // Lab results + evidence packages
+  const [labResults, setLabResults] = useState<any[]>([]);
+  const [evidencePackages, setEvidencePackages] = useState<any[]>([]);
+  const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const fetchActivity = async () => {
     if (activityFetched || !shipmentId) return;
@@ -544,6 +781,10 @@ export default function ShipmentDetailPage() {
   const [coldChainDialogOpen, setColdChainDialogOpen] = useState(false);
   const [lotDialogOpen, setLotDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Payment card state
+  const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
+  const [releaseEscrow, setReleaseEscrow] = useState<EscrowAccount | null>(null);
+  const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
 
   const fetchShipment = useCallback(async () => {
     if (orgLoading || !organization) return;
@@ -561,6 +802,41 @@ export default function ShipmentDetailPage() {
       setIsLoading(false);
     }
   }, [shipmentId, organization, orgLoading, toast]);
+
+  const fetchLabResultsAndEvidence = useCallback(async () => {
+    if (!shipmentId) return;
+    try {
+      const [labRes, evRes] = await Promise.all([
+        fetch(`/api/lab-results?shipment_id=${shipmentId}&page_size=20`),
+        fetch(`/api/shipments/${shipmentId}/evidence-package`),
+      ]);
+      if (labRes.ok) { const d = await labRes.json(); setLabResults(d.results ?? []); }
+      if (evRes.ok) { const d = await evRes.json(); setEvidencePackages(d.packages ?? []); }
+    } catch (e) { console.error('Failed to fetch lab/evidence:', e); }
+  }, [shipmentId]);
+
+  const generateEvidencePackage = async () => {
+    if (!shipmentId) return;
+    setIsGeneratingEvidence(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentId}/evidence-package`, { method: 'POST' });
+      const d = await res.json();
+      if (!res.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
+      // Download PDF
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${d.pdf}`;
+      link.download = d.fileName;
+      link.click();
+      toast({ title: 'Evidence package generated', description: `Shareable link: ${d.shareableUrl}` });
+      fetchLabResultsAndEvidence();
+    } finally { setIsGeneratingEvidence(false); }
+  };
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
 
   const fetchOutcomes = useCallback(async () => {
     if (!organization) return;
@@ -601,7 +877,8 @@ export default function ShipmentDetailPage() {
     fetchOutcomes();
     fetchColdChain();
     fetchLots();
-  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots]);
+    fetchLabResultsAndEvidence();
+  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots, fetchLabResultsAndEvidence]);
 
   const updateField = async (field: string, value: unknown) => {
     setIsSaving(true);
@@ -739,11 +1016,14 @@ export default function ShipmentDetailPage() {
   const score = readiness?.overall_score ?? 0;
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => router.push('/app/shipments')} aria-label="Back to shipments" data-testid="button-back">
           <ArrowLeft className="h-4 w-4" />
         </Button>
+        <div className="flex items-center justify-center h-9 w-9 rounded-lg icon-bg-blue shrink-0">
+          <Ship className="h-4 w-4" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-semibold font-mono" data-testid="text-shipment-code">
@@ -755,9 +1035,7 @@ export default function ShipmentDetailPage() {
             {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {shipment.destination_country && `${shipment.destination_country}`}
-            {shipment.commodity && ` - ${shipment.commodity}`}
-            {shipment.buyer_company && ` - ${shipment.buyer_company}`}
+            {[shipment.destination_country, shipment.commodity, shipment.buyer_company].filter(Boolean).join(' · ')}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5 shrink-0">
@@ -765,15 +1043,20 @@ export default function ShipmentDetailPage() {
         </Button>
       </div>
 
-      <Card className={`${decision.bgColor} border-0`}>
-        <CardContent className="py-6">
+      <Card className={`${decision.bgColor} border-l-4 ${
+        readiness?.decision === 'go' ? 'border-l-green-500' :
+        readiness?.decision === 'conditional' ? 'border-l-yellow-500' :
+        readiness?.decision === 'no_go' ? 'border-l-red-500' :
+        'border-l-muted-foreground/30'
+      }`}>
+        <CardContent className="py-5">
           <div className="flex items-center justify-between gap-6 flex-wrap">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-background flex items-center justify-center">
-                <DecisionIcon className={`h-7 w-7 ${decision.color}`} />
+              <div className="h-12 w-12 rounded-xl bg-background flex items-center justify-center shadow-sm border border-border/50">
+                <DecisionIcon className={`h-6 w-6 ${decision.color}`} />
               </div>
               <div>
-                <p className={`text-xl font-bold ${decision.color}`} data-testid="text-decision-label">
+                <p className={`text-lg font-bold ${decision.color}`} data-testid="text-decision-label">
                   {decision.label}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">
@@ -801,13 +1084,15 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <ShipmentTimeline shipment={shipment} outcomes={outcomes} />
+      <ShipmentPipeline shipment={shipment} onRefresh={fetchShipment} />
 
       {/* Linear Supply Chain Traceability Timeline */}
-      <Card data-testid="card-supply-chain-graph">
+      <Card className="card-accent-emerald" data-testid="card-supply-chain-graph">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Layers className="h-4 w-4" />
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <Layers className="h-3.5 w-3.5" />
+            </div>
             Supply Chain Traceability
           </CardTitle>
           <CardDescription>
@@ -816,7 +1101,10 @@ export default function ShipmentDetailPage() {
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Add shipment items to see the traceability chain.</p>
+            <div className="empty-state py-8">
+              <div className="empty-state-icon"><Layers className="h-5 w-5" /></div>
+              <p className="text-sm text-muted-foreground">Add shipment items to see the traceability chain.</p>
+            </div>
           ) : (() => {
             const batchItems = items.filter(i => i.item_type === 'batch');
             const fgItems = items.filter(i => i.item_type === 'finished_good');
@@ -824,7 +1112,7 @@ export default function ShipmentDetailPage() {
             const steps = [
               { label: 'Farms', value: totalFarms || '—', sub: 'source farms', icon: MapPin, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/20', link: '/app/farms' },
               { label: 'Batches', value: batchItems.length || '—', sub: 'collection batches', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/20', link: '/app/inventory' },
-              { label: 'Processing', value: fgItems.length > 0 ? '✓' : '—', sub: 'processing runs', icon: PackageCheck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20', link: '/app/processing' },
+              { label: 'Processing', value: fgItems.length > 0 ? <CheckCircle2 className="h-4 w-4 inline" /> : '—', sub: 'processing runs', icon: PackageCheck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20', link: '/app/processing' },
               { label: 'Finished Good', value: fgItems.length || '—', sub: 'finished goods', icon: CircleCheckBig, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20', link: '/app/pedigree' },
               { label: 'Shipment', value: '1', sub: shipment.status, icon: Ship, color: 'text-primary', bg: 'bg-primary/5', link: null },
             ];
@@ -863,12 +1151,14 @@ export default function ShipmentDetailPage() {
 
       {/* Readiness Action Center — unified prioritised action list */}
       {readiness && (readiness.risk_flags.length > 0 || readiness.remediation_items.length > 0 || readiness.dimensions.length > 0) && (
-        <Card data-testid="card-action-center">
+        <Card className="card-accent-amber" data-testid="card-action-center">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" />
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                  </div>
                   Readiness Action Center
                 </CardTitle>
                 <CardDescription>What needs to happen before this shipment can go</CardDescription>
@@ -1013,9 +1303,14 @@ export default function ShipmentDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="card-accent-violet">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Target Regulations</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                <Globe className="h-3.5 w-3.5" />
+              </div>
+              Target Regulations
+            </CardTitle>
             <CardDescription>Select regulations applicable to this shipment</CardDescription>
           </CardHeader>
           <CardContent>
@@ -1037,11 +1332,16 @@ export default function ShipmentDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-accent-blue">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-base">Export Documentation</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                    <FileText className="h-3.5 w-3.5" />
+                  </div>
+                  Export Documentation
+                </CardTitle>
                 <CardDescription>Mark documents that are ready for this shipment</CardDescription>
               </div>
               <Dialog open={uploadDocOpen} onOpenChange={(open) => { setUploadDocOpen(open); if (!open) setUploadDocType(''); }}>
@@ -1121,9 +1421,14 @@ export default function ShipmentDetailPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="card-accent-emerald">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Storage & Handling Controls</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+              <ShieldCheck className="h-3.5 w-3.5" />
+            </div>
+            Storage & Handling Controls
+          </CardTitle>
           <CardDescription>Confirm warehouse and handling compliance</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1145,19 +1450,24 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <CardTitle className="text-base">Shipment Items ({items.length})</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <Package className="h-3.5 w-3.5" />
+                </div>
+                Shipment Items ({items.length})
+              </CardTitle>
               <CardDescription>Batches and finished goods included in this shipment</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <div className="empty-state py-8">
+              <div className="empty-state-icon"><Package className="h-5 w-5" /></div>
               <p className="text-sm text-muted-foreground">
                 No items added yet. Use the API to add batches or finished goods to this shipment.
               </p>
@@ -1214,12 +1524,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-red">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <History className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-red shrink-0">
+                  <History className="h-3.5 w-3.5" />
+                </div>
                 Shipment Outcomes ({outcomes.length})
               </CardTitle>
               <CardDescription>Record border inspection results and rejection history</CardDescription>
@@ -1266,12 +1578,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <ThermometerSnowflake className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <ThermometerSnowflake className="h-3.5 w-3.5" />
+                </div>
                 Cold Chain Monitoring
               </CardTitle>
               <CardDescription>Temperature and humidity tracking for this shipment</CardDescription>
@@ -1287,22 +1601,17 @@ export default function ShipmentDetailPage() {
         <CardContent>
           {coldChainSummary && coldChainSummary.total_entries > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.avg_temp !== null ? `${coldChainSummary.avg_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Avg Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.min_temp !== null ? `${coldChainSummary.min_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Min Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className="text-lg font-bold">{coldChainSummary.max_temp !== null ? `${coldChainSummary.max_temp.toFixed(1)}` : '-'}</p>
-                <p className="text-xs text-muted-foreground">Max Temp</p>
-              </div>
-              <div className="text-center p-2 rounded-md bg-muted/50">
-                <p className={`text-lg font-bold ${coldChainSummary.alert_count > 0 ? 'text-red-600' : 'text-green-600'}`}>{coldChainSummary.alert_count}</p>
-                <p className="text-xs text-muted-foreground">Alerts</p>
-              </div>
+              {[
+                { label: 'Avg Temp', value: coldChainSummary.avg_temp !== null ? `${coldChainSummary.avg_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Min Temp', value: coldChainSummary.min_temp !== null ? `${coldChainSummary.min_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Max Temp', value: coldChainSummary.max_temp !== null ? `${coldChainSummary.max_temp.toFixed(1)}°C` : '—', color: '' },
+                { label: 'Alerts', value: String(coldChainSummary.alert_count), color: coldChainSummary.alert_count > 0 ? 'text-red-600' : 'text-green-600' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                  <span className={`font-bold text-sm ${s.color}`}>{s.value}</span>
+                </div>
+              ))}
             </div>
           )}
           {coldChainLogs.length === 0 ? (
@@ -1327,12 +1636,14 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="card-accent-violet">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <Layers className="h-4 w-4" />
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Layers className="h-3.5 w-3.5" />
+                </div>
                 Lot Management ({lots.length})
               </CardTitle>
               <CardDescription>Group batches into lots with mass balance validation</CardDescription>
@@ -1385,9 +1696,14 @@ export default function ShipmentDetailPage() {
 
       <div className="h-px w-full bg-border" />
 
-      <Card>
+      <Card className="card-accent-blue">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Shipment Details</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+              <Ship className="h-3.5 w-3.5" />
+            </div>
+            Shipment Details
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1457,11 +1773,164 @@ export default function ShipmentDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Lab Results */}
+      <Card className="card-accent-emerald">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <FlaskConical className="h-3.5 w-3.5" />
+                </div>
+                Lab Results ({labResults.length})
+              </CardTitle>
+              <CardDescription>Pesticide residue and quality test results for this shipment</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/app/lab-results?prefillShipmentId=${shipmentId}`}>
+                <Plus className="h-4 w-4 mr-1" /> Upload Lab Result
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {labResults.length === 0 ? (
+            <div className="text-center py-6">
+              <FlaskConical className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No lab results linked to this shipment.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {labResults.map((lr: any) => (
+                <div key={lr.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{lr.test_type?.replace(/_/g, ' ')}</span>
+                      <Badge
+                        variant={lr.overall_result === 'pass' ? 'default' : lr.overall_result === 'fail' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {lr.overall_result?.toUpperCase()}
+                      </Badge>
+                      {lr.mrl_flags && Array.isArray(lr.mrl_flags) && lr.mrl_flags.length > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {lr.mrl_flags.length} MRL exceedance{lr.mrl_flags.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {lr.lab_provider} · {lr.test_date ? new Date(lr.test_date).toLocaleDateString() : '—'}
+                      {lr.result_value != null && ` · ${lr.result_value} ${lr.result_unit || ''}`}
+                    </p>
+                  </div>
+                  {lr.certificate_number && (
+                    <Badge variant="outline" className="text-xs shrink-0">Cert #{lr.certificate_number}</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cost of Export & Net Margin */}
+      <CostTracker shipmentId={shipment.id} />
+
+      {/* Payment Card */}
+      <ShipmentPaymentCard
+        shipment={shipment}
+        onSetupPayment={() => setPaymentSetupOpen(true)}
+        onReleaseEscrow={(e) => setReleaseEscrow(e)}
+        onCopyInstructionLink={() => {
+          if (!shipment.payment_instruction_token) return;
+          const link = `${window.location.origin}/app/payments/pay/${shipment.payment_instruction_token}`;
+          navigator.clipboard.writeText(link).catch(() => {});
+          setCopiedPaymentLink(true);
+          setTimeout(() => setCopiedPaymentLink(false), 2000);
+          toast({ title: 'Payment link copied', description: 'Share this link with the buyer.' });
+        }}
+      />
+
+      {/* Evidence Package */}
+      <Card className="card-accent-violet">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Share2 className="h-3.5 w-3.5" />
+                </div>
+                Evidence Packages
+              </CardTitle>
+              <CardDescription>Shareable border-detention evidence bundles (valid 7 days)</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateEvidencePackage}
+              disabled={isGeneratingEvidence}
+            >
+              {isGeneratingEvidence ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Generating…</>
+              ) : (
+                <><FileDown className="h-4 w-4 mr-1" />Generate Package</>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {evidencePackages.length === 0 ? (
+            <div className="text-center py-6">
+              <Share2 className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No evidence packages generated yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {evidencePackages.map((pkg: any) => {
+                const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/app/evidence/${pkg.token}`;
+                const expired = new Date(pkg.expires_at) < new Date();
+                return (
+                  <div key={pkg.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px]">{pkg.token}</span>
+                        {expired ? (
+                          <Badge variant="destructive" className="text-xs">Expired</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle className="h-3 w-3 mr-1" />Active
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Expires {new Date(pkg.expires_at).toLocaleDateString()} · {pkg.view_count ?? 0} views
+                      </p>
+                    </div>
+                    {!expired && (
+                      <Button variant="ghost" size="sm" onClick={() => copyUrl(shareUrl)} className="shrink-0">
+                        {copiedUrl === shareUrl ? (
+                          <><CheckCircle className="h-4 w-4 mr-1 text-green-600" />Copied</>
+                        ) : (
+                          <><Copy className="h-4 w-4 mr-1" />Copy Link</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="h-4 w-4" />Activity
+              <div className="h-7 w-7 rounded-md flex items-center justify-center bg-muted shrink-0">
+                <History className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              Activity
             </CardTitle>
             {!activityFetched && (
               <Button variant="outline" size="sm" onClick={fetchActivity}>Load Activity</Button>
@@ -1517,6 +1986,264 @@ export default function ShipmentDetailPage() {
         loading={isRemovingItem}
         onConfirm={doRemoveItem}
       />
+
+      {/* Payment Setup Modal */}
+      <PaymentSetupModal
+        open={paymentSetupOpen}
+        shipmentId={shipment.id}
+        shipmentValue={shipment.total_shipment_value_usd}
+        onOpenChange={setPaymentSetupOpen}
+        onSuccess={() => { setPaymentSetupOpen(false); fetchShipment(); }}
+      />
+
+      {/* Escrow Release Confirmation */}
+      {releaseEscrow && (
+        <EscrowReleaseModal
+          open={!!releaseEscrow}
+          escrow={releaseEscrow}
+          shipment={shipment}
+          onOpenChange={(v) => { if (!v) setReleaseEscrow(null); }}
+          onSuccess={() => { setReleaseEscrow(null); fetchShipment(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Payment Setup Modal ──────────────────────────────────────────────────────
+
+function PaymentSetupModal({
+  open,
+  shipmentId,
+  shipmentValue,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean;
+  shipmentId: string;
+  shipmentValue: number | null;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [method, setMethod] = useState<'escrow_usdc' | 'swift_virtual' | 'manual'>('escrow_usdc');
+  const [amount, setAmount] = useState(String(shipmentValue ?? ''));
+  const [milestones, setMilestones] = useState([
+    { stage: 'on_loading', amount: '', description: 'Payment on loading' },
+    { stage: 'on_delivery', amount: '', description: 'Payment on delivery' },
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    const amountNum = parseFloat(amount);
+    if (!amountNum || amountNum <= 0) {
+      toast({ title: 'Invalid amount', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const milestoneParsed = method === 'escrow_usdc'
+        ? milestones
+            .filter((m) => m.description && m.amount)
+            .map((m) => ({ stage: m.stage, amount: parseFloat(m.amount), description: m.description }))
+        : undefined;
+
+      const res = await fetch(`/api/shipments/${shipmentId}/payment-setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method: method,
+          amount_usd: amountNum,
+          milestones: milestoneParsed,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to set up payment');
+
+      toast({ title: 'Payment set up', description: `Method: ${method === 'escrow_usdc' ? 'USDC Escrow' : method === 'swift_virtual' ? 'Wire Transfer' : 'Manual'}` });
+      onSuccess();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set Up Payment</DialogTitle>
+          <DialogDescription>
+            Choose how the buyer will pay for this shipment.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {/* Method */}
+          <div className="space-y-2">
+            <Label>Payment Method</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="escrow_usdc">USDC Escrow (Recommended)</SelectItem>
+                <SelectItem value="swift_virtual">Wire Transfer (Virtual Account)</SelectItem>
+                <SelectItem value="manual">Manual / Offline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Amount */}
+          <div className="space-y-2">
+            <Label>Shipment Value (USD)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 50000"
+            />
+          </div>
+
+          {/* Milestones (escrow only) */}
+          {method === 'escrow_usdc' && (
+            <div className="space-y-2">
+              <Label>Payment Milestones</Label>
+              <div className="space-y-2">
+                {milestones.map((m, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_100px] gap-2">
+                    <Input
+                      placeholder="Description"
+                      value={m.description}
+                      onChange={(e) => setMilestones((ms) => ms.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="USD"
+                      value={m.amount}
+                      onChange={(e) => setMilestones((ms) => ms.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))}
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setMilestones((ms) => [...ms, { stage: `stage_${ms.length + 1}`, amount: '', description: '' }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />Add Milestone
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Confirm Setup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Escrow Release Modal ─────────────────────────────────────────────────────
+
+function EscrowReleaseModal({
+  open,
+  escrow,
+  shipment,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean;
+  escrow: EscrowAccount;
+  shipment: ShipmentDetail;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [isReleasing, setIsReleasing] = useState(false);
+
+  const pendingMilestones = escrow.milestone_config.filter((m) => !m.released_at);
+
+  const handleRelease = async () => {
+    if (!selectedMilestone) {
+      toast({ title: 'Select a milestone to release', variant: 'destructive' });
+      return;
+    }
+    setIsReleasing(true);
+    try {
+      const res = await fetch(`/api/escrow/${escrow.id}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ milestone_id: selectedMilestone }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to release milestone');
+      toast({ title: 'Milestone released', description: 'Funds have been released.' });
+      onSuccess();
+    } catch (err: any) {
+      toast({ title: 'Release failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsReleasing(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Release Milestone Funds</DialogTitle>
+          <DialogDescription>
+            Select a milestone to release funds to your wallet.
+            Shipment: <strong>{shipment.shipment_code}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="rounded-lg border p-3 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Escrow Balance</span>
+              <span className="font-bold">${Number(escrow.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Select Milestone to Release</Label>
+            {pendingMilestones.map((m) => (
+              <button
+                key={m.milestone_id}
+                type="button"
+                onClick={() => setSelectedMilestone(m.milestone_id)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  selectedMilestone === m.milestone_id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-muted-foreground/50'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">{m.description}</span>
+                  <span className="text-sm font-bold">${m.amount.toLocaleString()}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">{m.stage}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={handleRelease}
+            disabled={isReleasing || !selectedMilestone}
+          >
+            {isReleasing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Release Funds
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

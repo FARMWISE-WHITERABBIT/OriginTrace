@@ -99,10 +99,65 @@ export async function PATCH(
     const { user, profile } = await getAuthenticatedProfile(request);
     if (!user || !profile?.org_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
+
+    // Dispatch action — updates status + dispatch tracking fields
+    if (body.action === 'dispatch') {
+      if (!['admin', 'aggregator', 'logistics_coordinator'].includes(profile.role)) {
+        return NextResponse.json({ error: 'Insufficient permissions to dispatch' }, { status: 403 });
+      }
+      if (!body.dispatch_destination) {
+        return NextResponse.json({ error: 'dispatch_destination is required' }, { status: 400 });
+      }
+
+      const now = new Date().toISOString();
+      const dispatchUpdates: Record<string, any> = {
+        status: 'dispatched',
+        updated_at: now,
+      };
+      if (body.dispatch_destination)  dispatchUpdates.dispatch_destination  = body.dispatch_destination;
+      if (body.vehicle_reference)     dispatchUpdates.vehicle_reference     = body.vehicle_reference;
+      if (body.driver_name)           dispatchUpdates.driver_name           = body.driver_name;
+      if (body.driver_phone)          dispatchUpdates.driver_phone          = body.driver_phone;
+      if (body.expected_arrival_at)   dispatchUpdates.expected_arrival_at   = body.expected_arrival_at;
+      // dispatched_at = user-specified time when dispatch actually happened; falls back to now
+      dispatchUpdates.dispatched_at        = body.dispatched_at || now;
+      dispatchUpdates.dispatch_recorded_at = now;   // always system time
+      dispatchUpdates.dispatched_by        = user.id;
+
+      const { error } = await supabase
+        .from('collection_batches')
+        .update(dispatchUpdates)
+        .eq('id', id)
+        .eq('org_id', profile.org_id);
+
+      if (error) {
+        // If the dispatch columns don't exist yet, fall back to just updating status
+        if (error.code === '42703' || error.message?.includes('column')) {
+          const { error: fallbackError } = await supabase
+            .from('collection_batches')
+            .update({ status: 'dispatched', updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .eq('org_id', profile.org_id);
+          if (fallbackError) return NextResponse.json({ error: fallbackError.message }, { status: 400 });
+        } else {
+          return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+      }
+      return NextResponse.json({ success: true, dispatched: true });
+    }
+
+    // Standard field update
     const allowed = ['grade', 'notes'];
-    const updates: Record<string, string> = {};
+    const updates: Record<string, any> = {};
     for (const key of allowed) { if (key in body) updates[key] = body[key]; }
-    const { error } = await supabase.from('collection_batches').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('org_id', profile.org_id);
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+    const { error } = await supabase
+      .from('collection_batches')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('org_id', profile.org_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: 'Internal server error' }, { status: 500 }); }

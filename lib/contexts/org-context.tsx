@@ -143,7 +143,9 @@ export function OrgProvider({ children }: { children: ReactNode }) {
           // VALID tiers only — reject legacy values like 'trial', 'free', 'growth'
           const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
           const rawTier = org.subscription_tier || s.subscription_tier;
-          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : 'starter';
+          // null/unset means billing not yet configured — pass through as undefined
+          // so hasTierAccess() grants full access rather than capping at 'starter'
+          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : undefined;
           return {
             ...org,
             subscription_tier: resolvedTier,

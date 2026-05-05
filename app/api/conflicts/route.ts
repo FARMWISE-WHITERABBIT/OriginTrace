@@ -9,8 +9,16 @@ import { parseBody } from '@/lib/api/validation';
 
 const conflictPatchSchema = z.object({
   conflict_id: z.number({ required_error: 'Conflict ID is required' }),
-  action: z.enum(['keep_a', 'keep_b', 'merge', 'dismiss'], { required_error: 'Action is required' }),
-  notes: z.string().optional(),
+  action: z.enum([
+    'keep_a',             // Retain Farm A, reject Farm B
+    'keep_b',             // Retain Farm B, reject Farm A
+    'merged',             // Both farms cleared — admin handles merge
+    'deactivated',        // Newer farm (B) deactivated, Farm A retained
+    'confirmed_correct',  // Admin confirms overlap is acceptable
+    'escalated_survey',   // Field re-survey assigned — conflict stays open
+    'dismissed',          // False positive, both farms cleared
+  ], { required_error: 'Action is required' }),
+  notes: z.string().min(20, 'Resolution note must be at least 20 characters'),
 });
 
 
@@ -270,64 +278,70 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Conflict not found' }, { status: 404 });
     }
 
-    let resolutionStatus = 'dismissed';
-    
+    // Determine the new conflict record status and farm side effects per action
+    type ConflictStatus = 'resolved' | 'dismissed' | 'escalated';
+    let conflictStatus: ConflictStatus = 'resolved';
+
     if (action === 'keep_a') {
-      resolutionStatus = 'resolved_keep_a';
-      await supabaseAdmin
-        .from('farms')
+      // Farm A survives; Farm B is rejected
+      await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_a_id)
-        .eq('org_id', profile.org_id);
-      await supabaseAdmin
-        .from('farms')
+        .eq('id', conflict.farm_a_id).eq('org_id', profile.org_id);
+      await supabaseAdmin.from('farms')
         .update({ compliance_status: 'rejected', conflict_status: 'clear' })
-        .eq('id', conflict.farm_b_id)
-        .eq('org_id', profile.org_id);
+        .eq('id', conflict.farm_b_id).eq('org_id', profile.org_id);
+
     } else if (action === 'keep_b') {
-      resolutionStatus = 'resolved_keep_b';
-      await supabaseAdmin
-        .from('farms')
+      // Farm B survives; Farm A is rejected
+      await supabaseAdmin.from('farms')
         .update({ compliance_status: 'rejected', conflict_status: 'clear' })
-        .eq('id', conflict.farm_a_id)
-        .eq('org_id', profile.org_id);
-      await supabaseAdmin
-        .from('farms')
+        .eq('id', conflict.farm_a_id).eq('org_id', profile.org_id);
+      await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_b_id)
-        .eq('org_id', profile.org_id);
-    } else if (action === 'merge') {
-      resolutionStatus = 'resolved_merged';
-      await supabaseAdmin
-        .from('farms')
+        .eq('id', conflict.farm_b_id).eq('org_id', profile.org_id);
+
+    } else if (action === 'merged') {
+      // Admin handles the merge externally; both cleared
+      await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_a_id)
-        .eq('org_id', profile.org_id);
-      await supabaseAdmin
-        .from('farms')
+        .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
+
+    } else if (action === 'deactivated') {
+      // Newer registration (Farm B) is deactivated; Farm A retained
+      await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_b_id)
-        .eq('org_id', profile.org_id);
+        .eq('id', conflict.farm_a_id).eq('org_id', profile.org_id);
+      await supabaseAdmin.from('farms')
+        .update({ compliance_status: 'rejected', conflict_status: 'clear' })
+        .eq('id', conflict.farm_b_id).eq('org_id', profile.org_id);
+
+    } else if (action === 'confirmed_correct') {
+      // Admin confirmed overlap is acceptable — both farms cleared
+      await supabaseAdmin.from('farms')
+        .update({ conflict_status: 'clear' })
+        .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
+
+    } else if (action === 'escalated_survey') {
+      // Field re-survey assigned — conflict stays open as 'escalated'
+      conflictStatus = 'escalated';
+      // Farms remain with conflict_status = 'conflict' until survey completes
+
     } else {
-      await supabaseAdmin
-        .from('farms')
+      // dismissed — false positive, both farms cleared
+      conflictStatus = 'dismissed';
+      await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_a_id)
-        .eq('org_id', profile.org_id);
-      await supabaseAdmin
-        .from('farms')
-        .update({ conflict_status: 'clear' })
-        .eq('id', conflict.farm_b_id)
-        .eq('org_id', profile.org_id);
+        .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
     }
 
     const { error: updateError } = await supabaseAdmin
       .from('farm_conflicts')
       .update({
-        status: resolutionStatus,
+        status: conflictStatus,
+        resolution_action: action,
         resolved_by: user.id,
-        resolved_at: new Date().toISOString(),
-        resolution_notes: notes || null
+        resolved_at: conflictStatus !== 'escalated' ? new Date().toISOString() : null,
+        resolution_notes: notes,
       })
       .eq('id', conflict_id);
 
@@ -336,7 +350,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to resolve conflict' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, status: resolutionStatus });
+    return NextResponse.json({ success: true, status: conflictStatus, action });
     
   } catch (error) {
     console.error('Conflicts PATCH error:', error);

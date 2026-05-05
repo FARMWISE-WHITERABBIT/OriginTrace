@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
-import { requireRole, ROLES } from '@/lib/rbac';
-import { ApiError, withErrorHandling } from '@/lib/api/errors';
+import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+
+const ALLOWED_SYNC_ROLES = ['admin', 'aggregator', 'agent'];
 
 const syncBatchSchema = z.object({
   local_id: z.string().min(1, 'local_id is required'),
@@ -27,101 +29,200 @@ const syncBatchSchema = z.object({
   })).optional(),
   notes: z.string().optional(),
   collected_at: z.string().optional(),
+  target_markets: z.array(z.string()).optional(),
 });
 
 const syncPutSchema = z.object({
   batches: z.array(syncBatchSchema).min(1, 'At least one batch is required'),
 });
 
-const conflictResolveSchema = z.object({
-  conflict_id: z.string().uuid(),
-  resolution: z.enum(['field', 'server']),
-});
+export async function GET(request: NextRequest) {
+  try {
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    const serviceClient = createServiceClient();
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
-  const { profile } = await getAuthenticatedProfile(request);
-  if (!profile) return ApiError.unauthorized();
-  if (!profile.org_id) return ApiError.forbidden('No organization assigned');
-  
-  const serviceClient = createServiceClient();
-  const { searchParams } = new URL(request.url);
-  const showConflicts = searchParams.get('conflicts') === 'true';
-
-  if (showConflicts) {
-    const roleError = requireRole(profile, ROLES.ADMIN_AGGREGATOR);
-    if (roleError) return roleError;
-
-    const { data: conflicts, error } = await serviceClient
-      .from('sync_conflicts')
-      .select('*')
-      .eq('org_id', profile.org_id)
-      .eq('status', 'pending');
+    if (profile.role === 'admin' || profile.role === 'aggregator') {
+      const { data: syncStatus, error } = await serviceClient
+        .from('agent_sync_status')
+        .select(`
+          *,
+          agent:profiles(id, full_name, role)
+        `)
+        .eq('org_id', profile.org_id)
+        .order('last_seen_at', { ascending: false });
+      
+      if (error) {
+        console.error('Sync status fetch error:', error);
+        return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
+      }
+      
+      return NextResponse.json({ sync_status: syncStatus || [] });
+    } else {
+      const { data: syncStatus, error } = await serviceClient
+        .from('agent_sync_status')
+        .select('*')
+        .eq('agent_id', profile.id)
+        .order('last_seen_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Sync status fetch error:', error);
+        return NextResponse.json({ error: 'Failed to fetch sync status' }, { status: 500 });
+      }
+      
+      return NextResponse.json({ sync_status: syncStatus?.[0] || null });
+    }
     
-    if (error) return ApiError.internal(error, 'sync/GET/conflicts');
-    return NextResponse.json({ conflicts });
+  } catch (error) {
+    console.error('Sync API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
 
-  // Legacy sync status logic
-  if (profile.role === 'admin' || profile.role === 'aggregator') {
-    const { data: syncStatus, error } = await serviceClient
-      .from('agent_sync_status')
-      .select('*, agent:profiles(id, full_name, role)')
-      .eq('org_id', profile.org_id)
-      .order('last_seen_at', { ascending: false });
-    
-    if (error) return ApiError.internal(error, 'sync/GET/status');
-    return NextResponse.json({ sync_status: syncStatus || [] });
-  } else {
-    const { data: syncStatus, error } = await serviceClient
-      .from('agent_sync_status')
-      .select('*')
-      .eq('agent_id', profile.id)
-      .limit(1);
-    
-    if (error) return ApiError.internal(error, 'sync/GET/status/agent');
-    return NextResponse.json({ sync_status: syncStatus?.[0] || null });
-  }
-}, 'sync/GET');
+export async function POST(request: NextRequest) {
+  try {
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    const serviceClient = createServiceClient();
 
-export const POST = withErrorHandling(async (request: NextRequest) => {
-  const { profile } = await getAuthenticatedProfile(request);
-  if (!profile) return ApiError.unauthorized();
-  if (!profile.org_id) return ApiError.forbidden('No organization assigned');
-  
-  const serviceClient = createServiceClient();
-  const body = await request.json();
-  const { device_id, pending_batches, pending_bags, app_version, is_online } = body;
-  
-  const { data: syncStatus, error } = await serviceClient
-    .from('agent_sync_status')
-    .upsert({
+    const body = await request.json();
+    const { device_id, pending_batches, pending_bags, app_version, is_online } = body;
+    
+    const upsertPayload: Record<string, any> = {
       org_id: profile.org_id,
       agent_id: profile.id,
       last_seen_at: new Date().toISOString(),
       pending_batches: pending_batches || 0,
       pending_bags: pending_bags || 0,
       is_online: is_online !== false
-    }, {
-      onConflict: 'agent_id'
-    })
-    .select()
-    .single();
-  
-  if (error) return ApiError.internal(error, 'sync/POST');
-  return NextResponse.json({ sync_status: syncStatus, success: true });
-}, 'sync/POST');
+    };
 
-export const PUT = withErrorHandling(async (request: NextRequest) => {
-  const { user, profile } = await getAuthenticatedProfile(request);
-  if (!user || !profile) return ApiError.unauthorized();
-  if (!profile.org_id) return ApiError.forbidden('No organization assigned');
-  
-  const serviceClient = createServiceClient();
-  const body = await request.json();
-  const parsed = syncPutSchema.safeParse(body);
-  if (!parsed.success) return ApiError.validation(parsed.error);
+    let { data: syncStatus, error } = await serviceClient
+      .from('agent_sync_status')
+      .upsert(upsertPayload, {
+        onConflict: 'agent_id'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating sync status:', error);
+      return NextResponse.json({ error: 'Failed to update sync status' }, { status: 500 });
+    }
+    
+    return NextResponse.json({ sync_status: syncStatus, success: true });
+    
+  } catch (error) {
+    console.error('Sync API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 
-  const { batches } = parsed.data;
+export async function PUT(request: NextRequest) {
+  try {
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_SYNC_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    const serviceClient = createServiceClient();
+
+    const body = await request.json();
+
+    const parsed = syncPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { batches } = parsed.data;
+
+    // Pre-flight Farm Compliance Gate checks before atomic sync insert.
+    // We block the sync batch when restricted-market gate rules fail.
+    const farmIdsToCheck = [
+      ...new Set(
+        batches
+          .flatMap((b: any) => [
+            String(b.farm_id ?? ''),
+            ...((b.contributors || []).map((c: any) => String(c.farm_id ?? ''))),
+          ])
+          .filter((id: string) => !!id && !id.startsWith('temp-') && id !== 'unknown')
+      ),
+    ];
+
+    if (farmIdsToCheck.length > 0) {
+      const { data: farms, error: farmsError } = await serviceClient
+        .from('farms')
+        .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp')
+        .in('id', farmIdsToCheck)
+        .eq('org_id', profile.org_id);
+
+      if (farmsError) {
+        return NextResponse.json(
+          { error: 'Failed to validate farm compliance gate', detail: farmsError.message },
+          { status: 500 }
+        );
+      }
+
+      const farmMap = new Map((farms || []).map((f: any) => [String(f.id), f]));
+      const blocked: Array<{
+        local_id: string;
+        farm_id?: string;
+        blockers: string[];
+        blocker_codes: string[];
+        warnings: string[];
+        warning_codes: string[];
+      }> = [];
+
+      for (const batch of batches as any[]) {
+        const targetMarkets = normalizeMarketCodes(batch.target_markets ?? []);
+        const batchFarmIds = [
+          batch.farm_id ? String(batch.farm_id) : undefined,
+          ...((batch.contributors || []).map((c: any) => c.farm_id ? String(c.farm_id) : undefined)),
+        ].filter((id: string | undefined): id is string => !!id && !id.startsWith('temp-') && id !== 'unknown');
+
+        for (const farmId of batchFarmIds) {
+          const farm = farmMap.get(farmId);
+          if (!farm) continue;
+          const eligibility = checkFarmEligibility(farm, targetMarkets);
+          if (!eligibility.eligible) {
+            blocked.push({
+              local_id: String(batch.local_id),
+              farm_id: farmId,
+              blockers: eligibility.blockers,
+              blocker_codes: eligibility.blocker_codes,
+              warnings: eligibility.warnings,
+              warning_codes: eligibility.warning_codes,
+            });
+          }
+        }
+      }
+
+      if (blocked.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Farm Compliance Gate blocked one or more synced batches',
+            blocked_batches: blocked,
+          },
+          { status: 422 }
+        );
+      }
+    }
 
   const { data: results, error: syncError } = await serviceClient.rpc('sync_batches_atomic', {
     p_org_id:  profile.org_id,

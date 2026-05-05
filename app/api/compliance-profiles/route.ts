@@ -2,112 +2,23 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { COMPLIANCE_TEMPLATES } from '@/lib/compliance-templates';
 
-
-const TEMPLATES: Record<string, {
-  name: string;
-  destination_market: string;
-  regulation_framework: string;
-  required_documents: string[];
-  required_certifications: string[];
-  geo_verification_level: string;
-  min_traceability_depth: number;
-}> = {
-  EU: {
-    name: 'EU EUDR Compliance',
-    destination_market: 'European Union',
-    regulation_framework: 'EUDR',
-    required_documents: [
-      'Deforestation-free declaration',
-      'GPS polygon boundaries',
-      'Land title / ownership proof',
-      'Farmer ID verification',
-      'Traceability chain documentation',
-      'Due diligence statement',
-    ],
-    required_certifications: ['Rainforest Alliance', 'UTZ', 'Fairtrade'],
-    geo_verification_level: 'satellite',
-    min_traceability_depth: 3,
-  },
-  UK: {
-    name: 'UK Environment Act Compliance',
-    destination_market: 'United Kingdom',
-    regulation_framework: 'UK_Environment_Act',
-    required_documents: [
-      'Due diligence assessment',
-      'Risk assessment report',
-      'Supply chain mapping',
-      'Farmer registration records',
-      'Land use documentation',
-    ],
-    required_certifications: ['Rainforest Alliance', 'Fairtrade'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 2,
-  },
-  US: {
-    name: 'US FSMA 204 Compliance',
-    destination_market: 'United States',
-    regulation_framework: 'FSMA_204',
-    required_documents: [
-      'Key Data Elements (KDE) records',
-      'Critical Tracking Events (CTE) log',
-      'Lot traceability records',
-      'Supplier verification',
-      'Food safety plan',
-    ],
-    required_certifications: ['FDA Registration', 'HACCP'],
-    geo_verification_level: 'basic',
-    min_traceability_depth: 1,
-  },
-  LACEY_UFLPA: {
-    name: 'US Lacey Act / UFLPA Compliance',
-    destination_market: 'United States',
-    regulation_framework: 'Lacey_Act_UFLPA',
-    required_documents: [
-      'Certificate of Origin',
-      'Species / product identification',
-      'Import declaration',
-      'Forced labor declaration',
-      'Supply chain mapping',
-      'Country-of-origin documentation',
-    ],
-    required_certifications: ['Chain of Custody', 'FSC/PEFC'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 3,
-  },
-  CHINA: {
-    name: 'China Green Trade Compliance',
-    destination_market: 'China',
-    regulation_framework: 'China_Green_Trade',
-    required_documents: [
-      'GACC registration certificate',
-      'Phytosanitary certificate',
-      'Fumigation certificate',
-      'Certificate of origin',
-      'GB standards compliance report',
-      'Inspection report',
-    ],
-    required_certifications: ['GACC Registration', 'GB Standards'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 2,
-  },
-  UAE: {
-    name: 'UAE / Halal Compliance',
-    destination_market: 'UAE / Middle East',
-    regulation_framework: 'UAE_Halal',
-    required_documents: [
-      'Halal certificate (accredited body)',
-      'ESMA compliance certificate',
-      'MOCCAE import permit',
-      'Certificate of origin',
-      'Health certificate',
-      'Arabic labeling compliance',
-    ],
-    required_certifications: ['Halal Certification', 'ESMA Compliance'],
-    geo_verification_level: 'basic',
-    min_traceability_depth: 1,
-  },
-};
+// Convert shared ComplianceTemplate format to the legacy TEMPLATES format expected by this route
+const TEMPLATES = Object.fromEntries(
+  Object.entries(COMPLIANCE_TEMPLATES).map(([key, tpl]) => [
+    key,
+    {
+      name: tpl.market_name,
+      destination_market: tpl.destination_market,
+      regulation_framework: tpl.regulation_framework,
+      required_documents: tpl.docs.filter(d => d.required).map(d => d.label),
+      required_certifications: tpl.required_certifications,
+      geo_verification_level: tpl.geo_verification_level,
+      min_traceability_depth: tpl.min_traceability_depth,
+    },
+  ])
+);
 
 export async function GET(request: NextRequest) {
   try {

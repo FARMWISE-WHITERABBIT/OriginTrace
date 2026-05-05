@@ -161,49 +161,25 @@ export default function DataVaultPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Farms</CardTitle>
-            <Map className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.farms || 0}</div>
-            <p className="text-xs text-muted-foreground">Registered farms</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Batches</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.batches || 0}</div>
-            <p className="text-xs text-muted-foreground">Collection batches</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Bags</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.bags || 0}</div>
-            <p className="text-xs text-muted-foreground">Individual bags</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Team</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{vaultStats?.stats.users || 0}</div>
-            <p className="text-xs text-muted-foreground">Team members</p>
-          </CardContent>
-        </Card>
+        {[
+          { icon: Map,     label: 'Farms',   value: String(vaultStats?.stats.farms || 0),   sub: 'Registered farms',   iconClass: 'icon-bg-emerald', accent: 'card-accent-emerald' },
+          { icon: Package, label: 'Batches', value: String(vaultStats?.stats.batches || 0), sub: 'Collection batches', iconClass: 'icon-bg-blue',    accent: 'card-accent-blue' },
+          { icon: Package, label: 'Bags',    value: String(vaultStats?.stats.bags || 0),    sub: 'Individual bags',    iconClass: 'icon-bg-violet',  accent: 'card-accent-violet' },
+          { icon: Users,   label: 'Team',    value: String(vaultStats?.stats.users || 0),   sub: 'Team members',       iconClass: 'icon-bg-amber',   accent: 'card-accent-amber' },
+        ].map(({ icon: Icon, label, value, sub, iconClass, accent }) => (
+          <Card key={label} className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${accent}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${iconClass}`}>
+                <Icon className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight">{value}</div>
+              <p className="text-xs text-muted-foreground">{sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {(vaultStats?.stats.flaggedBatches || 0) > 0 && (

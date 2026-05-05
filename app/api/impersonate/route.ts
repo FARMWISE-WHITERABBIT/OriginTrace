@@ -1,5 +1,5 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import { signCookiePayload, verifyCookiePayload } from '@/lib/security/signed-cookie';
+import { signCookiePayload, verifyCookiePayload, isCookieSecretConfigured } from '@/lib/security/signed-cookie';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
@@ -63,6 +63,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isCookieSecretConfigured()) {
+    return NextResponse.json(
+      { error: 'Impersonation is not available: IMPERSONATION_COOKIE_SECRET environment variable is not set.' },
+      { status: 503 }
+    );
+  }
+
   try {
     const supabaseAdmin = createAdminClient();
     

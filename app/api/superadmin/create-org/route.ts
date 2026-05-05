@@ -5,6 +5,7 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildWelcomeEmail } from '@/lib/email/templates';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
+import { getSystemAdmin } from '@/lib/superadmin-rbac';
 
 
 function generateTempPassword(): string {
@@ -19,19 +20,9 @@ function generateTempPassword(): string {
   return password;
 }
 
-async function isSystemAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('system_admins')
-    .select('id')
-    .eq('user_id', userId)
-    .single();
-  return !!data;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabaseAdmin = createAdminClient();
-
     const supabase = await createServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -39,9 +30,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isSuperAdmin = await isSystemAdmin(supabaseAdmin, user.id);
-    if (!isSuperAdmin) {
+    const adminRecord = await getSystemAdmin(user.id);
+    if (!adminRecord) {
       return NextResponse.json({ error: 'Forbidden: Superadmin access required' }, { status: 403 });
+    }
+    // Only platform_admin and support roles that have tenant write access may create orgs
+    if (adminRecord.role === 'support_agent' || adminRecord.role === 'compliance_manager') {
+      return NextResponse.json({ error: 'Forbidden: insufficient role to create organizations' }, { status: 403 });
     }
 
     const body = await request.json();

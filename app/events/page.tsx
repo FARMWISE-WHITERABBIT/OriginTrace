@@ -182,7 +182,7 @@ export default async function EventsPage() {
 
                         {/* CTA */}
                         <Link
-                          href={`/events/${event.slug.replace('-2026', '').replace('-', '/')}`}
+                          href={`/events/${event.slug.replace('-2026', '')}`}
                           className={`flex items-center justify-center gap-2 w-full text-sm font-semibold py-3 px-5 rounded-xl transition-colors ${
                             open
                               ? 'bg-[#1F5F52] hover:bg-[#174D42] text-white'

@@ -203,6 +203,33 @@ function RenderSection({ section }: { section: BlogSection }) {
         </div>
       );
 
+    case 'references':
+      return (
+        <div className="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Sources &amp; Further Reading</p>
+          <ol className="space-y-2">
+            {section.items.map((ref, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <span className="shrink-0 font-medium text-slate-400 dark:text-slate-500 min-w-[1.25rem]">{i + 1}.</span>
+                <span>
+                  <a
+                    href={ref.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    {ref.label}
+                  </a>
+                  {ref.publisher && (
+                    <span className="text-slate-400 dark:text-slate-500"> — {ref.publisher}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      );
+
     default:
       return null;
   }

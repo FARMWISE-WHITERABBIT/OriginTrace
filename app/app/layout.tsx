@@ -18,6 +18,7 @@ import { LocaleSwitcher } from '@/components/locale-switcher';
 import { RouteProgressBar } from '@/components/route-progress';
 import { AppBreadcrumb } from '@/components/app-breadcrumb';
 import { CommandPalette } from '@/components/command-palette';
+import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 import { Search } from 'lucide-react';
 
 function SearchTrigger() {
@@ -66,6 +67,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       </div>
       <AgentBottomNav />
       <CommandPalette />
+      <PWAInstallPrompt />
     </>
   );
 }

@@ -31,9 +31,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/demo`,
-      lastModified: new Date('2026-01-15'),
+      lastModified: new Date('2026-04-07'),
       changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/demo/confirm`,
+      lastModified: new Date('2026-04-07'),
+      changeFrequency: 'monthly',
+      priority: 0.7,
     },
 
     // ── Compliance ─────────────────────────────────────────────────────────
@@ -111,8 +117,38 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // ── Blog ───────────────────────────────────────────────────────────────
     {
       url: `${baseUrl}/blog`,
-      lastModified: new Date('2026-03-10'),
+      lastModified: new Date('2026-04-01'),
       changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/africa-trade-finance-gap-supply-chain-traceability`,
+      lastModified: new Date('2026-04-01'),
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/blog/how-to-export-to-china-gacc-registration-guide`,
+      lastModified: new Date('2026-03-29'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/supply-chain-traceability-global-trade`,
+      lastModified: new Date('2026-03-29'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/food-supply-chain-traceability`,
+      lastModified: new Date('2026-03-29'),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/eudr-regulation-complete-guide`,
+      lastModified: new Date('2026-03-29'),
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
     {

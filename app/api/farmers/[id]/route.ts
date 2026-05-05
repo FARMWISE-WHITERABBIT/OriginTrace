@@ -77,6 +77,65 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(50);
 
+    // Disbursement calculations for this farmer (table may not exist in all envs yet)
+    let disbursements: any[] = [];
+    try {
+      const { data: disbData } = await supabase
+        .from('disbursement_calculations')
+        .select('id, batch_id, farmer_name, weight_kg, price_per_kg, gross_amount, deductions, net_amount, currency, status, payment_id, approved_at, notes, created_at, collection_batches(batch_code, commodity)')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      disbursements = disbData ?? [];
+    } catch { /* table not yet migrated */ }
+
+    // Direct payments for this farmer: match by exact farmer_name OR by linked batch IDs
+    const batchIds = (batches ?? []).map((b: any) => b.id).filter(Boolean);
+    let payments: any[] = [];
+    try {
+      // Primary: match by payee_name (case-insensitive)
+      const { data: nameMatches } = await supabase
+        .from('payments')
+        .select('id, amount, currency, payment_method, reference_number, payment_date, status, notes, linked_entity_type, linked_entity_id, created_at')
+        .eq('org_id', profile.org_id)
+        .eq('payee_type', 'farmer')
+        .ilike('payee_name', farm.farmer_name)
+        .order('payment_date', { ascending: false })
+        .limit(50);
+
+      const seen = new Set<string>();
+      const merged: any[] = [];
+      for (const p of nameMatches ?? []) { seen.add(p.id); merged.push(p); }
+
+      // Also fetch payments linked to this farmer's batches
+      if (batchIds.length > 0) {
+        const { data: batchLinked } = await supabase
+          .from('payments')
+          .select('id, amount, currency, payment_method, reference_number, payment_date, status, notes, linked_entity_type, linked_entity_id, created_at')
+          .eq('org_id', profile.org_id)
+          .eq('payee_type', 'farmer')
+          .in('linked_entity_id', batchIds)
+          .order('payment_date', { ascending: false })
+          .limit(50);
+        for (const p of batchLinked ?? []) { if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); } }
+      }
+
+      payments = merged;
+    } catch { /* payments table may not exist */ }
+
+    // Bank accounts for this farmer
+    let bankAccounts: any[] = [];
+    try {
+      const { data: baData } = await supabase
+        .from('farmer_bank_accounts')
+        .select('id, account_number, account_name, bank_code, bank_name, is_verified, created_at')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false });
+      bankAccounts = baData ?? [];
+    } catch { /* table not yet migrated */ }
+
     return NextResponse.json({
       farm,
       ledger: ledger ?? null,
@@ -85,6 +144,9 @@ export async function GET(
       training: training ?? [],
       files: files ?? [],
       activity: activity ?? [],
+      disbursements: disbursements ?? [],
+      payments: payments ?? [],
+      bankAccounts,
     });
 
   } catch (err: any) {

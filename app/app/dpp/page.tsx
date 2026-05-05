@@ -273,12 +273,12 @@ export default function DPPPage() {
               const StatusIcon = statusConf.icon;
 
               return (
-                <Card key={dpp.id} data-testid={`card-dpp-${dpp.id}`}>
+                <Card key={dpp.id} className="card-accent-blue transition-shadow hover:shadow-md" data-testid={`card-dpp-${dpp.id}`}>
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-md icon-bg-blue flex items-center justify-center shrink-0">
+                          <FileText className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

@@ -284,30 +284,19 @@ export default function SyncDashboardPage() {
       )}
 
       <div className="grid grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-amber-600 font-mono" data-testid="text-stat-pending">{stats.pending}</div>
-            <div className="text-xs text-muted-foreground">Pending</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-600 font-mono" data-testid="text-stat-syncing">{stats.syncing}</div>
-            <div className="text-xs text-muted-foreground">Syncing</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-green-600 font-mono" data-testid="text-stat-synced">{stats.synced}</div>
-            <div className="text-xs text-muted-foreground">Synced</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-red-600 font-mono" data-testid="text-stat-error">{stats.error}</div>
-            <div className="text-xs text-muted-foreground">Failed</div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Pending', value: stats.pending, accent: 'card-accent-amber', color: 'text-amber-600', testId: 'text-stat-pending' },
+          { label: 'Syncing', value: stats.syncing, accent: 'card-accent-blue', color: 'text-blue-600', testId: 'text-stat-syncing' },
+          { label: 'Synced', value: stats.synced, accent: 'card-accent-emerald', color: 'text-green-600', testId: 'text-stat-synced' },
+          { label: 'Failed', value: stats.error, accent: 'card-accent-red', color: 'text-red-600', testId: 'text-stat-error' },
+        ].map(s => (
+          <Card key={s.label} className={s.accent}>
+            <CardContent className="pt-4 pb-3 text-center">
+              <div className={`text-2xl font-bold font-mono ${s.color}`} data-testid={s.testId}>{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="flex gap-3">

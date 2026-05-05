@@ -18,6 +18,7 @@ import {
   TrendLineChart,
 } from '@/components/charts';
 import { TierGate } from '@/components/tier-gate';
+import { VIZ_COLORS, STATUS_COLORS } from '@/lib/chart-colors';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -71,18 +72,12 @@ function AnalyticsContent() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-analytics-title">Analytics & Intelligence</h1>
           <p className="text-sm text-muted-foreground">Strategic insights across your supply chain operations</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-[130px]" data-testid="select-analytics-period">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2">
+          <div className="segmented-control" data-testid="select-analytics-period">
+            {([['7d','7 Days'],['30d','30 Days'],['90d','90 Days'],['1y','1 Year']] as const).map(([val, label]) => (
+              <button key={val} className="segmented-control-item" data-active={period === val} onClick={() => setPeriod(val)}>{label}</button>
+            ))}
+          </div>
           <Button variant="outline" size="sm" onClick={() => window.print()} data-testid="button-print-analytics">
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -135,7 +130,7 @@ function AnalyticsContent() {
                 <TrendLineChart
                   data={(data.volumeTrends || []).map((v: any) => ({ date: v.date, value: v.weight }))}
                   xKey="date"
-                  series={[{ dataKey: 'value', label: 'Weight (kg)', color: '#2E7D6B' }]}
+                  series={[{ dataKey: 'value', label: 'Weight (kg)', color: VIZ_COLORS[0] }]}
                   height={280}
                 />
               </CardContent>
@@ -196,7 +191,7 @@ function AnalyticsContent() {
                     dataKey="value"
                     categoryKey="name"
                     height={160}
-                    colors={['#2E7D6B', '#E5E7EB']}
+                    colors={[VIZ_COLORS[0], VIZ_COLORS[1]]}
                   />
                 </div>
               </CardContent>
@@ -496,16 +491,16 @@ function AnalyticsContent() {
 
 function StatCard({ title, value, trend, testId }: { title: string; value: string | number; trend?: number; testId: string }) {
   return (
-    <Card data-testid={testId}>
+    <Card className="card-accent-blue transition-shadow hover:shadow-sm" data-testid={testId}>
       <CardContent className="pt-4 pb-3">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{title}</p>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-2xl font-bold" data-testid={`${testId}-value`}>{value}</p>
+        <p className="text-xs text-muted-foreground font-medium">{title}</p>
+        <div className="flex items-center justify-between mt-1 gap-2">
+          <p className="text-2xl font-bold tracking-tight" data-testid={`${testId}-value`}>{value}</p>
           {trend !== undefined && trend !== null && (
-            <Badge variant={trend >= 0 ? 'default' : 'destructive'} className={`text-xs ${trend >= 0 ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : ''}`} data-testid={`${testId}-trend`}>
+            <span className={`flex items-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${trend >= 0 ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`} data-testid={`${testId}-trend`}>
               {trend >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               {trend > 0 ? '+' : ''}{trend}%
-            </Badge>
+            </span>
           )}
         </div>
       </CardContent>
@@ -515,9 +510,9 @@ function StatCard({ title, value, trend, testId }: { title: string; value: strin
 
 function MiniStat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
-    <div className="p-3 rounded-lg bg-muted/50" data-testid={testId}>
+    <div className="p-3 rounded-lg bg-muted/40 border border-border/50" data-testid={testId}>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold mt-0.5">{value}</p>
+      <p className="text-lg font-semibold tracking-tight mt-0.5">{value}</p>
     </div>
   );
 }

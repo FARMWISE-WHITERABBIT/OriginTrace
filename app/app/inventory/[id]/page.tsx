@@ -16,6 +16,7 @@ import {
   ArrowLeft, Package, Loader2, MapPin, User, Scale,
   CheckCircle2, AlertTriangle, Clock, Factory, Truck,
   FileText, Layers, Leaf, Activity, Pencil, Save, X,
+  FlaskConical, Plus, Banknote,
 } from 'lucide-react';
 
 interface BatchDetail {
@@ -119,6 +120,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [processingRun, setProcessingRun] = useState<ProcessingRun | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [labResults, setLabResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activityEvents, setActivityEvents] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -136,15 +138,18 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
   };
 
   useEffect(() => {
-    fetch(`/api/batches/${id}`)
-      .then(r => r.json())
-      .then(data => {
+    Promise.all([
+      fetch(`/api/batches/${id}`).then(r => r.json()),
+      fetch(`/api/lab-results?batch_id=${id}&page_size=20`).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] })),
+    ])
+      .then(([data, labData]) => {
         if (data.error) { router.push('/app/inventory'); return; }
         setBatch(data.batch);
         setBags(data.bags || []);
         setContributions(data.contributions || []);
         setProcessingRun(data.processing_run || null);
         setDocuments(data.documents || []);
+        setLabResults(labData.results || []);
       })
       .catch(() => router.push('/app/inventory'))
       .finally(() => setLoading(false));
@@ -164,7 +169,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
   const location = batch.community || batch.state || batch.farm?.community;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -479,6 +484,119 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lab Results */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FlaskConical className="h-4 w-4" />
+                Lab Results ({labResults.length})
+              </CardTitle>
+              <CardDescription>Pesticide residue and quality tests for this batch</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/app/lab-results?prefillBatchId=${id}`}>
+                <Plus className="h-4 w-4 mr-1" /> Upload
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {labResults.length === 0 ? (
+            <div className="text-center py-6">
+              <FlaskConical className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No lab results for this batch yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {labResults.map((lr: any) => (
+                <div key={lr.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{lr.test_type?.replace(/_/g, ' ')}</span>
+                      <Badge
+                        variant={lr.overall_result === 'pass' ? 'default' : lr.overall_result === 'fail' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {lr.overall_result?.toUpperCase()}
+                      </Badge>
+                      {lr.mrl_flags && Array.isArray(lr.mrl_flags) && lr.mrl_flags.length > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {lr.mrl_flags.length} MRL exceedance{lr.mrl_flags.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {lr.lab_provider} · {lr.test_date ? new Date(lr.test_date).toLocaleDateString() : '—'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Disbursement Prompt — shown for completed/resolved batches with contributors */}
+      {canDispatch && contributions.length > 0 && (
+        <Card className="card-accent-emerald">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <Banknote className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Farmer Disbursements</CardTitle>
+                  <CardDescription>
+                    {contributions.length} farmer{contributions.length !== 1 ? 's' : ''} contributed to this batch — pay them for their supply
+                  </CardDescription>
+                </div>
+              </div>
+              <Link href={`/app/payments?tab=disbursements&batch_id=${batch.id}`}>
+                <Button size="sm">
+                  <Banknote className="h-3.5 w-3.5 mr-1.5" />
+                  Manage Disbursements
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {contributions.slice(0, 5).map((c) => (
+                <div key={c.farm_id} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-border/40 last:border-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate font-medium">{c.farmer_name}</span>
+                    {c.community && (
+                      <span className="text-xs text-muted-foreground truncate hidden sm:inline">· {c.community}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                    <span>{Number(c.weight_kg).toLocaleString()} kg</span>
+                    <span>{c.bag_count} bags</span>
+                    {c.compliance_status && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${c.compliance_status === 'compliant' ? 'text-green-700' : 'text-amber-700'}`}
+                      >
+                        {c.compliance_status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {contributions.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  +{contributions.length - 5} more contributors
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail, FROM_ADDRESS } from '@/lib/email/resend-client';
+import { sendEmail } from '@/lib/email/resend-client';
 import { upsertHubSpotContact } from '@/lib/hubspot';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { full_name, email, phone, company, role, organization_type, commodity, monthly_tonnage, farmer_count, biggest_concern, message, source } = body;
+    const {
+      full_name, email, phone, company, role,
+      organization_type, commodity, monthly_tonnage,
+      farmer_count, biggest_concern, message, source,
+    } = body;
 
     if (!full_name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
@@ -17,8 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     const notifyAddress = process.env.LEAD_NOTIFY_EMAIL || 'hello@origintrace.trade';
+    const calcomLink = process.env.CALCOM_LINK || 'https://cal.com/origintrace/discovery';
 
-    // ── Notify internal team ────────────────────────────────────────────────
+    // ── Notify internal team ──────────────────────────────────────────────────
     const internalHtml = `
       <h2 style="margin:0 0 16px">New ${source === 'calculator' ? 'Calculator Lead' : 'Demo Request'} — OriginTrace</h2>
       <table style="border-collapse:collapse;width:100%;font-size:14px">
@@ -44,19 +50,27 @@ export async function POST(request: NextRequest) {
       replyTo: email,
     });
 
-    // ── Auto-reply to prospect ──────────────────────────────────────────────
+    // ── Auto-reply with Cal.com booking CTA ───────────────────────────────────
+    const firstName = full_name.split(' ')[0];
     const autoReplyHtml = `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
-        <h2 style="margin:0 0 8px">Your pilot slot is secured, ${full_name.split(' ')[0]}.</h2>
-        <p style="color:#555;margin:0 0 24px">Our compliance team will contact you within 24 hours to schedule your personalised demonstration.</p>
-        <p style="margin:0 0 8px">Here's what happens next:</p>
+        <h2 style="margin:0 0 8px">Your pilot slot is secured, ${firstName}.</h2>
+        <p style="color:#555;margin:0 0 24px">Skip the wait — book your discovery call directly at a time that works for you:</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+          <tr><td align="center">
+            <a href="${calcomLink}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:16px;font-weight:600;">
+              Pick a time that works for you →
+            </a>
+          </td></tr>
+        </table>
+        <p style="color:#555;margin:0 0 8px">Alternatively, our compliance team will follow up within 24 hours. Here's what to expect:</p>
         <ol style="color:#555;padding-left:20px;line-height:1.8">
           <li><strong>Discovery Call (30 min)</strong> — We review your supply chain and compliance requirements</li>
           <li><strong>Platform Demo (45 min)</strong> — Live walkthrough of polygon mapping, traceability, and DDS export</li>
           <li><strong>30-Day Pilot Setup</strong> — Organisation onboarding and farmer enrollment</li>
           <li><strong>Dedicated Support</strong> — Your compliance success manager throughout</li>
         </ol>
-        <p style="margin:24px 0 0;color:#555">If you have questions in the meantime, reply directly to this email.</p>
+        <p style="margin:24px 0 0;color:#555">Questions? Reply directly to this email.</p>
         <p style="margin:4px 0 0;color:#555">— The OriginTrace Team</p>
         <hr style="border:none;border-top:1px solid #eee;margin:32px 0" />
         <p style="font-size:11px;color:#aaa">OriginTrace — Supply Chain Compliance &amp; Traceability Platform<br/>origintrace.trade</p>
@@ -69,17 +83,44 @@ export async function POST(request: NextRequest) {
       html: autoReplyHtml,
     });
 
-    // ── Push lead to HubSpot CRM ────────────────────────────────────────────
+    // ── Push lead to HubSpot CRM ──────────────────────────────────────────────
+    let hubspotDealId: string | null = null;
     try {
-      await upsertHubSpotContact({
+      const result = await upsertHubSpotContact({
         full_name, email, phone, company, role, organization_type,
         commodity, monthly_tonnage, farmer_count, biggest_concern, message, source,
       });
+      hubspotDealId = result.dealId;
     } catch (hubspotErr) {
       console.error('[api/contact] HubSpot upsert failed (non-fatal):', hubspotErr);
     }
 
-    return NextResponse.json({ success: true });
+    // ── Create lead nurture job ───────────────────────────────────────────────
+    try {
+      const supabase = createAdminClient();
+      // Deactivate any existing active job for this email to prevent duplicate sequences
+      await supabase
+        .from('lead_nurture_jobs')
+        .update({ status: 'replaced' })
+        .eq('lead_email', email)
+        .eq('status', 'active');
+
+      await supabase.from('lead_nurture_jobs').insert({
+        lead_email:      email,
+        lead_name:       full_name,
+        lead_phone:      phone || null,
+        lead_company:    company || null,
+        commodity:       commodity || null,
+        org_type:        organization_type || null,
+        hubspot_deal_id: hubspotDealId,
+        status:          'active',
+      });
+    } catch (nurtureErr) {
+      console.error('[api/contact] Failed to create nurture job (non-fatal):', nurtureErr);
+    }
+
+    const confirmUrl = `/demo/confirm?name=${encodeURIComponent(full_name)}&email=${encodeURIComponent(email)}`;
+    return NextResponse.json({ success: true, redirect: confirmUrl });
   } catch (err: any) {
     console.error('[api/contact] error:', err);
     return NextResponse.json({ error: 'Failed to process submission' }, { status: 500 });
