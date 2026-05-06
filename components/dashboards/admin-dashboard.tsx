@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { StatCardSkeleton } from '@/components/skeletons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -141,6 +141,7 @@ export function AdminDashboard() {
   const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
   const [operationalAlerts, setOperationalAlerts] = useState<AlertItem[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
+  const [isLoading, setIsLoading] = useState(true);
   const { organization } = useOrg();
 
   const fetchAnalytics = useCallback(async () => {
