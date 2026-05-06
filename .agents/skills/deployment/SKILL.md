@@ -82,14 +82,11 @@ npx vercel env ls production
   ```sql
   SELECT tablename, rowsecurity FROM pg_tables
   WHERE schemaname = 'public' AND rowsecurity = false;
-  -- Should return 0 rows for any table that holds tenant data
   ```
+- [ ] Run type generation: `npx supabase gen types typescript --project-id ...`
 
 ### Build
-- [ ] Production build succeeds locally:
-  ```bash
-  npm run build
-  ```
+- [ ] Production build succeeds locally: `npm run build`
 - [ ] PWA service worker is regenerated (see Section 5)
 - [ ] Bundle size check: `npx next build --profile`
 
@@ -111,30 +108,8 @@ npm run build
 # Output: public/sw.js and public/workbox-*.js
 ```
 
-### `next.config.js` PWA config
-```javascript
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/,
-      handler: 'NetworkFirst',
-      options: { cacheName: 'api-cache', networkTimeoutSeconds: 10 },
-    },
-    {
-      urlPattern: /\/api\/.*/,
-      handler: 'NetworkFirst',
-      options: { cacheName: 'local-api-cache', networkTimeoutSeconds: 8 },
-    },
-  ],
-})
-```
-
 After deployment, verify the service worker is active:
-- Open Chrome DevTools → Application → Service Workers
+- Chrome DevTools → Application → Service Workers
 - Check `sw.js` is registered and status is "activated"
 
 ---
@@ -150,22 +125,28 @@ vercel --prod
 
 # Deploy preview (staging)
 vercel
-1. **Database Migrations**: Run all scripts in `migrations/` against the production Supabase instance.
-2. **Type Generation**: Run `npx supabase gen types typescript --project-id ...` to ensure `database.types.ts` is up to date.
-3. **PWA Generation**: Ensure the service worker is rebuilt to cache the latest reference data.
+```
 
 ---
 
-## 5. Gotchas
+## 7. Rollback
 
-- **PostgreSQL Regions**: Deploy the Supabase project in the same region as the Vercel project to minimize latency for non-edge routes.
-- **Storage Buckets**: Ensure `compliance_docs` and `avatars` buckets are created with correct public/private access levels before go-live.
-- **RLS Consistency**: Verify that production RLS policies match local development exactly. 
-rollback)
-# Write a reverse migration and apply it:
-## 10. Gotchas
+If a deployment fails, roll back to the previous build:
+```bash
+vercel rollback
+```
 
-- **Service worker caches the old build.** Users may see the old version for up to 24h after deployment. Force update by setting `skipWaiting: true` in the PWA config and showing a "New version available — refresh" banner.
-- **Supabase connection limits.** The free/pro Supabase plan has a connection pool limit. Use `pgbouncer` connection string for production: `?pgbouncer=true` in the `DATABASE_URL`.
-- **`NEXT_PUBLIC_*` variables are baked into the client bundle at build time.** Changing them requires a redeployment — they are not picked up at runtime.
-- **Replit sleeps after inactivity.** Use a cron job (e.g., UptimeRobot) to ping the Replit URL every 5 minutes to keep it awake during demos.
+For database rollbacks, write a reverse migration and apply it.
+
+---
+
+## 8. Gotchas
+
+- **Service worker caches the old build.** Users may see the old version for up to 24h. Force update by setting `skipWaiting: true` in PWA config and showing a "New version available — refresh" banner.
+- **Supabase connection limits.** Use `pgbouncer` connection string for production: `?pgbouncer=true` in `DATABASE_URL`.
+- **`NEXT_PUBLIC_*` variables are baked into the client bundle at build time.** Changing them requires a redeployment.
+- **Replit sleeps after inactivity.** Use UptimeRobot to ping the URL every 5 minutes during demos.
+- **PostgreSQL Regions**: Deploy Supabase in the same region as Vercel to minimize latency.
+- **Storage Buckets**: Ensure `compliance_docs` and `avatars` buckets are created with correct access levels.
+- **RLS Consistency**: Verify production RLS policies match local development.
+- **Tier gating**: Verify `lib/api/tier-guard.ts` feature flags are configured for the target environment.

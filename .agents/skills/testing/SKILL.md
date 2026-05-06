@@ -13,164 +13,76 @@ description: >
 
 ## 1. Overview
 
+OriginTrace uses **Vitest** for unit tests and **Playwright** for E2E tests.
+Unit tests are fast, offline, and mock external dependencies. E2E tests run
+against a live local dev server with real Supabase auth.
+
+### Running tests
+```bash
+# Unit tests
+npx vitest                     # Watch mode
+npx vitest run                 # Single run
+npx vitest run --coverage      # With coverage
+
+# E2E tests (requires dev server running)
+npx playwright test            # All tests
+npx playwright test --ui       # Interactive UI mode
+```
 
 ---
 
-## 4. Writing Unit Tests (Vitest)
+## 2. Test File Organization
+
+```
+tests/
+├── unit/                      ← Vitest unit tests
+│   ├── rbac.test.ts
+│   ├── scoring.test.ts
+│   └── ...
+├── e2e/                       ← Playwright E2E tests
+│   ├── auth.setup.ts          ← Auth bootstrapping (runs first)
+│   ├── shipments.spec.ts
+│   └── ...
+├── fixtures/                  ← Shared test data
+│   └── shipment.fixture.ts
+└── .auth/                     ← Auth state files (gitignored)
+```
+
+---
+
+## 3. Writing Unit Tests (Vitest)
 
 ### File naming
-- `src/lib/rbac.ts` → `tests/unit/rbac.test.ts`
-- `src/lib/services/scoring.ts` → `tests/unit/scoring.test.ts`
-- Mirror the `src/` path inside `tests/unit/`
+- `lib/rbac.ts` → `tests/unit/rbac.test.ts`
+- `lib/services/scoring.ts` → `tests/unit/scoring.test.ts`
 
 ### Test structure
 ```typescript
-// tests/unit/shipment-scoring.test.ts
 import { describe, it, expect } from 'vitest'
-import { calculateRiskScore } from '@/lib/services/shipment-scoring'
+import { computeShipmentReadiness } from '@/lib/services/scoring'
 
-describe('calculateRiskScore', () => {
-  it('returns low risk for verified supplier with clean history', () => {
-    const result = calculateRiskScore({
-      supplierVerified: true,
-      deforestationRisk: 0,
-      countryRisk: 'low',
-      documentComplete: true,
-      priceAnomaly: false,
-    })
-    expect(result.total).toBeLessThan(30)
-    expect(result.tier).toBe('low')
+describe('computeShipmentReadiness', () => {
+  it('returns go decision for fully compliant shipment', () => {
+    const result = computeShipmentReadiness(compliantInput)
+    expect(result.decision).toBe('go')
+    expect(result.overall_score).toBeGreaterThanOrEqual(80)
   })
 
-  it('returns critical risk when deforestation flag is set', () => {
-    const result = calculateRiskScore({
-      supplierVerified: false,
-      deforestationRisk: 1,
-      countryRisk: 'high',
-      documentComplete: false,
-      priceAnomaly: true,
-    })
-    expect(result.total).toBeGreaterThanOrEqual(80)
-    expect(result.tier).toBe('critical')
-  })
-
-  it('clamps total score between 0 and 100', () => {
-    const result = calculateRiskScore({ /* extreme values */ } as any)
-    expect(result.total).toBeGreaterThanOrEqual(0)
-    expect(result.total).toBeLessThanOrEqual(100)
+  it('returns no_go when traceability is below 50%', () => {
+    const result = computeShipmentReadiness(lowTraceabilityInput)
+    expect(result.decision).toBe('no_go')
+    expect(result.risk_flags.some(f => f.is_hard_fail)).toBe(true)
   })
 })
 ```
 
 ### Test naming conventions
 - Describe block: the function or module name
-- It block: starts with a verb, describes the expected outcome
-  - `'returns X when Y'`
-  - `'throws when Z is missing'`
-  - `'normalises input before calculating'`
+- It block: starts with a verb — `'returns X when Y'`, `'throws when Z is missing'`
 
 ---
 
-## 5. E2E Auth Bootstrapping (Playwright)
-
-**The auth setup runs once before all E2E tests** and saves authenticated browser state to disk. Individual test files reuse that state to skip the login flow.
-
-### `tests/e2e/auth.setup.ts`
-```typescript
-import { test as setup, expect } from '@playwright/test'
-import path from 'path'
-
-// One auth state file per role
-export const ADMIN_AUTH_FILE   = path.join(__dirname, '../.auth/admin.json')
-export const MANAGER_AUTH_FILE = path.join(__dirname, '../.auth/manager.json')
-export const VIEWER_AUTH_FILE  = path.join(__dirname, '../.auth/viewer.json')
-
-setup('authenticate as admin', async ({ page }) => {
-  await page.goto('/login')
-  await page.fill('[name="email"]',    'admin@demo.test')
-  await page.fill('[name="password"]', 'demo-password-123')
-  await page.click('[type="submit"]')
-  await expect(page).toHaveURL('/dashboard')
-  await page.context().storageState({ path: ADMIN_AUTH_FILE })
-})
-
-setup('authenticate as viewer', async ({ page }) => {
-  await page.goto('/login')
-  await page.fill('[name="email"]',    'viewer@demo.test')
-  await page.fill('[name="password"]', 'demo-password-123')
-  await page.click('[type="submit"]')
-  await expect(page).toHaveURL('/dashboard')
-  await page.context().storageState({ path: VIEWER_AUTH_FILE })
-})
-```
-
-### `playwright.config.ts`
-```typescript
-import { defineConfig, devices } from '@playwright/test'
-import { ADMIN_AUTH_FILE } from './tests/e2e/auth.setup'
-
-export default defineConfig({
-  testDir: './tests/e2e',
-  projects: [
-    // Auth setup runs first, once
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
-
-    // All other tests depend on setup
-    {
-      name:         'chromium-admin',
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: ADMIN_AUTH_FILE,
-      },
-      dependencies: ['setup'],
-    },
-  ],
-  use: {
-    baseURL:   'http://localhost:3000',
-    trace:     'on-first-retry',
-    screenshot:'only-on-failure',
-  },
-})
-```
-
----
-
-## 6. Writing E2E Tests
-
-```typescript
-// tests/e2e/shipments.spec.ts
-import { test, expect } from '@playwright/test'
-
-test.describe('Shipment creation', () => {
-  test('admin can create a new shipment', async ({ page }) => {
-    await page.goto('/shipments/new')
-
-    await page.selectOption('[name="supplier_id"]', { label: 'Demo Supplier' })
-    await page.fill('[name="quantity_kg"]', '5000')
-    await page.selectOption('[name="product_type"]', 'cocoa')
-    await page.click('[data-testid="submit-shipment"]')
-
-    await expect(page.locator('[data-testid="success-toast"]')).toBeVisible()
-    await expect(page).toHaveURL(/\/shipments\/[a-z0-9-]+/)
-  })
-
-  test('viewer cannot see the create button', async ({ page }) => {
-    // This test uses viewer auth state — configure in playwright.config.ts
-    await page.goto('/shipments')
-    await expect(page.locator('[data-testid="create-shipment-btn"]')).not.toBeVisible()
-  })
-})
-```
-
-### E2E conventions
-- Use `data-testid` attributes for selectors (not CSS classes — they change)
-- Add `data-testid` to any element that E2E tests target
-- Group related tests in a `test.describe` block
-- One spec file per feature area (`shipments.spec.ts`, not `all-tests.spec.ts`)
-
----
-
-## 7. Test Fixtures
+## 4. Test Fixtures
 
 ```typescript
 // tests/fixtures/shipment.fixture.ts
@@ -191,9 +103,58 @@ export function buildShipment(overrides?: Partial<typeof mockShipment>) {
 
 ---
 
-## 8. Gotchas
+## 5. E2E Auth Bootstrapping (Playwright)
 
-- **E2E tests require the dev server running.** Start with `npm run dev` before `playwright test`, or use `webServer` config in `playwright.config.ts` to auto-start.
-- **Auth state files are gitignored.** The `.auth/` directory is never committed. Each developer and CI run generates fresh auth state by running the setup project.
-- **Unit tests must not hit the real database.** Mock Supabase client calls with `vi.mock('@/lib/supabase')` — unit tests should be offline and fast.
-- **`data-testid` is for tests only** — strip them in production builds via a Babel/SWC plugin if bundle size is a concern.
+Auth setup runs once before all E2E tests and saves authenticated browser
+state to disk. Individual test files reuse that state.
+
+```typescript
+// tests/e2e/auth.setup.ts
+import { test as setup, expect } from '@playwright/test'
+import path from 'path'
+
+export const ADMIN_AUTH_FILE = path.join(__dirname, '../.auth/admin.json')
+
+setup('authenticate as admin', async ({ page }) => {
+  await page.goto('/login')
+  await page.fill('[name="email"]',    'admin@demo.test')
+  await page.fill('[name="password"]', 'demo-password-123')
+  await page.click('[type="submit"]')
+  await expect(page).toHaveURL('/dashboard')
+  await page.context().storageState({ path: ADMIN_AUTH_FILE })
+})
+```
+
+---
+
+## 6. Writing E2E Tests
+
+```typescript
+// tests/e2e/shipments.spec.ts
+import { test, expect } from '@playwright/test'
+
+test.describe('Shipment creation', () => {
+  test('admin can create a new shipment', async ({ page }) => {
+    await page.goto('/shipments/new')
+    await page.selectOption('[name="supplier_id"]', { label: 'Demo Supplier' })
+    await page.fill('[name="quantity_kg"]', '5000')
+    await page.click('[data-testid="submit-shipment"]')
+    await expect(page.locator('[data-testid="success-toast"]')).toBeVisible()
+  })
+})
+```
+
+### E2E conventions
+- Use `data-testid` attributes for selectors (not CSS classes)
+- One spec file per feature area
+- Group related tests in `test.describe`
+
+---
+
+## 7. Gotchas
+
+- **E2E tests require the dev server.** Start with `npm run dev` or use `webServer` config in `playwright.config.ts`.
+- **Auth state files are gitignored.** Each run regenerates fresh auth state.
+- **Unit tests must not hit the real database.** Mock Supabase with `vi.mock('@/lib/supabase')`.
+- **`data-testid` is for tests only** — strip in production if bundle size matters.
+- **Seed data must match test expectations.** Auth bootstrapping uses `admin@demo.test` / `demo-password-123`.

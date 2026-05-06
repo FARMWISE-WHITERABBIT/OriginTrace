@@ -11,43 +11,68 @@ description: >
 
 ## 1. Overview
 
-**Mission:** OriginTrace allows field agents to quickly register farmers by scanning their government-issued IDs. We use OpenAI Vision (`gpt-4o`) to extract names and ID numbers from photos taken in the field.
+OriginTrace uses an AI-powered OCR system to extract data from farmer identity
+documents (NIN, Voter Cards, Passports). This reduces manual entry errors
+during field registration.
 
 ---
 
-## 2. Implementation (`app/api/ocr/route.ts`)
+## 2. Technical Stack
 
-The OCR endpoint receives a base64-encoded image and passes it to OpenAI with a specialized vision system prompt.
-
-### Extraction Logic
-- **Farmer Name**: Full name in title case.
-- **ID Number**: Primary identification number including prefixes.
-- **Confidence**: 0.0 to 1.0 score representing extraction quality.
-- **Document Type**: Detected type (NIN Slip, Voter's Card, etc.).
+- **Frontend**: `components/ocr-capture.tsx` (handles camera/upload).
+- **Backend Service**: `lib/services/ocr-extractor.ts`.
+- **AI Engine**: OpenAI GPT-4o Vision (via API).
+- **Storage**: Temporary base64 for processing; permanent storage in
+  Supabase `compliance_docs` bucket.
 
 ---
 
 ## 3. Supported Documents
 
-The system is trained via prompt engineering to recognize West African identity documents:
-- Nigerian NIN (Slips and Cards)
-- Voter's Cards
-- Driver's Licenses
-- National ID Cards
+| Document | Key Fields Extracted |
+|----------|----------------------|
+| **National ID (NIN)** | NIN Number, Full Name, DOB, Gender |
+| **Voter Card** | VIN, Name, State, LGA |
+| **Passport** | Passport Number, Nationality, Expiry |
 
 ---
 
-## 4. Rate Limiting & Safety
+## 4. Usage Pattern
 
-OCR is an expensive operation and is protected by:
-- **Role Enforcement**: Only internal roles (`admin`, `compliance_officer`, `quality_manager`) can trigger OCR.
-- **Rate Limits**: Controlled via `RATE_LIMIT_PRESETS.ocr` in `lib/api/rate-limit.ts`.
-- **Budget Protection**: Handles `FREE_CLOUD_BUDGET_EXCEEDED` errors by prompting manual entry.
+```typescript
+// components/ocr-capture.tsx
+import { extractIdData } from '@/lib/services/ocr-extractor';
+
+async function handleCapture(imageFile: File) {
+  const result = await extractIdData(imageFile);
+  if (result.success) {
+    updateForm(result.data);
+  } else {
+    showError(result.error);
+  }
+}
+```
 
 ---
 
-## 5. Gotchas
+## 5. RBAC & Permissions
 
-- **Base64 Padding**: The API expects the image data to optionally include the data URI prefix (`data:image/jpeg;base64,...`).
-- **Prompt Sensitivity**: The JSON output is strictly enforced. Any changes to the prompt must ensure the output remains a single parsable JSON object.
-- **Vision Limitations**: Poor lighting, blurry photos, or extreme angles will significantly lower extraction confidence. The UI should guide the user to retake the photo if `confidence < 0.7`.
+OCR functionality is restricted to roles involved in field data collection:
+- `admin`
+- `aggregator`
+- `agent` (Primary user)
+
+*Note: `quality_manager` can view the results but typically does not perform
+the capture.*
+
+---
+
+## 6. Gotchas
+
+- **Image Quality**: Low-light or blurry images significantly reduce accuracy.
+- **Rate Limiting**: OpenAI API calls are rate-limited per org to prevent
+  abuse.
+- **Privacy**: OCR results are never logged in plain text. Only the final
+  extracted fields are stored in the database.
+- **Size Limits**: Keep image uploads under 5MB to avoid processing timeouts.
+- **Fallback**: Always provide a manual entry form if OCR fails.

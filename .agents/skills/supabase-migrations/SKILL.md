@@ -13,7 +13,10 @@ description: >
 
 ## 1. Overview
 
-Every database schema change goes through a timestamped SQL migration file applied via the Supabase CLI and then reflected in `supabase/schema.sql`. No ad-hoc schema edits via the dashboard — all changes must be reproducible from migration history.
+Every database schema change goes through a timestamped SQL migration file
+applied via the Supabase CLI and then reflected in `supabase/schema.sql`.
+No ad-hoc schema edits via the dashboard — all changes must be reproducible
+from migration history.
 
 ---
 
@@ -21,11 +24,14 @@ Every database schema change goes through a timestamped SQL migration file appli
 
 ```
 supabase/
-├── schema.sql                              ← Canonical full-schema snapshot (keep in sync)
+├── schema.sql                              ← Canonical full-schema snapshot
 ├── migrations/
 │   ├── 20240101_000000_init.sql
 │   ├── 20240215_143022_add_shipment_status.sql
 │   └── YYYYMMDD_HHMMSS_<description>.sql  ← naming convention
+├── rls-policies.sql                        ← RLS policy reference
+├── seed-locations.sql                      ← Location reference data
+└── seeds/                                  ← Seed data files
 ```
 
 ---
@@ -50,63 +56,62 @@ ALTER TABLE pedigree_certificates
 CREATE INDEX IF NOT EXISTS idx_certs_expiry
   ON pedigree_certificates (expiry_date)
   WHERE expiry_date IS NOT NULL;
-**Mission:** Database schema changes are managed via SQL migration files located in the `migrations/` directory. `supabase/schema.sql` serves as the consolidated source of truth representing the current state of the database.
+
+COMMIT;
+```
+
+### Step 3 — Apply locally
+```bash
+supabase link --project-ref LOCAL_PROJECT_REF
+supabase db push --linked
+```
+
+### Step 4 — Regenerate schema snapshot
+```bash
+supabase db dump > supabase/schema.sql
+```
 
 ---
 
-## 2. Workflow
+## 4. Best Practices
 
-1. **Incremental Changes**: Create a new `.sql` file in `migrations/` prefixed with the date (e.g., `20260311_add_new_table.sql`).
-2. **Local Testing**: Run the SQL in your local Supabase instance or the Supabase SQL Editor.
-3. **Consolidation**: After a successful migration, update `supabase/schema.sql` to reflect the new state. This allows for clean environment resets using `npm run seed:demo:wipe && npm run seed:demo`.
-
----
-
-## 3. Best Practices
-
-- **Idempotency**: Use `CREATE TABLE IF NOT EXISTS` and `DO $$ BEGIN ... END $$` blocks for adding columns or constraints to ensure scripts can be run multiple times safely.
-- **Search Path**: Always include `SET search_path = public, extensions;` at the top of functions or complex migrations to ensure PostGIS and other extensions are resolvable.
+- **Idempotency**: Use `CREATE TABLE IF NOT EXISTS` and `DO $$ BEGIN ... END $$`
+  blocks to ensure scripts can be run safely multiple times.
+- **Search Path**: Include `SET search_path = public, extensions;` at the top of
+  functions or complex migrations to ensure PostGIS and other extensions resolve.
 - **Naming Convention**:
-  - Tables: plural, lowercase (`farms`, `batches`).
-  - Columns: snake_case (`org_id`, `created_at`).
-  - Functions: descriptive snake_case (`get_user_org_id`).
+  - Tables: plural, lowercase (`farms`, `batches`)
+  - Columns: snake_case (`org_id`, `created_at`)
+  - Functions: descriptive snake_case (`get_user_org_id`)
 
 ---
 
-## 4. Core Extensions
+## 5. Core Extensions
 
 OriginTrace relies on:
-- `uuid-ossp`: For primary keys.
-- `postgis`: For geographic data and spatial analysis.
-- `pg_net` (optional): For outgoing webhooks.
-
----
-
-## 5. Gotchas
-
-- **RLS by Default**: Every new table **must** enable RLS and have policies defined in the same migration file.
-- **Function Permissions**: Functions used in RLS policies must be defined with `SECURITY DEFINER` and a restricted `search_path` to prevent privilege escalation.
-- **Type Compatibility**: The live database might use adapted types (e.g., `INTEGER` for some IDs); always check `schema.sql` before assuming `UUID` for legacy tables.
+- `uuid-ossp`: For primary keys
+- `postgis`: For geographic data and spatial analysis
+- `pg_net` (optional): For outgoing webhooks
 
 ---
 
 ## 6. RLS Policy Patterns
 
-Every tenant-scoped table must have RLS enabled with `org_id` isolation.
+Every tenant-scoped table must have RLS enabled with `org_id` isolation:
 
 ```sql
 ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
 
--- Standard tenant isolation
+-- Standard tenant isolation (uses helper functions from schema)
 CREATE POLICY "tenant_isolation" ON your_table
-  FOR ALL
-  USING (org_id = auth.jwt() ->> 'org_id')
-  WITH CHECK (org_id = auth.jwt() ->> 'org_id');
+  FOR SELECT USING (org_id = get_user_org_id() OR is_system_admin());
+
+CREATE POLICY "tenant_insert" ON your_table
+  FOR INSERT WITH CHECK (org_id = get_user_org_id());
 
 -- Superadmin bypass — always pair with tenant policy
 CREATE POLICY "superadmin_bypass" ON your_table
-  FOR ALL
-  USING (auth.jwt() ->> 'role' = 'superadmin');
+  FOR ALL USING (is_system_admin());
 ```
 
 ---
@@ -129,11 +134,7 @@ CREATE TABLE IF NOT EXISTS farm_audits (
 ALTER TABLE farm_audits ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "tenant_isolation" ON farm_audits
-  FOR ALL USING (org_id = auth.jwt() ->> 'org_id')
-  WITH CHECK (org_id = auth.jwt() ->> 'org_id');
-
-CREATE POLICY "superadmin_bypass" ON farm_audits
-  FOR ALL USING (auth.jwt() ->> 'role' = 'superadmin');
+  FOR ALL USING (org_id = get_user_org_id() OR is_system_admin());
 
 CREATE INDEX idx_farm_audits_org  ON farm_audits(org_id);
 CREATE INDEX idx_farm_audits_farm ON farm_audits(farm_id);
@@ -153,7 +154,7 @@ CREATE TRIGGER set_updated_at
 
 ---
 
-## 6. Pre-Commit Checklist
+## 8. Pre-Commit Checklist
 
 - [ ] File named `YYYYMMDD_HHMMSS_description.sql`
 - [ ] Wrapped in `BEGIN; ... COMMIT;`
@@ -165,9 +166,12 @@ CREATE TRIGGER set_updated_at
 
 ---
 
-## 7. Gotchas
+## 9. Gotchas
 
 - **Never edit the Supabase dashboard schema directly in prod** without a matching migration file.
 - **`schema.sql` is a snapshot, not a runnable script.** Only `migrations/` files are applied incrementally.
 - **Column renames break existing code silently.** Add new column → migrate data → drop old in a later migration.
-- **Service-key API routes bypass RLS.** Verify this is intentional for any route using the Supabase service role key.
+- **Service-key API routes bypass RLS.** Verify this is intentional for any route using `createAdminClient()`.
+- **RLS by Default**: Every new table must enable RLS with policies in the same migration file.
+- **Function Permissions**: Functions in RLS policies must use `SECURITY DEFINER` with a restricted `search_path`.
+- **Type Compatibility**: Check `schema.sql` before assuming UUID for legacy tables — some use INTEGER.
