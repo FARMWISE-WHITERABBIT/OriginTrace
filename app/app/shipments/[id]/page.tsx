@@ -580,7 +580,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 interface EscrowAccount {
   id: string;
-  amount_usd: number;
+  total_amount: number;
   status: string;
   milestone_config: Array<{ milestone_id: string; stage: string; amount: number; description: string; released_at?: string }>;
   created_at: string;
@@ -616,7 +616,7 @@ function ShipmentPaymentCard({
   const releasedMilestones  = (escrow?.milestone_config ?? []).filter((m) => m.released_at);
   const pendingMilestones   = (escrow?.milestone_config ?? []).filter((m) => !m.released_at);
   const releasedAmount      = releasedMilestones.reduce((s, m) => s + m.amount, 0);
-  const escrowTotal         = escrow?.amount_usd ?? 0;
+  const escrowTotal         = escrow?.total_amount ?? 0;
 
   return (
     <Card className="card-accent-emerald">
