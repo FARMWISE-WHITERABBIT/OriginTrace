@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS agent_sync_status (
   is_online BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(agent_id, device_id)
+  UNIQUE(agent_id)
 );
 
 -- Compliance Files (for document storage)
@@ -483,8 +483,8 @@ ON CONFLICT (commodity, region) DO NOTHING;
 -- Farm Conflicts table for spatial conflict detection
 CREATE TABLE IF NOT EXISTS farm_conflicts (
   id SERIAL PRIMARY KEY,
-  farm_a_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  farm_b_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_a_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_b_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   overlap_ratio DECIMAL(5,4),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
   resolved_by UUID REFERENCES auth.users(id),
@@ -598,7 +598,7 @@ SELECT
   f.community,
   f.area_hectares,
   f.commodity,
-  COALESCE(SUM(b.weight), 0) AS total_delivery_kg,
+  COALESCE(SUM(b.weight_kg), 0) AS total_delivery_kg,
   COUNT(DISTINCT cb.id) AS total_batches,
   COUNT(b.id) AS total_bags,
   ROUND(AVG(CASE 
@@ -652,7 +652,8 @@ CREATE POLICY "System admins can manage all conflicts" ON farm_conflicts
 -- Processing Runs (factory processing sessions)
 CREATE TABLE IF NOT EXISTS processing_runs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   run_code TEXT NOT NULL,
   facility_name TEXT NOT NULL,
   facility_location TEXT,
@@ -675,7 +676,7 @@ CREATE TABLE IF NOT EXISTS processing_runs (
 CREATE TABLE IF NOT EXISTS processing_run_batches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   processing_run_id UUID NOT NULL REFERENCES processing_runs(id) ON DELETE CASCADE,
-  collection_batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  collection_batch_id UUID NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
   weight_contribution_kg DECIMAL(12,2) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(processing_run_id, collection_batch_id)
@@ -684,7 +685,8 @@ CREATE TABLE IF NOT EXISTS processing_run_batches (
 -- Finished Goods (export-ready products with pedigree)
 CREATE TABLE IF NOT EXISTS finished_goods (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   pedigree_code TEXT NOT NULL,
   product_name TEXT NOT NULL,
   product_type TEXT NOT NULL,
@@ -713,6 +715,7 @@ CREATE TABLE IF NOT EXISTS finished_goods (
 -- Standard Recovery Rates by Product Type
 CREATE TABLE IF NOT EXISTS recovery_standards (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   commodity TEXT NOT NULL,
   product_type TEXT NOT NULL,
   standard_recovery_rate DECIMAL(5,2) NOT NULL,
@@ -1377,7 +1380,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 
 -- ============================================
 -- T003: BAGS weight → weight_kg (idempotent)
-=======
+-- ============================================
 -- AUDIT EVENTS (Phase 11 — Immutable Append-Only Log)
 -- ============================================
 
@@ -1542,6 +1545,7 @@ CREATE INDEX IF NOT EXISTS idx_farmer_inputs_farm ON farmer_inputs(farm_id);
 
 CREATE TABLE IF NOT EXISTS yield_benchmarks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   commodity TEXT NOT NULL,
   country TEXT,
   region TEXT,
@@ -1628,13 +1632,9 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'en'
 
 DO $$
 BEGIN
-  -- Rename weight to weight_kg if the old column exists and the new one doesn't
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'bags' AND column_name = 'weight'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'bags' AND column_name = 'weight_kg'
   ) THEN
     ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
     -- Adjust precision to match app expectations
@@ -1878,7 +1878,7 @@ CREATE TABLE IF NOT EXISTS tenant_health_metrics (
 CREATE TABLE IF NOT EXISTS farmer_performance_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   -- Identity
   farmer_name TEXT NOT NULL,
   community TEXT,
@@ -1915,7 +1915,7 @@ CREATE INDEX IF NOT EXISTS idx_farmer_ledger_delivery ON farmer_performance_ledg
 ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger
   FOR ALL USING (org_id = get_user_org_id());
-=======
+-- ============================================
 -- BOUNDARY ANALYSIS (Phase 12)
 -- ============================================
 
@@ -2018,8 +2018,8 @@ ALTER TABLE shipments ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.u
 
 CREATE TABLE IF NOT EXISTS batch_contributions (
   id SERIAL PRIMARY KEY,
-  batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   farmer_name TEXT,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
@@ -2056,9 +2056,9 @@ CREATE TABLE IF NOT EXISTS shipment_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
   item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good')),
-  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  batch_id UUID REFERENCES collection_batches(id) ON DELETE SET NULL,
   finished_good_id UUID REFERENCES finished_goods(id) ON DELETE SET NULL,
-  farm_id INTEGER REFERENCES farms(id) ON DELETE SET NULL,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   farm_count INTEGER DEFAULT 0,
   traceability_complete BOOLEAN DEFAULT false,
@@ -2134,7 +2134,7 @@ CREATE TABLE IF NOT EXISTS shipment_lot_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   lot_id UUID NOT NULL REFERENCES shipment_lots(id) ON DELETE CASCADE,
   shipment_item_id UUID REFERENCES shipment_items(id) ON DELETE SET NULL,
-  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  batch_id UUID REFERENCES collection_batches(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -2332,8 +2332,8 @@ CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_trend ON tenant_health_metr
 
 CREATE TABLE IF NOT EXISTS farmer_performance_ledger_table (
   id SERIAL PRIMARY KEY,
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   season TEXT NOT NULL,
   total_collections INTEGER DEFAULT 0,
   total_weight_kg NUMERIC(12,2) DEFAULT 0,
@@ -2487,7 +2487,7 @@ CREATE POLICY "webhook_deliveries_org_read" ON webhook_deliveries
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM webhook_endpoints we
-      WHERE we.id = webhook_deliveries.endpoint_id
+      WHERE we.id = webhook_deliveries.webhook_id
         AND we.org_id = get_user_org_id()
     )
   );
@@ -2499,6 +2499,14 @@ CREATE POLICY "webhook_deliveries_service_write" ON webhook_deliveries
 -- ── RLS: webhook_events ───────────────────────────────────────────────────────
 -- Inbound or internal webhook event log.
 -- Org users can read their own events; service role inserts.
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
 
