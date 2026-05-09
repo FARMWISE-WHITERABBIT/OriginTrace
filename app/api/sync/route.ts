@@ -163,6 +163,7 @@ export const PUT = withErrorHandling(async (request: NextRequest) => {
             farm_id: farmId,
             blockers: eligibility.blockers,
             blocker_codes: eligibility.blocker_codes,
+            warning_codes: eligibility.warning_codes,
           });
         }
       }

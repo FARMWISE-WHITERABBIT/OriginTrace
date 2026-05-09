@@ -215,8 +215,8 @@ const API_ROUTE_TO_FEATURE: Record<string, TierFeature> = {
 };
 
 export function hasTierAccess(orgTier: string | undefined, feature: TierFeature): boolean {
-  // No tier set → org not yet enrolled in billing → grant full access
-  if (!orgTier) return true;
+  // No tier set → defaults to starter behaviour
+  if (!orgTier) orgTier = 'starter';
   const tier = orgTier as SubscriptionTier;
   const currentLevel = TIER_HIERARCHY[tier] ?? 0;
   const requiredLevel = TIER_HIERARCHY[FEATURE_MIN_TIER[feature]] ?? 0;

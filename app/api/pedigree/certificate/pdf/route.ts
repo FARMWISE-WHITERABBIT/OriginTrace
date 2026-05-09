@@ -14,6 +14,10 @@ export async function GET(request: NextRequest) {
       .from('profiles').select('org_id').eq('user_id', user.id).single();
     if (!profile?.org_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const { enforceTier } = await import('@/lib/api/tier-guard');
+    const tierBlock = await enforceTier(profile.org_id, 'pedigree');
+    if (tierBlock) return tierBlock;
+
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 

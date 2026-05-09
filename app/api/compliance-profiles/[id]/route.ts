@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
 
 export async function DELETE(
   request: NextRequest,
@@ -14,6 +15,9 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
+    if (tierBlock) return tierBlock;
 
     if (profile.role !== 'admin' && profile.role !== 'compliance_officer') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
@@ -66,6 +70,9 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
+    if (tierBlock) return tierBlock;
 
     const profileId = parseInt(id, 10);
     if (isNaN(profileId)) {

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { requireRole, ROLES } from '@/lib/rbac';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildFarmConflictEmail } from '@/lib/email/templates';
 import { z } from 'zod';
@@ -139,6 +140,12 @@ export async function POST(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const tierBlock = await enforceTier(profile.org_id, 'boundary_conflicts');
+    if (tierBlock) return tierBlock;
+
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
+
     const body = await request.json();
     const { farm_a_id, farm_b_id, overlap_ratio } = body;
 
@@ -254,6 +261,12 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const tierBlock = await enforceTier(profile.org_id, 'boundary_conflicts');
+    if (tierBlock) return tierBlock;
+
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
 
     const rawBody = await request.json();
     const { data: parsed, error: validationError } = parseBody(conflictPatchSchema, rawBody);
