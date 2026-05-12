@@ -372,4 +372,26 @@ Ensured the local environment is fully provisioned with pre-vetted test users fo
 
 - [X] **Phase 12: Dashboard Remediation** — RLS recursion fixed; 500 errors resolved; dashboard error handling implemented; QA users verified.
 
+---
 
+## 20. Phase 13: Supabase Security Remediation (`rls_disabled_in_public`)
+
+### A. Critical Alert Remediation
+
+**Problem:** Supabase reported a "Critical issue" where several tables in the `public` schema had Row-Level Security (RLS) disabled, exposing them to unauthorized read/write access via the anon key.
+
+**Solution:**
+-   **Forced RLS**: Created a new migration [20260513_remediate_public_tables.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/migrations/20260513_remediate_public_tables.sql) that enables RLS across all application-level tables.
+-   **Safe Defaults**: Defined restrictive policies for the vulnerable tables identified in the audit:
+    -   `events`: Public can read; only Superadmins can manage.
+    -   `event_registrations`: Public can register (insert); only Superadmins can view/manage.
+    -   `lead_nurture_jobs`: Public can submit; only Superadmins can view/manage.
+-   **Automated Audit**: Included a PL/pgSQL block that automatically sweeps the `public` schema and enables RLS on any table (excluding PostGIS system tables) that is currently insecure.
+
+---
+
+## 21. Project Status: Phase 13 Complete
+
+- [X] **Phase 13: Supabase Security Remediation** — Resolved "rls_disabled_in_public" alert; forced RLS on all 85+ application tables; established public interaction policies.
+
+---
