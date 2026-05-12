@@ -95,7 +95,13 @@ The codebase is now technically sound, evidence-backed, and optimized for both l
 **Problem:** Inconsistent security checks across routes (e.g., `sync/route.ts` was missing RBAC guards and leaked stack traces on 500 errors).
 **Solution:** Refactored the API layer to use a standardized `withErrorHandling` wrapper. All security failures (RBAC, Multi-tenancy) now return sanitized `ApiError` responses, preventing internal system leaks.
 
-### B. Live Security Probe (The "Acid Test")
+### B. Restricted Onboarding Model
+
+**Design Decision:** Self-service registration for Organizations and Buyers was intentionally disabled on March 11, 2026.
+**Rationale:** To "harden the platform" and ensure all tenants are vetted. OriginTrace is not a self-service registration platform like typical SaaS companies. New organizations must sign contracts and undergo manual vetting before being provisioned via the Superadmin dashboard. This prevents unauthorized organization creation and maintains a controlled, high-trust entry point.
+**Exception:** Farmer self-activation remains functional via unique invite tokens sent by SMS, as these are pre-vetted and managed by the organization that invited them. This is the only self-service flow allowed on the platform.
+
+### C. Live Security Probe (The "Acid Test")
 
 We ran a live penetration probe using a Field Agent account to test the boundaries:
 
@@ -310,5 +316,32 @@ With a solid QA baseline established, the immediate roadmap focuses on:
 
 ## 15. Project Status: Phase 10 Complete
 
+
 - [X] **Phase 10: Build Stabilization** — Fixed `EscrowAccount` type mismatch in Shipment Detail page; production build (`npm run build`) is now 100% green.
+
+---
+
+## 16. Phase 11: Branding Remediation & Asset Standardization
+
+### A. Placeholder Replacement
+
+**Problem:** Several high-traffic entry points (Login, Farmer Activation, Superadmin Portal) used generic Lucide icons (`Leaf`, `Shield`) as brand placeholders, creating an "unprofessional" or "generic" first impression.
+
+**Solution:** Audited the entire platform and replaced all brand-placeholder icons with the official `Logo` and `LogoIcon` components.
+
+**Remediated Routes:**
+- **Farmer Activation** (`/farmer/activate`): Replaced `Leaf` with `LogoIcon`.
+- **Superadmin Portal** (`/superadmin/*`): Replaced `Shield` with `LogoIcon` in sidebar, loading states, and the Command Tower header.
+- **Public Verification** (`/verify/*`): Refactored hardcoded `Image` tags to use the centralized `Logo` component.
+- **Main Login** (`/auth/login`): Standardized to the `Logo` component.
+
+### B. Centralized Branding Logic
+
+All branding is now driven by `components/logo.tsx`. This component handles theme-aware asset selection (Dark Mode vs Light Mode) and ensures that we use high-resolution PNGs (`logo-green.png`, `logo-white.png`) instead of generic SVG icons for primary brand identification.
+
+---
+
+## 17. Project Status: Phase 11 Complete
+
+- [X] **Phase 11: Branding Remediation** — Placeholder icons removed; official assets implemented across all portals; branding logic centralized.
 

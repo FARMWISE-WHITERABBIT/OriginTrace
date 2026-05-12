@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { LogoIcon } from '@/components/logo';
 import {
   Building2,
   Users,
@@ -164,9 +165,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-            <Shield className="h-6 w-6 text-white" />
-          </div>
+          <LogoIcon size={48} className="drop-shadow-sm" />
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400" />
         </div>
       </div>
@@ -199,7 +198,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
         <div className="flex items-center gap-2 text-sm">
-          <Shield className="h-4 w-4 text-cyan-400" />
+          <LogoIcon size={20} />
           <span className="font-medium text-slate-200">{currentPage?.label || 'Command Tower'}</span>
         </div>
         <div className="w-9" />
@@ -215,9 +214,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
         {/* Brand */}
         <div className="p-5 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
+            <LogoIcon size={36} />
             <div>
               <div className="text-sm font-bold text-white leading-tight">OriginTrace</div>
               <div className="text-[10px] font-semibold text-cyan-400 tracking-widest uppercase">Command Tower</div>

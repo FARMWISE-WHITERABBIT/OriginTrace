@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Logo } from '@/components/logo';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,19 +78,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image 
-              src="/images/logo-green.png" 
-              alt="OriginTrace" 
+            <Logo 
               width={140} 
               height={40}
-              className="dark:hidden"
-            />
-            <Image 
-              src="/images/logo-white.png" 
-              alt="OriginTrace" 
-              width={140} 
-              height={40}
-              className="hidden dark:block"
+              className="h-10 w-auto"
             />
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
