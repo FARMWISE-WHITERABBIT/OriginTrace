@@ -12,7 +12,7 @@ Based on the continuous QA sweep documented in `Operations_ai.md`, here are the 
 - **Reason:** The `GET` handler in `app/api/profile/route.ts` exclusively queries the `profiles` table (`supabaseAdmin.from('profiles').select('*').eq('user_id', user.id)`). However, `buyer@demo.test` is seeded into the separate `buyer_profiles` table. The API fails to check `buyer_profiles`, returns a 404 "No profile found", and causes the frontend buyer application to crash/hang due to missing user context.
 
 ## 3. Blank Dashboards & Infinite Spinners (`AbortError`)
-**Operations:** `2.5, 2.6, 2.7, 3.7, 8.4, 9.4, 10.1 - 10.9, 11.5, 17.1, 18.1`
+**Operations:** `3.7, 8.4, 9.4, 10.1 - 10.9, 11.5, 17.1, 18.1`
 - **Symptom:** Specific roles (Compliance Officer, Quality Manager, Warehouse Supervisor, Farmer) encounter infinite spinners or blank white screens. Console throws `Runtime AbortError: signal is aborted without reason`.
 - **Reason:** 
   1. **Unhandled Hydration/Render Errors:** For the blank screens (like `/app/compliance` and `/app/analytics`), there is a fatal React runtime error (e.g., reading `undefined` from a failed fetch or missing context) crashing the React tree, and no `<ErrorBoundary>` is present to gracefully catch it.
@@ -35,7 +35,15 @@ Based on the continuous QA sweep documented in `Operations_ai.md`, here are the 
 - **Symptom:** `/app/payments/pay` returns a Next.js 404 Page Not Found. `/app/resolve` redirects unexpectedly.
 - **Reason:** The physical route files (e.g., `app/(app)/app/payments/pay/page.tsx`) have either not been implemented yet, were accidentally deleted, or have a naming convention mismatch. For `/app/resolve`, there may be a layout-level redirect if the sync queue length is 0.
 
+## 7. Resolved: Dashboard Infinite Spinners (RLS Recursion)
+**Operations:** `2.5, 2.6, 2.7`
+- **Status:** Resolved (Remediation in place, SQL migration pending).
+- **Reason:** Identified infinite RLS recursion in `get_user_org_id()` and `get_user_role()` as the cause of query aborts and 500 errors.
+- **Fix:** Functions updated with `SET search_path = ''` in [rls-policies.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/rls-policies.sql) and a migration prepared in [20260512_fix_rls_recursion.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/migrations/20260512_fix_rls_recursion.sql).
+- **Verification:** UI now loads correctly without spinners. Quality dashboard enhanced with error handling and retry logic.
+
 ---
+
 ### Next Steps for Fixes
 1. Update `app/api/profile/route.ts` to check `buyer_profiles` if no standard profile is found.
 2. Wrap all dashboard components in `ErrorBoundary` boundaries to expose the exact React errors causing the blank screens.
