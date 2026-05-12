@@ -184,3 +184,131 @@ The `DO $$` block that renames `weight` → `weight_kg` now correctly re-applies
 ## 9. Project Status: Phase 7 Complete
 
 - [X] **Phase 7: Database Schema Integrity** — All FK type mismatches fixed, RLS policies restored, merge conflict markers removed, webhook subsystem corrected.
+
+---
+
+## 10. Phase 8: QA Testing Infrastructure & Operations Registry
+
+### A. Operations Registry (`Operations_ai.md`)
+
+A comprehensive operations registry was created documenting **all 100+ user-facing operations** across 21 functional categories. This serves as the single source of truth for QA — browser agents test each operation and update the registry with pass/fail status and timestamped notes.
+
+**Categories covered:**
+1. Authentication & Onboarding (11 ops)
+2. Dashboard (7 ops — one per role)
+3. Farmer Management (7 ops)
+4. Farm Management (6 ops)
+5. Collection & Batches (7 ops)
+6. Inventory (3 ops)
+7. Shipments (8 ops)
+8. Processing (4 ops)
+9. Lab Results & Quality (4 ops)
+10. Compliance & Regulatory (9 ops)
+11. Payments & Disbursements (6 ops)
+12. Contracts & Tenders (5 ops)
+13. Buyer Portal (7 ops)
+14. Team Management (5 ops)
+15. Settings & Organization (8 ops)
+16. Documents & Audit Logs (5 ops)
+17. Service Providers (3 ops)
+18. Analytics & Reporting (3 ops)
+19. Offline / Sync (3 ops)
+20. Public / Marketing Pages (3 ops)
+21. Access Control / RBAC Smoke Tests (4 ops)
+
+### B. Browser QA Skill (`.agents/skills/browser-qa/`)
+
+A new agent skill that codifies the browser-driven QA workflow:
+- Determines test scope from `Operations_ai.md`
+- Launches browser sub-agents with clear pass/fail criteria
+- Updates the registry with results
+- Surfaces bugs as structured, actionable reports
+
+### C. QA Test Users — One Per RBAC Role
+
+Created `scripts/seed-qa-users.ts` — a dedicated seed script that generates **9 test accounts** covering every role in the RBAC system. All users belong to the `demo-whiterabbit` org (buyer belongs to `demo-nibseurope`).
+
+| Role | Email | Password |
+|------|-------|----------|
+| `admin` | `admin@demo.test` | `Demo1234!` |
+| `aggregator` | `aggregator@demo.test` | `Demo1234!` |
+| `agent` | `agent@demo.test` | `Demo1234!` |
+| `quality_manager` | `quality@demo.test` | `Demo1234!` |
+| `logistics_coordinator` | `logistics@demo.test` | `Demo1234!` |
+| `compliance_officer` | `compliance@demo.test` | `Demo1234!` |
+| `warehouse_supervisor` | `warehouse@demo.test` | `Demo1234!` |
+| `buyer` | `buyer@demo.test` | `Demo1234!` |
+| `farmer` | `farmer@demo.test` | `Demo1234!` |
+
+**NPM commands:**
+```bash
+npm run seed:qa          # Create all 9 QA users (idempotent)
+npm run seed:qa:wipe     # Remove all QA users
+```
+
+### D. Agent Skills Registry (`agents.md`)
+
+A centralized catalogue of all **35 agent skills** (18 project-specific + 17 general-purpose) was created. Features:
+- Quick-reference trigger keyword table for skill activation
+- Mermaid dependency graph showing inter-skill relationships
+- Detailed profiles with paths, purposes, and key files
+- Composability rules — agents activate all matching skills for a task
+
+---
+
+## 11. Project Status: Phase 8 Complete
+
+- [X] **Phase 8: QA Testing Infrastructure** — Operations Registry (100+ ops), browser-qa skill, 9 QA test users, seed script, and centralized agents registry.
+
+---
+
+## 12. Phase 9: Continuous QA Sweep Execution
+
+We have successfully executed a continuous, section-by-section QA sweep using the `browser-qa` agent across all 21 functional categories documented in `Operations_ai.md`.
+
+### A. Execution Methodology
+- **Sequential Testing:** Subagents were dispatched to test individual sections (e.g., Section 1: Authentication, Section 2: Dashboard).
+- **Immediate Documentation:** After each subagent returned its text report, the results (PASS/FAIL/FLAKY) were written immediately to `Operations_ai.md` to prevent data loss in the event of a crash.
+- **Visual Verification:** All UI states, including empty states and error modals, were visually verified via screenshot captures.
+
+### B. Key QA Findings
+The platform shows strong structural integrity in core features, but uncovered critical UI blockers:
+
+1. **Authentication & Core Flows (PASS):** Login, email verification, password resets, and team management are highly stable.
+2. **RBAC Isolation (PASS):** Tenant isolation and role-based redirects (e.g., agent restricted from payments) correctly intercepted unauthorized access.
+3. **Data Availability (FLAKY/FAIL):**
+   - The `State/LGA` dropdowns on Farmer/Batch registration forms failed to populate (stuck on "Loading").
+   - A missing `/api/profile` endpoint caused the Buyer Portal to return 404s and hang the application for `buyer@demo.test`.
+4. **Route Rendering Issues (FAIL):** Several pages rendered completely blank or were stuck on infinite spinners, highlighting broken API fetches or React component crashes. Affected routes include:
+   - `/app/compliance` (and related compliance tools)
+   - `/app/analytics`
+   - `/app/documents`
+   - `/app/contracts` and `/app/tenders`
+
+### C. Next Steps for Remediation
+With a solid QA baseline established, the immediate roadmap focuses on:
+1. Fixing the `AbortError` / infinite spinners blocking compliance, quality, and warehouse dashboards.
+2. Resolving the 404 profile endpoint for the Buyer role.
+3. Populating the database with a full spectrum of seed data (farms, shipments, lab results) to unlock testing for the detail views.
+
+---
+
+## 13. Project Status: Phase 9 Complete
+
+
+---
+
+## 14. Phase 10: Build Stabilization & Type Safety
+
+### A. Shipment Detail Page Fix
+
+**Problem:** The production build failed due to a TypeScript error in `app/app/shipments/[id]/page.tsx`. The code attempted to access `escrow.amount_usd`, which did not exist on the local `EscrowAccount` interface definition.
+
+**Solution:** Corrected the property access to `escrow.total_amount` to match the interface. This restored the production build to a passing state.
+
+---
+
+## 15. Project Status: Phase 10 Complete
+
+- [X] **Phase 10: Build Stabilization** — Fixed `EscrowAccount` type mismatch in Shipment Detail page; production build (`npm run build`) is now 100% green.
+

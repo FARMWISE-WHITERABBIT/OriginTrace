@@ -2208,7 +2208,7 @@ function EscrowReleaseModal({
           <div className="rounded-lg border p-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Escrow Balance</span>
-              <span className="font-bold">${Number(escrow.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              <span className="font-bold">${Number(escrow.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
           <div className="space-y-2">
