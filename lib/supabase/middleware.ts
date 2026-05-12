@@ -159,7 +159,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/compliance') ||
     pathname.startsWith('/industries') ||
     pathname.startsWith('/legal') ||
-    pathname.startsWith('/pedigree');
+    pathname.startsWith('/pedigree') ||
+    pathname.startsWith('/farmer/activate');
 
   // API routes do their own auth
   if (isApiRoute) return supabaseResponse;

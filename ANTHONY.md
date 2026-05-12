@@ -343,5 +343,33 @@ All branding is now driven by `components/logo.tsx`. This component handles them
 
 ## 17. Project Status: Phase 11 Complete
 
-- [X] **Phase 11: Branding Remediation** — Placeholder icons removed; official assets implemented across all portals; branding logic centralized.
+---
+
+## 18. Phase 12: Dashboard Remediation & RLS Stability
+
+### A. Infinite Spinner & 500 Error Remediation
+
+**Problem:** Dashboards for Compliance, Quality Manager, and Warehouse roles were stuck on infinite loading spinners or showing 0 data. The console revealed `500 Internal Server Error` on nearly every data-fetching endpoint (`/rest/v1/farms`, `/rest/v1/bags`, etc.).
+
+**The Cause (RLS Recursion):**
+A critical bug was found in the `get_user_org_id()` and `get_user_role()` database functions. They were defined with `SET search_path = public`, which caused infinite recursion when called from a `profiles` table RLS policy. Postgres would crash when the function tried to query the table it was already evaluating.
+
+**Solution:**
+- Refactored `get_user_org_id` and `get_user_role` to use `SET search_path = ''` and fully qualified table names (`public.profiles`). This allows the functions to bypass RLS safely and terminates the recursion loop.
+- Applied a new migration [20260512_fix_rls_recursion.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/migrations/20260512_fix_rls_recursion.sql) to the live database.
+
+### B. Dashboard Resilience
+
+**Improvement:** Added error handling and "Retry" states to the `QualityManagerDashboard`. Instead of failing silently, the UI now detects fetch failures and provides actionable feedback to the user.
+
+### C. QA Seed Verification
+
+Ensured the local environment is fully provisioned with pre-vetted test users for every role, enabling standard QA sweeps to continue without authentication blockers.
+
+---
+
+## 19. Project Status: Phase 12 Complete
+
+- [X] **Phase 12: Dashboard Remediation** — RLS recursion fixed; 500 errors resolved; dashboard error handling implemented; QA users verified.
+
 
