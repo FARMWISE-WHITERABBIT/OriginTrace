@@ -417,3 +417,32 @@ A comprehensive regression sweep was completed, verifying fixes for all previous
 - [X] **Phase 14: Final QA Regression Sweep** — Verified 0 failing operations; documented the 23 untested operations with direct mapping to the `agents.md` skill registry for future remediation.
 
 ---
+
+## 24. Phase 15: Compliance Resilience & Access Guard Hardening
+
+### A. Compliance Route Stability
+
+**Problem:** Data Vault and Digital Product Passport pages could hang indefinitely when API calls stalled or returned inaccessible states.
+
+**Solution:** Added timeout-backed fetches, explicit load-error states, and retry actions so users see a recoverable state instead of an infinite spinner.
+
+### B. Access Guard Tightening
+
+**Problem:** Sensitive Data Vault and farmer disbursement API paths needed explicit role guards in addition to authentication and tenant context.
+
+**Solution:** Data Vault access is now limited to admin/compliance roles, while farmer disbursement creation is limited to admin/aggregator roles.
+
+### C. UI and Route Recovery
+
+**Improvements:**
+- LocaleProvider now starts with default English messages to prevent NextIntl provider gaps during initial render.
+- Farmer registration and Smart Collect now explain when no LGAs are configured for a selected state.
+- Compliance Evidence upload and `/app/farms/new` route restoration close remaining navigation gaps.
+
+---
+
+## 25. Project Status: Phase 15 Complete
+
+- [X] **Phase 15: Compliance Resilience & Access Guard Hardening** — Hardened compliance loading states, tightened API role guards, stabilized locale bootstrapping, clarified empty LGA states, and restored missing compliance/farm navigation routes.
+
+---
