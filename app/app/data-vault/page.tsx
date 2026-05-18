@@ -53,6 +53,7 @@ export default function DataVaultPage() {
   const [exportFormat, setExportFormat] = useState<'json' | 'csv' | 'geojson'>('json');
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,15 +61,23 @@ export default function DataVaultPage() {
   }, []);
 
   const fetchVaultStats = async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch('/api/data-vault');
+      setLoadError(null);
+      const response = await fetch('/api/data-vault', { signal: controller.signal });
       if (response.ok) {
         const data = await response.json();
         setVaultStats(data);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setLoadError(data.error || 'Data Vault could not be loaded.');
       }
     } catch (error) {
       console.error('Failed to fetch vault stats:', error);
+      setLoadError('Data Vault could not be loaded. Please refresh or check API access.');
     } finally {
+      window.clearTimeout(timeout);
       setIsLoading(false);
     }
   };
@@ -127,6 +136,15 @@ export default function DataVaultPage() {
     <TierGate feature="data_vault" requiredTier="enterprise" featureLabel="Data Vault">
     {isLoading ? (
       <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
+    ) : loadError ? (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+          <h3 className="text-lg font-medium mb-1">Data Vault unavailable</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">{loadError}</p>
+          <Button onClick={fetchVaultStats}>Retry</Button>
+        </CardContent>
+      </Card>
     ) : (
     <div className="p-6 space-y-6">
       <div>
