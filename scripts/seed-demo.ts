@@ -111,13 +111,22 @@ async function seed() {
 
   // 1. Organisation
   section('Organisation');
-  const { data: existingOrg } = await db.from('organizations').select('id').eq('slug','demo-whiterabbit').single();
+  const { data: existingOrg } = await db.from('organizations').select('id, settings').eq('slug','demo-whiterabbit').single();
   let eId: string;
   if (existingOrg) { eId = (existingOrg as any).id; ok('org exists'); }
   else {
-    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'pro', commodities: ['cocoa','ginger','cashew','hibiscus','sesame'] });
+    const [org] = await ins('organizations', { name: 'WhiteRabbit Demo Co.', slug: 'demo-whiterabbit', subscription_status: 'active', subscription_tier: 'enterprise', settings: { subscription_tier: 'enterprise' }, commodities: ['cocoa','ginger','cashew','hibiscus','sesame'] });
     eId = (org as any).id;
   }
+  const orgSettings = (existingOrg as any)?.settings && typeof (existingOrg as any).settings === 'object'
+    ? (existingOrg as any).settings
+    : {};
+  const { error: tierErr } = await db
+    .from('organizations')
+    .update({ subscription_tier: 'enterprise', settings: { ...orgSettings, subscription_tier: 'enterprise' } })
+    .eq('id', eId);
+  if (tierErr) warn(`could not set demo org tier: ${tierErr.message}`);
+  else ok('org tier: enterprise');
   const [buyerOrg] = await ins('buyer_organizations', { name: 'NibsEurope GmbH', slug: 'demo-nibseurope', country: 'Germany', industry: 'Food & Beverage', contact_email: 'procurement@nibseurope-demo.com' });
   const bId: string = (buyerOrg as any).id;
 

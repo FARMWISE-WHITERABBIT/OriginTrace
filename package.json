@@ -22,6 +22,8 @@
     "seed:gacon:wipe": "tsx scripts/seed-gacon.ts --wipe",
     "seed:gacon:reset": "tsx scripts/seed-gacon.ts --wipe && tsx scripts/seed-gacon.ts",
     "seed:locations": "tsx scripts/seed-locations.ts",
+    "seed:qa": "tsx scripts/seed-qa-users.ts",
+    "seed:qa:wipe": "tsx scripts/seed-qa-users.ts --wipe",
     "seed:reset-all": "bash scripts/reset-and-seed.sh"
   },
   "dependencies": {

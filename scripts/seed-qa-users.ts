@@ -88,12 +88,26 @@ async function seedQAUsers() {
   // 1. Resolve demo org
   const { data: demoOrg, error: orgErr } = await db
     .from('organizations')
-    .select('id')
+    .select('id, settings')
     .eq('slug', 'demo-whiterabbit')
     .single();
   if (orgErr || !demoOrg) fail('Demo org "demo-whiterabbit" not found. Run npm run seed:demo first.');
   const orgId = (demoOrg as any).id;
   ok(`org: demo-whiterabbit → ${orgId}`);
+
+  const currentSettings = (demoOrg as any).settings;
+  const settings = currentSettings && typeof currentSettings === 'object' && !Array.isArray(currentSettings)
+    ? currentSettings
+    : {};
+  const { error: tierError } = await db
+    .from('organizations')
+    .update({
+      subscription_tier: 'enterprise',
+      settings: { ...settings, subscription_tier: 'enterprise' },
+    })
+    .eq('id', orgId);
+  if (tierError) warn(`could not set demo-whiterabbit tier: ${tierError.message}`);
+  else ok('org tier: demo-whiterabbit -> enterprise');
 
   // 2. Resolve buyer org (for buyer user)
   const { data: buyerOrg } = await db
