@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { createClient } from '@/lib/supabase/client';
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
 
@@ -51,16 +49,25 @@ export default function LoginPage() {
           .from('system_admins')
           .select('id')
           .eq('user_id', authData.user.id)
-          .single();
+          .maybeSingle();
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          toast({
+            title: 'Login Failed',
+            description: 'Your session could not be established. Please try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
 
         if (systemAdmin) {
           toast({ title: 'Welcome to Command Tower' });
-          router.push('/superadmin');
+          window.location.assign('/superadmin');
         } else {
           toast({ title: 'Welcome back!' });
-          router.push('/app');
+          window.location.assign('/app');
         }
-        router.refresh();
       }
     } catch (err) {
       toast({ 
@@ -95,7 +102,9 @@ export default function LoginPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
