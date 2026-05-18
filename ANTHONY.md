@@ -396,3 +396,24 @@ Ensured the local environment is fully provisioned with pre-vetted test users fo
 - [X] **Phase 13: Supabase Security Remediation** — Resolved "rls_disabled_in_public" alert; forced RLS on all 85+ application tables; established public interaction policies.
 
 ---
+
+## 22. Phase 14: Final QA Regression Sweep & Bug Fixes
+
+A comprehensive regression sweep was completed, verifying fixes for all previously failing core operations. 
+
+### 🚀 New Features & Restorations
+- **Farmer Disbursement Portal**: The `/app/payments/pay` route was implemented with full i18n support, restoring missing payment capabilities.
+- **Admin Sidebar**: Re-enabled dynamic navigation logic (`navigation.ts` and `app-sidebar.tsx`) to ensure admins have access to all system modules.
+
+### 🛠️ Improvements & Fixes
+- **Authentication & RBAC Stabilization**: Resolved a critical 404 error on the buyer profile (`/api/profile`) and fixed session handoff logic that caused "An unexpected error occurred" toasts for `warehouse`, `quality`, and `agent` logins.
+- **Form Data Loading**: Addressed infinite loading spinners in the State/LGA dropdowns by correcting the `seed-locations.ts` data mappings.
+- **QA Documentation**: Completed browser-based regression sweeps updating `Operations_ai.md` (95 PASS, 0 FAIL) and generated a detailed `untested.md` report outlining the 23 remaining entity-dependent testing scenarios.
+
+---
+
+## 23. Project Status: Phase 14 Complete
+
+- [X] **Phase 14: Final QA Regression Sweep** — Verified 0 failing operations; documented the 23 untested operations with direct mapping to the `agents.md` skill registry for future remediation.
+
+---
