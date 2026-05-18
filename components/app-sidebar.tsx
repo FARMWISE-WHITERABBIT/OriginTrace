@@ -122,7 +122,7 @@ export function AppSidebar() {
   };
 
   // Determine user role for navigation
-  const validAppRoles: UserRole[] = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer'];
+  const validAppRoles: UserRole[] = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer', 'farmer'];
   let userRole: UserRole = 'agent';
   if (isSystemAdmin && pathname.startsWith('/superadmin')) {
     userRole = 'superadmin';

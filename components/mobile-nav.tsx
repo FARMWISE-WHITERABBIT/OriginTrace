@@ -35,13 +35,14 @@ export function MobileNav() {
   };
 
   // Determine user role
+  const validAppRoles: UserRole[] = ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor', 'buyer', 'farmer'];
   let userRole: UserRole = 'agent';
   if (isSystemAdmin && pathname.startsWith('/superadmin')) {
     userRole = 'superadmin';
-  } else if (isSystemAdmin || profile?.role === 'admin') {
+  } else if (isSystemAdmin) {
     userRole = 'admin';
-  } else if (profile?.role === 'aggregator') {
-    userRole = 'aggregator';
+  } else if (profile?.role && validAppRoles.includes(profile.role as UserRole)) {
+    userRole = profile.role as UserRole;
   }
 
   const navConfig = getNavigationConfig(userRole);
@@ -144,6 +145,11 @@ export function MobileNav() {
 // Bottom navigation bar for mobile agent view
 export function AgentBottomNav() {
   const pathname = usePathname();
+  const { profile } = useOrg();
+
+  if (!profile || !['admin', 'aggregator', 'agent'].includes(profile.role)) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t lg:hidden z-50 safe-area-inset-bottom">
