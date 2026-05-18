@@ -1,50 +1,60 @@
 # QA Test Failures & Untested Operations Analysis
 
-Based on the continuous QA sweep documented in `Operations_ai.md`, here are the detailed reasons and root causes for the `❌ FAIL` and `🔲 UNTESTED` operations. No codebase changes have been made.
+Based on `Operations_ai.md` after the second Compliance Officer retest on `2026-05-16T12:42+01:00`, the Compliance Officer DPP/Data Vault/sidebar issues are resolved. This file now tracks only current failures, genuinely untested operations, and resolved historical blockers.
 
-## 1. Untested Operations
-**Operations:** `3.3, 3.4, 3.6, 4.4, 4.5, 5.4, 5.7, 6.3, 7.3, 7.4, 7.5, 7.6, 8.3, 11.6, 17.3`
-- **Reason:** Missing Mock/Seed Data. The database seeding scripts (`seed-demo.ts`, `seed-qa-users.ts`) successfully establish organizational structure and users but do not generate deep entity data. There are zero seeded Farmers, Farms, Batches, Shipments, or Processing Runs in the test database, making it impossible to navigate to detail pages or execute actions that require an entity ID (e.g., viewing a farm map, dispatching a batch, linking a lab result to a shipment).
+## 1. Current FAIL Operations
+**Operations:** None
 
-## 2. Buyer Portal 404 & Hang
-**Operations:** `13.1 - 13.7, 12.5`
-- **Symptom:** Buyer login redirects to `/app/buyer` but hangs on an infinite spinner.
-- **Reason:** The `GET` handler in `app/api/profile/route.ts` exclusively queries the `profiles` table (`supabaseAdmin.from('profiles').select('*').eq('user_id', user.id)`). However, `buyer@demo.test` is seeded into the separate `buyer_profiles` table. The API fails to check `buyer_profiles`, returns a 404 "No profile found", and causes the frontend buyer application to crash/hang due to missing user context.
+All previously failing operations (8.4, 9.4, 11.2, 19.3) have been re-tested and are now PASS. The unexpected error toasts upon login and missing routes (404) have been successfully resolved.
 
-## 3. Blank Dashboards & Infinite Spinners (`AbortError`)
-**Operations:** `3.7, 8.4, 9.4, 10.1 - 10.9, 11.5, 17.1, 18.1`
-- **Symptom:** Specific roles (Compliance Officer, Quality Manager, Warehouse Supervisor, Farmer) encounter infinite spinners or blank white screens. Console throws `Runtime AbortError: signal is aborted without reason`.
-- **Reason:** 
-  1. **Unhandled Hydration/Render Errors:** For the blank screens (like `/app/compliance` and `/app/analytics`), there is a fatal React runtime error (e.g., reading `undefined` from a failed fetch or missing context) crashing the React tree, and no `<ErrorBoundary>` is present to gracefully catch it.
-  2. **Fetch Loops/Aborts:** The infinite spinners with `AbortError` suggest that the data fetching hooks inside components like `<ComplianceOfficerDashboard />` or `<QualityManagerDashboard />` are firing and aborting unexpectedly, potentially due to missing API routes or infinite re-renders triggering `AbortController` signals.
-  3. **Missing Dashboard Mappings:** For the farmer (3.7), the role `farmer` is missing from the `dashboardMap` in `app/app/page.tsx`. It defaults to rendering the `AdminDashboard` or `AgentDashboard`, which then crashes because the farmer lacks the necessary profile structure or permissions.
+## 2. Current UNTESTED Operations
+**Entity-dependent operations:** `3.3`, `3.4`, `3.6`, `4.4`, `4.5`, `5.4`, `5.7`, `6.3`, `7.3`, `7.4`, `7.5`, `7.6`, `8.3`, `11.6`, `17.3`
 
-## 4. Public Registration Redirects (Reconciled)
-**Operations:** `1.3, 1.4`
-- **Status:** Resolved (by policy).
-- **Reason:** As per the project's **Restricted Onboarding Model** (documented in README.md), self-service registration is intentionally disabled to ensure all tenants are vetted by a Superadmin. The redirect to `/auth/login` is the correct intended behavior.
-- **Note:** Operation `1.9` (Farmer Activation) was fixed by adding it to the middleware public allowlist in `lib/supabase/middleware.ts`.
+These remain blocked by missing deep seed data. The QA seed users exist, but there are not enough seeded farmers, farms, batches, shipments, inventory items, processing runs, or dispatches to navigate to detail pages or exercise entity-specific actions.
 
-## 5. State/LGA Dropdown Loading Block
-**Operations:** `3.2, 5.2`
-- **Symptom:** Farmer registration and Smart Collect wizards get stuck on "Loading states..." and block form submission.
-- **Reason:** The client-side fetch to the location/address API (which populates Nigerian States and LGAs) is failing. This could be a dead endpoint, a CORS issue, or an empty `locations` table in the database preventing the dropdown array from resolving.
+**Action/scenario operations:** `10.5`, `12.2`, `12.4`, `12.5`, `16.2`, `16.3`, `21.2`, `21.4`
 
-## 6. Missing Pages / 404 Routing
-**Operations:** `11.2`, `19.3`
-- **Symptom:** `/app/payments/pay` returns a Next.js 404 Page Not Found. `/app/resolve` redirects unexpectedly.
-- **Reason:** The physical route files (e.g., `app/(app)/app/payments/pay/page.tsx`) have either not been implemented yet, were accidentally deleted, or have a naming convention mismatch. For `/app/resolve`, there may be a layout-level redirect if the sync queue length is 0.
+These routes or surrounding pages render, but the specific action was not completed in the browser retest. They need targeted action tests: create compliance profile, create contract, create tender, submit bid with an open tender, upload/download document, viewer invite visibility, and tier-gated upgrade prompt.
 
-## 7. Resolved: Dashboard Infinite Spinners (RLS Recursion)
-**Operations:** `2.5, 2.6, 2.7`
-- **Status:** Resolved (Remediation in place, SQL migration pending).
-- **Reason:** Identified infinite RLS recursion in `get_user_org_id()` and `get_user_role()` as the cause of query aborts and 500 errors.
-- **Fix:** Functions updated with `SET search_path = ''` in [rls-policies.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/rls-policies.sql) and a migration prepared in [20260512_fix_rls_recursion.sql](file:///c:/Users/USER/Downloads/OriginTrace/supabase/migrations/20260512_fix_rls_recursion.sql).
-- **Verification:** UI now loads correctly without spinners. Quality dashboard enhanced with error handling and retry logic.
+## 3. Resolved: Compliance Officer Second Retest
+**Operations:** `2.5`, `4.6`, `10.6`, `10.7`, `10.9`
 
----
+- `/app` dashboard renders for `compliance@demo.test` with the "Welcome back, QA Compliance Officer" greeting and compliance metrics.
+- Sidebar footer correctly shows `QA Compliance Officer` and `compliance_officer`.
+- `/app/conflicts` renders issues and retains the compliance user state.
+- `/app/evidence` renders without the NextIntl overlay error.
+- `/app/dpp` renders the Digital Product Passports empty state and Generate DPP CTAs without an infinite spinner. Screenshot evidence confirms Product Passport is visible as the active sidebar link.
+- `/app/data-vault` renders Data Vault metrics/policy content without an infinite spinner. Screenshot evidence confirms Data Vault is visible as a functional sidebar link.
 
-### Next Steps for Fixes
-1. Update `app/api/profile/route.ts` to check `buyer_profiles` if no standard profile is found.
-2. Wrap all dashboard components in `ErrorBoundary` boundaries to expose the exact React errors causing the blank screens.
-3. Enhance `seed-demo.ts` to generate robust domain entity mocks (10 farms, 5 batches, 5 shipments) so detail views can be QA'd.
+## 4. Resolved: Buyer Portal 404 & Hang
+**Operations:** `13.1` - `13.7`
+
+The buyer portal is no longer treated as a current failure. `buyer@demo.test` reaches `/app/buyer`, `/api/profile` returns the buyer role, and buyer routes render with buyer context/sidebar. Operation `12.5` was moved to UNTESTED because bid submission still needs a real action test with an open tender.
+
+## 5. Resolved: Prior False Negatives
+**Operations reclassified to PASS:** `11.4`, `11.5`, `12.1`, `12.3`, `16.1`, `18.1`
+
+User/browser screenshots from `2026-05-16` prove these admin routes render real UI and empty states, not blank pages, infinite spinners, or 404s. `Operations_ai.md` has been corrected accordingly.
+
+**Operations downgraded from FAIL to UNTESTED:** `12.2`, `12.4`, `16.2`, `16.3`
+
+The screenshots disprove the old blank-page failure notes, but they do not prove the full create/upload/download actions completed.
+
+## 6. Resolved: Dashboard Infinite Spinners and RLS Recursion
+**Operations:** `2.5`, `2.6`, `2.7`, `10.6`, `10.9`
+
+The dashboard and compliance route spinner issues are resolved from the user's retest evidence. Earlier RLS recursion work remains documented in `supabase/rls-policies.sql` and `supabase/migrations/20260512_fix_rls_recursion.sql`.
+
+## 7. Resolved: Public Registration Redirects
+**Operations:** `1.3`, `1.4`
+
+The redirects to `/auth/login` are intended behavior under the restricted onboarding model. Farmer activation (`1.9`) was fixed by adding it to the middleware public allowlist.
+
+## 8. Resolved: State/LGA Dropdown Loading
+**Operations:** `3.2`, `5.2`
+
+Latest regression notes confirm the state dropdown loads and LGA dropdown populates in both farmer registration and Smart Collect.
+
+## Next Steps
+1. Add richer seed data for farmers, farms, batches, shipments, inventory, dispatches, and processing runs so entity-detail operations can be tested.
+2. Run targeted action tests for `10.5`, `12.2`, `12.4`, `12.5`, `16.2`, `16.3`, `21.2`, and `21.4`.
