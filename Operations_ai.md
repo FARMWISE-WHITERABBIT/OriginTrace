@@ -346,4 +346,4 @@ These verify that role restrictions are enforced in the UI — not just the API.
 
 ---
 
-*Last document update: 2026-05-16T12:42+01:00. Maintained by QA agents using the `browser-qa` skill.*
+*Last document update: 2026-05-18T19:02+01:00. Maintained by QA agents using the `browser-qa` skill.*

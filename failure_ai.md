@@ -1,6 +1,6 @@
 # QA Test Failures & Untested Operations Analysis
 
-Based on `Operations_ai.md` after the second Compliance Officer retest on `2026-05-16T12:42+01:00`, the Compliance Officer DPP/Data Vault/sidebar issues are resolved. This file now tracks only current failures, genuinely untested operations, and resolved historical blockers.
+Based on `Operations_ai.md` after the `2026-05-17` browser regression sweep and the `2026-05-18` documentation reconciliation, all previously failing operations are resolved. This file now tracks only current failures, genuinely untested operations, and resolved historical blockers.
 
 ## 1. Current FAIL Operations
 **Operations:** None

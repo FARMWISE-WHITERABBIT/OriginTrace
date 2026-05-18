@@ -407,8 +407,9 @@ A comprehensive regression sweep was completed, verifying fixes for all previous
 
 ### 🛠️ Improvements & Fixes
 - **Authentication & RBAC Stabilization**: Resolved a critical 404 error on the buyer profile (`/api/profile`) and fixed session handoff logic that caused "An unexpected error occurred" toasts for `warehouse`, `quality`, and `agent` logins.
+- **QA Operation Recovery**: Operations `8.4` (warehouse finished goods), `9.4` (quality yield alerts), `11.2` (farmer disbursement route), and `19.3` (agent conflict resolution) are now recorded as PASS in `Operations_ai.md`.
 - **Form Data Loading**: Addressed infinite loading spinners in the State/LGA dropdowns by correcting the `seed-locations.ts` data mappings.
-- **QA Documentation**: Completed browser-based regression sweeps updating `Operations_ai.md` (95 PASS, 0 FAIL) and generated a detailed `untested.md` report outlining the 23 remaining entity-dependent testing scenarios.
+- **QA Documentation**: Completed browser-based regression sweeps updating `Operations_ai.md` (95 PASS, 0 FAIL) and generated a detailed `untested.md` report outlining the 23 remaining untested scenarios: 15 entity-dependent detail flows and 8 action/RBAC scenarios.
 
 ---
 
@@ -439,10 +440,16 @@ A comprehensive regression sweep was completed, verifying fixes for all previous
 - Farmer registration and Smart Collect now explain when no LGAs are configured for a selected state.
 - Compliance Evidence upload and `/app/farms/new` route restoration close remaining navigation gaps.
 
+### D. Remaining QA Boundaries
+
+**Still Untested:** `Operations_ai.md` and `failure_ai.md` now agree that there are no current FAIL operations, but 23 operations still need targeted coverage. The remaining set is split between seed-data-dependent detail pages (`3.3`, `3.4`, `3.6`, `4.4`, `4.5`, `5.4`, `5.7`, `6.3`, `7.3`, `7.4`, `7.5`, `7.6`, `8.3`, `11.6`, `17.3`) and action/RBAC scenarios (`10.5`, `12.2`, `12.4`, `12.5`, `16.2`, `16.3`, `21.2`, `21.4`).
+
+**Clarification:** The Compliance Evidence route (`/app/evidence`) is restored and renders, but Document Vault upload/download operations (`16.2`, `16.3`) remain untested until an actual file upload and download flow is exercised.
+
 ---
 
 ## 25. Project Status: Phase 15 Complete
 
-- [X] **Phase 15: Compliance Resilience & Access Guard Hardening** — Hardened compliance loading states, tightened API role guards, stabilized locale bootstrapping, clarified empty LGA states, and restored missing compliance/farm navigation routes.
+- [X] **Phase 15: Compliance Resilience & Access Guard Hardening** — Hardened compliance loading states, tightened API role guards, stabilized locale bootstrapping, clarified empty LGA states, restored missing compliance/farm navigation routes, and documented the remaining 23 untested QA scenarios.
 
 ---
