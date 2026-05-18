@@ -67,6 +67,9 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
               data-testid="select-lga"
             >
               <option value="">Select LGA</option>
+              {selectedState && filteredLGAs.length === 0 && (
+                <option value="" disabled>No LGAs configured for selected state</option>
+              )}
               {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
           </div>
