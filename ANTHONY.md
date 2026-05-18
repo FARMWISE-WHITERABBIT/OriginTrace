@@ -1,6 +1,6 @@
 # Project Audit & Refactor Reality (For Anthony)
 
-Hey Anthony! We've completed a deep-dive audit of the "BIG Change" refactor and synchronized our development standards into 15 Agent Skills. This document provides the technical "Before vs. After" ground truth.
+Hey Anthony! We've completed a deep-dive audit of the "BIG Change" refactor and synchronized our development standards into the 35-skill registry documented in `agents.md`. This document provides the technical "Before vs. After" ground truth.
 
 ## 1. Refactor Audit: The Ground Truth
 
@@ -64,16 +64,15 @@ export const GET = withErrorHandling(async (req) => {
 
 ---
 
-## 3. Standardized Agent Skills (`.agents/skills/`)
+## 3. Standardized Agent Skills (`agents.md`)
 
-We have actualized 15 skill definitions in the repo to prevent "knowledge drift":
+The current source of truth is `agents.md`, which defines **35 composable skills**: 18 OriginTrace-specific skills plus 17 general-purpose skills from `skills-main`.
 
-- **RBAC**: Documents the 10-role system and `requireRole(profile, ROLES.X)`.
-- **Validation**: Mirroring DB triggers into `lib/services/` for unit testing yield/mass-balance logic without a DB.
-- **Offline Sync**: Details the dual-store architecture (`origintrace-offline` vs `origintrace-cache`).
-- **Release Notes**: A new skill that translates technical diffs into stakeholder-friendly updates.
+**OriginTrace-specific coverage:** `api-routes`, `browser-qa`, `compliance-regulations`, `conventional-commits`, `deployment`, `geospatial`, `i18n`, `multi-tenancy`, `ocr`, `offline-sync`, `rbac`, `release-notes`, `security`, `seed-data`, `shipment-scoring`, `supabase-migrations`, `testing`, and `ui-components`.
 
-Check the `walkthrough.md` in the brain artifacts for the full list of files modified.
+**General-purpose coverage:** `pdf`, `docx`, `pptx`, `xlsx`, `canvas-design`, `algorithmic-art`, `frontend-design`, `web-artifacts-builder`, `claude-api`, `mcp-builder`, `skill-creator`, `doc-coauthoring`, `slack-gif-creator`, `brand-guidelines`, `theme-factory`, `internal-comms`, and `webapp-testing`.
+
+The important operational rule is composability: if a task touches multiple domains, agents activate all matching skills. For example, API work pulls in `api-routes` plus `multi-tenancy`, `rbac`, and `security`; database work pulls in `supabase-migrations` and `multi-tenancy`; browser QA pulls in `browser-qa` with `testing` and `seed-data`.
 
 ---
 
@@ -109,19 +108,21 @@ We ran a live penetration probe using a Field Agent account to test the boundari
 - **UI Gating**: The navigation sidebar now dynamically prunes links based on user roles, reducing the attack surface.
 - **Boundary Verification**: The agent was confirmed to have zero access to organizational billing or API management, while maintaining full access to legitimate field collection tools.
 
-## 6. Updated Agent Skill Library (16 Skills)
+## 6. Updated Agent Skill Library (35 Skills)
 
-We have fully audited and synchronized the following skills to match the 2026 codebase:
+The earlier 16-skill hardening pass has now been folded into the full `agents.md` registry. The registry is the routing layer agents use before touching code, docs, tests, migrations, QA, or release notes.
 
-- **Security [NEW]**: Codifies Multi-Tenancy (RLS), RBAC, Tier Gating, and Audit Logging.
-- **Testing [REFINED]**: Implemented a full evaluation loop (Unit, E2E, Fixtures) to ensure high-quality test generation.
-- **Shipment Scoring**: Updated for new regulatory frameworks (China Green Trade, FSMA 204).
+- **Security-critical work** routes through `security`, `multi-tenancy`, and `rbac`.
+- **Database changes** route through `supabase-migrations` and tenant isolation checks.
+- **QA work** routes through `browser-qa`, `testing`, and `seed-data`.
+- **Regulatory logic** routes through `compliance-regulations`, `shipment-scoring`, and `geospatial`.
+- **Frontend/UI work** routes through `ui-components`, `i18n`, and, when relevant, `frontend-design`.
 
 ---
 
 ## 7. Project Status: Phase 5 Complete
 
-- [X] **Phase 5: Security Hardening & Standards Sync** (16 skills updated, security probe passed).
+- [X] **Phase 5: Security Hardening & Standards Sync** (security standards folded into the 35-skill registry, security probe passed).
 - [X] **Phase 6: Structural Integrity** (Fixed missing state/imports in Dashboard and Sync route).
 
 The platform is now not only functionally sound but architecturally hardened, type-safe, and 100% compliant with our "Secure by Default" standard.
