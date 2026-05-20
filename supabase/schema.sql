@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS collection_batches (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farm_id UUID NOT NULL REFERENCES farms(id),
   agent_id UUID NOT NULL REFERENCES profiles(id),
+  -- Inventory/dispatch flows use resolved and dispatched after collection is complete.
   status TEXT DEFAULT 'collecting' CHECK (status IN ('collecting', 'completed', 'aggregated', 'resolved', 'dispatched', 'shipped')),
   total_weight DECIMAL(10,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
@@ -1208,7 +1209,8 @@ CREATE TABLE IF NOT EXISTS compliance_profiles (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   destination_market TEXT NOT NULL,
-  regulation_framework TEXT NOT NULL CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'custom')),
+  -- Keep this list aligned with live compliance/scoring flows, including China GACC.
+  regulation_framework TEXT NOT NULL CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom')),
   required_documents JSONB DEFAULT '[]',
   required_certifications JSONB DEFAULT '[]',
   geo_verification_level TEXT DEFAULT 'polygon' CHECK (geo_verification_level IN ('basic', 'polygon', 'satellite')),
@@ -1605,10 +1607,11 @@ CREATE INDEX IF NOT EXISTS idx_farm_certifications_expiry ON farm_certifications
 -- SCHEMA FIXES — Compliance Gaps (Phase 11)
 -- ============================================
 
--- Fix regulation_framework CHECK to include all 7 frameworks
+-- Fix regulation_framework CHECK to include all app-supported frameworks,
+-- including China GACC profiles created by demo and shipment flows.
 ALTER TABLE compliance_profiles DROP CONSTRAINT IF EXISTS compliance_profiles_regulation_framework_check;
 ALTER TABLE compliance_profiles ADD CONSTRAINT compliance_profiles_regulation_framework_check
-  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'));
+  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom'));
 
 -- Fix compliance_files file_type CHECK to support all regulatory document types
 ALTER TABLE compliance_files DROP CONSTRAINT IF EXISTS compliance_files_file_type_check;
@@ -1660,6 +1663,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   destination_port TEXT,
   target_regulations TEXT[] DEFAULT ARRAY[]::TEXT[],
   compliance_profile_id UUID REFERENCES compliance_profiles(id),
+  -- Readiness scoring and shipment detail pages persist checklist state here.
   doc_status JSONB DEFAULT '{}',
   storage_controls JSONB DEFAULT '{}',
   total_weight_kg NUMERIC(12,2),
@@ -1690,6 +1694,8 @@ CREATE TABLE IF NOT EXISTS shipment_items (
   item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good', 'lot')),
   batch_id UUID,
   finished_good_id UUID,
+  -- Nullable direct source-farm pointer for shipment item traceability drill-downs.
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   farm_count INTEGER DEFAULT 0,
   traceability_complete BOOLEAN DEFAULT false,
@@ -2011,6 +2017,10 @@ ALTER TABLE shipments ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS estimated_ship_date DATE;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS total_items INTEGER DEFAULT 0;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+-- Optional commercial references used by export shipment logistics workflows.
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS export_invoice_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS letter_of_credit_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS incoterm TEXT;
 
 -- ============================================
 -- BATCH CONTRIBUTIONS (Multi-farm batch collection)
@@ -2086,6 +2096,13 @@ CREATE POLICY "System admins can manage all shipment items" ON shipment_items
 CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment ON shipment_items(shipment_id);
 CREATE INDEX IF NOT EXISTS idx_shipment_items_batch ON shipment_items(batch_id);
 CREATE INDEX IF NOT EXISTS idx_shipment_items_finished_good ON shipment_items(finished_good_id);
+
+-- Detail fields used by shipment lot APIs and UI lot cards.
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS lot_code TEXT;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS commodity TEXT;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS total_weight_kg NUMERIC(12,2);
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS total_bags INTEGER DEFAULT 0;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS farm_count INTEGER DEFAULT 0;
 
 -- ============================================
 -- SHIPMENT LOTS (Sub-groupings within a shipment)

@@ -453,3 +453,27 @@ A comprehensive regression sweep was completed, verifying fixes for all previous
 - [X] **Phase 15: Compliance Resilience & Access Guard Hardening** — Hardened compliance loading states, tightened API role guards, stabilized locale bootstrapping, clarified empty LGA states, restored missing compliance/farm navigation routes, and documented the remaining 23 untested QA scenarios.
 
 ---
+
+## 26. Phase 16: Schema Compatibility Fixes From Local Supabase QA
+
+During local Supabase population for browser-QA preparation, several fresh-database mismatches surfaced between the application code and the canonical schema/migration history. These were discovered through QA seed data, but the fixes below are not test-only; they align live database constraints and columns with routes and services that already exist in the app.
+
+### A. Live-Safe Compatibility Fixes
+
+**Compliance frameworks:** `20260520_allow_gacc_compliance_framework.sql` restores `GACC` to the `compliance_profiles.regulation_framework` constraint. China-bound shipment flows and demo compliance profiles use plain GACC alongside China Green Trade.
+
+**Collection batch statuses:** `20260520_restore_collection_batch_statuses.sql` restores `resolved` and `dispatched` to `collection_batches.status`. Inventory, dashboard, resolve, and dispatch flows already read or write these states.
+
+**Shipment readiness state:** `20260520_add_shipment_readiness_json.sql` adds `doc_status` and `storage_controls` to shipments so readiness scoring and shipment detail pages can persist checklist state.
+
+**Shipment item traceability:** `20260520_add_shipment_items_farm_id.sql` adds a nullable `farm_id` to shipment items so detail views and traceability flows can preserve the primary source farm for a line item.
+
+**Shipment lot detail fields:** `20260520_add_shipment_lot_detail_fields.sql` adds `lot_code`, commodity, weight, bag count, and farm count fields used by the shipment lot UI and API.
+
+**Commercial shipment references:** `20260520_add_shipment_commercial_refs.sql` adds optional export invoice, letter of credit, and Incoterm fields. These support logistics workflows without requiring values on existing shipments.
+
+### B. Test-Only Work Kept Separate
+
+Local Supabase Docker config, QA route-anchor seed scripts, QA registry updates, and the `pending_payments_ngn` farmer ledger field were intentionally kept separate from the live-schema compatibility commit. Those items remain useful for local/demo QA, but they should not be treated as production rollout requirements until product scope confirms them.
+
+---
