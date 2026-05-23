@@ -477,3 +477,14 @@ During local Supabase population for browser-QA preparation, several fresh-datab
 Local Supabase Docker config, QA route-anchor seed scripts, QA registry updates, and the `pending_payments_ngn` farmer ledger field were intentionally kept separate from the live-schema compatibility commit. Those items remain useful for local/demo QA, but they should not be treated as production rollout requirements until product scope confirms them.
 
 ---
+
+## 27. Phase 17: QA Infrastructure & Testing Updates
+
+### 🚀 New Features
+- **QA Automation Capabilities**: Added the `playwright-tester` agent skill for robust, automated browser QA testing. 
+- **Product Brainstorming**: Introduced the `office-hours` agent skill to help outline product features and design documents before coding begins.
+
+### 🛠️ Improvements & Fixes
+- **Testing Infrastructure**: Added comprehensive local Supabase Docker config (`config.toml`, `.gitignore`), updated `next.config.mjs` and `package.json`, and added robust seed scripts (`seed-qa-entities.ts`, `toggle-tier.ts`) to easily provision local environments for testing without impacting production schema constraints.
+- **Automated Test Suites**: Authored permanent Playwright E2E suites for untested entity details and action flows, creating a robust baseline for regression sweeps.
+- **QA Registry Consistency**: Updated the project's QA registry (`Operations_ai.md`, `untested.md`, `failure_ai.md`) and the master skills index (`agents.md`) to formally record 6 newly passing entity-dependent operations verified by the Antigravity QA agent.
