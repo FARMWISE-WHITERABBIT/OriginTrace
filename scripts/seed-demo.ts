@@ -127,8 +127,27 @@ async function seed() {
     .eq('id', eId);
   if (tierErr) warn(`could not set demo org tier: ${tierErr.message}`);
   else ok('org tier: enterprise');
-  const [buyerOrg] = await ins('buyer_organizations', { name: 'NibsEurope GmbH', slug: 'demo-nibseurope', country: 'Germany', industry: 'Food & Beverage', contact_email: 'procurement@nibseurope-demo.com' });
+  const { data: existingBuyerOrg } = await db
+    .from('buyer_organizations')
+    .select('id')
+    .eq('slug', 'demo-nibseurope')
+    .maybeSingle();
+  const [buyerOrg] = existingBuyerOrg
+    ? [existingBuyerOrg]
+    : await ins('buyer_organizations', { name: 'NibsEurope GmbH', slug: 'demo-nibseurope', country: 'Germany', industry: 'Food & Beverage', contact_email: 'procurement@nibseurope-demo.com' });
   const bId: string = (buyerOrg as any).id;
+
+  if (existingOrg) {
+    const [{ count: farmCount }, { count: batchCount }, { count: shipmentCount }] = await Promise.all([
+      db.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', eId),
+      db.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', eId),
+      db.from('shipments').select('id', { count: 'exact', head: true }).eq('org_id', eId),
+    ]);
+    if ((farmCount ?? 0) > 0 && (batchCount ?? 0) > 0 && (shipmentCount ?? 0) > 0) {
+      ok('demo data already present; skipping full reseed');
+      return;
+    }
+  }
 
   // 2. Users
   section('Users');
@@ -497,9 +516,9 @@ async function seed() {
 
   // 10. Processing Runs — Cocoa
   section('Processing Runs — Cocoa');
-  const [run1] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-001', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2630, output_weight_kg:2265, recovery_rate:86.1, mass_balance_valid:true,  processed_at:daysAgo(35), created_by:adminUserId, notes:'EU export batch. Grade 1/2 blend, sun-dried 7 days.' }, 'RUN-001');
-  const [run2] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-002', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2040, output_weight_kg:1815, recovery_rate:88.9, mass_balance_valid:true,  processed_at:daysAgo(28), created_by:adminUserId, notes:'US export batch. Premium Grade 1 only.' }, 'RUN-002');
-  const [run3] = await ins('processing_runs', { org_id:eId, run_code:'WR-RUN-003', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:720,  output_weight_kg:432,  recovery_rate:60.0, mass_balance_valid:false, processed_at:daysAgo(20), created_by:adminUserId, notes:'UK batch — mass balance INVALID. 60% recovery below 75% threshold.' }, 'RUN-003 FAIL');
+  const [run1] = await ins('processing_runs', { org_id:eId, farm_id:(fA as any).id, run_code:'WR-RUN-001', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2630, output_weight_kg:2265, recovery_rate:86.1, mass_balance_valid:true,  processed_at:daysAgo(35), created_by:adminUserId, notes:'EU export batch. Grade 1/2 blend, sun-dried 7 days.' }, 'RUN-001');
+  const [run2] = await ins('processing_runs', { org_id:eId, farm_id:(fD as any).id, run_code:'WR-RUN-002', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:2040, output_weight_kg:1815, recovery_rate:88.9, mass_balance_valid:true,  processed_at:daysAgo(28), created_by:adminUserId, notes:'US export batch. Premium Grade 1 only.' }, 'RUN-002');
+  const [run3] = await ins('processing_runs', { org_id:eId, farm_id:(fF as any).id, run_code:'WR-RUN-003', facility_name:'WhiteRabbit Processing — Sagamu', facility_location:'Sagamu, Ogun State, Nigeria', commodity:'cocoa', input_weight_kg:720,  output_weight_kg:432,  recovery_rate:60.0, mass_balance_valid:false, processed_at:daysAgo(20), created_by:adminUserId, notes:'UK batch — mass balance INVALID. 60% recovery below 75% threshold.' }, 'RUN-003 FAIL');
 
   await ins('processing_run_batches', [
     { processing_run_id:(run1 as any).id, collection_batch_id:(cocoaBatches[0] as any).id, weight_contribution_kg:820  },
@@ -513,7 +532,7 @@ async function seed() {
   // 11. Processing Run — Ginger (WhiteRabbit)
   section('Processing Run — Ginger');
   const [gingerRun] = await ins('processing_runs', {
-    org_id:eId, run_code:'WRG-RUN-001',
+    org_id:eId, farm_id:(gF1 as any).id, run_code:'WRG-RUN-001',
     facility_name:'WhiteRabbit Processing — Lagos', facility_location:'Magodo GRA, Lagos, Nigeria',
     commodity:'ginger', input_weight_kg:4850, output_weight_kg:1165, recovery_rate:24.0,
     mass_balance_valid:true, processed_at:daysAgo(12), created_by:adminUserId,
@@ -524,7 +543,7 @@ async function seed() {
   // 11b. Processing Run — Cashew
   section('Processing Run — Cashew');
   const [cashewRun] = await ins('processing_runs', {
-    org_id:eId, run_code:'WRK-RUN-001',
+    org_id:eId, farm_id:(cF1 as any).id, run_code:'WRK-RUN-001',
     facility_name:'KogiNut Processing Ltd — Kabba', facility_location:'Kabba, Kogi State, Nigeria',
     commodity:'cashew', input_weight_kg:5000, output_weight_kg:1750, recovery_rate:35.0,
     mass_balance_valid:true, processed_at:daysAgo(18), created_by:adminUserId,
@@ -538,7 +557,7 @@ async function seed() {
   // 11c. Processing Run — Hibiscus
   section('Processing Run — Hibiscus');
   const [hibiscusRun] = await ins('processing_runs', {
-    org_id:eId, run_code:'WRH-RUN-001',
+    org_id:eId, farm_id:(hF1 as any).id, run_code:'WRH-RUN-001',
     facility_name:'WhiteRabbit Processing — Lagos', facility_location:'Magodo GRA, Lagos, Nigeria',
     commodity:'hibiscus', input_weight_kg:1450, output_weight_kg:1305, recovery_rate:90.0,
     mass_balance_valid:true, processed_at:daysAgo(10), created_by:adminUserId,
@@ -562,13 +581,13 @@ async function seed() {
   // 12. Finished Goods
   section('Finished Goods');
   const fgB = { org_id:eId, created_by:adminUserId };
-  const [fg1] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-001', product_name:'Certified Cocoa Beans — EU Grade',          product_type:'dried_beans', weight_kg:2265, batch_number:'FG-2026-001', lot_number:'LOT-EU-001',  production_date:dateStr(35), destination_country:'Germany',              buyer_company:'NibsEurope GmbH',             pedigree_verified:true }, 'FG1 EU');
-  const [fg2] = await ins('finished_goods', { ...fgB, processing_run_id:(run2 as any).id, pedigree_code:'PED-WR-002', product_name:'Premium Cocoa Beans — US Grade',            product_type:'dried_beans', weight_kg:1815, batch_number:'FG-2026-002', lot_number:'LOT-US-001',  production_date:dateStr(28), destination_country:'United States',         buyer_company:'CacaoAmerica LLC',            pedigree_verified:true }, 'FG2 US');
-  const [fg3] = await ins('finished_goods', { ...fgB, processing_run_id:(run3 as any).id, pedigree_code:'PED-WR-003', product_name:'Cocoa Beans — UK Batch (HOLD)',             product_type:'dried_beans', weight_kg:432,  batch_number:'FG-2026-003', lot_number:'LOT-UK-001',  production_date:dateStr(20), destination_country:'United Kingdom',        buyer_company:'BritishChoc Ltd',             pedigree_verified:false, verification_notes:'Mass balance invalid — under investigation.' }, 'FG3 UK');
-  const [fg4] = await ins('finished_goods', { ...fgB, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-004', product_name:'Certified Cocoa Beans — UAE Grade',         product_type:'dried_beans', weight_kg:1200, batch_number:'FG-2026-004', lot_number:'LOT-UAE-001', production_date:dateStr(30), destination_country:'United Arab Emirates',  buyer_company:'GulfChocolate FZCO',          pedigree_verified:true }, 'FG4 UAE');
-  const [gingerFG] = await ins('finished_goods', { ...fgB, processing_run_id:(gingerRun as any).id, pedigree_code:'PED-WRG-001', product_name:'Dried Split Ginger — China Export Grade', product_type:'spice', weight_kg:1165, batch_number:'FG-WRG-2026-001', lot_number:'LOT-CN-001', production_date:dateStr(12), destination_country:'China', buyer_company:'Tianjin Spice Imports Co. Ltd', pedigree_verified:true }, 'FG5 ginger China');
-  const [cashewFG] = await ins('finished_goods', { ...fgB, processing_run_id:(cashewRun as any).id, pedigree_code:'PED-WRK-001', product_name:'W320 Cashew Kernels — EU/UK Grade', product_type:'nut_kernel', weight_kg:1750, batch_number:'FG-WRK-2026-001', lot_number:'LOT-CSH-001', production_date:dateStr(18), destination_country:'United Kingdom', buyer_company:'British Nut Traders Ltd', pedigree_verified:true }, 'FG6 cashew UK');
-  const [hibiscusFG] = await ins('finished_goods', { ...fgB, processing_run_id:(hibiscusRun as any).id, pedigree_code:'PED-WRH-001', product_name:'Dried Hibiscus Calyces — Organic EU Grade', product_type:'dried_herb', weight_kg:1305, batch_number:'FG-WRH-2026-001', lot_number:'LOT-HIB-001', production_date:dateStr(10), destination_country:'Germany', buyer_company:'Kräuter & Co. GmbH', pedigree_verified:true }, 'FG7 hibiscus EU');
+  const [fg1] = await ins('finished_goods', { ...fgB, farm_id:(fA as any).id, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-001', product_name:'Certified Cocoa Beans — EU Grade',          product_type:'dried_beans', weight_kg:2265, batch_number:'FG-2026-001', lot_number:'LOT-EU-001',  production_date:dateStr(35), destination_country:'Germany',              buyer_company:'NibsEurope GmbH',             pedigree_verified:true }, 'FG1 EU');
+  const [fg2] = await ins('finished_goods', { ...fgB, farm_id:(fD as any).id, processing_run_id:(run2 as any).id, pedigree_code:'PED-WR-002', product_name:'Premium Cocoa Beans — US Grade',            product_type:'dried_beans', weight_kg:1815, batch_number:'FG-2026-002', lot_number:'LOT-US-001',  production_date:dateStr(28), destination_country:'United States',         buyer_company:'CacaoAmerica LLC',            pedigree_verified:true }, 'FG2 US');
+  const [fg3] = await ins('finished_goods', { ...fgB, farm_id:(fF as any).id, processing_run_id:(run3 as any).id, pedigree_code:'PED-WR-003', product_name:'Cocoa Beans — UK Batch (HOLD)',             product_type:'dried_beans', weight_kg:432,  batch_number:'FG-2026-003', lot_number:'LOT-UK-001',  production_date:dateStr(20), destination_country:'United Kingdom',        buyer_company:'BritishChoc Ltd',             pedigree_verified:false, verification_notes:'Mass balance invalid — under investigation.' }, 'FG3 UK');
+  const [fg4] = await ins('finished_goods', { ...fgB, farm_id:(fA as any).id, processing_run_id:(run1 as any).id, pedigree_code:'PED-WR-004', product_name:'Certified Cocoa Beans — UAE Grade',         product_type:'dried_beans', weight_kg:1200, batch_number:'FG-2026-004', lot_number:'LOT-UAE-001', production_date:dateStr(30), destination_country:'United Arab Emirates',  buyer_company:'GulfChocolate FZCO',          pedigree_verified:true }, 'FG4 UAE');
+  const [gingerFG] = await ins('finished_goods', { ...fgB, farm_id:(gF1 as any).id, processing_run_id:(gingerRun as any).id, pedigree_code:'PED-WRG-001', product_name:'Dried Split Ginger — China Export Grade', product_type:'spice', weight_kg:1165, batch_number:'FG-WRG-2026-001', lot_number:'LOT-CN-001', production_date:dateStr(12), destination_country:'China', buyer_company:'Tianjin Spice Imports Co. Ltd', pedigree_verified:true }, 'FG5 ginger China');
+  const [cashewFG] = await ins('finished_goods', { ...fgB, farm_id:(cF1 as any).id, processing_run_id:(cashewRun as any).id, pedigree_code:'PED-WRK-001', product_name:'W320 Cashew Kernels — EU/UK Grade', product_type:'nut_kernel', weight_kg:1750, batch_number:'FG-WRK-2026-001', lot_number:'LOT-CSH-001', production_date:dateStr(18), destination_country:'United Kingdom', buyer_company:'British Nut Traders Ltd', pedigree_verified:true }, 'FG6 cashew UK');
+  const [hibiscusFG] = await ins('finished_goods', { ...fgB, farm_id:(hF1 as any).id, processing_run_id:(hibiscusRun as any).id, pedigree_code:'PED-WRH-001', product_name:'Dried Hibiscus Calyces — Organic EU Grade', product_type:'dried_herb', weight_kg:1305, batch_number:'FG-WRH-2026-001', lot_number:'LOT-HIB-001', production_date:dateStr(10), destination_country:'Germany', buyer_company:'Kräuter & Co. GmbH', pedigree_verified:true }, 'FG7 hibiscus EU');
 
   // 13. Shipments
   section('Shipments');
@@ -584,13 +603,13 @@ async function seed() {
   // 14. Shipment Items (links finished goods → shipments)
   section('Shipment Items');
   await ins('shipment_items', [
-    { shipment_id:(ship1 as any).id,       item_type:'finished_good', finished_good_id:(fg1 as any).id,       weight_kg:(fg1 as any).weight_kg      },
-    { shipment_id:(ship2 as any).id,       item_type:'finished_good', finished_good_id:(fg2 as any).id,       weight_kg:(fg2 as any).weight_kg      },
-    { shipment_id:(ship3 as any).id,       item_type:'finished_good', finished_good_id:(fg3 as any).id,       weight_kg:(fg3 as any).weight_kg      },
-    { shipment_id:(ship4 as any).id,       item_type:'finished_good', finished_good_id:(fg4 as any).id,       weight_kg:(fg4 as any).weight_kg      },
-    { shipment_id:(gingerShip as any).id,  item_type:'finished_good', finished_good_id:(gingerFG as any).id,  weight_kg:(gingerFG as any).weight_kg  },
-    { shipment_id:(cashewShip as any).id,  item_type:'finished_good', finished_good_id:(cashewFG as any).id,  weight_kg:(cashewFG as any).weight_kg  },
-    { shipment_id:(hibiscusShip as any).id,item_type:'finished_good', finished_good_id:(hibiscusFG as any).id,weight_kg:(hibiscusFG as any).weight_kg },
+    { org_id:eId, shipment_id:(ship1 as any).id,       item_type:'finished_good', finished_good_id:(fg1 as any).id,       farm_id:(fA as any).id, weight_kg:(fg1 as any).weight_kg      },
+    { org_id:eId, shipment_id:(ship2 as any).id,       item_type:'finished_good', finished_good_id:(fg2 as any).id,       farm_id:(fD as any).id, weight_kg:(fg2 as any).weight_kg      },
+    { org_id:eId, shipment_id:(ship3 as any).id,       item_type:'finished_good', finished_good_id:(fg3 as any).id,       farm_id:(fF as any).id, weight_kg:(fg3 as any).weight_kg      },
+    { org_id:eId, shipment_id:(ship4 as any).id,       item_type:'finished_good', finished_good_id:(fg4 as any).id,       farm_id:(fA as any).id, weight_kg:(fg4 as any).weight_kg      },
+    { org_id:eId, shipment_id:(gingerShip as any).id,  item_type:'finished_good', finished_good_id:(gingerFG as any).id,  farm_id:(gF1 as any).id, weight_kg:(gingerFG as any).weight_kg  },
+    { org_id:eId, shipment_id:(cashewShip as any).id,  item_type:'finished_good', finished_good_id:(cashewFG as any).id,  farm_id:(cF1 as any).id, weight_kg:(cashewFG as any).weight_kg  },
+    { org_id:eId, shipment_id:(hibiscusShip as any).id,item_type:'finished_good', finished_good_id:(hibiscusFG as any).id,farm_id:(hF1 as any).id, weight_kg:(hibiscusFG as any).weight_kg },
   ], '7 shipment items');
 
   // 15. Digital Product Passports
