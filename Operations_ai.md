@@ -99,10 +99,10 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 |---|-----------|-------|-------|--------|-------------|-------|
 | 3.1 | View farmer list with search & filter | `/app/farmers` | admin, aggregator, agent | ✅ PASS | 2026-05-10T12:55Z | Farmer Network page loaded with KPI cards (Total Farmers, Total Volume, Avg Grade, GPS Coverage), search bar, filters, and Performance Ledger table. 0 farmers in seed data. |
 | 3.2 | Register a new farmer (KYC form) | `/app/farmers/new` | admin, aggregator, agent | ✅ PASS | 2026-05-16T01:14Z | State dropdown loads successfully and LGA dropdown populates. |
-| 3.3 | View individual farmer profile | `/app/farmers/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T12:55Z | No seed farmers exist — cannot navigate to a farmer profile |
-| 3.4 | Edit farmer details | `/app/farmers/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T12:55Z | No seed farmers — depends on 3.3 |
+| 3.3 | View individual farmer profile | `/app/farmers/[id]` | admin, aggregator | ✅ PASS | 2026-05-23T20:43Z | Profile loaded. Evidence recorded by Antigravity browser QA agent. |
+| 3.4 | Edit farmer details | `/app/farmers/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T12:55Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA farmers are seeded. Still UNTESTED pending browser retest evidence. |
 | 3.5 | Upload farmer identity document (OCR) | `/app/farmers/[id]` | admin, aggregator | ✅ PASS | 2026-05-10T12:55Z | OCR Upload component visible on registration form step 1 ("Upload ID Document" with camera/file option). OCR scan page renders correctly. |
-| 3.6 | View farmer-linked bank accounts | `/app/farmers/[id]` | admin | 🔲 UNTESTED | 2026-05-10T12:55Z | No seed farmers — cannot verify bank account section |
+| 3.6 | View farmer-linked bank accounts | `/app/farmers/[id]` | admin | 🔲 UNTESTED | 2026-05-10T12:55Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA-FARMER-001 has a seeded bank account. Still UNTESTED pending browser retest evidence. |
 | 3.7 | View farmer portal (self-service) | Farmer portal | farmer | ✅ PASS | 2026-05-16T02:23Z | Login succeeds, redirects to /app/farmer, portal renders successfully. |
 
 ---
@@ -114,8 +114,8 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 | 4.1 | View farm list | `/app/farms` | admin, aggregator | ✅ PASS | 2026-05-10T12:59Z | Farm Polygons page loads with search, status filter (approved/pending/rejected), Map and List View toggles. Shows "No farms yet" — 0 farms in seed data. |
 | 4.2 | Register a new farm with boundary | `/app/farms` | admin, aggregator | ✅ PASS | 2026-05-16T01:14Z | Mapping Tool page renders successfully with boundary controls. |
 | 4.3 | Draw farm boundary on map | `/app/farms/map` | admin, aggregator | ✅ PASS | 2026-05-10T12:59Z | Leaflet map renders with satellite imagery tiles, Street/Satellite toggle, zoom controls. "No farms mapped yet" empty state shown. Map loads correctly. |
-| 4.4 | View farm details including GeoJSON | `/app/farms/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T12:59Z | No seed farms — cannot navigate to farm detail page |
-| 4.5 | Run deforestation check on farm | `/app/farms/[id]` | compliance_officer | 🔲 UNTESTED | 2026-05-10T12:59Z | Blocked by 4.4 — no farms to check |
+| 4.4 | View farm details including GeoJSON | `/app/farms/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T12:59Z | Seed-data blocker resolved after `npm run seed:qa:data`; `/app/farms/<farmId>` redirects to the map with QA GeoJSON. Still UNTESTED pending browser retest evidence. |
+| 4.5 | Run deforestation check on farm | `/app/farms/[id]` | compliance_officer | 🔲 UNTESTED | 2026-05-10T12:59Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA farms include deforestation check JSON. Still UNTESTED pending browser retest evidence. |
 | 4.6 | View spatial conflict flags | `/app/conflicts` | compliance_officer | ✅ PASS | 2026-05-16T12:42+01:00 | Second compliance QA retest passed: issues render correctly and the sidebar retains the compliance_officer state. |
 
 ---
@@ -127,10 +127,10 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 | 5.1 | View collection batches list | `/app/collect` | admin, aggregator, agent | ✅ PASS | 2026-05-10T13:04Z | Inventory page loads with Batches/Bags/Dispatch tabs. Batches tab shows status filters (Collecting, Completed, Aggregated, Resolved, Dispatched) + search. "No collection batches yet" empty state. |
 | 5.2 | Create a new collection batch | `/app/collect` | admin, aggregator, agent | ✅ PASS | 2026-05-16T01:14Z | LGA dropdown populates successfully after state selection. |
 | 5.3 | Add bags to a collection batch | `/app/bags` | admin, aggregator | ✅ PASS | 2026-05-10T13:04Z | Bags tab renders with search bar and "Generate Batch" button. "No bags generated yet" empty state shown. |
-| 5.4 | View batch detail with contributions | `/app/collect/[id]` | admin, aggregator | 🔲 UNTESTED | 2026-05-10T13:04Z | No seed batches — cannot test detail page |
+| 5.4 | View batch detail with contributions | `/app/collect/[id]` | admin, aggregator | ✅ PASS | 2026-05-23T20:43Z | Batch detail loaded. Evidence recorded by Antigravity browser QA agent. |
 | 5.5 | Dispatch a batch to inventory | `/app/dispatch` | admin, aggregator, logistics_coordinator | ✅ PASS | 2026-05-10T13:04Z | Dispatch tab accessible from Inventory page with "Select Batches to Dispatch" screen. Note: direct URL /app/dispatch renders blank — must use tab navigation. |
 | 5.6 | View dispatch list | `/app/dispatch` | admin, logistics_coordinator | ✅ PASS | 2026-05-10T13:04Z | Dispatch tab renders correctly with empty state |
-| 5.7 | View dispatch details | `/app/dispatch/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:04Z | No seed dispatches — cannot test detail page |
+| 5.7 | View dispatch details | `/app/dispatch/[id]` | admin, logistics_coordinator | ✅ PASS | 2026-05-23T20:43Z | Dispatch detail loaded. Evidence recorded by Antigravity browser QA agent. |
 
 ---
 
@@ -140,7 +140,7 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 |---|-----------|-------|-------|--------|-------------|-------|
 | 6.1 | View inventory list | `/app/inventory` | admin, aggregator, warehouse_supervisor | ✅ PASS | 2026-05-10T13:08Z | /app/inventory renders (same as /app/collect) with Batches/Bags/Dispatch tabs. Shows 0 batches with empty state. |
 | 6.2 | Bulk dispatch from inventory | `/app/inventory` | admin, logistics_coordinator | ✅ PASS | 2026-05-10T13:08Z | Dispatch tab present with batch selection UI for bulk dispatch. |
-| 6.3 | View inventory item detail | `/app/inventory/[id]` | admin, warehouse_supervisor | 🔲 UNTESTED | 2026-05-10T13:08Z | No seed inventory items — cannot test detail view |
+| 6.3 | View inventory item detail | `/app/inventory/[id]` | admin, warehouse_supervisor | ✅ PASS | 2026-05-23T20:43Z | Inventory detail loaded. Evidence recorded by Antigravity browser QA agent. |
 
 ---
 
@@ -150,10 +150,10 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 |---|-----------|-------|-------|--------|-------------|-------|
 | 7.1 | View shipments list with filters | `/app/shipments` | admin, logistics_coordinator | ✅ PASS | 2026-05-10T13:08Z | Shipment Operations page loads with KPI cards (Total, Ready to Ship, Conditional, Blocked). Search + status filters (Draft, Ready, Conditional, Shipped, Cancelled) + sort. |
 | 7.2 | Create a new shipment | `/app/shipments` | admin, logistics_coordinator | ✅ PASS | 2026-05-10T13:08Z | "New Shipment" button opens multi-step creation modal with fields for destination, commodity, dates. |
-| 7.3 | View shipment detail page | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:08Z | No seed shipments — cannot test detail page |
-| 7.4 | Update shipment status | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:08Z | Blocked by 7.3 — no shipments |
-| 7.5 | Generate waybill PDF | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:08Z | Blocked by 7.3 — no shipments |
-| 7.6 | View shipment readiness score | `/app/shipments/[id]` | admin, compliance_officer | 🔲 UNTESTED | 2026-05-10T13:08Z | Blocked by 7.3 — no shipments |
+| 7.3 | View shipment detail page | `/app/shipments/[id]` | admin, logistics_coordinator | ✅ PASS | 2026-05-23T20:43Z | Shipment detail loaded. Evidence recorded by Antigravity browser QA agent. |
+| 7.4 | Update shipment status | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:08Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA-SHP-001 exists for status-action retest. Still UNTESTED pending browser retest evidence. |
+| 7.5 | Generate waybill PDF | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T13:08Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA-SHP-001 has logistics fields and documents. Still UNTESTED pending browser retest evidence. |
+| 7.6 | View shipment readiness score | `/app/shipments/[id]` | admin, compliance_officer | 🔲 UNTESTED | 2026-05-10T13:08Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA-SHP-001 has readiness fields. Still UNTESTED pending browser retest evidence. |
 | 7.7 | View traceability chain for shipment | `/app/traceability` | admin, compliance_officer | ✅ PASS | 2026-05-10T13:08Z | Traceability page loads with "Bag Search" and "Network Graph" tabs |
 | 7.8 | Create shipment from template | `/app/shipment-templates` | admin | ✅ PASS | 2026-05-10T13:08Z | Templates page loads with empty state and "New Template" button |
 
@@ -165,7 +165,7 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 |---|-----------|-------|-------|--------|-------------|-------|
 | 8.1 | View processing runs list | `/app/processing` | admin, quality_manager | ✅ PASS | 2026-05-10T13:20Z | Processing Runs page loads with KPI cards (Total Runs, Input kg, Output kg, Valid Balance). "No processing runs yet" empty state. |
 | 8.2 | Create a new processing run | `/app/processing` | admin, quality_manager | ✅ PASS | 2026-05-10T13:20Z | "New Processing Run" button opens form with Facility, Commodity, Input/Output weights, Lot linkage fields. |
-| 8.3 | View processing run detail | `/app/processing/[id]` | admin, quality_manager | 🔲 UNTESTED | 2026-05-10T13:20Z | No seed processing runs — cannot test detail |
+| 8.3 | View processing run detail | `/app/processing/[id]` | admin, quality_manager | ✅ PASS | 2026-05-23T20:43Z | Processing detail loaded. Evidence recorded by Antigravity browser QA agent. |
 | 8.4 | View finished goods | `/app/processing` | admin, warehouse_supervisor | ✅ PASS | 2026-05-17T14:10Z | Login succeeds. Processing runs dashboard loads correctly for warehouse_supervisor. |
 
 ---
@@ -206,7 +206,7 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 | 11.3 | View disbursements list | `/app/payments/disbursements` | admin | ✅ PASS | 2026-05-10T14:15Z | Page renders correctly (though it redirects to /app/payments/disburse). UI elements like KPI cards visible. |
 | 11.4 | View transaction history | `/app/payments/transactions` | admin | ✅ PASS | 2026-05-16 | Admin screenshot confirms the Transactions page renders with KPI cards, filters, `Record Payment`, and the `No payments found` empty state; not blank/404. |
 | 11.5 | View org wallet balance | `/app/payments/wallet` | admin | ✅ PASS | 2026-05-16 | Admin screenshot confirms the OriginTrace Wallet renders with balance cards, transfer accounts, Add Account, and empty-state content; not stuck on a spinner/404. |
-| 11.6 | View farmer price agreement | Farmer profile | admin | 🔲 UNTESTED | 2026-05-10T14:15Z | Blocked by missing seed farmers. |
+| 11.6 | View farmer price agreement | Farmer profile | admin | 🔲 UNTESTED | 2026-05-10T14:15Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA-FARMER-001 has a seeded price agreement. Still UNTESTED pending browser retest evidence. |
 
 ---
 
@@ -281,7 +281,7 @@ These are the original demo users, also valid for testing. Password: `Demo1234!`
 |---|-----------|-------|-------|--------|-------------|-------|
 | 17.1 | View service providers list | `/app/service-providers` | admin | ✅ PASS | 2026-05-15T22:30Z | Directory loads correctly; displayed empty state initially. |
 | 17.2 | Add a new service provider | `/app/service-providers` | admin | ✅ PASS | 2026-05-15T22:30Z | Successfully added Test Logistics provider. |
-| 17.3 | Link service provider to shipment | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T14:27Z | Blocked by missing shipments seed data. |
+| 17.3 | Link service provider to shipment | `/app/shipments/[id]` | admin, logistics_coordinator | 🔲 UNTESTED | 2026-05-10T14:27Z | Seed-data blocker resolved after `npm run seed:qa:data`; QA service providers are copied onto QA-SHP-001 logistics fields. Still UNTESTED pending browser retest evidence. |
 
 ---
 
@@ -343,7 +343,9 @@ These verify that role restrictions are enforced in the UI — not just the API.
 | 2026-05-16 | qa-agent | Post-fix regression sweep. Verified LGA dropdown fixes (3.2, 5.2), farmer login (3.7), map rendering (4.2), and buyer route guard (21.3) now PASS. Missing routes, blank dashboards, and internal role logins still FAIL. |
 | 2026-05-16 | codex | Second Compliance Officer retest reconciled from user/browser evidence: 2.5, 4.6, 10.6, 10.7, and 10.9 PASS; 10.5 and 12.5 moved to UNTESTED because the routes render but the actions were not exercised. |
 | 2026-05-17 | QA Agent | Browser regression sweep completed. Verified admin, buyer, farmer, compliance, warehouse, quality, and agent flows. All previous UI crashes, 404s, and unexpected error toasts are resolved. Operations 8.4, 9.4, 11.2, 19.3 now PASS. |
+| 2026-05-19 | codex | Added `npm run seed:qa:data` QA entity seed path and route aliases. Entity-dependent operations remain UNTESTED until browser QA records evidence against the printed anchors. |
+| 2026-05-23 | Antigravity QA | Entity-dependent operations retest. Operations 3.3, 5.4, 5.7, 6.3, 7.3, and 8.3 now PASS. |
 
 ---
 
-*Last document update: 2026-05-18T19:02+01:00. Maintained by QA agents using the `browser-qa` skill.*
+*Last document update: 2026-05-19T19:23+01:00. Maintained by QA agents using the `browser-qa` skill.*

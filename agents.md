@@ -11,7 +11,8 @@
 | # | Skill | Category | Trigger Keywords |
 |---|-------|----------|-----------------|
 | 1 | [api-routes](#1-api-routes) | Backend | `API endpoint`, `route handler`, `app/api`, `POST handler`, `GET handler`, `withErrorHandling`, `tier guard`, `rate limit` |
-| 2 | [browser-qa](#2-browser-qa) | QA & Testing | `smoke test`, `QA sweep`, `test from browser`, `verify UI`, `regression test`, `find bugs`, `operations registry` |
+| 2 | [playwright-tester](#2-playwright-tester) | QA & Testing | `smoke test`, `QA sweep`, `full sweep`, `test from browser`, `verify UI`, `regression test`, `find bugs`, `check the app in a browser`, `run my tests` |
+| legacy | [browser-qa](#legacy-browser-qa) | QA & Testing | explicit `use browser-qa`, `run the browser agent`, `operations registry update`, `Operations_ai.md` |
 | 3 | [compliance-regulations](#3-compliance-regulations) | Domain | `EUDR`, `DDS`, `pedigree certificate`, `FSMA 204`, `Lacey Act`, `UK Environment Act`, `halal`, `China Green Trade`, `DPP` |
 | 4 | [conventional-commits](#4-conventional-commits) | DevOps | `git add`, `commit my changes`, `save this work`, `version control` |
 | 5 | [deployment](#5-deployment) | DevOps | `deploy`, `production`, `Vercel`, `environment variables`, `service worker`, `PWA manifest`, `go live` |
@@ -28,28 +29,29 @@
 | 16 | [supabase-migrations](#16-supabase-migrations) | Database | `add a column`, `new table`, `migration file`, `RLS policy`, `schema change`, `database update`, `Supabase SQL` |
 | 17 | [testing](#17-testing) | QA & Testing | `write a test`, `unit test`, `E2E test`, `Playwright`, `Vitest`, `test coverage`, `run the test suite` |
 | 18 | [ui-components](#18-ui-components) | Frontend | `add a component`, `shadcn`, `UI component`, `Tailwind class`, `white-label`, `theming`, `design system` |
+| 19 | [office-hours](#19-office-hours) | Product | `brainstorm this`, `is this worth building`, `help me think through`, `office hours`, `I have an idea` |
 
 ### General-Purpose Skills (from `skills-main`)
 
 | # | Skill | Category | Trigger Keywords |
 |---|-------|----------|-----------------|
-| 19 | [pdf](#19-pdf) | Documents | `.pdf`, `create PDF`, `merge PDF`, `split PDF`, `OCR PDF`, `watermark` |
-| 20 | [docx](#20-docx) | Documents | `.docx`, `Word doc`, `table of contents`, `headings`, `letterhead` |
-| 21 | [pptx](#21-pptx) | Documents | `.pptx`, `slides`, `presentation`, `pitch deck`, `speaker notes` |
-| 22 | [xlsx](#22-xlsx) | Documents | `.xlsx`, `.csv`, `spreadsheet`, `Excel`, `tabular data`, `charts` |
-| 23 | [canvas-design](#23-canvas-design) | Creative | `poster`, `visual design`, `artwork`, `.png`, `.pdf design` |
-| 24 | [algorithmic-art](#24-algorithmic-art) | Creative | `generative art`, `p5.js`, `flow field`, `particle system`, `algorithmic art` |
-| 25 | [frontend-design](#25-frontend-design) | Frontend | `landing page`, `web component`, `UI design`, `beautify`, `dashboard layout` |
-| 26 | [web-artifacts-builder](#26-web-artifacts-builder) | Frontend | `HTML artifact`, `React artifact`, `multi-component`, `shadcn artifact` |
-| 27 | [claude-api](#27-claude-api) | Integration | `Anthropic SDK`, `Claude API`, `prompt caching`, `tool use`, `model migration` |
-| 28 | [mcp-builder](#28-mcp-builder) | Integration | `MCP server`, `Model Context Protocol`, `tool integration`, `FastMCP` |
-| 29 | [skill-creator](#29-skill-creator) | Meta | `create a skill`, `edit skill`, `skill evals`, `optimize skill` |
-| 30 | [doc-coauthoring](#30-doc-coauthoring) | Documents | `write docs`, `technical spec`, `proposal`, `decision doc` |
-| 31 | [slack-gif-creator](#31-slack-gif-creator) | Creative | `animated GIF`, `Slack GIF`, `make a GIF` |
-| 32 | [brand-guidelines](#32-brand-guidelines) | Creative | `brand colors`, `style guidelines`, `visual formatting`, `Anthropic look` |
-| 33 | [theme-factory](#33-theme-factory) | Creative | `theme`, `styling artifact`, `color palette`, `apply theme` |
-| 34 | [internal-comms](#34-internal-comms) | Documents | `status report`, `leadership update`, `newsletter`, `incident report` |
-| 35 | [webapp-testing](#35-webapp-testing) | QA & Testing | `Playwright`, `browser screenshot`, `UI debugging`, `browser logs`, `local web app` |
+| 20 | [pdf](#20-pdf) | Documents | `.pdf`, `create PDF`, `merge PDF`, `split PDF`, `OCR PDF`, `watermark` |
+| 21 | [docx](#21-docx) | Documents | `.docx`, `Word doc`, `table of contents`, `headings`, `letterhead` |
+| 22 | [pptx](#22-pptx) | Documents | `.pptx`, `slides`, `presentation`, `pitch deck`, `speaker notes` |
+| 23 | [xlsx](#23-xlsx) | Documents | `.xlsx`, `.csv`, `spreadsheet`, `Excel`, `tabular data`, `charts` |
+| 24 | [canvas-design](#24-canvas-design) | Creative | `poster`, `visual design`, `artwork`, `.png`, `.pdf design` |
+| 25 | [algorithmic-art](#25-algorithmic-art) | Creative | `generative art`, `p5.js`, `flow field`, `particle system`, `algorithmic art` |
+| 26 | [frontend-design](#26-frontend-design) | Frontend | `landing page`, `web component`, `UI design`, `beautify`, `dashboard layout` |
+| 27 | [web-artifacts-builder](#27-web-artifacts-builder) | Frontend | `HTML artifact`, `React artifact`, `multi-component`, `shadcn artifact` |
+| 28 | [claude-api](#28-claude-api) | Integration | `Anthropic SDK`, `Claude API`, `prompt caching`, `tool use`, `model migration` |
+| 29 | [mcp-builder](#29-mcp-builder) | Integration | `MCP server`, `Model Context Protocol`, `tool integration`, `FastMCP` |
+| 30 | [skill-creator](#30-skill-creator) | Meta | `create a skill`, `edit skill`, `skill evals`, `optimize skill` |
+| 31 | [doc-coauthoring](#31-doc-coauthoring) | Documents | `write docs`, `technical spec`, `proposal`, `decision doc` |
+| 32 | [slack-gif-creator](#32-slack-gif-creator) | Creative | `animated GIF`, `Slack GIF`, `make a GIF` |
+| 33 | [brand-guidelines](#33-brand-guidelines) | Creative | `brand colors`, `style guidelines`, `visual formatting`, `Anthropic look` |
+| 34 | [theme-factory](#34-theme-factory) | Creative | `theme`, `styling artifact`, `color palette`, `apply theme` |
+| 35 | [internal-comms](#35-internal-comms) | Documents | `status report`, `leadership update`, `newsletter`, `incident report` |
+| 36 | [webapp-testing](#36-webapp-testing) | QA & Testing | `Playwright`, `browser screenshot`, `UI debugging`, `browser logs`, `local web app` |
 
 ---
 
@@ -86,7 +88,8 @@ graph LR
   end
 
   subgraph QA Layer
-    BQA[browser-qa]
+    PWT[playwright-tester]
+    BQA[browser-qa legacy]
     TEST[testing]
   end
 
@@ -96,14 +99,19 @@ graph LR
     RN[release-notes]
   end
 
+  subgraph Product Planning
+    OH[office-hours]
+  end
+
   API --> MT
   API --> RBAC
   API --> SEC
   SCORE --> COMP
   SCORE --> GEO
   COMP --> GEO
-  BQA --> TEST
-  BQA --> SEED
+  PWT --> TEST
+  PWT --> SEED
+  BQA --> PWT
   RN --> CC
   MIG --> MT
   SEED --> MIG
@@ -123,11 +131,19 @@ graph LR
 
 ---
 
-### 2. browser-qa
-- **Path:** `.agents/skills/browser-qa/SKILL.md`
-- **Purpose:** Browser-driven QA agent for functional testing. Uses browser subagent to verify platform operations and updates the `Operations_ai.md` registry.
-- **Key files:** `Operations_ai.md`
+### 2. playwright-tester
+- **Path:** `.agents/skills/playwright-tester/SKILL.md`
+- **Purpose:** Default browser QA workflow. Writes persistent Playwright `.spec.ts` tests, runs them with `npx playwright test --reporter=line`, and uses Playwright's native runner instead of token-heavy browser-agent sessions.
+- **Key files:** `playwright.config.ts`, `tests/e2e/*.spec.ts`, `tests/e2e/auth.setup.ts`
 - **Depends on:** `seed-data`, `testing`
+
+---
+
+### Legacy. browser-qa
+- **Path:** `.agents/skills/browser-qa/SKILL.md`
+- **Purpose:** Legacy/fallback registry workflow. Use only when the user explicitly asks for `browser-qa`, asks to run the browser agent, or specifically needs `Operations_ai.md` reconciled from QA results.
+- **Key files:** `Operations_ai.md`
+- **Default:** Prefer `playwright-tester` for smoke tests, regression checks, full sweeps, UI verification, and browser bug finding.
 
 ---
 
@@ -250,103 +266,110 @@ graph LR
 
 ---
 
-### 19. pdf
+### 19. office-hours
+- **Path:** `.agents/skills/office-hours/SKILL.md`
+- **Purpose:** YC-style office hours for product ideas before implementation. Startup mode tests demand, status quo, target user, wedge, observation, and future-fit. Builder mode brainstorms the coolest shareable version for side projects, hackathons, learning, open source, and research. Produces a saved design doc only.
+- **Key files:** `~/.gstack/projects/*/*-design-*.md`, `.agents/skills/office-hours/references/design-doc-templates.md`, `.agents/skills/office-hours/references/founder-resources.md`
+
+---
+
+### 20. pdf
 - **Path:** `.agents/skills/skills-main/skills/pdf/SKILL.md`
 - **Purpose:** Read, create, merge, split, rotate, watermark, encrypt, and OCR PDF files.
 
 ---
 
-### 20. docx
+### 21. docx
 - **Path:** `.agents/skills/skills-main/skills/docx/SKILL.md`
 - **Purpose:** Create, read, edit, and manipulate Word documents (.docx) with formatting, tables of contents, images, and tracked changes.
 
 ---
 
-### 21. pptx
+### 22. pptx
 - **Path:** `.agents/skills/skills-main/skills/pptx/SKILL.md`
 - **Purpose:** Create, read, edit, or manipulate PowerPoint presentations (.pptx) including templates, layouts, and speaker notes.
 
 ---
 
-### 22. xlsx
+### 23. xlsx
 - **Path:** `.agents/skills/skills-main/skills/xlsx/SKILL.md`
 - **Purpose:** Open, read, edit, create, or convert spreadsheet files (.xlsx, .csv, .tsv) including charts, formulas, and data cleaning.
 
 ---
 
-### 23. canvas-design
+### 24. canvas-design
 - **Path:** `.agents/skills/skills-main/skills/canvas-design/SKILL.md`
 - **Purpose:** Create visual art, posters, and static designs rendered as .png or .pdf using design philosophy principles.
 
 ---
 
-### 24. algorithmic-art
+### 25. algorithmic-art
 - **Path:** `.agents/skills/skills-main/skills/algorithmic-art/SKILL.md`
 - **Purpose:** Generate algorithmic art using p5.js with seeded randomness and interactive parameter exploration.
 
 ---
 
-### 25. frontend-design
+### 26. frontend-design
 - **Path:** `.agents/skills/skills-main/skills/frontend-design/SKILL.md`
 - **Purpose:** Create distinctive, production-grade frontend interfaces with high visual design quality.
 
 ---
 
-### 26. web-artifacts-builder
+### 27. web-artifacts-builder
 - **Path:** `.agents/skills/skills-main/skills/web-artifacts-builder/SKILL.md`
 - **Purpose:** Build elaborate, multi-component HTML artifacts using React, Tailwind CSS, and shadcn/ui.
 
 ---
 
-### 27. claude-api
+### 28. claude-api
 - **Path:** `.agents/skills/skills-main/skills/claude-api/SKILL.md`
 - **Purpose:** Build, debug, and optimize Claude API / Anthropic SDK apps with prompt caching and model migration support.
 
 ---
 
-### 28. mcp-builder
+### 29. mcp-builder
 - **Path:** `.agents/skills/skills-main/skills/mcp-builder/SKILL.md`
 - **Purpose:** Create high-quality MCP (Model Context Protocol) servers for LLM-to-external-service integration.
 
 ---
 
-### 29. skill-creator
+### 30. skill-creator
 - **Path:** `.agents/skills/skills-main/skills/skill-creator/SKILL.md`
 - **Purpose:** Create new skills, modify existing skills, run evals, and benchmark skill performance.
 
 ---
 
-### 30. doc-coauthoring
+### 31. doc-coauthoring
 - **Path:** `.agents/skills/skills-main/skills/doc-coauthoring/SKILL.md`
 - **Purpose:** Guided workflow for co-authoring documentation, proposals, technical specs, and decision docs.
 
 ---
 
-### 31. slack-gif-creator
+### 32. slack-gif-creator
 - **Path:** `.agents/skills/skills-main/skills/slack-gif-creator/SKILL.md`
 - **Purpose:** Create animated GIFs optimized for Slack with constraints, validation, and animation concepts.
 
 ---
 
-### 32. brand-guidelines
+### 33. brand-guidelines
 - **Path:** `.agents/skills/skills-main/skills/brand-guidelines/SKILL.md`
 - **Purpose:** Apply Anthropic's official brand colors and typography to artifacts.
 
 ---
 
-### 33. theme-factory
+### 34. theme-factory
 - **Path:** `.agents/skills/skills-main/skills/theme-factory/SKILL.md`
 - **Purpose:** Style artifacts with 10 pre-set themes or generate custom themes on-the-fly.
 
 ---
 
-### 34. internal-comms
+### 35. internal-comms
 - **Path:** `.agents/skills/skills-main/skills/internal-comms/SKILL.md`
 - **Purpose:** Write structured internal communications: status reports, leadership updates, newsletters, incident reports, FAQs.
 
 ---
 
-### 35. webapp-testing
+### 36. webapp-testing
 - **Path:** `.agents/skills/skills-main/skills/webapp-testing/SKILL.md`
 - **Purpose:** Interact with and test local web applications using Playwright — verify frontend functionality, capture screenshots, view browser logs.
 
@@ -362,10 +385,12 @@ graph LR
 
 ### For the Human
 - Say **"use the security skill"** or **"check the RBAC skill"** to force a specific skill activation.
-- Say **"full sweep"** to trigger `browser-qa` against all operations in `Operations_ai.md`.
+- Say **"office hours"**, **"brainstorm this"**, or **"is this worth building?"** to trigger `office-hours` before implementation.
+- Say **"full sweep"** to trigger `playwright-tester` against the relevant Playwright specs or to author missing specs before running `npx playwright test --reporter=line`.
+- Say **"use browser-qa"** only when you explicitly need the legacy browser-agent workflow or an `Operations_ai.md` registry reconciliation.
 - Say **"commit my changes"** to trigger `conventional-commits`.
 - Say **"deploy"** to trigger the `deployment` checklist.
 
 ---
 
-*Last updated: 2026-05-09T21:55:00+01:00*
+*Last updated: 2026-05-22T14:48:46+01:00*
