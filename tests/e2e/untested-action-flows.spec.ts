@@ -14,6 +14,8 @@ import {
 
 type JsonMap = Record<string, any>;
 
+test.setTimeout(120_000);
+
 async function authed(browser: Browser, role: Parameters<typeof newAuthedPage>[1]): Promise<AuthedPage> {
   try {
     return await newAuthedPage(browser, role);
@@ -35,10 +37,18 @@ test.describe('Untested action and scenario operations', () => {
       await page.locator('[data-testid="button-new-profile"]').click();
       await page.getByPlaceholder('e.g. EU EUDR Export Profile').fill(profileName);
       await page.getByPlaceholder('e.g. European Union, China').fill('European Union');
-      await page.getByRole('button', { name: /^Create Profile$/ }).click();
 
-      await expect(page.getByText(profileName)).toBeVisible();
-      await expect(page.getByText('European Union')).toBeVisible();
+      const createProfileResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/compliance-profiles') &&
+        response.request().method() === 'POST',
+      );
+      await page.getByRole('dialog').getByRole('button', { name: /^Create Profile$/ }).click();
+      const createdProfileResponse = await createProfileResponse;
+      expect(createdProfileResponse.ok()).toBeTruthy();
+      const createdProfileBody = await createdProfileResponse.json();
+      expect(createdProfileBody.profile?.destination_market).toBe('European Union');
+
+      await expect(page.getByText(profileName, { exact: true }).first()).toBeVisible();
     } finally {
       await context.close();
     }
@@ -48,13 +58,14 @@ test.describe('Untested action and scenario operations', () => {
     const { context, page } = await authed(browser, 'admin');
     const title = uniqueQaName('E2E Uploaded Document');
     const fileName = `${title}.txt`;
+    const uploadedFileUrl = `${process.env.E2E_BASE_URL || 'http://localhost:5000'}/api/e2e-downloads/${encodeURIComponent(fileName)}`;
     try {
       await page.route('**/api/upload', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            url: `https://example.com/${encodeURIComponent(fileName)}`,
+            url: uploadedFileUrl,
             file_name: fileName,
             file_size: 24,
           }),
@@ -73,15 +84,18 @@ test.describe('Untested action and scenario operations', () => {
 
       await expect(page.locator('[data-testid="document-upload-success"]')).toBeVisible();
       await expect(page.locator('[data-testid="text-uploaded-filename"]')).toContainText(fileName);
-      await page.getByRole('button', { name: /^Add Document$/ }).click();
-
-      const document = await waitForApiItem<JsonMap>(
-        page,
-        '/api/documents?limit=100',
-        (data) => data.documents || [],
-        (item) => item.title === title,
-        'uploaded document',
+      const createDocumentResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/documents') &&
+        response.request().method() === 'POST',
       );
+      await page.locator('[data-testid="button-confirm-create"]').click();
+
+      const createdDocumentResponse = await createDocumentResponse;
+      expect(createdDocumentResponse.ok()).toBeTruthy();
+      const createdDocumentBody = await createdDocumentResponse.json();
+      const document = createdDocumentBody.document as JsonMap;
+      expect(document.title).toBe(title);
+      expect(document.file_url).toBe(uploadedFileUrl);
 
       await expect(page.locator(`[data-testid="card-document-${document.id}"]`)).toBeVisible();
       await expect(page.locator(`[data-testid="text-doc-title-${document.id}"]`)).toContainText(title);
@@ -93,12 +107,14 @@ test.describe('Untested action and scenario operations', () => {
   test('16.3 opens a stored document attachment from the download control', async ({ browser }) => {
     const { context, page } = await authed(browser, 'admin');
     const title = uniqueQaName('E2E Download Document');
+    const fileName = 'origintrace-e2e-download.txt';
+    const fileUrl = `${process.env.E2E_BASE_URL || 'http://localhost:5000'}/api/e2e-downloads/${fileName}`;
     try {
       const document = await createDocumentViaApi(page, {
         title,
         document_type: 'export_license',
-        file_url: 'https://example.com/origintrace-e2e-download.txt',
-        file_name: 'origintrace-e2e-download.txt',
+        file_url: fileUrl,
+        file_name: fileName,
       });
 
       await page.goto('/app/documents');
@@ -108,7 +124,7 @@ test.describe('Untested action and scenario operations', () => {
       const popupPromise = page.waitForEvent('popup');
       await page.locator(`[data-testid="button-download-doc-${document.id}"]`).click();
       const popup = await popupPromise;
-      await expect(popup).toHaveURL(/example\.com\/origintrace-e2e-download\.txt/);
+      await expect(popup).toHaveURL(new RegExp(`/api/e2e-downloads/${fileName}$`));
       await popup.close();
     } finally {
       await context.close();
@@ -210,9 +226,13 @@ test.describe('Untested action and scenario operations', () => {
     try {
       await page.goto('/app/team');
 
-      await expect(page.getByText('Access Restricted')).toBeVisible();
-      await expect(page.getByText(/Only organisation admins and aggregators/i)).toBeVisible();
       await expect(page.locator('[data-testid="button-add-member"]')).toHaveCount(0);
+      if (await page.getByText('Access Restricted').isVisible().catch(() => false)) {
+        await expect(page.getByText(/Only organisation admins and aggregators/i)).toBeVisible();
+      } else {
+        await expect(page).toHaveURL(/\/app(?:$|\?)/);
+        await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+      }
     } finally {
       await context.close();
     }

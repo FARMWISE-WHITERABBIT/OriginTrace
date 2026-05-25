@@ -55,14 +55,48 @@ export function uniqueQaName(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+async function waitForLoginHydration(page: Page) {
+  await page.locator('#email').waitFor({ state: 'visible' });
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+  await page.waitForFunction(() => {
+    const email = document.querySelector('#email') as HTMLInputElement & { _valueTracker?: unknown };
+    const password = document.querySelector('#password') as HTMLInputElement & { _valueTracker?: unknown };
+    return Boolean(email?._valueTracker && password?._valueTracker);
+  }, null, { timeout: 5_000 }).catch(() => page.waitForTimeout(500));
+}
+
 export async function loginAsRole(page: Page, role: QaRole) {
   const user = QA_USERS[role];
-  await page.goto('/auth/login');
-  await page.locator('#email').waitFor({ state: 'visible' });
+  await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+  await waitForLoginHydration(page);
   await page.locator('#email').fill(user.email);
   await page.locator('#password').fill(user.password);
+
+  const loginError = page
+    .getByText(/login failed|invalid login credentials|configuration error|session could not be established|unexpected error/i)
+    .first();
+
   await page.locator('[data-testid="button-login"]').click();
-  await page.waitForURL(/\/app/, { timeout: 25_000 });
+
+  const deadline = Date.now() + 25_000;
+  let errorText: string | null = null;
+  while (Date.now() < deadline) {
+    if (/\/app(?:$|[/?#])/.test(page.url())) {
+      await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => {});
+      return;
+    }
+    if (await loginError.isVisible().catch(() => false)) {
+      errorText = await loginError.textContent().catch(() => null);
+      break;
+    }
+    await page.waitForTimeout(250);
+  }
+
+  if (!/\/app(?:$|[/?#])/.test(page.url())) {
+    throw new Error(
+      `Could not log in as ${user.email}${errorText ? `: ${errorText.trim()}` : `; current URL is ${page.url()}`}`,
+    );
+  }
 }
 
 export async function newAuthedPage(browser: Browser, role: QaRole): Promise<AuthedPage> {
@@ -70,7 +104,20 @@ export async function newAuthedPage(browser: Browser, role: QaRole): Promise<Aut
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     storageState: { cookies: [], origins: [] },
   });
+  await context.addInitScript(() => {
+    [
+      'origintrace_tour_admin',
+      'origintrace_tour_aggregator',
+      'origintrace_tour_agent',
+      'origintrace_tour_quality_manager',
+      'origintrace_tour_logistics_coordinator',
+      'origintrace_tour_compliance_officer',
+      'origintrace_tour_buyer',
+    ].forEach((key) => localStorage.setItem(key, 'true'));
+  });
   const page = await context.newPage();
+  page.setDefaultNavigationTimeout(60_000);
+  page.setDefaultTimeout(20_000);
   try {
     await loginAsRole(page, role);
     return { context, page };
@@ -144,7 +191,7 @@ export async function findQaAnchors(page: Page): Promise<QaAnchors | null> {
     const processingRun = processingRuns.find((item: JsonMap) => item.run_code === 'QA-RUN-001');
     const shipment = shipments.find((item: JsonMap) => item.shipment_code === 'QA-SHP-001');
 
-    const farmerId = String(farmer?.id || farmer?.farm_id || farm?.id || '');
+    const farmerId = String(farmer?.farm_id || farm?.id || farmer?.id || '');
     const farmId = String(farm?.id || farmer?.farm_id || farmer?.id || '');
     const batchId = String(batch?.id || '');
     const processingRunId = String(processingRun?.id || '');
@@ -238,7 +285,10 @@ export async function ensureActiveSupplyChainLink(
 
   if (!link) {
     const response = await buyerPage.request.post('/api/supply-chain-links', {
-      data: { exporter_org_name: 'WhiteRabbit Demo Co.' },
+      data: {
+        exporter_org_name: 'WhiteRabbit Demo Co.',
+        exporter_email: 'admin@demo.test',
+      },
     });
     if (!response.ok() && response.status() !== 409) {
       const body = await response.text().catch(() => '');
