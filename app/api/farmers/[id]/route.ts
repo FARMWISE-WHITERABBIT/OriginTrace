@@ -136,6 +136,18 @@ export async function GET(
       bankAccounts = baData ?? [];
     } catch { /* table not yet migrated */ }
 
+    // Price agreements for this farmer
+    let priceAgreements: any[] = [];
+    try {
+      const { data: paData } = await supabase
+        .from('farmer_price_agreements')
+        .select('id, commodity, price_per_kg, currency, effective_from, effective_to, notes, created_at')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('effective_from', { ascending: false });
+      priceAgreements = paData ?? [];
+    } catch { /* table not yet migrated */ }
+
     return NextResponse.json({
       farm,
       ledger: ledger ?? null,
@@ -147,6 +159,7 @@ export async function GET(
       disbursements: disbursements ?? [],
       payments: payments ?? [],
       bankAccounts,
+      priceAgreements,
     });
 
   } catch (err: any) {

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Camera, Upload, X, Loader2, CheckCircle, File, AlertCircle } from 'lucide-react';
+import { Camera, Upload, X, Loader2, CheckCircle, File as FileIcon, AlertCircle } from 'lucide-react';
 
 export interface UploadResult {
   url: string;
@@ -284,7 +284,7 @@ export function DocumentUpload({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
-            <File className="h-6 w-6 text-muted-foreground" />
+            <FileIcon className="h-6 w-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Drag & drop a file here, or</p>
             <div className="flex gap-2 flex-wrap justify-center">
               <Button

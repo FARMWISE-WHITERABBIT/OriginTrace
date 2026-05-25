@@ -34,6 +34,7 @@ interface FarmerData {
   payments: any[];
   disbursements: any[];
   bankAccounts: any[];
+  priceAgreements: any[];
 }
 
 const COMPLIANCE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -384,7 +385,7 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
 
   if (!data) { notFound(); return null; }
 
-  const { farm, ledger, batches, inputs, training, files, payments, disbursements, bankAccounts } = data;
+  const { farm, ledger, batches, inputs, training, files, payments, disbursements, bankAccounts, priceAgreements } = data;
   const statusCfg = COMPLIANCE_STATUS_CONFIG[farm.compliance_status] || COMPLIANCE_STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
   const completedTraining = training.filter((t: any) => t.status === 'completed').length;
@@ -490,8 +491,8 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                     Identity
                   </CardTitle>
                   {canEdit && editingCard !== 'identity' && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCard('identity')} data-testid="button-edit-farmer">
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingCard('identity')} data-testid="button-edit-farmer">
+                      <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                     </Button>
                   )}
                 </div>
@@ -1085,6 +1086,52 @@ export default function FarmerDetailPage({ params: paramsPromise }: { params: Pr
                           >
                             {deletingBankAccountId === acct.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                           </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Price Agreements */}
+          <Card className="card-accent-emerald">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0"><FileText className="h-3.5 w-3.5" /></div>
+                  Price Agreements
+                </CardTitle>
+              </div>
+              <CardDescription className="mt-1">Active and historical contract pricing for this farmer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!priceAgreements || priceAgreements.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon"><FileText className="h-6 w-6" /></div>
+                  <p className="font-medium text-sm mt-3">No price agreements found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Pricing defaults to the organization standard.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {priceAgreements.map((pa: any) => (
+                    <div key={pa.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{Number(pa.price_per_kg).toLocaleString()} {pa.currency}/kg <span className="text-muted-foreground font-normal capitalize">({pa.commodity})</span></p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Effective: {new Date(pa.effective_from).toLocaleDateString()} {pa.effective_to ? `- ${new Date(pa.effective_to).toLocaleDateString()}` : 'onwards'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {!pa.effective_to || new Date(pa.effective_to) >= new Date() ? (
+                          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700">Active</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">Expired</Badge>
                         )}
                       </div>
                     </div>
