@@ -488,3 +488,35 @@ Local Supabase Docker config, QA route-anchor seed scripts, QA registry updates,
 - **Testing Infrastructure**: Added comprehensive local Supabase Docker config (`config.toml`, `.gitignore`), updated `next.config.mjs` and `package.json`, and added robust seed scripts (`seed-qa-entities.ts`, `toggle-tier.ts`) to easily provision local environments for testing without impacting production schema constraints.
 - **Automated Test Suites**: Authored permanent Playwright E2E suites for untested entity details and action flows, creating a robust baseline for regression sweeps.
 - **QA Registry Consistency**: Updated the project's QA registry (`Operations_ai.md`, `untested.md`, `failure_ai.md`) and the master skills index (`agents.md`) to formally record 6 newly passing entity-dependent operations verified by the Antigravity QA agent.
+
+---
+
+## 28. Phase 18: Playwright QA Closure & CVE Red-Team
+
+### A. Playwright-First Stabilization
+
+- Stabilized admin and role login setup by waiting for React hydration and committed redirects instead of waiting on full page load.
+- Hardened the brittle compliance profile, document upload/download, and farmer payment assertions with scoped submits, API response assertions, same-origin document URLs, and rendered currency matching.
+- Verified the full 17-operation closure lane: `tests/e2e/untested-entity-details.spec.ts` plus `tests/e2e/untested-action-flows.spec.ts` passed 17/17 on Chromium.
+
+### B. CVE Red-Team Coverage
+
+- Added `tests/e2e/security-cve-regression.spec.ts` covering protected-route bypass probes, middleware/header spoofing, dynamic route variant access, XSS escaping in document fields, RBAC denial, document API/file access controls, and non-destructive SSRF/WebSocket config posture.
+- Verified the CVE regression lane passed 7/7 on Chromium.
+
+### C. Dependency Security
+
+- Updated `next` to `16.2.6` after the 16.2.5 fix was superseded by the May 2026 follow-up advisory.
+- Applied same-major production patches for `axios`, `jspdf`, `next-intl`, `postcss`, and `@sentry/nextjs`; added npm overrides for patched transitive `postcss` and `serialize-javascript`.
+- Kept `xlsx` because import/export workflows depend on it and npm reports no fix; mitigated the authenticated XLSX import path with file-size limits, row caps, and prototype-key filtering.
+
+### D. QA Registry Closure
+
+- Reconciled `Operations_ai.md`, `untested.md`, and `failure_ai.md` to record 0 current FAIL operations and 0 current UNTESTED operations.
+- Added `cve.md` with advisory sources, installed versions, probe results, mitigations, residual risk, and verification evidence.
+
+---
+
+## 29. Project Status: Phase 18 Complete
+
+- [X] **Phase 18: Playwright QA Closure & CVE Red-Team** - Closed the remaining QA registry gaps with persistent Playwright evidence, added CVE/security regression coverage, patched same-major dependency advisories, documented the `xlsx` residual, and verified `npm run check` plus `npm run build`.
