@@ -16,6 +16,10 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { requireRole } from '@/lib/rbac';
 import * as XLSX from 'xlsx';
 
+const MAX_IMPORT_ROWS = 5000;
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 // ── Column aliases ──────────────────────────────────────────────────────────
 // Maps common KoBoToolbox / Excel column names → OriginTrace field names.
 // Case-insensitive matching applied before lookup.
@@ -79,19 +83,27 @@ function parseCSV(text: string): Record<string, string>[] {
   }
 
   const headers = splitLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
-  return lines.slice(1).filter(l => l.trim()).map(line => {
+  return lines.slice(1, MAX_IMPORT_ROWS + 2).filter(l => l.trim()).map(line => {
     const vals = splitLine(line).map(v => v.replace(/^"|"$/g, '').trim());
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h] = vals[i] ?? ''; });
+    const row: Record<string, string> = Object.create(null);
+    headers.forEach((h, i) => {
+      if (!isBlockedKey(h)) row[h] = vals[i] ?? '';
+    });
     return row;
   });
 }
 
 // ── Column normaliser ────────────────────────────────────────────────────────
+function isBlockedKey(key: string): boolean {
+  return BLOCKED_KEYS.has(key.toLowerCase().trim());
+}
+
 function normaliseRow(raw: Record<string, string>, aliases: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
+  const out: Record<string, string> = Object.create(null);
   for (const [rawKey, val] of Object.entries(raw)) {
+    if (isBlockedKey(rawKey)) continue;
     const normalised = aliases[rawKey.toLowerCase().trim()] ?? rawKey.toLowerCase().trim();
+    if (isBlockedKey(normalised)) continue;
     if (val !== undefined && val !== '') out[normalised] = val;
   }
   return out;
@@ -121,6 +133,9 @@ export async function POST(request: NextRequest) {
     const dryRun = formData.get('dry_run') === 'true';
 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    if (file.size > MAX_IMPORT_BYTES) {
+      return NextResponse.json({ error: 'Maximum import file size is 2 MB' }, { status: 400 });
+    }
     if (!['farmers', 'farms', 'batches'].includes(type)) {
       return NextResponse.json({ error: 'type must be farmers, farms, or batches' }, { status: 400 });
     }
@@ -134,13 +149,21 @@ export async function POST(request: NextRequest) {
       const text = new TextDecoder('utf-8').decode(arrayBuffer);
       rows = parseCSV(text);
     } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), {
+        type: 'array',
+        sheetRows: MAX_IMPORT_ROWS + 2,
+        cellHTML: false,
+        cellStyles: false,
+        bookVBA: false,
+      });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const raw = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
       rows = raw.map(r => {
-        const out: Record<string, string> = {};
-        for (const [k, v] of Object.entries(r)) { out[k] = String(v ?? ''); }
+        const out: Record<string, string> = Object.create(null);
+        for (const [k, v] of Object.entries(r)) {
+          if (!isBlockedKey(k)) out[k] = String(v ?? '');
+        }
         return out;
       });
     } else {
@@ -148,7 +171,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (rows.length === 0) return NextResponse.json({ error: 'File is empty or has no data rows' }, { status: 400 });
-    if (rows.length > 5000) return NextResponse.json({ error: 'Maximum 5,000 rows per import. Split into smaller files.' }, { status: 400 });
+    if (rows.length > MAX_IMPORT_ROWS) return NextResponse.json({ error: 'Maximum 5,000 rows per import. Split into smaller files.' }, { status: 400 });
 
     const aliases = type === 'batches' ? BATCH_ALIASES : FARMER_ALIASES;
     const normalisedRows = rows.map(r => normaliseRow(r, aliases));
