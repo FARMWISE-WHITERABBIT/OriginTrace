@@ -520,3 +520,23 @@ Local Supabase Docker config, QA route-anchor seed scripts, QA registry updates,
 ## 29. Project Status: Phase 18 Complete
 
 - [X] **Phase 18: Playwright QA Closure & CVE Red-Team** - Closed the remaining QA registry gaps with persistent Playwright evidence, added CVE/security regression coverage, patched same-major dependency advisories, documented the `xlsx` residual, and verified `npm run check` plus `npm run build`.
+
+---
+
+## 30. Phase 19: CI Pipeline & E2E Configuration Fixes
+
+### A. Dependency Tree Resolution (`npm ci` Failure)
+
+**Problem:** The CI pipeline failed during the `npm ci` step with an error indicating that the lock file was out of sync. Specifically, `package-lock.json` was pinning `@swc/helpers` to `0.5.15`, but a recent dependency update required `>=0.5.17`.
+**Solution:** Explicitly required `@swc/helpers@0.5.21` as a dev dependency to resolve the invalid dependency tree and synchronize `package.json` with `package-lock.json`.
+
+### B. Playwright Project Restoration
+
+**Problem:** The marketing smoke tests failed in CI because they were configured to run against the `--project=chromium-public` project, which had been removed or was missing from `playwright.config.ts`.
+**Solution:** Restored the `chromium-public` project configuration in `playwright.config.ts` specifically matching `/marketing\.spec\.ts/` tests, allowing the CI smoke tests to run successfully.
+
+---
+
+## 31. Project Status: Phase 19 Complete
+
+- [X] **Phase 19: CI Pipeline & E2E Configuration Fixes** - Fixed `npm ci` transitive dependency lock mismatch for `@swc/helpers` and restored `chromium-public` Playwright project for marketing smoke tests.
