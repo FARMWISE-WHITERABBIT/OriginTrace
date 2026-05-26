@@ -59,6 +59,11 @@ export default defineConfig({
     },
     // Public pages — no auth required, safe to run in CI without credentials
     {
+      name: 'chromium-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /marketing\.spec\.ts/,
+    },
+    {
       name: 'red-team',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /red-team-probe\.spec\.ts/,
