@@ -21,6 +21,9 @@ export function CacheWarmer() {
     // Purge stale cached entries on every app init (client-side only)
     if (typeof window !== 'undefined' && 'indexedDB' in window) {
       purgeExpiredCaches();
+      import('@/lib/offline/sync-store')
+        .then(({ purgeExpiredOfflineData }) => purgeExpiredOfflineData())
+        .catch(() => undefined);
     }
   }, []);
 

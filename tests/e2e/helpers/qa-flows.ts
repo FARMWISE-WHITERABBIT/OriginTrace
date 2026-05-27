@@ -1,4 +1,5 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { existsSync, readFileSync } from 'fs';
 
 export type QaRole =
   | 'admin'
@@ -43,6 +44,85 @@ export interface AuthedPage {
 
 type JsonMap = Record<string, any>;
 
+const SUPABASE_SESSION_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
+const SUPABASE_COOKIE_CHUNK_SIZE = 3180;
+
+export function getE2eBaseUrl(): string {
+  const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000';
+  return baseUrl.replace('http://127.0.0.1:5000', 'http://localhost:5000');
+}
+
+function getEnvValue(key: string): string | undefined {
+  if (process.env[key]) return process.env[key];
+  if (!existsSync('.env.local')) return undefined;
+
+  const line = readFileSync('.env.local', 'utf8')
+    .split(/\r?\n/)
+    .find((entry) => entry.startsWith(`${key}=`));
+
+  return line?.slice(key.length + 1).trim();
+}
+
+function base64UrlEncode(value: string): string {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function sessionCookieChunks(name: string, value: string) {
+  const encoded = encodeURIComponent(value);
+  if (encoded.length <= SUPABASE_COOKIE_CHUNK_SIZE) {
+    return [{ name, value }];
+  }
+
+  const chunks: Array<{ name: string; value: string }> = [];
+  for (let i = 0; i < value.length; i += SUPABASE_COOKIE_CHUNK_SIZE) {
+    chunks.push({ name: `${name}.${chunks.length}`, value: value.slice(i, i + SUPABASE_COOKIE_CHUNK_SIZE) });
+  }
+  return chunks;
+}
+
+export async function authenticateContextWithCredentials(
+  context: BrowserContext,
+  email: string,
+  password: string,
+) {
+  const supabaseUrl = getEnvValue('NEXT_PUBLIC_SUPABASE_URL') || 'http://127.0.0.1:54321';
+  const anonKey = getEnvValue('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!anonKey) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required for E2E auth setup');
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Could not authenticate ${email}: ${response.status} ${body}`);
+  }
+
+  const tokenResponse = await response.json() as JsonMap;
+  const expiresAt = tokenResponse.expires_at || Math.floor(Date.now() / 1000) + Number(tokenResponse.expires_in || 3600);
+  const session = { ...tokenResponse, expires_at: expiresAt };
+  const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+  const cookieValue = `base64-${base64UrlEncode(JSON.stringify(session))}`;
+  const baseUrl = getE2eBaseUrl();
+
+  await context.addCookies(sessionCookieChunks(storageKey, cookieValue).map((chunk) => ({
+    ...chunk,
+    url: baseUrl,
+    sameSite: 'Lax' as const,
+    expires: Math.floor(Date.now() / 1000) + SUPABASE_SESSION_MAX_AGE_SECONDS,
+  })));
+}
+
 export function dateDaysFromNow(days: number): string {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
@@ -57,12 +137,19 @@ export function uniqueQaName(prefix: string): string {
 
 async function waitForLoginHydration(page: Page) {
   await page.locator('#email').waitFor({ state: 'visible' });
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+  await page.locator('#password').waitFor({ state: 'visible' });
+  await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => {});
   await page.waitForFunction(() => {
     const email = document.querySelector('#email') as HTMLInputElement & { _valueTracker?: unknown };
-    const password = document.querySelector('#password') as HTMLInputElement & { _valueTracker?: unknown };
-    return Boolean(email?._valueTracker && password?._valueTracker);
-  }, null, { timeout: 5_000 }).catch(() => page.waitForTimeout(500));
+    const form = document.querySelector('form') as HTMLFormElement | null;
+    const emailKeys = email ? Object.keys(email) : [];
+    const formKeys = form ? Object.keys(form) : [];
+    return Boolean(
+      email?._valueTracker ||
+      emailKeys.some((key) => key.startsWith('__reactProps')) ||
+      formKeys.some((key) => key.startsWith('__reactProps')),
+    );
+  }, null, { timeout: 15_000 });
 }
 
 export async function loginAsRole(page: Page, role: QaRole) {
@@ -101,25 +188,28 @@ export async function loginAsRole(page: Page, role: QaRole) {
 
 export async function newAuthedPage(browser: Browser, role: QaRole): Promise<AuthedPage> {
   const context = await browser.newContext({
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
+    baseURL: getE2eBaseUrl(),
     storageState: { cookies: [], origins: [] },
   });
   await context.addInitScript(() => {
-    [
-      'origintrace_tour_admin',
-      'origintrace_tour_aggregator',
-      'origintrace_tour_agent',
-      'origintrace_tour_quality_manager',
-      'origintrace_tour_logistics_coordinator',
-      'origintrace_tour_compliance_officer',
-      'origintrace_tour_buyer',
-    ].forEach((key) => localStorage.setItem(key, 'true'));
+    try {
+      [
+        'origintrace_tour_admin',
+        'origintrace_tour_aggregator',
+        'origintrace_tour_agent',
+        'origintrace_tour_quality_manager',
+        'origintrace_tour_logistics_coordinator',
+        'origintrace_tour_compliance_officer',
+        'origintrace_tour_buyer',
+      ].forEach((key) => localStorage.setItem(key, 'true'));
+    } catch {}
   });
   const page = await context.newPage();
   page.setDefaultNavigationTimeout(60_000);
   page.setDefaultTimeout(20_000);
   try {
     await loginAsRole(page, role);
+    await expect(page).toHaveURL(/\/app(?:$|[/?#])/, { timeout: 20_000 });
     return { context, page };
   } catch (error) {
     await context.close();

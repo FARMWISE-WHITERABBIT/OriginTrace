@@ -540,3 +540,54 @@ Local Supabase Docker config, QA route-anchor seed scripts, QA registry updates,
 ## 31. Project Status: Phase 19 Complete
 
 - [X] **Phase 19: CI Pipeline & E2E Configuration Fixes** - Fixed `npm ci` transitive dependency lock mismatch for `@swc/helpers` and restored `chromium-public` Playwright project for marketing smoke tests.
+
+---
+
+## 32. Phase 20: Production Offline Field Work
+
+### A. Durable Offline Field Queue
+
+**Problem:** The offline workflow was too narrow for real field operations. It could not reliably carry an agent from farmer registration through document capture, OCR, boundary mapping, and collection while offline, then replay those dependencies safely once network returned.
+
+**Solution:** Expanded the offline sync store and service into a typed field-work pipeline:
+- `pending_farms`
+- `pending_boundaries`
+- `pending_uploads`
+- `pending_ocr_jobs`
+- `id_mappings`
+- existing `pending_batches`
+
+Sync now runs in dependency order: farms -> files/OCR -> boundaries -> batches -> status. Local farm IDs are rewritten to server UUIDs before dependent boundary and batch sync runs, and batches stay pending if their local farm reference has not resolved yet.
+
+### B. API and Schema Support
+
+Added production API support for offline-created farms and field-agent uploads:
+- `farms.local_id` plus a unique partial index on `(org_id, local_id)` for idempotent offline farm creation.
+- `/api/farms` accepts `local_id`, enforces field roles, uses farmer-registration tier gating, and returns the existing farm on retry.
+- `PATCH /api/farms/[id]/boundary` lets admin, aggregator, and agent users save validated GeoJSON boundaries inside their organization, records audit events, and triggers boundary authenticity analysis.
+- Farmer file upload and OCR routes now support the field-agent workflow when the device comes back online.
+
+### C. Field-Facing UI Updates
+
+Updated the offline-facing app surfaces so the workflow is usable, not just technically queued:
+- `/app/farmers/new` queues typed farmer data, consent, files, and OCR jobs when offline.
+- `/app/farms/map` shows cached and local farms and queues GPS boundary saves.
+- `/app/collect` can use locally registered farms and queue Smart Collect batches against them.
+- `/app/sync` shows all pending categories with retry/discard visibility and refreshes after auto-sync events.
+- Auto-sync now runs the full field-work sync pipeline and uses a browser-global lock to avoid manual-sync/auto-sync races.
+
+### D. Verification Evidence
+
+The production offline-field Playwright path was verified against local Supabase and the Next dev server on port `5000`.
+
+**Passed:**
+- `npm run check`
+- `npx playwright test tests/e2e/offline-field-work.spec.ts --project=chromium --reporter=line --retries=0 --timeout=90000`
+
+**Result:** 2/2 Playwright tests passed: admin auth setup plus the field-agent offline farmer/files/OCR/boundary/batch sync order test.
+
+---
+
+## 33. Project Status: Phase 20 Complete
+
+- [X] **Phase 20: Production Offline Field Work** - Implemented typed offline field queues, idempotent farm sync, field-agent boundary/file/OCR API support, offline UI queue visibility, dependency-safe batch sync, and a passing Chromium E2E regression for the full reconnect workflow.

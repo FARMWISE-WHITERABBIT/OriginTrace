@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS farms (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farmer_name TEXT NOT NULL,
   farmer_id TEXT,
+  local_id TEXT,
   phone TEXT,
   state_id UUID REFERENCES states(id),
   lga_id UUID REFERENCES lgas(id),
@@ -201,6 +202,7 @@ CREATE INDEX IF NOT EXISTS idx_villages_lga_id ON villages(lga_id);
 
 -- Spatial index for PostGIS farm boundaries
 CREATE INDEX IF NOT EXISTS idx_farms_boundary_geo ON farms USING GIST (boundary_geo);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_farms_org_local_id ON farms (org_id, local_id) WHERE local_id IS NOT NULL;
 
 -- Function to sync JSONB boundary to PostGIS geography column
 CREATE OR REPLACE FUNCTION sync_farm_boundary_geo()

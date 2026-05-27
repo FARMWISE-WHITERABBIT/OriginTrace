@@ -52,12 +52,15 @@ interface BoundaryAnalysisResult {
 
 interface Farm {
   id: string;
+  local_id?: string;
   farmer_name: string;
   community: string;
   boundary?: any;
   area_hectares?: number;
   deforestation_check?: DeforestationResult | null;
   boundary_analysis?: BoundaryAnalysisResult | null;
+  is_local?: boolean;
+  sync_status?: string;
 }
 
 interface DeforestationResult {
@@ -106,6 +109,7 @@ function HybridFarmMappingContent() {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
@@ -125,23 +129,46 @@ function HybridFarmMappingContent() {
   useEffect(() => {
     async function loadFarms() {
       setFarmsLoading(true);
+      setFarmsLoadError(false);
       try {
-        const res = await fetch('/api/farms?limit=1000');
-        if (!res.ok) throw new Error('Failed to load farms');
-        const json = await res.json();
-        const sorted: Farm[] = (json.farms || []).sort((a: Farm, b: Farm) =>
-          (a.farmer_name || '').localeCompare(b.farmer_name || '')
-        );
-        setFarms(sorted);
-        if (farmIdParam) {
-          const found = sorted.find(f => String(f.id) === farmIdParam);
-          if (found) {
-            setSelectedFarm(found);
-            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
-            if (ring && ring.length > 1) {
-              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+        const { getCachedFarmsFull, cacheFarmsFull } = await import('@/lib/offline/offline-cache');
+        const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
+        const localFarms = await getLocalFarmsForOrg(organization?.id) as Farm[];
+        const cached = organization?.id ? await getCachedFarmsFull(organization.id) : null;
+
+        const applyFarms = (serverFarms: Farm[]) => {
+          const merged = [...localFarms, ...serverFarms.filter((farm) => !localFarms.some((local) => local.id === farm.id))];
+          const sorted: Farm[] = merged.sort((a: Farm, b: Farm) =>
+            (a.farmer_name || '').localeCompare(b.farmer_name || '')
+          );
+          setFarms(sorted);
+          if (farmIdParam) {
+            const found = sorted.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+            if (found) {
+              setSelectedFarm(found);
+              const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+              if (ring && ring.length > 1) {
+                setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+              }
             }
           }
+        };
+
+        if (cached?.length || localFarms.length) {
+          applyFarms((cached || []) as Farm[]);
+        }
+
+        if (isOnline) {
+          const res = await fetch('/api/farms?limit=1000');
+          if (!res.ok) throw new Error('Failed to load farms');
+          const json = await res.json();
+          const serverFarms = json.farms || [];
+          if (organization?.id) {
+            await cacheFarmsFull(organization.id, serverFarms);
+          }
+          applyFarms(serverFarms);
+        } else if (!cached?.length && localFarms.length === 0) {
+          throw new Error('No cached farms available');
         }
       } catch {
         setFarmsLoadError(true);
@@ -149,8 +176,21 @@ function HybridFarmMappingContent() {
         setFarmsLoading(false);
       }
     }
-    loadFarms();
-  }, [farmIdParam]);
+    if (!orgLoading) loadFarms();
+  }, [farmIdParam, isOnline, organization?.id, orgLoading]);
+
+  useEffect(() => {
+    if (farmIdParam && farms.length > 0 && !selectedFarm) {
+      const found = farms.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+          if (found) {
+            setSelectedFarm(found);
+            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+            if (ring && ring.length > 1) {
+              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+            }
+          }
+    }
+  }, [farmIdParam, farms, selectedFarm]);
 
   // Silently acquire GPS on mount so the satellite map centers on the user's actual location
   useEffect(() => {
@@ -329,8 +369,8 @@ function HybridFarmMappingContent() {
     };
 
     try {
-      if (isOnline) {
-        const res = await fetch(`/api/farmers/${selectedFarm.id}`, {
+      if (isOnline && !selectedFarm.is_local) {
+        const res = await fetch(`/api/farms/${selectedFarm.id}/boundary`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ boundary, area_hectares: areaHectares }),
@@ -340,9 +380,21 @@ function HybridFarmMappingContent() {
           throw new Error(json.error || 'Failed to save boundary');
         }
         toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
-        await runBoundaryAnalysis(selectedFarm.id, boundary);
+        const json = await res.json().catch(() => ({}));
+        if (json.result) setBoundaryAnalysis(json.result);
+        else await runBoundaryAnalysis(selectedFarm.id, boundary);
+        setSavedOffline(false);
       } else {
+        const { saveBoundaryOffline } = await import('@/lib/offline/sync-store');
+        await saveBoundaryOffline({
+          farm_id: selectedFarm.id,
+          local_farm_id: selectedFarm.is_local ? (selectedFarm.local_id || selectedFarm.id) : undefined,
+          boundary,
+          area_hectares: areaHectares,
+        });
+        setSelectedFarm(prev => prev ? { ...prev, boundary, area_hectares: areaHectares, has_boundary: true } as any : prev);
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
+        setSavedOffline(true);
       }
       setIsSuccess(true);
     } catch (error: any) {
@@ -365,9 +417,11 @@ function HybridFarmMappingContent() {
     return (
       <div className="max-w-md mx-auto py-12 text-center space-y-6">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold">Boundary Saved</h2>
+        <h2 className="text-2xl font-bold">{savedOffline ? 'Boundary Queued Offline' : 'Boundary Saved'}</h2>
         <p className="text-muted-foreground">
-          {selectedFarm?.farmer_name}'s farm has been mapped ({areaHectares} hectares).
+          {savedOffline
+            ? `${selectedFarm?.farmer_name}'s boundary is saved on this device and will sync when online.`
+            : `${selectedFarm?.farmer_name}'s farm has been mapped (${areaHectares} hectares).`}
         </p>
         <div className="space-y-3">
           <Button onClick={() => { setIsSuccess(false); setCoordinates([]); setSelectedFarm(null); setCurrentLocation(null); }} className="w-full" data-testid="button-map-another">
@@ -401,6 +455,9 @@ function HybridFarmMappingContent() {
               <div>
                 <div className="font-medium text-sm">{selectedFarm.farmer_name}</div>
                 <div className="text-xs text-muted-foreground">{selectedFarm.community}</div>
+                {selectedFarm.is_local && (
+                  <Badge variant="secondary" className="text-xs mt-1">Queued offline</Badge>
+                )}
                 {selectedFarm.boundary && (
                   <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
                 )}
@@ -454,7 +511,10 @@ function HybridFarmMappingContent() {
                           <div className="font-medium text-sm truncate">{f.farmer_name}</div>
                           <div className="text-xs text-muted-foreground">{f.community}</div>
                         </div>
-                        {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                        <div className="flex items-center gap-1">
+                          {f.is_local && <Badge variant="secondary" className="text-xs">Offline</Badge>}
+                          {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                        </div>
                       </button>
                     ))
                   )}

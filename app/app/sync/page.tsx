@@ -26,6 +26,8 @@ import {
   Scale,
   ChevronDown,
   ChevronUp,
+  Upload,
+  FileText,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
 
@@ -45,10 +47,18 @@ interface LocalBatch {
   bags: any[];
   notes?: string;
   collected_at: string;
-  status: 'pending' | 'syncing' | 'synced' | 'error';
+  status: 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
   error_message?: string;
   created_at: string;
   synced_at?: string;
+}
+
+interface QueueStats {
+  pending: number;
+  syncing: number;
+  synced: number;
+  error: number;
+  conflict?: number;
 }
 
 interface SyncStats {
@@ -56,6 +66,24 @@ interface SyncStats {
   syncing: number;
   synced: number;
   error: number;
+  conflict?: number;
+  batches?: QueueStats;
+  farms?: QueueStats;
+  boundaries?: QueueStats;
+  uploads?: QueueStats;
+  ocr?: QueueStats;
+}
+
+type QueueItemType = 'farm' | 'upload' | 'ocr' | 'boundary';
+
+interface QueueItem {
+  id: string;
+  type: QueueItemType;
+  label: string;
+  detail: string;
+  status: 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
+  error_message?: string;
+  created_at: string;
 }
 
 export default function SyncDashboardPage() {
@@ -64,7 +92,9 @@ export default function SyncDashboardPage() {
   const isOnline = useOnlineStatus();
 
   const [batches, setBatches] = useState<LocalBatch[]>([]);
-  const [stats, setStats] = useState<SyncStats>({ pending: 0, syncing: 0, synced: 0, error: 0 });
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const emptyQueue = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
+  const [stats, setStats] = useState<SyncStats>({ pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -79,9 +109,62 @@ export default function SyncDashboardPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { getAllBatches, getSyncStats } = await import('@/lib/offline/sync-store');
-      const [batchList, syncStats] = await Promise.all([getAllBatches(), getSyncStats()]);
+      const {
+        getAllBatches,
+        getAllOfflineFarms,
+        getAllBoundaries,
+        getAllUploads,
+        getAllOcrJobs,
+        getSyncStats,
+      } = await import('@/lib/offline/sync-store');
+      const [batchList, farmList, boundaryList, uploadList, ocrList, syncStats] = await Promise.all([
+        getAllBatches(),
+        getAllOfflineFarms(),
+        getAllBoundaries(),
+        getAllUploads(),
+        getAllOcrJobs(),
+        getSyncStats(),
+      ]);
+      const fieldItems: QueueItem[] = [
+        ...farmList.map((farm: any) => ({
+          id: farm.id,
+          type: 'farm' as const,
+          label: farm.farmer_name || 'Offline farmer',
+          detail: [farm.community, farm.phone].filter(Boolean).join(' - ') || farm.local_id,
+          status: farm.status,
+          error_message: farm.error_message,
+          created_at: farm.created_at,
+        })),
+        ...uploadList.map((upload: any) => ({
+          id: upload.id,
+          type: 'upload' as const,
+          label: upload.file_name || upload.file_type || 'Queued file',
+          detail: `${upload.file_type || 'file'} for ${upload.local_farm_id || upload.farm_id}`,
+          status: upload.status,
+          error_message: upload.error_message,
+          created_at: upload.created_at,
+        })),
+        ...ocrList.map((job: any) => ({
+          id: job.id,
+          type: 'ocr' as const,
+          label: 'Offline OCR job',
+          detail: `Runs after ${job.local_farm_id || job.farm_id} syncs`,
+          status: job.status,
+          error_message: job.error_message,
+          created_at: job.created_at,
+        })),
+        ...boundaryList.map((boundary: any) => ({
+          id: boundary.id,
+          type: 'boundary' as const,
+          label: 'Farm boundary',
+          detail: `${boundary.area_hectares ?? 0} ha for ${boundary.local_farm_id || boundary.farm_id}`,
+          status: boundary.status,
+          error_message: boundary.error_message,
+          created_at: boundary.created_at,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setBatches(batchList as any);
+      setQueueItems(fieldItems);
       setStats(syncStats);
     } catch (error) {
       console.error('Failed to load sync data:', error);
@@ -109,6 +192,25 @@ export default function SyncDashboardPage() {
     }
   }, [orgLoading, loadData, isOnline, loadServerMetrics]);
 
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let disposed = false;
+
+    import('@/lib/offline/sync-service')
+      .then(({ addSyncListener }) => {
+        if (disposed) return;
+        cleanup = addSyncListener(() => {
+          void loadData();
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
+  }, [loadData]);
+
   const handleSyncAll = async () => {
     if (!isOnline) {
       toast({ title: 'Offline', description: 'You need to be online to sync.', variant: 'destructive' });
@@ -120,10 +222,10 @@ export default function SyncDashboardPage() {
       const { syncPendingBatches } = await import('@/lib/offline/sync-service');
       const result = await syncPendingBatches();
       if (result.synced > 0) {
-        toast({ title: 'Sync Complete', description: `${result.synced} batch(es) synced successfully.` });
+        toast({ title: 'Sync Complete', description: `${result.synced} item(s) synced successfully.` });
       }
       if (result.failed > 0) {
-        toast({ title: 'Some Syncs Failed', description: `${result.failed} batch(es) failed to sync.`, variant: 'destructive' });
+        toast({ title: 'Some Syncs Failed', description: `${result.failed} item(s) failed to sync.`, variant: 'destructive' });
       }
       if (result.synced === 0 && result.failed === 0) {
         toast({ title: 'Nothing to Sync', description: 'All data is up to date.' });
@@ -153,17 +255,63 @@ export default function SyncDashboardPage() {
     }
   };
 
+  const handleRetryQueueItem = async (item: QueueItem) => {
+    if (!isOnline) {
+      toast({ title: 'Offline', description: 'You need to be online to retry.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const {
+        updateFarmStatus,
+        updateUploadStatus,
+        updateOcrJobStatus,
+        updateBoundaryStatus,
+      } = await import('@/lib/offline/sync-store');
+
+      if (item.type === 'farm') await updateFarmStatus(item.id, 'pending');
+      if (item.type === 'upload') await updateUploadStatus(item.id, 'pending');
+      if (item.type === 'ocr') await updateOcrJobStatus(item.id, 'pending');
+      if (item.type === 'boundary') await updateBoundaryStatus(item.id, 'pending');
+      await loadData();
+      handleSyncAll();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to retry item.', variant: 'destructive' });
+    }
+  };
+
   const handleClearSynced = async () => {
     setIsClearing(true);
     try {
-      const { deleteSyncedBatches } = await import('@/lib/offline/sync-store');
-      await deleteSyncedBatches();
+      const { deleteSyncedQueueItems } = await import('@/lib/offline/sync-store');
+      await deleteSyncedQueueItems();
       await loadData();
-      toast({ title: 'Cleared', description: 'Synced batches removed from local storage.' });
+      toast({ title: 'Cleared', description: 'Synced offline items removed from local storage.' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to clear.', variant: 'destructive' });
     } finally {
       setIsClearing(false);
+    }
+  };
+
+  const handleDiscardQueueItem = async (item: QueueItem) => {
+    try {
+      const {
+        deleteFarm,
+        deleteUpload,
+        deleteOcrJob,
+        deleteBoundary,
+      } = await import('@/lib/offline/sync-store');
+
+      if (item.type === 'farm') await deleteFarm(item.id);
+      if (item.type === 'upload') await deleteUpload(item.id);
+      if (item.type === 'ocr') await deleteOcrJob(item.id);
+      if (item.type === 'boundary') await deleteBoundary(item.id);
+      setDiscardConfirmId(null);
+      await loadData();
+      toast({ title: 'Discarded', description: 'Queued item removed from local storage.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to discard item.', variant: 'destructive' });
     }
   };
 
@@ -200,11 +348,29 @@ export default function SyncDashboardPage() {
       case 'pending': return <Clock className="h-4 w-4 text-amber-500" />;
       case 'syncing': return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
       case 'synced': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'conflict': return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'error': return <XCircle className="h-4 w-4 text-red-500" />;
       default: return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
+  const getQueueIcon = (type: QueueItemType) => {
+    switch (type) {
+      case 'farm': return <Users className="h-4 w-4 text-emerald-600" />;
+      case 'upload': return <Upload className="h-4 w-4 text-blue-600" />;
+      case 'ocr': return <FileText className="h-4 w-4 text-violet-600" />;
+      case 'boundary': return <MapPin className="h-4 w-4 text-amber-600" />;
+    }
+  };
+
+  const getQueueTypeLabel = (type: QueueItemType) => {
+    switch (type) {
+      case 'farm': return 'Farmer';
+      case 'upload': return 'File';
+      case 'ocr': return 'OCR';
+      case 'boundary': return 'Boundary';
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -299,6 +465,23 @@ export default function SyncDashboardPage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: 'Farmers', value: (stats.farms || emptyQueue).pending + (stats.farms || emptyQueue).error, testId: 'text-queue-farms' },
+          { label: 'Files', value: (stats.uploads || emptyQueue).pending + (stats.uploads || emptyQueue).error, testId: 'text-queue-uploads' },
+          { label: 'OCR', value: (stats.ocr || emptyQueue).pending + (stats.ocr || emptyQueue).error, testId: 'text-queue-ocr' },
+          { label: 'Boundaries', value: (stats.boundaries || emptyQueue).pending + (stats.boundaries || emptyQueue).error, testId: 'text-queue-boundaries' },
+          { label: 'Batches', value: (stats.batches || emptyQueue).pending + (stats.batches || emptyQueue).error, testId: 'text-queue-batches' },
+        ].map(item => (
+          <Card key={item.label}>
+            <CardContent className="pt-3 pb-3 text-center">
+              <div className="text-lg font-bold font-mono" data-testid={item.testId}>{item.value}</div>
+              <div className="text-[11px] text-muted-foreground">{item.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <div className="flex gap-3">
         <Button
           onClick={handleSyncAll}
@@ -333,6 +516,103 @@ export default function SyncDashboardPage() {
         </Button>
       </div>
 
+      {!isLoading && queueItems.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Field Work Queue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {queueItems.map((item) => {
+              const confirmId = `${item.type}:${item.id}`;
+              return (
+                <div key={confirmId} className="rounded-md border p-3 space-y-3" data-testid={`queue-item-${confirmId}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {getQueueIcon(item.type)}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">{item.label}</span>
+                          <Badge variant="secondary" className="text-xs">{getQueueTypeLabel(item.type)}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground break-all">{item.detail}</div>
+                        <div className="text-xs text-muted-foreground">{formatTime(item.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {getStatusIcon(item.status)}
+                      <StatusBadge domain="sync" status={item.status} />
+                    </div>
+                  </div>
+
+                  {item.status === 'error' && (
+                    <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Sync Error
+                      </div>
+                      {item.error_message && (
+                        <p className="text-xs text-muted-foreground font-mono break-all">{item.error_message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{getErrorGuidance(item.error_message)}</p>
+                    </div>
+                  )}
+
+                  {discardConfirmId === confirmId ? (
+                    <div className="rounded-md bg-muted p-3 space-y-2">
+                      <p className="text-xs font-medium">Discard this queued item? This cannot be undone.</p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => handleDiscardQueueItem(item)}
+                          data-testid={`button-discard-queue-confirm-${confirmId}`}
+                        >
+                          Yes, Discard
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setDiscardConfirmId(null)}
+                          data-testid={`button-discard-queue-cancel-${confirmId}`}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => handleRetryQueueItem(item)}
+                        disabled={!isOnline || item.status === 'syncing'}
+                        data-testid={`button-retry-queue-${confirmId}`}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs text-destructive hover:text-destructive"
+                        onClick={() => setDiscardConfirmId(confirmId)}
+                        data-testid={`button-discard-queue-${confirmId}`}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Discard
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -341,8 +621,12 @@ export default function SyncDashboardPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-2">
             <Package className="h-10 w-10 text-muted-foreground mx-auto" />
-            <div className="font-medium">No offline data</div>
-            <div className="text-sm text-muted-foreground">Batches collected offline will appear here.</div>
+            <div className="font-medium">{stats.pending > 0 || stats.error > 0 ? 'Offline field work queued' : 'No offline data'}</div>
+            <div className="text-sm text-muted-foreground">
+              {stats.pending > 0 || stats.error > 0
+                ? 'Queued farmers, files, OCR jobs, or boundaries are shown in the summary above.'
+                : 'Batches collected offline will appear here.'}
+            </div>
           </CardContent>
         </Card>
       ) : (

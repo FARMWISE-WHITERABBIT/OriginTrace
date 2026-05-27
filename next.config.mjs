@@ -86,11 +86,10 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com",
-      "script-src 'self' 'unsafe-inline' https://*.sentry.io",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
-      "connect-src 'self' http://127.0.0.1:3000 http://localhost:3000 http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:54321 ws://localhost:54321 https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
+      "connect-src 'self' http://127.0.0.1:3000 http://localhost:3000 http://127.0.0.1:5000 http://localhost:5000 http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:5000 ws://localhost:5000 ws://127.0.0.1:54321 ws://localhost:54321 https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
       "frame-src 'self' https://js.paystack.co",
       "worker-src 'self' blob:",
       "media-src 'self' blob:",
@@ -101,6 +100,7 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: { root: rootDir },
+  allowedDevOrigins: ['127.0.0.1:5000', 'localhost:5000'],
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

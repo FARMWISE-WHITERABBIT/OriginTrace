@@ -18,6 +18,8 @@ const syncBatchSchema = z.object({
   community: z.string().optional(),
   gps_lat: z.number().optional(),
   gps_lng: z.number().optional(),
+  bag_count: z.number().optional(),
+  total_weight: z.number().optional(),
   contributors: z.array(z.object({
     farm_id: z.string().uuid().optional().or(z.string().optional()).or(z.number().optional()),
     farmer_name: z.string().optional(),
