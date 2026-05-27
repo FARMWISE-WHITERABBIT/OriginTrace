@@ -22,7 +22,7 @@ const registrationSchema = z.object({
   nepcRegistered:     z.enum(['yes', 'no']),
 });
 
-const ALLOWED_SLUGS = new Set(['yexdep-2026', 'export-readiness-2026']);
+const ALLOWED_SLUGS = new Set(['yexdep-2026', 'export-readiness-2026', 'border-compliance-2026']);
 
 export async function POST(request: NextRequest) {
   let body: unknown;
