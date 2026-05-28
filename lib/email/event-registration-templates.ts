@@ -79,8 +79,32 @@ const EXPORT_READINESS_CONTEXT: EventEmailContext = {
   regLabel:       '#065F46',
 };
 
+const BORDER_COMPLIANCE_CONTEXT: EventEmailContext = {
+  partners:       'OriginTrace',
+  eventTitle:     'Border Compliance Webinar',
+  shortTitle:     'Border Compliance Webinar 2026',
+  date:           'Friday, 12th June 2026',
+  time:           'Time confirmed in your joining link email',
+  venue:          'Online · Zoom',
+  venueAddress:   'Joining link sent to your registered email address',
+  theme:          'Don\'t let a missing document stop your next shipment.',
+  dayWord:        'Friday',
+  headerColor:    '#1F5F52',
+  accentColor:    '#1F5F52',
+  bannerBg:       '#D1FAE5',
+  bannerBorder:   '#A7F3D0',
+  bannerText:     '#065F46',
+  detailsBg:      '#F8FAFC',
+  detailsBorder:  '#E2E8F0',
+  detailsAccent:  '#1F5F52',
+  regBg:          '#F0FDF9',
+  regBorder:      '#A7F3D0',
+  regLabel:       '#065F46',
+};
+
 export function getEventEmailContext(slug: string): EventEmailContext {
   if (slug === 'export-readiness-2026') return EXPORT_READINESS_CONTEXT;
+  if (slug === 'border-compliance-2026') return BORDER_COMPLIANCE_CONTEXT;
   return YEXDEP_CONTEXT;
 }
 
