@@ -3,6 +3,39 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import { CookieBanner } from '@/components/marketing/cookie-banner';
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://origintrace.trade/#organization',
+      name: 'OriginTrace',
+      url: 'https://origintrace.trade',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://origintrace.trade/images/logo-green.png',
+        width: 512,
+        height: 512,
+      },
+      description: 'Supply chain compliance and traceability platform for agricultural exporters in Africa and beyond. EUDR, GACC, UK due diligence, and global buyer-ready documentation.',
+      areaServed: ['NG', 'GH', 'KE', 'ET', 'CI', 'CM'],
+      knowsAbout: ['EUDR compliance', 'China GACC registration', 'supply chain traceability', 'agricultural export compliance', 'deforestation-free certification'],
+      contactPoint: {
+        '@type': 'ContactPoint',
+        email: 'hello@origintrace.trade',
+        contactType: 'customer support',
+      },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://origintrace.trade/#website',
+      url: 'https://origintrace.trade',
+      name: 'OriginTrace',
+      publisher: { '@id': 'https://origintrace.trade/#organization' },
+    },
+  ],
+};
+
 export const metadata: Metadata = {
   title: {
     default: 'OriginTrace — Supply Chain Compliance & Traceability Platform',
@@ -33,6 +66,10 @@ export default function MarketingLayout({
 }) {
   return (
     <ThemeProvider>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
       {/*
        * Google Analytics — marketing pages only, not /app.
        * GA is loaded with default_consent denied so it fires no cookies
