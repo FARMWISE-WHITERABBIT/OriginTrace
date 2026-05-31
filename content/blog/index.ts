@@ -17,9 +17,11 @@ import { post as juneComplianceWave } from './june-2026-compliance-wave-nigerian
 import { post as supplyChainTransparency } from './supply-chain-transparency-new-entry-ticket-global-trade';
 import { post as rainforestAlliance } from './rainforest-alliance-certification-nigerian-ghanaian-exporters';
 import { post as exportCocoaCashewSesame } from './how-to-export-cocoa-cashew-sesame-eu-nigeria-ghana';
+import { post as gaccSesameGumArabic } from './gacc-compliance-traceability-sesame-gum-arabic-nigeria';
 import type { BlogPost } from '@/lib/blog';
 
 export const posts: BlogPost[] = [
+  gaccSesameGumArabic,
   juneComplianceWave,
   supplyChainTransparency,
   rainforestAlliance,
