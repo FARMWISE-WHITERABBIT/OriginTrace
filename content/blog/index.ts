@@ -13,9 +13,17 @@ import { post as soybean } from './soybean-eudr-export-compliance-guide';
 import { post as preShipment } from './pre-shipment-compliance-scoring';
 import { post as eudrDeadline } from './eudr-compliance-deadline-2026-exporters';
 import { post as offline } from './offline-first-traceability-low-connectivity';
+import { post as juneComplianceWave } from './june-2026-compliance-wave-nigerian-ghanaian-exporters';
+import { post as supplyChainTransparency } from './supply-chain-transparency-new-entry-ticket-global-trade';
+import { post as rainforestAlliance } from './rainforest-alliance-certification-nigerian-ghanaian-exporters';
+import { post as exportCocoaCashewSesame } from './how-to-export-cocoa-cashew-sesame-eu-nigeria-ghana';
 import type { BlogPost } from '@/lib/blog';
 
 export const posts: BlogPost[] = [
+  juneComplianceWave,
+  supplyChainTransparency,
+  rainforestAlliance,
+  exportCocoaCashewSesame,
   africaTradeFinance,
   howToExportChina,
   supplyChainTraceability,
