@@ -591,3 +591,35 @@ The production offline-field Playwright path was verified against local Supabase
 ## 33. Project Status: Phase 20 Complete
 
 - [X] **Phase 20: Production Offline Field Work** - Implemented typed offline field queues, idempotent farm sync, field-agent boundary/file/OCR API support, offline UI queue visibility, dependency-safe batch sync, and a passing Chromium E2E regression for the full reconnect workflow.
+
+---
+
+## 34. Phase 21: Release Notes Snapshot
+
+This release note snapshot translates the recent production commits into user-facing value for QA, security, CI stability, and offline field operations.
+
+### What's New
+
+- **Offline field work is now production-grade:** Field agents can register farmers, capture files and OCR jobs, map boundaries, and queue collection batches while offline. When the device reconnects, the sync pipeline replays those records in dependency order so local farm IDs resolve before boundaries and batches sync.
+- **Persistent Playwright coverage now closes the remaining QA gaps:** The 17 formerly untested entity and action workflows are covered by durable Chromium E2E specs, including farmer details, farm boundaries, shipment readiness, compliance profiles, document upload/download, contracts, tenders, bids, and RBAC-gated routes.
+- **Security regression probes are part of the test suite:** The CVE-focused Playwright spec now checks protected-route bypass attempts, middleware/header spoofing, dynamic route variants, XSS escaping in document fields, RBAC denial, and document API access controls.
+
+### Fixes
+
+- **More reliable login and QA flows:** Playwright auth now waits for login hydration and committed redirects instead of relying on full page load events, reducing false timeouts during E2E runs.
+- **CI and smoke tests are back in line:** The dependency tree was synchronized for `npm ci`, and the `chromium-public` Playwright project was restored for marketing smoke coverage.
+- **Security dependency exposure was reduced:** Next.js was upgraded to the patched 16.x line, same-major vulnerable packages were refreshed, and the remaining no-fix `xlsx` import risk is constrained with file-size, row-count, and prototype-key guardrails.
+
+### Verification
+
+- `npm run check` passed.
+- `npm run build` passed.
+- `npx playwright test tests/e2e/untested-entity-details.spec.ts tests/e2e/untested-action-flows.spec.ts --project=chromium --reporter=line` passed 17/17.
+- `npx playwright test tests/e2e/security-cve-regression.spec.ts --project=chromium --reporter=line` passed 7/7.
+- `npx playwright test tests/e2e/offline-field-work.spec.ts --project=chromium --reporter=line --retries=0 --timeout=90000` passed 2/2.
+
+---
+
+## 35. Project Status: Phase 21 Complete
+
+- [X] **Phase 21: Release Notes Snapshot** - Added a concise product-facing summary of the QA closure, CVE/security probes, CI fixes, dependency hardening, and production offline field workflow.
