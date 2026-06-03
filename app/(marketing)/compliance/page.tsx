@@ -4,7 +4,31 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import { ArrowRight, Globe, Shield, FileCheck, Scale, Landmark } from 'lucide-react';
+
+const hubFaqs = [
+  {
+    question: 'Which export regulations affect Nigerian and Ghanaian food exporters in 2026?',
+    answer: 'Nigerian and Ghanaian exporters are currently affected by several major regulations simultaneously: the EU Deforestation Regulation (EUDR) with full enforcement by December 2026, China GACC Decree 248 facility registration (deadline June 2026), the UK Environment Act due diligence rules, and the US FDA FSMA 204 Food Traceability Rule. The specific regulations that apply to you depend on which markets you export to and which commodities you handle.',
+  },
+  {
+    question: 'What is the difference between EUDR and GACC?',
+    answer: 'EUDR (EU Deforestation Regulation) is a European law that requires commodities like cocoa, coffee, soy, and palm oil to be deforestation-free before entering the EU market. GACC (General Administration of Customs of China) is China\'s customs authority that requires overseas food facilities to be registered under Decree 248 before they can export food products to China. Both regulations affect African agricultural exporters but for different markets and with different documentation requirements.',
+  },
+  {
+    question: 'Do I need to comply with EUDR if I export cocoa or cashew from Nigeria to Europe?',
+    answer: 'Yes. If you export cocoa, coffee, rubber, or other EUDR-covered commodities to the EU, your EU buyer is required to conduct due diligence — and they will ask you to provide traceability data and geolocation coordinates for all farms in your supply chain. Without this data, your EU buyer cannot place your goods on the EU market. Effectively, EUDR compliance starts with you as the African exporter.',
+  },
+  {
+    question: 'What is GACC registration and does it affect Nigerian exporters?',
+    answer: 'GACC registration under Decree 248 is mandatory for all overseas food production, processing, and storage facilities that export food to China. Nigeria is a major exporter of sesame seeds, cocoa, and agricultural products to China, making GACC registration directly relevant for Nigerian exporters. The registration deadline of June 2026 is enforced — unregistered facilities will have their shipments refused at Chinese ports.',
+  },
+  {
+    question: 'Can one platform handle EUDR, GACC, and other compliance requirements at the same time?',
+    answer: 'Yes. OriginTrace provides a single platform that captures the farm-level GPS data, batch traceability, documentation, and compliance scoring needed across multiple regulations simultaneously. Rather than running separate processes for each export market, OriginTrace lets you collect data once and use it across EUDR due diligence statements, GACC traceability documentation, and UK/US buyer requirements.',
+  },
+];
 
 const regulations = [
   {
@@ -67,7 +91,8 @@ const regulations = [
 export default function ComplianceHubPage() {
   return (
     <>
-<MarketingNav />
+      <FAQSchema faqs={hubFaqs} />
+      <MarketingNav />
       <main className="min-h-screen bg-background">
         <section className="pt-28 pb-20 md:pt-36 md:pb-28 text-center">
           <div className="max-w-6xl mx-auto px-6">
