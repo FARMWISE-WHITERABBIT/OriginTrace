@@ -623,3 +623,29 @@ This release note snapshot translates the recent production commits into user-fa
 ## 35. Project Status: Phase 21 Complete
 
 - [X] **Phase 21: Release Notes Snapshot** - Added a concise product-facing summary of the QA closure, CVE/security probes, CI fixes, dependency hardening, and production offline field workflow.
+
+---
+
+## 36. Phase 22: Post-Merge QA Hardening
+
+After pulling `main`, the verification lane surfaced three follow-up issues: `/robots.txt` returned a Next.js route conflict, the CVE config posture probe failed because `allowedDevOrigins` had been introduced, and the public marketing smoke suite had page-load timing flakes in dev mode.
+
+### Fixes
+
+- **SEO route stability:** Removed the duplicate `app/robots.ts` metadata route and kept `public/robots.txt` as the single `/robots.txt` source.
+- **Security posture alignment:** Removed `allowedDevOrigins` from `next.config.mjs` so the non-destructive SSRF/WebSocket posture probe stays fail-closed.
+- **Smoke-test reliability:** Updated the marketing smoke suite to wait for `domcontentloaded` with a wider per-test timeout instead of waiting on full page `load`.
+- **Security-test speed:** Reworked the CVE route/API probes to authenticate test contexts directly, preserving browser route checks and API access-control assertions without slow full UI logins.
+
+### Verification
+
+- `npm run check` passed.
+- `npx playwright test tests/e2e/security-cve-regression.spec.ts --project=chromium --reporter=line --retries=0 --timeout=90000` passed 7/7.
+- `npx playwright test tests/e2e/marketing.spec.ts --project=chromium-public --reporter=line --retries=0 --timeout=90000` passed 20/20.
+- `npm run build` passed; the build still prints the known non-fatal `ENVIRONMENT_FALLBACK` diagnostic.
+
+---
+
+## 37. Project Status: Phase 22 Complete
+
+- [X] **Phase 22: Post-Merge QA Hardening** - Resolved the post-merge robots route conflict, restored CVE config posture, stabilized marketing smoke navigation, and verified security, marketing, type-check, and production build lanes.
