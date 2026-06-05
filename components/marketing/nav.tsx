@@ -140,6 +140,23 @@ export function MarketingNav() {
             )}
           </div>
 
+          {/* Nav divider shape — Mivora .nav-divider */}
+          <div style={{ position: 'relative', width: '13px', flexShrink: 0, alignSelf: 'stretch' }}>
+            <img
+              src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+              alt=""
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: '0% -11px 0% auto',
+                width: '13px',
+                height: '50px',
+                marginTop: 'auto',
+                marginBottom: 'auto',
+              }}
+            />
+          </div>
+
           {/* CTA — alignSelf stretch fills full pill height, green pill creates the pinch */}
           <Link href="/demo"
             className="flex items-center font-semibold transition-opacity hover:opacity-90"

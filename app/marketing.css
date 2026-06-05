@@ -1565,6 +1565,19 @@
   color: var(--mk-green);
 }
 
+/* Mivora .nav-divider — shape SVG between nav links and CTA button */
+.nav-divider {
+  position: absolute;
+  inset: 0% -11px 0% auto;
+  width: 13px;
+  height: 50px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+@media screen and (max-width: 767px) {
+  .nav-divider { width: 14px; }
+}
+
 /* Nav link — Mivora style: left-aligned group, no background on idle */
 .mk-nav-link,
 .mk-pill-nav__link {
