@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
@@ -13,8 +11,9 @@ import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
-import { 
-  Shield, 
+import { WhyChooseSection } from '@/components/marketing/why-choose-section';
+import {
+  Shield,
   ChevronRight,
   Check,
   AlertTriangle,
@@ -45,6 +44,10 @@ import {
   Target,
   Eye,
 } from 'lucide-react';
+
+/* ─────────────────────────────────────────────────────────────────
+   DATA CONSTANTS — unchanged from original
+   ───────────────────────────────────────────────────────────────── */
 
 const problemCards = [
   { icon: FlaskConical, title: 'Hazardous pesticide residues', description: 'MRL violations trigger automatic border rejections across EU and US markets.' },
@@ -164,9 +167,37 @@ const supplyChainSteps = [
   { icon: ClipboardCheck, label: 'Inspection', detail: 'Border compliance check' },
 ];
 
+const whyChooseFeatures = [
+  {
+    title: 'Pre-Shipment Compliance Scoring',
+    body: 'Score every shipment across five dimensions before cargo reaches port. Identify risks, resolve issues, and clear with confidence.',
+    icon: Shield,
+  },
+  {
+    title: 'Farm-Level GPS Traceability',
+    body: 'GPS polygon mapping links every shipment back to its exact farm source — meeting EUDR, FSMA, and buyer standards.',
+    icon: MapPin,
+  },
+  {
+    title: 'Offline-First Field Operations',
+    body: 'Purpose-built for remote areas. Field agents capture data with zero connectivity, syncing automatically when back in range.',
+    icon: Wifi,
+  },
+  {
+    title: 'Buyer Portal & DPP',
+    body: 'Give buyers direct traceability access. Generate QR-linked Digital Product Passports that prove full chain of custody.',
+    icon: QrCode,
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   PAGE COMPONENT
+   ───────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
   const recentPosts = getRecentPosts(3);
+
+  /* Schema markup */
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -196,522 +227,610 @@ export default function HomePage() {
       <MarketingNav />
 
       <main>
-        {/* ===== HERO SECTION ===== */}
-        <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 overflow-hidden min-h-[90vh] flex items-center">
+
+        {/* ═══════════════════════════════════════════════════════
+            1. HERO — full-bleed dark, left-aligned, floating card
+            ═══════════════════════════════════════════════════════ */}
+        <section className="mk-hero">
           <HeroBackground />
-          
-          <div className="max-w-6xl mx-auto px-6 relative z-10 w-full">
-            <div className="max-w-3xl mx-auto text-center">
-              <FadeIn delay={0.1}>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] mb-8 text-slate-900 dark:text-white" data-testid="text-hero-headline">
-                  Compliance Infrastructure
-                  <br />
-                  for <IndustryTicker />
-                </h1>
-              </FadeIn>
+          <div className="mk-hero__overlay" />
 
-              <FadeIn delay={0.2}>
-                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed mb-10 max-w-2xl mx-auto">
-                  OriginTrace is the all-in-one platform for supply chain traceability, 
-                  compliance verification, and export readiness — helping exporters prevent 
-                  shipment rejections before cargo reaches port.
-                </p>
-              </FadeIn>
+          <div className="mk-hero__content">
+            <div className="mk-container-lg">
+              <div className="grid lg:grid-cols-[3fr_2fr] gap-12 lg:gap-16 items-center">
 
-              <FadeIn delay={0.3}>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="#eudr-assessment">
-                    <Button size="lg" className="gap-2 w-full sm:w-auto bg-emerald-600 text-white px-8 h-12 text-base" data-testid="button-check-readiness">
-                      Assess Your Export Readiness
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/demo">
-                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-slate-300 dark:border-slate-600 px-8 h-12 text-base" data-testid="button-request-demo">
-                      Request a Demo
-                    </Button>
-                  </Link>
+                {/* Left — headline + CTAs */}
+                <div>
+                  <FadeIn delay={0.05}>
+                    <span className="pre-title margin-bottom margin-large" style={{ display: 'inline-flex' }}>
+                      Trust Infrastructure
+                    </span>
+                  </FadeIn>
+
+                  <FadeIn delay={0.15}>
+                    <h1
+                      className="text-display-xl text-mk-on-dark margin-bottom margin-large"
+                      data-testid="text-hero-headline"
+                      style={{ maxWidth: '20ch' }}
+                    >
+                      Compliance Infrastructure
+                      <br />
+                      for <IndustryTicker />
+                    </h1>
+                  </FadeIn>
+
+                  <FadeIn delay={0.25}>
+                    <p
+                      className="text-mk-faded margin-bottom margin-xlarge"
+                      style={{ fontSize: '1.0625rem', lineHeight: 1.7, maxWidth: '46ch' }}
+                    >
+                      OriginTrace is the all-in-one platform for supply chain traceability,
+                      compliance verification, and export readiness — helping exporters prevent
+                      shipment rejections before cargo reaches port.
+                    </p>
+                  </FadeIn>
+
+                  <FadeIn delay={0.35}>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Link
+                        href="#eudr-assessment"
+                        className="btn-mk-primary btn-mk-lg"
+                        data-testid="button-check-readiness"
+                      >
+                        Assess Your Export Readiness
+                        <ChevronRight className="h-5 w-5" />
+                      </Link>
+                      <Link
+                        href="/demo"
+                        className="btn-mk-ghost btn-mk-lg"
+                        data-testid="button-request-demo"
+                      >
+                        Request a Demo
+                      </Link>
+                    </div>
+                  </FadeIn>
                 </div>
-              </FadeIn>
+
+                {/* Right — floating compliance card */}
+                <FadeIn delay={0.4} direction="left">
+                  <div className="hidden lg:block">
+                    <div className="bg-white rounded-2xl shadow-xl p-5 max-w-sm ml-auto">
+                      {/* Card header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p
+                            className="text-xs font-semibold uppercase tracking-widest mb-0.5"
+                            style={{ color: 'var(--mk-green)' }}
+                          >
+                            Example Shipment
+                          </p>
+                          <p className="text-sm font-bold" style={{ color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}>
+                            Cocoa Export · Nigeria → EU
+                          </p>
+                        </div>
+                        <div
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={{ background: 'var(--mk-green-light)', color: 'var(--mk-green)' }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                          Live
+                        </div>
+                      </div>
+
+                      {/* Compliance score bar */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs" style={{ color: 'var(--mk-text-muted)' }}>
+                            Compliance Score
+                          </span>
+                          <span
+                            className="text-sm font-extrabold"
+                            style={{ color: 'var(--mk-green)', fontFamily: 'var(--font-display)' }}
+                          >
+                            99.2%
+                          </span>
+                        </div>
+                        <div
+                          className="h-2 w-full rounded-full overflow-hidden"
+                          style={{ background: 'var(--mk-surface-gray)' }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: '99.2%', background: 'var(--mk-green)' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Stat row with divider */}
+                      <div
+                        className="pt-4 flex items-stretch gap-4"
+                        style={{ borderTop: '1px solid var(--mk-border)' }}
+                      >
+                        <div className="flex-1 text-center">
+                          <p
+                            className="text-xl font-extrabold leading-none"
+                            style={{
+                              color: 'var(--mk-green)',
+                              fontFamily: 'var(--font-display)',
+                              letterSpacing: '-0.035em',
+                            }}
+                          >
+                            99.2%
+                          </p>
+                          <p className="text-[11px] mt-1" style={{ color: 'var(--mk-text-muted)' }}>
+                            Clearance Rate
+                          </p>
+                        </div>
+                        <div className="mk-stat-row__divider" />
+                        <div className="flex-1 text-center">
+                          <p
+                            className="text-xl font-extrabold leading-none"
+                            style={{
+                              color: 'var(--mk-green)',
+                              fontFamily: 'var(--font-display)',
+                              letterSpacing: '-0.035em',
+                            }}
+                          >
+                            500+
+                          </p>
+                          <p className="text-[11px] mt-1" style={{ color: 'var(--mk-text-muted)' }}>
+                            Farms Verified
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </FadeIn>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ===== LOGO MARQUEE ===== */}
-        <section className="border-y border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="max-w-6xl mx-auto px-6">
-            <p className="text-center text-xs font-medium text-slate-400 dark:text-slate-500 pt-6 uppercase tracking-widest">Aligned with global compliance standards</p>
+
+        {/* ═══════════════════════════════════════════════════════
+            2. MARQUEE STRIP
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-bordered section-gray" style={{ paddingBlock: '1.5rem' }}>
+          <div className="mk-container-lg">
+            <p
+              className="text-center text-xs font-semibold uppercase tracking-[0.18em] margin-bottom margin-medium"
+              style={{ color: 'var(--mk-text-muted)' }}
+            >
+              Aligned with global compliance standards
+            </p>
             <LogoMarquee />
           </div>
         </section>
 
-        {/* ===== WHO WE ARE + STATS ===== */}
-        <section className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-16">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ About OriginTrace ]</span>
+
+        {/* ═══════════════════════════════════════════════════════
+            3. ABOUT / MISSION
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-sm">
+            {/* Centered header */}
+            <FadeIn>
+              <div className="section-header">
+                <div
+                  className="mk-icon-badge mk-icon-badge--lg margin-bottom margin-medium"
+                  aria-hidden
+                >
+                  <Leaf className="w-6 h-6" />
+                </div>
+                <span className="pre-title margin-bottom margin-medium">About OriginTrace</span>
+                <h2 className="text-display-lg section-header__title">
+                  OriginTrace is{' '}
+                  <span className="text-mk-muted">redefining</span> supply chain
+                  compliance{' '}
+                  <span className="text-mk-brand">across Africa.</span>
+                </h2>
+                <p className="section-header__body">
+                  We are trust infrastructure purpose-built for origin-sensitive supply chains.
+                  From first-mile field operations to port clearance, OriginTrace helps exporters
+                  capture verifiable compliance data at every step — so shipments clear borders,
+                  not get rejected at them.
+                </p>
+              </div>
             </FadeIn>
 
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-20">
-              <FadeIn direction="right">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center p-8">
-                      <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                        <Shield className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Trust Infrastructure</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Origin-Sensitive Supply Chains</p>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-200/50 dark:border-slate-600/50">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">Active Compliance Score</span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">98.4%</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '98.4%' }} />
-                    </div>
-                  </div>
+            {/* 3-column image grid — center image taller */}
+            <FadeIn delay={0.1}>
+              <div className="grid grid-cols-3 gap-4 items-end margin-bottom margin-xlarge-2">
+                {/* Left image */}
+                <div
+                  className="rounded-2xl overflow-hidden flex items-center justify-center"
+                  style={{
+                    aspectRatio: '4/3',
+                    background: 'linear-gradient(135deg, #065f46 0%, #2E7D6B 100%)',
+                  }}
+                >
+                  <Sprout className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.25)' }} />
                 </div>
-              </FadeIn>
 
-              <FadeIn direction="left">
-                <h2 className="text-3xl md:text-4xl font-extrabold mb-6 text-slate-900 dark:text-white">
-                  Whether you're an exporter, processor, or buyer — we help you ship with confidence.
-                </h2>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
-                  OriginTrace is trust infrastructure purpose-built for origin-sensitive supply chains. 
-                  We help organizations capture verifiable compliance data at every step — from first-mile 
-                  field operations to port clearance — so shipments clear borders, not get rejected at them.
-                </p>
-                <div className="grid sm:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">Our Mission</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      To eliminate shipment rejections by making pre-shipment compliance verification the standard — not the exception.
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">Our Approach</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Offline-first, field-ready tools that capture trust data at origin — then score, verify, and surface compliance gaps before shipment.
-                    </p>
-                  </div>
+                {/* Center image — taller (square aspect) */}
+                <div
+                  className="rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2 relative"
+                  style={{
+                    aspectRatio: '1/1',
+                    background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+                  }}
+                >
+                  <Shield className="w-12 h-12" style={{ color: 'rgba(255,255,255,0.3)' }} />
+                  <span
+                    className="text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)' }}
+                  >
+                    Platform Screenshot
+                  </span>
                 </div>
-                <Link href="/solutions">
-                  <Button variant="outline" className="gap-2" data-testid="button-learn-more">
-                    Learn More
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+
+                {/* Right image */}
+                <div
+                  className="rounded-2xl overflow-hidden flex items-center justify-center"
+                  style={{
+                    aspectRatio: '4/3',
+                    background: 'linear-gradient(135deg, #064e3b 0%, #1e293b 100%)',
+                  }}
+                >
+                  <Globe className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                </div>
+              </div>
+            </FadeIn>
+
+            {/* CTA */}
+            <FadeIn delay={0.2}>
+              <div className="flex justify-center">
+                <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
+                  Explore the Platform
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-              </FadeIn>
-            </div>
-
-            <FadeIn>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-t border-slate-200 dark:border-slate-700">
-                <StatCounter value={500} suffix="+" label="Farms Mapped" />
-                <StatCounter value={99.2} suffix="%" label="Clearance Rate" decimals={1} />
-                <StatCounter value={12} label="Countries" />
-                <StatCounter value={50} suffix="+" label="Exporters" />
               </div>
             </FadeIn>
           </div>
         </section>
 
-        {/* ===== WHY SHIPMENTS GET REJECTED ===== */}
-        <section className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ The Problem ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-problem-headline">
-                Why Shipments Get Rejected
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                Shipment rejections cost origin-sensitive supply chains millions annually. 
-                The root causes are structural, not accidental.
-              </p>
-            </FadeIn>
 
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {problemCards.map((card, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
-                        <card.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-white">{card.title}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{card.description}</p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-
-            <FadeIn className="text-center mt-12">
-              <p className="text-sm font-medium text-slate-400 dark:text-slate-500 max-w-xl mx-auto">
-                Rejections are not random — they are trust infrastructure failures.
-              </p>
-            </FadeIn>
-          </div>
-        </section>
-
-        {/* ===== PLATFORM CAPABILITIES (ACCORDION) ===== */}
-        <section className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Platform Capabilities ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-6">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-capabilities-headline">
-                Everything You Need to Ship with Confidence
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-6">
-                A complete compliance infrastructure — from first-mile field capture to pre-shipment scoring 
-                and buyer-facing transparency.
-              </p>
-              <Link href="/demo">
-                <Button variant="outline" className="gap-2" data-testid="button-capabilities-cta">
-                  Request a Demo
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+        {/* ═══════════════════════════════════════════════════════
+            4. CAPABILITIES (accordion)
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header section-header--left margin-bottom margin-xlarge">
+                <span
+                  className="pre-title margin-bottom margin-medium"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--mk-green)',
+                    color: 'var(--mk-green)',
+                  }}
+                >
+                  Platform Capabilities
+                </span>
+                <h2
+                  className="text-display-lg section-header__title"
+                  data-testid="text-capabilities-headline"
+                >
+                  Everything you need{' '}
+                  <span className="text-mk-muted">to ship with confidence</span>
+                </h2>
+                <p className="section-header__body" style={{ textAlign: 'left', marginInline: 0 }}>
+                  A complete compliance infrastructure — from first-mile field capture to
+                  pre-shipment scoring and buyer-facing transparency.
+                </p>
+                <div className="flex gap-3 mt-4">
+                  <Link
+                    href="/demo"
+                    className="btn-mk-primary btn-mk-sm"
+                    data-testid="button-capabilities-cta"
+                  >
+                    Request a Demo
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
             </FadeIn>
 
             <HomeCapabilityAccordion capabilities={capabilities} />
           </div>
         </section>
 
-        {/* ===== SHIPMENT READINESS SCORE ===== */}
-        <section id="shipment-readiness" className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Shipment Readiness Score ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-readiness-headline">
-                Know Before You Ship
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                Every shipment is scored across five compliance dimensions. 
-                Flag issues and resolve them before cargo reaches the port.
-              </p>
-            </FadeIn>
 
-            <ScaleIn>
-              <div className="max-w-4xl mx-auto">
-                <Card className="overflow-hidden border-0 shadow-2xl">
-                  <div className="bg-slate-900 text-white">
-                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 border-b border-slate-700">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                      <span className="ml-3 text-[10px] text-slate-400 font-mono">origintrace.trade/shipment-readiness</span>
-                    </div>
-
-                    <div className="p-6 md:p-8">
-                      <div className="flex flex-col md:flex-row gap-8">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">Shipment SHP-NG-2847</p>
-                              <p className="text-sm text-slate-300">Lagos Port | Cocoa Beans | 22 MT</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
-                              <span className="text-xs text-emerald-400 font-medium">Pre-Clearance</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-6 mb-8 flex-wrap">
-                            <div className="text-center">
-                              <p className="text-5xl font-bold text-emerald-400" data-testid="text-readiness-score">82</p>
-                              <p className="text-sm text-slate-400">/100</p>
-                            </div>
-                            <div>
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 text-sm font-medium">
-                                <Shield className="h-4 w-4" />
-                                Low Risk
-                              </div>
-                              <p className="text-xs text-slate-400 mt-2">Estimated clearance probability: 94%</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {readinessCategories.map((cat, i) => (
-                              <div key={i}>
-                                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                                  <span className="text-xs text-slate-300">{cat.label}</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-slate-500">Weight: {cat.weight}</span>
-                                    <span className="text-xs text-slate-400 font-mono">{cat.score}%</span>
-                                  </div>
-                                </div>
-                                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full ${cat.color}`} 
-                                    style={{ width: `${cat.score}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="md:w-72 space-y-6">
-                          <div>
-                            <p className="text-xs font-medium text-amber-400 mb-3 flex items-center gap-1.5">
-                              <CircleAlert className="h-3.5 w-3.5" />
-                              Flagged Issues
-                            </p>
-                            <div className="space-y-2">
-                              {flaggedIssues.map((issue, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs">
-                                  <AlertTriangle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${
-                                    issue.severity === 'critical' ? 'text-red-400' : 'text-amber-400'
-                                  }`} />
-                                  <span className="text-slate-300">{issue.text}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-medium text-emerald-400 mb-3 flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5" />
-                              Recommended Actions
-                            </p>
-                            <div className="space-y-2">
-                              {recommendedActions.map((action, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs">
-                                  <ArrowRight className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-500" />
-                                  <span className="text-slate-400">{action}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+        {/* ═══════════════════════════════════════════════════════
+            5. DARK SERVICES — 3-col card grid
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header section-header--left margin-bottom margin-xlarge">
+                <span className="pre-title margin-bottom margin-medium">Our Capabilities</span>
+                <h2 className="text-display-lg section-header__title">
+                  Six capabilities.{' '}
+                  <span className="text-mk-brand">One platform.</span>
+                </h2>
               </div>
-            </ScaleIn>
-          </div>
-        </section>
-
-        {/* ===== USE CASES ===== */}
-        <section id="use-cases" className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Use Cases ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-usecases-headline">
-                How OriginTrace Works Across Verticals
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                One platform, multiple origin-sensitive commodities. Tailored compliance workflows 
-                for every vertical — from farm to final destination.
-              </p>
             </FadeIn>
 
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {useCases.map((uc, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg transition-all group">
-                    <div className={`h-32 bg-gradient-to-br ${uc.gradient} flex items-center justify-center relative`}>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-700/30 dark:text-white/20">{uc.vertical}</p>
-                      </div>
-                      <div className="absolute top-3 right-3">
-                        <span className="text-[10px] font-mono bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm px-2 py-1 rounded text-slate-600 dark:text-slate-300">{uc.route}</span>
-                      </div>
-                    </div>
-                    <CardContent className="p-5">
-                      <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-white">{uc.vertical} Supply Chain</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{uc.description}</p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
+            <StaggerContainer className="mk-grid-3">
+              {/* Card 1 — Compliance Scoring */}
+              <StaggerItem>
+                <div className="mk-card h-full flex flex-col">
+                  <div className="mk-card__icon">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <h3 className="mk-card__title">Pre-Shipment Compliance Scoring</h3>
+                  <p className="mk-card__body flex-1">
+                    Score every shipment across five compliance dimensions before cargo reaches port.
+                    Identify risks early and clear shipments with confidence.
+                  </p>
+                  <Link href="/solutions" className="mk-card__arrow">
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  {/* Bottom illustration */}
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(31,95,82,0.5) 100%)' }}
+                  >
+                    <Shield className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  </div>
+                </div>
+              </StaggerItem>
+
+              {/* Card 2 — Farm Traceability */}
+              <StaggerItem>
+                <div className="mk-card h-full flex flex-col">
+                  <div className="mk-card__icon">
+                    <MapPin className="w-6 h-6" />
+                  </div>
+                  <h3 className="mk-card__title">Farm-Level GPS Traceability</h3>
+                  <p className="mk-card__body flex-1">
+                    GPS polygon mapping links every shipment back to its exact farm source —
+                    meeting EUDR, FSMA, and buyer traceability standards from day one.
+                  </p>
+                  <Link href="/solutions" className="mk-card__arrow">
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(5,95,70,0.5) 100%)' }}
+                  >
+                    <MapPin className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  </div>
+                </div>
+              </StaggerItem>
+
+              {/* Card 3 — Offline-First */}
+              <StaggerItem>
+                <div className="mk-card h-full flex flex-col">
+                  <div className="mk-card__icon">
+                    <Wifi className="w-6 h-6" />
+                  </div>
+                  <h3 className="mk-card__title">Offline-First Field Operations</h3>
+                  <p className="mk-card__body flex-1">
+                    Purpose-built for remote areas. Field agents capture data with zero
+                    connectivity, syncing automatically when back in range — no data loss.
+                  </p>
+                  <Link href="/solutions" className="mk-card__arrow">
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(20,80,65,0.5) 100%)' }}
+                  >
+                    <Wifi className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  </div>
+                </div>
+              </StaggerItem>
             </StaggerContainer>
+          </div>
+        </section>
 
-            <FadeIn className="text-center mt-12">
-              <Link href="/solutions">
-                <Button variant="outline" className="gap-2" data-testid="button-explore-solutions">
-                  Explore All Solutions
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+
+        {/* ═══════════════════════════════════════════════════════
+            6. WHY CHOOSE — accordion + image
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header section-header--left margin-bottom margin-xlarge">
+                <span
+                  className="pre-title margin-bottom margin-medium"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--mk-green)',
+                    color: 'var(--mk-green)',
+                  }}
+                >
+                  Why OriginTrace
+                </span>
+                <h2 className="text-display-lg section-header__title">
+                  Built for Africa.{' '}
+                  <span className="text-mk-muted">Trusted globally.</span>
+                </h2>
+              </div>
+            </FadeIn>
+
+            <WhyChooseSection features={whyChooseFeatures} />
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            7. STAT ROW
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing-sm section-white">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="mk-stat-row justify-center">
+                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
+                  <span className="mk-stat-row__value">500+</span>
+                  <span className="mk-stat-row__label">Farms Mapped</span>
+                </div>
+                <div className="mk-stat-row__divider" />
+                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
+                  <span className="mk-stat-row__value">99.2%</span>
+                  <span className="mk-stat-row__label">Clearance Rate</span>
+                </div>
+                <div className="mk-stat-row__divider" />
+                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
+                  <span className="mk-stat-row__value">12</span>
+                  <span className="mk-stat-row__label">Countries</span>
+                </div>
+                <div className="mk-stat-row__divider" />
+                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
+                  <span className="mk-stat-row__value">50+</span>
+                  <span className="mk-stat-row__label">Exporters</span>
+                </div>
+              </div>
             </FadeIn>
           </div>
         </section>
 
-        {/* ===== COMPLIANCE COVERAGE GRID ===== */}
-        <section className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Regulatory Coverage ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-compliance-headline">
-                Multi-Regulatory Compliance Coverage
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                One trust infrastructure serving multiple regulatory frameworks, verticals, and buyer requirements.
-              </p>
+
+        {/* ═══════════════════════════════════════════════════════
+            8. COMPLIANCE COVERAGE GRID
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">Regulatory Coverage</span>
+                <h2
+                  className="text-display-md section-header__title"
+                  data-testid="text-compliance-headline"
+                >
+                  Multi-Regulatory Compliance Coverage
+                </h2>
+                <p className="section-header__body">
+                  One trust infrastructure serving multiple regulatory frameworks, verticals,
+                  and buyer requirements.
+                </p>
+              </div>
             </FadeIn>
 
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div style={{ maxWidth: '75rem', marginInline: 'auto' }}>
+            <StaggerContainer className="mk-grid-3">
               {regulatoryData.map((group, i) => (
                 <StaggerItem key={i}>
-                  <Link href={group.link}>
-                    <Card className="h-full border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors" data-testid={`card-regulation-${i}`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="h-9 w-9 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
-                            <group.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <h3 className="font-semibold text-sm text-slate-900 dark:text-white">{group.region}</h3>
+                  <Link href={group.link} style={{ textDecoration: 'none' }}>
+                    <div
+                      className="mk-card h-full"
+                      data-testid={`card-regulation-${i}`}
+                    >
+                      <div className="flex items-center gap-3 margin-bottom margin-large">
+                        <div className="mk-card__icon" style={{ marginBottom: 0, flexShrink: 0 }}>
+                          <group.icon className="w-5 h-5" />
                         </div>
-                        <ul className="space-y-2">
-                          {group.regulations.map((reg, j) => (
-                            <li key={j} className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                              <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                              {reg}
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
+                        <h3 className="mk-card__title" style={{ marginBottom: 0 }}>
+                          {group.region}
+                        </h3>
+                      </div>
+                      <ul className="flex flex-col gap-2.5">
+                        {group.regulations.map((reg, j) => (
+                          <li key={j} className="mk-list-item">
+                            <span className="mk-list-item__icon">
+                              <Check className="w-3 h-3" />
+                            </span>
+                            {reg}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </Link>
                 </StaggerItem>
               ))}
             </StaggerContainer>
-          </div>
-        </section>
-
-        {/* ===== SUPPLY CHAIN FLOW ===== */}
-        <section className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ End-to-End Visibility ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-flow-headline">
-                Origin-to-Destination Visibility
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                OriginTrace captures compliance data at every handoff point — from farm, forest, mine, or vessel to final destination.
-              </p>
-            </FadeIn>
-
-            <div className="max-w-4xl mx-auto">
-              <StaggerContainer className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                {supplyChainSteps.map((step, i) => (
-                  <StaggerItem key={i} className="flex items-center gap-4 md:gap-0 md:flex-col">
-                    <div className="flex items-center md:flex-col gap-4 md:gap-2">
-                      <div className="h-14 w-14 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
-                        <step.icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div className="text-left md:text-center">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{step.label}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{step.detail}</p>
-                      </div>
-                    </div>
-                    {i < supplyChainSteps.length - 1 && (
-                      <ArrowRight className="h-5 w-5 text-slate-300 dark:text-slate-600 hidden md:block mt-0 md:absolute md:relative md:mx-2" />
-                    )}
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-
-              <div className="hidden md:flex items-center justify-between max-w-3xl mx-auto mt-4 px-7">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="flex-1 flex items-center">
-                    <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/30 to-emerald-500/10" />
-                    <ArrowRight className="h-3 w-3 text-emerald-500/30 -ml-1" />
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </section>
 
-        {/* ===== TESTIMONIALS ===== */}
-        <section className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ What Our Clients Say ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-testimonials-headline">
-                Trusted by Exporters Worldwide
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                Hear from the exporters, processors, and buyers who rely on OriginTrace 
-                to clear shipments and build trust with their partners.
-              </p>
-            </FadeIn>
 
-            <TestimonialCarousel />
-          </div>
-        </section>
+        {/* ═══════════════════════════════════════════════════════
+            9. READINESS ASSESSMENT — 2-col
+            ═══════════════════════════════════════════════════════ */}
+        <section id="eudr-assessment" className="section-spacing section-white">
+          <div className="mk-container-lg">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
-        {/* ===== REGULATORY READINESS ASSESSMENT ===== */}
-        <section id="eudr-assessment" className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Readiness Assessment ]</span>
-            </FadeIn>
-
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start mt-10">
+              {/* Left — feature list */}
               <FadeIn direction="right">
-                <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white">
+                <span className="pre-title margin-bottom margin-large" style={{ display: 'inline-flex' }}>
+                  Readiness Assessment
+                </span>
+                <h2
+                  className="text-display-md margin-bottom margin-medium"
+                  style={{ color: 'var(--mk-text-primary)' }}
+                >
                   Regulatory Readiness Assessment
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                  Whether you are preparing for EUDR, FSMA 204, or buyer-mandated traceability requirements, 
-                  OriginTrace helps you identify gaps and build a compliance roadmap before deadlines hit.
+                <p
+                  className="margin-bottom margin-xlarge"
+                  style={{ color: 'var(--mk-text-secondary)', fontSize: '1.0625rem', lineHeight: 1.7 }}
+                >
+                  Whether you are preparing for EUDR, FSMA 204, or buyer-mandated traceability
+                  requirements, OriginTrace helps you identify gaps and build a compliance roadmap
+                  before deadlines hit.
                 </p>
-                <div className="space-y-5 mb-8">
-                  <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
+
+                <div className="flex flex-col gap-5 margin-bottom margin-xlarge">
+                  <div className="mk-list-item">
+                    <span className="mk-list-item__icon" style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.75rem', flexShrink: 0 }}>
+                      <Globe className="w-4 h-4" />
+                    </span>
                     <div>
-                      <p className="font-semibold text-sm text-slate-900 dark:text-white">Multi-Regulation Coverage</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Assess readiness across EU, UK, US, and voluntary certification standards.</p>
+                      <p className="font-semibold text-sm margin-bottom margin-xsmall" style={{ color: 'var(--mk-text-primary)' }}>
+                        Multi-Regulation Coverage
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--mk-text-secondary)' }}>
+                        Assess readiness across EU, UK, US, and voluntary certification standards.
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
+                  <div className="mk-list-item">
+                    <span className="mk-list-item__icon" style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.75rem', flexShrink: 0 }}>
+                      <MapPin className="w-4 h-4" />
+                    </span>
                     <div>
-                      <p className="font-semibold text-sm text-slate-900 dark:text-white">Farm-Level GPS Evidence</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Every plot is geolocated with polygon coordinates and verified against deforestation datasets.</p>
+                      <p className="font-semibold text-sm margin-bottom margin-xsmall" style={{ color: 'var(--mk-text-primary)' }}>
+                        Farm-Level GPS Evidence
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--mk-text-secondary)' }}>
+                        Every plot is geolocated with polygon coordinates and verified against
+                        deforestation datasets.
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
+                  <div className="mk-list-item">
+                    <span className="mk-list-item__icon" style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.75rem', flexShrink: 0 }}>
+                      <FileText className="w-4 h-4" />
+                    </span>
                     <div>
-                      <p className="font-semibold text-sm text-slate-900 dark:text-white">Audit-Ready Data Exports</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Generate compliance dossiers, GeoJSON files, and due diligence statements on demand.</p>
+                      <p className="font-semibold text-sm margin-bottom margin-xsmall" style={{ color: 'var(--mk-text-primary)' }}>
+                        Audit-Ready Data Exports
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--mk-text-secondary)' }}>
+                        Generate compliance dossiers, GeoJSON files, and due diligence statements
+                        on demand.
+                      </p>
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 border-l-2 border-emerald-500/30 pl-4">
-                  Non-compliance can result in shipment seizure, market bans, and significant financial penalties across multiple jurisdictions.
+
+                <p
+                  className="text-sm"
+                  style={{
+                    color: 'var(--mk-text-secondary)',
+                    borderLeft: '2px solid var(--mk-green)',
+                    paddingLeft: '1rem',
+                    lineHeight: 1.65,
+                  }}
+                >
+                  Non-compliance can result in shipment seizure, market bans, and significant
+                  financial penalties across multiple jurisdictions.
                 </p>
               </FadeIn>
 
+              {/* Right — compliance calculator */}
               <FadeIn direction="left">
                 <ComplianceCalculator />
               </FadeIn>
@@ -719,55 +838,290 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ===== PEDIGREE CTA BANNER ===== */}
-        <section className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
+
+        {/* ═══════════════════════════════════════════════════════
+            10. SHIPMENT SCORE MOCKUP (dark terminal)
+            ═══════════════════════════════════════════════════════ */}
+        <section id="shipment-readiness" className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">Shipment Readiness Score</span>
+                <h2
+                  className="text-display-md section-header__title"
+                  data-testid="text-readiness-headline"
+                >
+                  Know Before You Ship
+                </h2>
+                <p className="section-header__body">
+                  Every shipment is scored across five compliance dimensions. Flag issues and
+                  resolve them before cargo reaches the port.
+                </p>
+              </div>
+            </FadeIn>
+
             <ScaleIn>
-              <Card className="border-0 bg-gradient-to-br from-emerald-700 to-emerald-900 text-white overflow-hidden shadow-2xl">
-                <CardContent className="p-8 md:p-12">
-                  <div className="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                      <span className="text-xs font-medium text-emerald-300 uppercase tracking-[0.2em] mb-4 block">[ Product Pedigree ]</span>
-                      <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-                        The Non-Falsifiable Pedigree
-                      </h2>
-                      <p className="text-emerald-100/80 mb-6 leading-relaxed">
-                        A single QR code on your finished good links back to the exact GPS coordinates 
-                        of every contributing farm. Auditors verify in seconds.
-                      </p>
-                      <div className="flex flex-wrap gap-4 mb-6">
-                        <div className="flex items-center gap-2 text-sm text-emerald-200">
-                          <Check className="h-4 w-4" />
-                          <span>GPS-verified</span>
+              <div style={{ maxWidth: '56rem', marginInline: 'auto' }}>
+                <div
+                  className="overflow-hidden rounded-2xl shadow-2xl"
+                  style={{ background: '#0d1f1b' }}
+                >
+                  {/* Terminal title bar */}
+                  <div
+                    className="flex items-center gap-1.5 px-4 py-2.5"
+                    style={{ background: 'hsl(168 28% 9%)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,80,80,0.6)' }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,200,80,0.6)' }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(80,210,80,0.6)' }} />
+                    <span
+                      className="ml-3 font-mono text-[10px]"
+                      style={{ color: 'rgba(255,255,255,0.35)' }}
+                    >
+                      origintrace.trade/shipment-readiness
+                    </span>
+                  </div>
+
+                  <div className="p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row gap-8">
+                      {/* Score panel */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between flex-wrap gap-2 margin-bottom margin-medium-2">
+                          <div>
+                            <p
+                              className="text-xs margin-bottom margin-tiny"
+                              style={{ color: 'rgba(255,255,255,0.4)' }}
+                            >
+                              Shipment SHP-NG-2847
+                            </p>
+                            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                              Lagos Port | Cocoa Beans | 22 MT
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-3 w-3 rounded-full animate-pulse"
+                              style={{ background: 'var(--mk-green)' }}
+                            />
+                            <span
+                              className="text-xs font-medium"
+                              style={{ color: 'var(--mk-green)' }}
+                            >
+                              Pre-Clearance
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-emerald-200">
-                          <Check className="h-4 w-4" />
-                          <span>Mass balance verified</span>
+
+                        <div className="flex items-center gap-6 flex-wrap margin-bottom margin-xlarge">
+                          <div>
+                            <p
+                              className="font-extrabold leading-none"
+                              style={{
+                                fontSize: '3.5rem',
+                                color: 'var(--mk-green)',
+                                fontFamily: 'var(--font-display)',
+                                letterSpacing: '-0.05em',
+                              }}
+                              data-testid="text-readiness-score"
+                            >
+                              82
+                            </p>
+                            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              /100
+                            </p>
+                          </div>
+                          <div>
+                            <div
+                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium"
+                              style={{ background: 'rgba(46,125,107,0.2)', color: 'var(--mk-green)' }}
+                            >
+                              <Shield className="h-4 w-4" />
+                              Low Risk
+                            </div>
+                            <p
+                              className="text-xs mt-2"
+                              style={{ color: 'rgba(255,255,255,0.35)' }}
+                            >
+                              Estimated clearance probability: 94%
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-emerald-200">
-                          <Check className="h-4 w-4" />
-                          <span>Instant audit access</span>
+
+                        <div className="flex flex-col gap-4">
+                          {readinessCategories.map((cat, i) => (
+                            <div key={i}>
+                              <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
+                                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                                  {cat.label}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className="text-[10px]"
+                                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                                  >
+                                    Weight: {cat.weight}
+                                  </span>
+                                  <span
+                                    className="text-xs font-mono"
+                                    style={{ color: 'rgba(255,255,255,0.55)' }}
+                                  >
+                                    {cat.score}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div
+                                className="h-2 rounded-full overflow-hidden"
+                                style={{ background: 'rgba(255,255,255,0.08)' }}
+                              >
+                                <div
+                                  className={`h-full rounded-full ${cat.color}`}
+                                  style={{ width: `${cat.score}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <Link href="/pedigree">
-                        <Button variant="secondary" className="gap-2 bg-white text-emerald-800" data-testid="button-learn-pedigree">
-                          Learn About Pedigree
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+
+                      {/* Issues + actions panel */}
+                      <div className="md:w-72 flex flex-col gap-6">
+                        <div>
+                          <p
+                            className="text-xs font-medium flex items-center gap-1.5 margin-bottom margin-small"
+                            style={{ color: 'rgba(251,191,36,0.9)' }}
+                          >
+                            <CircleAlert className="h-3.5 w-3.5" />
+                            Flagged Issues
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {flaggedIssues.map((issue, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs">
+                                <AlertTriangle
+                                  className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
+                                  style={{
+                                    color: issue.severity === 'critical'
+                                      ? 'rgba(248,113,113,0.9)'
+                                      : 'rgba(251,191,36,0.9)',
+                                  }}
+                                />
+                                <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                                  {issue.text}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p
+                            className="text-xs font-medium flex items-center gap-1.5 margin-bottom margin-small"
+                            style={{ color: 'var(--mk-green)' }}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Recommended Actions
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {recommendedActions.map((action, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs">
+                                <ArrowRight
+                                  className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
+                                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                                />
+                                <span style={{ color: 'rgba(255,255,255,0.45)' }}>
+                                  {action}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScaleIn>
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            11. PEDIGREE BANNER
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing-sm section-dark">
+          <div className="mk-container-lg">
+            <ScaleIn>
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, #1F5F52 0%, #2E7D6B 50%, #1a4a3c 100%)',
+                  boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div className="p-8 md:p-12">
+                  <div className="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                      <span
+                        className="pre-title margin-bottom margin-large"
+                        style={{
+                          display: 'inline-flex',
+                          background: 'rgba(255,255,255,0.12)',
+                          color: 'rgba(255,255,255,0.85)',
+                        }}
+                      >
+                        Product Pedigree
+                      </span>
+                      <h2
+                        className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
+                      >
+                        The Non-Falsifiable Pedigree
+                      </h2>
+                      <p
+                        className="margin-bottom margin-large"
+                        style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}
+                      >
+                        A single QR code on your finished good links back to the exact GPS
+                        coordinates of every contributing farm. Auditors verify in seconds.
+                      </p>
+                      <div className="flex flex-wrap gap-4 margin-bottom margin-large">
+                        {['GPS-verified', 'Mass balance verified', 'Instant audit access'].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center gap-2 text-sm"
+                            style={{ color: 'rgba(255,255,255,0.8)' }}
+                          >
+                            <Check className="h-4 w-4" style={{ color: 'var(--mk-green-mid)' }} />
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                      <Link
+                        href="/pedigree"
+                        className="btn-mk-primary"
+                        data-testid="button-learn-pedigree"
+                        style={{ background: 'white', color: 'var(--mk-green-dark)', borderColor: 'white' }}
+                      >
+                        Learn About Pedigree
+                        <ChevronRight className="h-4 w-4" />
                       </Link>
                     </div>
+
+                    {/* QR code visual */}
                     <div className="hidden md:flex justify-center">
-                      <div className="w-44 h-44 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                      <div
+                        className="w-44 h-44 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}
+                      >
                         <div className="w-36 h-36 bg-white rounded-xl flex items-center justify-center shadow-lg">
                           <div className="grid grid-cols-5 gap-1 p-3">
-                            {Array.from({ length: 25 }).map((_, i) => (
-                              <div 
-                                key={i} 
-                                className={`w-4 h-4 rounded-sm ${
-                                  [0,1,2,4,5,6,10,14,18,19,20,22,23,24].includes(i) 
-                                    ? 'bg-emerald-700' 
-                                    : 'bg-slate-200'
-                                }`}
+                            {Array.from({ length: 25 }).map((_, qi) => (
+                              <div
+                                key={qi}
+                                className="w-4 h-4 rounded-sm"
+                                style={{
+                                  background: [0, 1, 2, 4, 5, 6, 10, 14, 18, 19, 20, 22, 23, 24].includes(qi)
+                                    ? 'var(--mk-green-dark)'
+                                    : 'var(--mk-surface-gray)',
+                                }}
                               />
                             ))}
                           </div>
@@ -775,101 +1129,148 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </ScaleIn>
           </div>
         </section>
 
-        {/* ===== BLOG / INSIGHTS ===== */}
-        <section className="py-20 md:py-28">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-4">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">[ Insights ]</span>
-            </FadeIn>
-            <FadeIn className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-blog-headline">
-                Expert Insights & Compliance Updates
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                Stay ahead of regulatory changes and learn best practices for origin-sensitive supply chain compliance.
-              </p>
+
+        {/* ═══════════════════════════════════════════════════════
+            12. BLOG — 3-col mk-blog-card grid
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">Insights</span>
+                <h2
+                  className="text-display-md section-header__title"
+                  data-testid="text-blog-headline"
+                >
+                  Expert Insights &amp; Compliance Updates
+                </h2>
+                <p className="section-header__body">
+                  Stay ahead of regulatory changes and learn best practices for
+                  origin-sensitive supply chain compliance.
+                </p>
+              </div>
             </FadeIn>
 
-            <StaggerContainer className="grid md:grid-cols-3 gap-6">
+            <StaggerContainer className="mk-grid-3 margin-bottom margin-xlarge-2">
               {recentPosts.map((post) => (
                 <StaggerItem key={post.slug}>
-                  <Link href={`/blog/${post.slug}`} className="group block h-full">
-                    <Card className="h-full overflow-hidden border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-lg transition-all">
-                      <div className={`h-40 relative overflow-hidden bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}>
-                        {post.coverImage ? (
-                          <Image src={post.coverImage} alt={post.coverImageAlt || post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
-                        ) : (
-                          <BookOpen className="h-8 w-8 text-white/10" />
-                        )}
-                      </div>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">{post.category}</span>
-                          <span className="text-[10px] text-slate-400">{post.date}</span>
+                  <Link href={`/blog/${post.slug}`} className="mk-blog-card">
+                    <div className="mk-blog-card__img-wrap">
+                      {post.coverImage ? (
+                        <Image
+                          src={post.coverImage}
+                          alt={post.coverImageAlt || post.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
+                        >
+                          <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
                         </div>
-                        <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">{post.title}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-3">{post.description}</p>
-                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">Read More →</span>
-                      </CardContent>
-                    </Card>
+                      )}
+                      <div className="mk-blog-card__overlay" />
+                      <div className="mk-blog-card__cat">
+                        <span className="pre-title">{post.category}</span>
+                      </div>
+                    </div>
+                    <div className="mk-blog-card__body">
+                      <div className="mk-blog-card__meta">{post.date}</div>
+                      <h3 className="mk-blog-card__title">{post.title}</h3>
+                      <p className="mk-blog-card__desc">{post.description}</p>
+                      <span className="mk-blog-card__link">
+                        Read More <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </Link>
                 </StaggerItem>
               ))}
             </StaggerContainer>
 
-            <FadeIn className="text-center mt-10">
-              <Link href="/blog">
-                <Button variant="outline" className="gap-2">
+            <FadeIn>
+              <div className="flex justify-center">
+                <Link href="/blog" className="btn-mk-outline">
                   View All Insights
                   <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </FadeIn>
-          </div>
-        </section>
-
-        {/* ===== FINAL CTA ===== */}
-        <section className="py-20 md:py-28 bg-slate-50/80 dark:bg-slate-900/30">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="max-w-3xl mx-auto text-center">
-                <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="text-final-cta-headline">
-                  Ready to build trust into your supply chain?
-                </h2>
-                <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-10">
-                  Join exporters and processors across agriculture, timber, minerals, and seafood 
-                  who trust OriginTrace for supply chain compliance.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                  <Link href="/demo">
-                    <Button size="lg" className="gap-2 bg-emerald-600 text-white px-8 h-12 text-base w-full sm:w-auto" data-testid="button-get-started">
-                      Get Started
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/demo">
-                    <Button size="lg" variant="outline" className="px-8 h-12 text-base w-full sm:w-auto gap-2" data-testid="button-schedule-call">
-                      <Phone className="h-4 w-4" />
-                      Schedule a Call
-                    </Button>
-                  </Link>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
-                  <a href="mailto:hello@origintrace.trade" className="flex items-center gap-2 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" data-testid="link-contact-email">
-                    <Mail className="h-4 w-4" />
-                    hello@origintrace.trade
-                  </a>
-                </div>
+                </Link>
               </div>
             </FadeIn>
           </div>
         </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            13. FINAL CTA
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div
+                className="flex flex-col items-center text-center"
+                style={{ maxWidth: '40rem', marginInline: 'auto' }}
+              >
+                <span className="pre-title margin-bottom margin-large">
+                  Get Started
+                </span>
+
+                <h2
+                  className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
+                  data-testid="text-final-cta-headline"
+                >
+                  Ready to build trust into your supply chain?
+                </h2>
+
+                <p
+                  className="margin-bottom margin-xlarge-2"
+                  style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
+                >
+                  Join exporters and processors across agriculture, timber, minerals, and seafood
+                  who trust OriginTrace for supply chain compliance.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 margin-bottom margin-large-2">
+                  <Link
+                    href="/demo"
+                    className="btn-mk-primary btn-mk-lg"
+                    data-testid="button-get-started"
+                  >
+                    Get Started
+                    <ChevronRight className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/demo"
+                    className="btn-mk-ghost btn-mk-lg"
+                    data-testid="button-schedule-call"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Schedule a Call
+                  </Link>
+                </div>
+
+                <a
+                  href="mailto:hello@origintrace.trade"
+                  className="flex items-center gap-2 text-sm"
+                  style={{ color: 'var(--mk-text-on-dark-2)', textDecoration: 'none', transition: 'color 0.2s' }}
+                  data-testid="link-contact-email"
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--mk-green)')}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--mk-text-on-dark-2)')}
+                >
+                  <Mail className="h-4 w-4" />
+                  hello@origintrace.trade
+                </a>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
       </main>
 
       <MarketingFooter />
