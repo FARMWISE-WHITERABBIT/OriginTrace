@@ -114,7 +114,7 @@ export function MarketingNav() {
       */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:block"
-        style={{ paddingTop: '1.25rem', paddingBottom: '1.25rem' }}
+        style={{ paddingTop: '1rem', paddingBottom: '1rem' }}
         data-testid="marketing-nav"
       >
         {/* .container-full */}
@@ -125,9 +125,7 @@ export function MarketingNav() {
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr auto',
-              gridColumnGap: '9px',
-              gridRowGap: '9px',
-              gridTemplateRows: 'auto',
+              gap: '9px',
               position: 'relative',
               maxWidth: '1390px',
               marginInline: 'auto',
@@ -139,25 +137,22 @@ export function MarketingNav() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'auto 1fr',
-                gridColumnGap: '20px',
-                gridRowGap: '20px',
-                gridTemplateRows: 'auto',
-                gridAutoColumns: '1fr',
+                gap: '20px',
+                alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                placeItems: 'center stretch',
                 width: '100%',
-                padding: '1rem 1.25rem',
+                padding: '0.625rem 1.25rem',
                 position: 'relative',
                 overflow: 'visible',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
-              {/* Logo — grid node, justify-self: start */}
+              {/* Logo */}
               <Link
                 href="/"
                 aria-label="OriginTrace home"
-                style={{ justifySelf: 'start', display: 'flex', alignItems: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
               >
                 <Image
                   src="/images/logo-green.png"
@@ -169,49 +164,45 @@ export function MarketingNav() {
                 />
               </Link>
 
-              {/* Nav links — grid node, justify-self: start */}
-              <div
-                style={{
-                  justifySelf: 'start',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0,
-                  width: '100%',
-                }}
-              >
-                <nav style={{ display: 'flex', alignItems: 'center', gap: 0, flex: 1 }}>
-                  {navLinks.map((link) =>
-                    link.dropdown ? (
-                      <NavDropdown key={link.href} link={link} pathname={pathname} />
-                    ) : (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="mk-nav-link"
-                        data-active={
-                          (link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href.split('#')[0])) || undefined
-                        }
-                        data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      >
-                        {link.label}
-                      </Link>
-                    )
-                  )}
-                </nav>
+              {/* Nav links — centered in the remaining space */}
+              <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
+                {navLinks.map((link) =>
+                  link.dropdown ? (
+                    <NavDropdown key={link.href} link={link} pathname={pathname} />
+                  ) : (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="mk-nav-link"
+                      data-active={
+                        (link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href.split('#')[0])) || undefined
+                      }
+                      data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {link.label}
+                    </Link>
+                  )
+                )}
+              </nav>
 
-                {/* Nav-divider shape SVG — absolutely positioned on right edge of left pill */}
-                <div style={{ position: 'relative', width: '13px', flexShrink: 0, alignSelf: 'stretch' }}>
-                  <img
-                    src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
-                    alt=""
-                    aria-hidden
-                    className="nav-divider"
-                  />
-                </div>
-              </div>
+              {/* Shape SVG — bridges the gap to the right pill */}
+              <img
+                src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+                alt=""
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  right: '-15px',
+                  top: 0,
+                  height: '100%',
+                  width: '30px',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              />
             </div>
 
-            {/* .right-nav — white pill (matches left pill), green button inside */}
+            {/* .right-nav — white pill, green button inside */}
             <div
               style={{
                 display: 'flex',
@@ -219,7 +210,7 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '1rem 1.25rem',
+                padding: '0.625rem 1.25rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
