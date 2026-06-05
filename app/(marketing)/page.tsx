@@ -493,7 +493,7 @@ export default function HomePage() {
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch' }}
+                style={{ alignItems: 'stretch', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
                 <div className="flex flex-col justify-center py-8">

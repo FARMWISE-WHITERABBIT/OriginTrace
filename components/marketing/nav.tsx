@@ -193,7 +193,7 @@ export function MarketingNav() {
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-15px',
+                  right: '-11px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   height: '42px',

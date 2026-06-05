@@ -1167,6 +1167,7 @@
      overflow: hidden on section BUT we keep visible for hero-detail-wrap bleed */
   .mk-hero {
     position: relative;
+    overflow: visible;
     margin-top: -7rem;
     padding-top: 12rem;
     padding-bottom: 8.3rem;
