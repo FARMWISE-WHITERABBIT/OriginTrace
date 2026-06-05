@@ -194,7 +194,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="/videos/origintrace placeholder hearo video.mp4" />
+          <HeroBackground videoSrc="/origintrace placeholder hearo video.mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
