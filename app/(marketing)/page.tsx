@@ -382,43 +382,40 @@ export default function HomePage() {
               </div>
             </FadeIn>
 
-            {/* 3-column image grid — side images shorter, center protrudes up */}
+            {/* 3-column image grid — bottom-aligned, center protrudes up */}
             <FadeIn delay={0.12}>
               <div className="grid grid-cols-3 gap-5 items-end margin-bottom margin-xlarge-2">
 
-                {/* LEFT — Farmer (portrait, shorter) */}
+                {/* LEFT — Farmer in field */}
                 <div
-                  className="rounded-2xl overflow-hidden"
+                  className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '420px',
-                    backgroundImage: 'url(/images/farmer.jpg)',
+                    height: '400px',
+                    backgroundImage: "url('/images/farmer in field.jpg')",
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundColor: '#1a4a2e', /* fallback until photo is added */
+                    backgroundPosition: 'center top',
                   }}
                 />
 
-                {/* CENTER — Warehouse bags (taller, protrudes above sides) */}
+                {/* CENTER — Bagged product in warehouse (tallest, protrudes above) */}
                 <div
-                  className="rounded-2xl overflow-hidden"
+                  className="rounded-2xl overflow-hidden w-full"
                   style={{
                     height: '520px',
-                    backgroundImage: 'url(/images/warehouse-bags.jpg)',
+                    backgroundImage: "url('/images/baged product in wareouse.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    backgroundColor: '#0f3d28', /* fallback */
                   }}
                 />
 
-                {/* RIGHT — Apapa seaport (portrait, shorter) */}
+                {/* RIGHT — Lagos Apapa port */}
                 <div
-                  className="rounded-2xl overflow-hidden"
+                  className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '420px',
-                    backgroundImage: 'url(/images/apapa-port.jpg)',
+                    height: '400px',
+                    backgroundImage: "url('/images/lagos apapa port.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    backgroundColor: '#0a2e1e', /* fallback */
                   }}
                 />
 
