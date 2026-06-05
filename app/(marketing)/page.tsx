@@ -382,61 +382,45 @@ export default function HomePage() {
               </div>
             </FadeIn>
 
-            {/* 3-column portrait image grid — center protrudes higher (Mivora pattern) */}
+            {/* 3-column image grid — side images shorter, center protrudes up */}
             <FadeIn delay={0.12}>
-              <div className="grid grid-cols-3 gap-4 items-end margin-bottom margin-xlarge-2">
+              <div className="grid grid-cols-3 gap-5 items-end margin-bottom margin-xlarge-2">
 
-                {/* Left — portrait, shorter */}
+                {/* LEFT — Farmer (portrait, shorter) */}
                 <div
-                  className="rounded-2xl overflow-hidden flex items-end justify-center pb-6"
+                  className="rounded-2xl overflow-hidden"
                   style={{
-                    aspectRatio: '3/4',
-                    background: 'linear-gradient(160deg, #0a3d2a 0%, #1a6a4a 50%, #2E7D6B 100%)',
+                    height: '420px',
+                    backgroundImage: 'url(/images/farmer.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#1a4a2e', /* fallback until photo is added */
                   }}
-                >
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Sprout className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.22)' }} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      Farm Origin
-                    </span>
-                  </div>
-                </div>
+                />
 
-                {/* Center — portrait, taller (protrudes above side cards) */}
+                {/* CENTER — Warehouse bags (taller, protrudes above sides) */}
                 <div
-                  className="rounded-2xl overflow-hidden flex items-center justify-center"
+                  className="rounded-2xl overflow-hidden"
                   style={{
-                    aspectRatio: '2/3',
-                    background: 'linear-gradient(160deg, #047857 0%, #059669 45%, #0d9488 100%)',
-                    marginBottom: '-2rem',
+                    height: '520px',
+                    backgroundImage: 'url(/images/warehouse-bags.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#0f3d28', /* fallback */
                   }}
-                >
-                  <div className="flex flex-col items-center gap-3 px-4 text-center">
-                    <Shield className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.28)' }} />
-                    <span
-                      className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                      style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)' }}
-                    >
-                      Compliance Verified
-                    </span>
-                  </div>
-                </div>
+                />
 
-                {/* Right — portrait, shorter */}
+                {/* RIGHT — Apapa seaport (portrait, shorter) */}
                 <div
-                  className="rounded-2xl overflow-hidden flex items-end justify-center pb-6"
+                  className="rounded-2xl overflow-hidden"
                   style={{
-                    aspectRatio: '3/4',
-                    background: 'linear-gradient(160deg, #064e3b 0%, #0f5240 50%, #1F5F52 100%)',
+                    height: '420px',
+                    backgroundImage: 'url(/images/apapa-port.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#0a2e1e', /* fallback */
                   }}
-                >
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Globe className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.22)' }} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      Export Ready
-                    </span>
-                  </div>
-                </div>
+                />
 
               </div>
             </FadeIn>

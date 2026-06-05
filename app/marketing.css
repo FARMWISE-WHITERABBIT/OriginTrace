@@ -203,15 +203,9 @@
   @media (min-width: 640px)  { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2rem; } }
   @media (min-width: 1024px) { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2.5rem; } }
 
-  /*
-   * Wide viewport-proportional container — used for hero & full-bleed sections.
-   * Padding scales with viewport (7vw) so the layout stays proportional on any
-   * screen width, matching the Mivora template's proportional layout.
-   * min 1.5rem on small screens, max 9rem on ultra-wide.
-   */
   .mk-container-wide {
     width: 100%;
-    padding-inline: clamp(1.5rem, 7vw, 9rem);
+    padding-inline: clamp(1.5rem, 5vw, 6rem);
   }
 
   .mk-container-2xs { max-width: var(--container-2xs); }

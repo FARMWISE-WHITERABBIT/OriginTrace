@@ -114,34 +114,33 @@ export function MarketingNav() {
       {/* ── Desktop: full-width floating pill ──────────────────────────────── */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
-        style={{ paddingTop: '1.125rem', paddingInline: 'clamp(1rem, 7vw, 9rem)' }}
+        style={{ paddingTop: '1rem', paddingInline: 'clamp(1rem, 5vw, 6rem)' }}
         data-testid="marketing-nav"
       >
         <nav
-          className="flex items-center w-full"
+          className="flex items-center w-full overflow-hidden"
           style={{
-            height: '4.25rem',
+            height: '4rem',           /* 64px — matches Mivora pill height */
             background: '#ffffff',
             borderRadius: '9999px',
-            boxShadow: '0 4px 28px rgba(0,0,0,0.11)',
-            paddingLeft: '1.75rem',
-            paddingRight: '0.375rem',
+            boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+            padding: '0.3rem 0.3rem 0.3rem 1.75rem',
           }}
         >
-          {/* Logo — bigger to match Mivora */}
-          <Link href="/" className="shrink-0" aria-label="OriginTrace home" style={{ marginRight: '2rem' }}>
+          {/* Logo */}
+          <Link href="/" className="shrink-0" aria-label="OriginTrace home" style={{ marginRight: '1.5rem' }}>
             <Image
               src="/images/logo-green.png"
               alt="OriginTrace"
-              width={160}
-              height={44}
-              style={{ width: 'auto', height: '36px' }}
+              width={140}
+              height={36}
+              style={{ width: 'auto', height: '30px' }}
               priority
             />
           </Link>
 
-          {/* Nav links — fill the space */}
-          <div className="flex items-center gap-1 flex-1">
+          {/* Nav links — CENTERED between logo and CTA */}
+          <div className="flex items-center justify-center gap-1 flex-1">
             {navLinks.map((link) =>
               link.dropdown ? (
                 <NavDropdown key={link.href} link={link} pathname={pathname} />
@@ -161,30 +160,37 @@ export function MarketingNav() {
             )}
           </div>
 
-          {/* Pinch separator + CTA — Contact us flush to right edge */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Right side — sign in + CTA that stretches full pill height (creates the pinch) */}
+          <div className="flex items-stretch gap-2 shrink-0">
             <Link
               href="/auth/login"
-              className="text-[15px] font-medium transition-colors"
+              className="flex items-center text-[14px] font-medium px-4 transition-colors"
               style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}
               data-testid="nav-sign-in"
             >
               Sign in
             </Link>
 
+            {/*
+             * align-self: stretch + full border-radius creates the Mivora "pinch":
+             * the tall green pill embedded inside the white pill visually narrows
+             * the white area just before it, exactly as in the screenshot.
+             */}
             <Link
               href="/demo"
-              className="text-[15px] font-semibold rounded-full transition-colors"
+              className="flex items-center font-semibold transition-colors"
               style={{
+                alignSelf: 'stretch',
                 background: 'var(--mk-green)',
                 color: '#fff',
-                padding: '0.75rem 1.625rem',
+                borderRadius: '9999px',
+                padding: '0 1.625rem',
+                fontSize: '14px',
                 whiteSpace: 'nowrap',
-                lineHeight: 1,
               }}
               data-testid="nav-request-demo"
             >
-              Contact us
+              Request Demo
             </Link>
           </div>
         </nav>
