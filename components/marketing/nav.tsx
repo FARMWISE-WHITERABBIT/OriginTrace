@@ -75,7 +75,7 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
        */}
       <div
         aria-hidden={!open}
-        className={`absolute top-full left-0 mt-1 w-52 ${open ? 'invisible' : 'invisible'}`}
+        className={`absolute top-full left-0 mt-1 w-52 ${open ? 'visible' : 'invisible'}`}
         data-seo="dropdown-links"
       >
         {link.dropdown!.map((sub) => (

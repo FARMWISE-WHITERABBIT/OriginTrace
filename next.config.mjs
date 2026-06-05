@@ -101,6 +101,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    turbopackUseSystemTlsCerts: true,
   },
   images: {
     remotePatterns: [
