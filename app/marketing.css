@@ -1178,7 +1178,7 @@
   @media screen and (max-width: 991px) {
     .mk-hero {
       padding-top: 10rem;
-      padding-bottom: 0;
+      padding-bottom: 6.3rem;
     }
   }
   @media screen and (max-width: 767px) {
@@ -1200,9 +1200,8 @@
   /* Mivora exact: .hero-overlay — background-color: var(--color--black), opacity: 0.5 */
   .mk-hero__overlay {
     position: absolute;
-    inset: 0%;
+    inset: 0;
     z-index: 2;
-    height: 100%;
     background-color: var(--color--black);
     opacity: 0.5;
     border-bottom-right-radius: var(--border-radius--md);

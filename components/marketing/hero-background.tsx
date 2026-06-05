@@ -48,7 +48,7 @@ export default function HeroBackground({
       {/* Layer 2 — video overlay */}
       {youtubeId ? (
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&rel=0&modestbranding=1&playsinline=1&disablekb=1`}
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&rel=0&modestbranding=1&playsinline=1&disablekb=1`}
           allow="autoplay; encrypted-media; fullscreen"
           style={{
             position: 'absolute', zIndex: 2,

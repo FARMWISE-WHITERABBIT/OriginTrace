@@ -142,7 +142,7 @@ export function MarketingNav() {
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
                 width: '100%',
-                padding: '0 1.25rem',
+                padding: '0.3125rem 1.25rem',
                 position: 'relative',
                 overflow: 'visible',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
@@ -211,7 +211,7 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '0 0.875rem',
+                padding: '0.3125rem 0.875rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
