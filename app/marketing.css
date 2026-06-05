@@ -1874,11 +1874,12 @@
   position: absolute;
   bottom: 1rem;
   right: 1.25rem;
-  font-size: 3rem;
-  color: hsl(0 0% 100% / 0.05);
-  line-height: 1;
+  width: 30px;
+  height: 57px;
+  opacity: 0.15;
   pointer-events: none;
   user-select: none;
+  flex-shrink: 0;
 }
 
 @media (max-width: 1024px) {

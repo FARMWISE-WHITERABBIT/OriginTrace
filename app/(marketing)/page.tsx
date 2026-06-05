@@ -384,8 +384,14 @@ function TestimonialsSection() {
                   </div>
                 </div>
                 <p className="mk-testimonial-desc">&ldquo;{t.quote}&rdquo;</p>
-                {/* decorative quote mark */}
-                <div className="mk-testimonial-shape" aria-hidden>❝</div>
+                <img
+                  src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+                  alt=""
+                  aria-hidden
+                  className="mk-testimonial-shape"
+                  width={30}
+                  height={57}
+                />
               </div>
             </FadeIn>
           ))}
@@ -577,8 +583,23 @@ export default function HomePage() {
                       </div>
 
                       {/* Decorative corner elements */}
-                      <div className="hero-left-decorative" aria-hidden />
-                      <div className="hero-right-decorative" aria-hidden />
+                      {/* Mivora concave quarter-circle corner fills */}
+                      <img
+                        src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-left-decorative"
+                        width={25}
+                        height={25}
+                      />
+                      <img
+                        src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-right-decorative"
+                        width={25}
+                        height={25}
+                      />
                     </div>
                   </FadeIn>
                 </div>
