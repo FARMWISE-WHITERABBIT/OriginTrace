@@ -194,7 +194,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="/origintrace%20placeholder%20hearo%20video.mp4" posterSrc="" />
+          <HeroBackground />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -236,22 +236,36 @@ export default function HomePage() {
                 {/* RIGHT — card pinned to bottom of hero, overflows into white section below */}
                 <div className="hidden lg:flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="left">
-                    {/* Shadow wrapper: filter:drop-shadow follows the clip-path boundary */}
-                    <div style={{ filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.13)) drop-shadow(0 2px 6px rgba(0,0,0,0.07))', marginLeft: 'auto', maxWidth: '360px' }}>
                     <div
                       style={{
                         background: '#ffffff',
-                        /* Concave bottom corners (16px) + convex top corners (10px ≈ 0.625rem)
-                           polygon() supports calc() so this scales with card width */
-                        clipPath: 'polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 10px)',
+                        /* Top corners convex (normal rounded), bottom corners are square —
+                           the concave "inverse" effect at the bottom comes from the two
+                           white quarter-circle divs rendered at each bottom corner below */
+                        borderRadius: '0.625rem 0.625rem 0 0',
                         marginBottom: '-10rem',
                         paddingTop: '1.25rem',
                         paddingLeft: '1.25rem',
                         paddingRight: '1.25rem',
                         position: 'relative',
                         zIndex: 10,
+                        maxWidth: '360px',
+                        marginLeft: 'auto',
+                        boxShadow: '0 -6px 32px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.07)',
                       }}
                     >
+                      {/* Concave bottom-left corner — 16px arc curving into card */}
+                      <div aria-hidden style={{
+                        position: 'absolute', bottom: 0, left: -16,
+                        width: 16, height: 16,
+                        background: 'radial-gradient(circle at 0% 100%, transparent 16px, #ffffff 16px)',
+                      }} />
+                      {/* Concave bottom-right corner — 16px arc curving into card */}
+                      <div aria-hidden style={{
+                        position: 'absolute', bottom: 0, right: -16,
+                        width: 16, height: 16,
+                        background: 'radial-gradient(circle at 100% 100%, transparent 16px, #ffffff 16px)',
+                      }} />
                       {/* ── 1. TITLE ── */}
                       <div className="px-5 pt-5 pb-4">
                         <p
@@ -330,7 +344,6 @@ export default function HomePage() {
                       </div>
 
                     </div>
-                    </div>{/* end shadow wrapper */}
                   </FadeIn>
                 </div>
 
