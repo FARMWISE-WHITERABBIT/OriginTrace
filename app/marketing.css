@@ -1168,8 +1168,6 @@
   .mk-hero {
     position: relative;
     /* overflow: visible — required for hero-detail-wrap margin-bottom: -8.3rem bleed */
-    display: flex;
-    flex-direction: column;
     min-height: 65vh;
     margin-top: -7rem;
     padding-top: 12rem;
@@ -1218,15 +1216,6 @@
     z-index: 3;
     width: 100%;
     padding-bottom: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mk-hero__content .mk-container-lg {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
   }
 
   /* Mivora .hero-detail-wrap — card that bleeds below the hero section */

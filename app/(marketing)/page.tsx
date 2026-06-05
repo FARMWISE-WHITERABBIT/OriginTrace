@@ -485,7 +485,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground />
+          <HeroBackground youtubeId="Ifr4moOLxDI" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -493,7 +493,7 @@ export default function HomePage() {
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch', flex: 1 }}
+                style={{ alignItems: 'stretch', minHeight: 'calc(65vh - 12rem)' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
                 <div className="flex flex-col justify-center py-8">
