@@ -5,8 +5,6 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { LogoMarquee } from '@/components/marketing/logo-marquee';
-import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
-import { StatCounter } from '@/components/marketing/stat-counter';
 import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
@@ -20,18 +18,12 @@ import {
   FileText,
   MapPin,
   Package,
-  Factory,
-  Truck,
   ClipboardCheck,
   Sprout,
   Globe,
-  Thermometer,
-  FolderOpen,
-  Users,
   ArrowRight,
   CircleAlert,
   Search,
-  FlaskConical,
   BarChart3,
   Scale,
   Leaf,
@@ -40,23 +32,11 @@ import {
   Wifi,
   QrCode,
   BookOpen,
-  Calendar,
-  Target,
-  Eye,
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────
    DATA CONSTANTS — unchanged from original
    ───────────────────────────────────────────────────────────────── */
-
-const problemCards = [
-  { icon: FlaskConical, title: 'Hazardous pesticide residues', description: 'MRL violations trigger automatic border rejections across EU and US markets.' },
-  { icon: AlertTriangle, title: 'Aflatoxin contamination', description: 'Mycotoxin levels above threshold result in destroyed shipments and lost revenue.' },
-  { icon: MapPin, title: 'Missing geospatial origin data', description: 'Regulators require plot-level GPS proof of origin, not warehouse addresses.' },
-  { icon: FileText, title: 'Incomplete documentation', description: 'Missing phytosanitary certificates, lab reports, or due diligence statements halt clearance.' },
-  { icon: Thermometer, title: 'Cold chain breakdowns', description: 'Temperature excursions during transit invalidate perishable commodity compliance.' },
-  { icon: FolderOpen, title: 'Fragmented supplier records', description: 'Scattered data across WhatsApp, spreadsheets, and paper makes audit response impossible.' },
-];
 
 const capabilities = [
   {
@@ -95,15 +75,6 @@ const capabilities = [
     description: 'Store, track, and manage all compliance documents in one vault. Auto-alerts for expiring certificates. Export audit-ready dossiers on demand.',
     points: ['Centralized document storage with expiry tracking', 'GeoJSON export for EUDR due diligence statements', 'Entity-linked documents (batch, shipment, contract)'],
   },
-];
-
-const useCases = [
-  { vertical: 'Cocoa', route: 'West Africa → EU', gradient: 'from-amber-800/20 to-amber-600/10', iconColor: 'text-amber-600 dark:text-amber-400', description: 'Full traceability from smallholder farms through cooperatives to European chocolate manufacturers. EUDR-ready with GPS polygon evidence.' },
-  { vertical: 'Cashew', route: 'Nigeria → Global', gradient: 'from-emerald-800/20 to-emerald-600/10', iconColor: 'text-emerald-600 dark:text-emerald-400', description: 'Bag-to-bush traceability across hundreds of collection agents. Compliance scoring for EU, US, and voluntary buyer standards.' },
-  { vertical: 'Timber', route: 'Forest Concession → UK', gradient: 'from-green-900/20 to-green-700/10', iconColor: 'text-green-700 dark:text-green-400', description: 'Concession-level GPS mapping with chain-of-custody tracking. UK Environment Act and Lacey Act compliance built in.' },
-  { vertical: 'Shea Butter', route: 'Processing → Export', gradient: 'from-yellow-700/20 to-yellow-500/10', iconColor: 'text-yellow-700 dark:text-yellow-400', description: 'Processing run tracking from raw nuts through pressing and filtering. Finished goods pedigree with mass balance verification.' },
-  { vertical: 'Seafood', route: 'Vessel → Market', gradient: 'from-cyan-700/20 to-cyan-500/10', iconColor: 'text-cyan-600 dark:text-cyan-400', description: 'Vessel-to-market traceability for artisanal and industrial fisheries. Cold chain monitoring and FSMA 204 compliance.' },
-  { vertical: 'Minerals', route: 'Artisanal Mine → Refinery', gradient: 'from-slate-700/20 to-slate-500/10', iconColor: 'text-slate-600 dark:text-slate-400', description: 'Source-level verification for artisanal mining operations. Conflict-free certification evidence and due diligence documentation.' },
 ];
 
 const readinessCategories = [
@@ -157,14 +128,6 @@ const regulatoryData = [
     regulations: ['ESMA (Emirates Authority for Standardization)', 'Halal Certification Requirements', 'Food Import Re-export Controls'],
     link: '/compliance/uae',
   },
-];
-
-const supplyChainSteps = [
-  { icon: Sprout, label: 'Farm', detail: 'GPS-verified origin' },
-  { icon: Users, label: 'Aggregator', detail: 'Collection & grading' },
-  { icon: Factory, label: 'Processor', detail: 'Transformation & QC' },
-  { icon: Truck, label: 'Export', detail: 'Documentation & dispatch' },
-  { icon: ClipboardCheck, label: 'Inspection', detail: 'Border compliance check' },
 ];
 
 const whyChooseFeatures = [
