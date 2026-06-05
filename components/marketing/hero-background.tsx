@@ -3,10 +3,48 @@
 export default function HeroBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-50 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950" />
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA2KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-      <div className="absolute top-1/4 -right-32 w-96 h-96 bg-emerald-200/20 dark:bg-emerald-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 -left-32 w-80 h-80 bg-emerald-100/30 dark:bg-emerald-500/5 rounded-full blur-3xl" />
+      {/* Dark aerial landscape gradient — mimics the Mivora forest/river photo */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(160deg, #0a2e1e 0%, #0f4a30 25%, #1a6645 50%, #0d3d28 75%, #071e12 100%)',
+        }}
+      />
+
+      {/* Subtle texture layer */}
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)',
+          backgroundSize: '32px 32px',
+        }}
+      />
+
+      {/* Soft depth glow — upper right */}
+      <div
+        className="absolute"
+        style={{
+          top: '-10%',
+          right: '-5%',
+          width: '55%',
+          height: '70%',
+          background: 'radial-gradient(ellipse at center, rgba(46,125,107,0.22) 0%, transparent 65%)',
+        }}
+      />
+
+      {/* Soft depth glow — lower left */}
+      <div
+        className="absolute"
+        style={{
+          bottom: '-10%',
+          left: '-5%',
+          width: '45%',
+          height: '60%',
+          background: 'radial-gradient(ellipse at center, rgba(31,95,82,0.18) 0%, transparent 65%)',
+        }}
+      />
     </div>
   );
 }

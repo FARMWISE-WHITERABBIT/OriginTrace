@@ -192,7 +192,7 @@ export default function HomePage() {
       <main>
 
         {/* ═══════════════════════════════════════════════════════
-            1. HERO — full-bleed dark, left-aligned, floating card
+            1. HERO — full-bleed dark aerial, left headline, right editorial card
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
           <HeroBackground />
@@ -200,145 +200,144 @@ export default function HomePage() {
 
           <div className="mk-hero__content">
             <div className="mk-container-lg">
-              <div className="grid lg:grid-cols-[3fr_2fr] gap-12 lg:gap-16 items-center">
+              <div className="grid lg:grid-cols-[3fr_2fr] gap-12 lg:gap-20 items-center">
 
-                {/* Left — headline + CTAs */}
+                {/* Left — big headline + single CTA */}
                 <div>
-                  <FadeIn delay={0.05}>
-                    <span className="pre-title margin-bottom margin-large" style={{ display: 'inline-flex' }}>
-                      Trust Infrastructure
-                    </span>
-                  </FadeIn>
-
-                  <FadeIn delay={0.15}>
+                  <FadeIn delay={0.1}>
                     <h1
-                      className="text-display-xl text-mk-on-dark margin-bottom margin-large"
+                      className="text-display-xl margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{ maxWidth: '20ch' }}
+                      style={{
+                        color: '#ffffff',
+                        maxWidth: '18ch',
+                        fontFamily: 'var(--font-display)',
+                      }}
                     >
-                      Compliance Infrastructure
-                      <br />
-                      for <IndustryTicker />
+                      The Compliance Pulse of Modern Supply Chains
                     </h1>
                   </FadeIn>
 
-                  <FadeIn delay={0.25}>
+                  <FadeIn delay={0.2}>
                     <p
-                      className="text-mk-faded margin-bottom margin-xlarge"
-                      style={{ fontSize: '1.0625rem', lineHeight: 1.7, maxWidth: '46ch' }}
+                      className="margin-bottom margin-xlarge"
+                      style={{
+                        fontSize: '1.0625rem',
+                        lineHeight: 1.72,
+                        maxWidth: '44ch',
+                        color: 'rgba(255,255,255,0.62)',
+                      }}
                     >
-                      OriginTrace is the all-in-one platform for supply chain traceability,
-                      compliance verification, and export readiness — helping exporters prevent
-                      shipment rejections before cargo reaches port.
+                      Traceability, compliance verification, and export readiness — helping African
+                      exporters clear borders, not get rejected at them.
                     </p>
                   </FadeIn>
 
-                  <FadeIn delay={0.35}>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Link
-                        href="#eudr-assessment"
-                        className="btn-mk-primary btn-mk-lg"
-                        data-testid="button-check-readiness"
-                      >
-                        Assess Your Export Readiness
-                        <ChevronRight className="h-5 w-5" />
-                      </Link>
-                      <Link
-                        href="/demo"
-                        className="btn-mk-ghost btn-mk-lg"
-                        data-testid="button-request-demo"
-                      >
-                        Request a Demo
-                      </Link>
-                    </div>
+                  <FadeIn delay={0.3}>
+                    <Link
+                      href="#eudr-assessment"
+                      className="btn-mk-primary btn-mk-lg"
+                      data-testid="button-check-readiness"
+                    >
+                      Assess Your Export Readiness
+                    </Link>
                   </FadeIn>
                 </div>
 
-                {/* Right — floating compliance card */}
-                <FadeIn delay={0.4} direction="left">
+                {/* Right — editorial article-preview card (Mivora pattern) */}
+                <FadeIn delay={0.45} direction="left">
                   <div className="hidden lg:block">
-                    <div className="bg-white rounded-2xl shadow-xl p-5 max-w-sm ml-auto">
-                      {/* Card header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p
-                            className="text-xs font-semibold uppercase tracking-widest mb-0.5"
-                            style={{ color: 'var(--mk-green)' }}
-                          >
-                            Example Shipment
-                          </p>
-                          <p className="text-sm font-bold" style={{ color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}>
-                            Cocoa Export · Nigeria → EU
-                          </p>
-                        </div>
-                        <div
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                          style={{ background: 'var(--mk-green-light)', color: 'var(--mk-green)' }}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                          Live
-                        </div>
-                      </div>
-
-                      {/* Compliance score bar */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs" style={{ color: 'var(--mk-text-muted)' }}>
-                            Compliance Score
-                          </span>
-                          <span
-                            className="text-sm font-extrabold"
-                            style={{ color: 'var(--mk-green)', fontFamily: 'var(--font-display)' }}
-                          >
-                            99.2%
-                          </span>
-                        </div>
-                        <div
-                          className="h-2 w-full rounded-full overflow-hidden"
-                          style={{ background: 'var(--mk-surface-gray)' }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: '99.2%', background: 'var(--mk-green)' }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Stat row with divider */}
+                    <div
+                      className="rounded-2xl overflow-hidden"
+                      style={{ background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.28)' }}
+                    >
+                      {/* Card image area */}
                       <div
-                        className="pt-4 flex items-stretch gap-4"
-                        style={{ borderTop: '1px solid var(--mk-border)' }}
+                        className="relative w-full flex items-center justify-center overflow-hidden"
+                        style={{
+                          aspectRatio: '16/9',
+                          background: 'linear-gradient(135deg, #065f46 0%, #2E7D6B 50%, #059669 100%)',
+                        }}
                       >
-                        <div className="flex-1 text-center">
-                          <p
-                            className="text-xl font-extrabold leading-none"
-                            style={{
-                              color: 'var(--mk-green)',
-                              fontFamily: 'var(--font-display)',
-                              letterSpacing: '-0.035em',
-                            }}
+                        {/* Supply chain visual */}
+                        <div className="flex flex-col items-center gap-3 z-10">
+                          <div className="flex items-center gap-3">
+                            {['Farm', 'Collect', 'Process', 'Export'].map((step, idx) => (
+                              <div key={step} className="flex items-center gap-3">
+                                <div className="flex flex-col items-center gap-1.5">
+                                  <div
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                    style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(4px)' }}
+                                  >
+                                    <div className="w-2.5 h-2.5 rounded-full bg-white opacity-80" />
+                                  </div>
+                                  <span className="text-[9px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                                    {step}
+                                  </span>
+                                </div>
+                                {idx < 3 && (
+                                  <div className="w-5 h-px mb-4" style={{ background: 'rgba(255,255,255,0.25)' }} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <span
+                            className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                            style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(4px)' }}
                           >
-                            99.2%
-                          </p>
-                          <p className="text-[11px] mt-1" style={{ color: 'var(--mk-text-muted)' }}>
-                            Clearance Rate
-                          </p>
+                            Farm to Export · Verified
+                          </span>
                         </div>
-                        <div className="mk-stat-row__divider" />
-                        <div className="flex-1 text-center">
-                          <p
-                            className="text-xl font-extrabold leading-none"
-                            style={{
-                              color: 'var(--mk-green)',
-                              fontFamily: 'var(--font-display)',
-                              letterSpacing: '-0.035em',
-                            }}
-                          >
-                            500+
-                          </p>
-                          <p className="text-[11px] mt-1" style={{ color: 'var(--mk-text-muted)' }}>
-                            Farms Verified
-                          </p>
+                      </div>
+
+                      {/* Card body */}
+                      <div className="p-5">
+                        <p
+                          className="text-sm font-semibold leading-snug margin-bottom margin-small"
+                          style={{ color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}
+                        >
+                          How Nigerian cocoa exporters cleared EU borders on the first attempt
+                        </p>
+
+                        {/* Stat row */}
+                        <div
+                          className="pt-4 flex items-stretch gap-0"
+                          style={{ borderTop: '1px solid var(--mk-border)' }}
+                        >
+                          <div className="flex-1 text-center">
+                            <p className="text-xs mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                              Farms verified to clear cargo
+                            </p>
+                            <p
+                              className="text-xl font-extrabold leading-none"
+                              style={{
+                                color: 'var(--mk-text-primary)',
+                                fontFamily: 'var(--font-display)',
+                                letterSpacing: '-0.035em',
+                              }}
+                            >
+                              500+
+                            </p>
+                          </div>
+                          <div
+                            className="w-px self-stretch mx-4"
+                            style={{ background: 'var(--mk-border)' }}
+                          />
+                          <div className="flex-1 text-center">
+                            <p className="text-xs mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                              Reduction in customs delays
+                            </p>
+                            <p
+                              className="text-xl font-extrabold leading-none"
+                              style={{
+                                color: 'var(--mk-text-primary)',
+                                fontFamily: 'var(--font-display)',
+                                letterSpacing: '-0.035em',
+                              }}
+                            >
+                              200+
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -367,85 +366,117 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            3. ABOUT / MISSION
+            3. ABOUT / MISSION — Mivora "Driving Change" pattern
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
               <div className="section-header">
-                <div
-                  className="mk-icon-badge mk-icon-badge--lg margin-bottom margin-medium"
+                {/* Sun / starburst icon — matches Mivora */}
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 36 36"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="margin-bottom margin-medium"
                   aria-hidden
+                  style={{ color: 'var(--mk-text-muted)' }}
                 >
-                  <Leaf className="w-6 h-6" />
-                </div>
-                <span className="pre-title margin-bottom margin-medium">About OriginTrace</span>
-                <h2 className="text-display-lg section-header__title">
-                  OriginTrace is{' '}
-                  <span className="text-mk-muted">redefining</span> supply chain
-                  compliance{' '}
-                  <span className="text-mk-brand">across Africa.</span>
+                  <circle cx="18" cy="18" r="5" stroke="currentColor" strokeWidth="1.5" />
+                  <line x1="18" y1="2"  x2="18" y2="7"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="18" y1="29" x2="18" y2="34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="2"  y1="18" x2="7"  y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29" y1="18" x2="34" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="6.34"  y1="6.34"  x2="9.87"  y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="26.13" y1="26.13" x2="29.66" y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29.66" y1="6.34"  x2="26.13" y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="9.87"  y1="26.13" x2="6.34"  y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+
+                <span className="pre-title margin-bottom margin-medium">Driving Change</span>
+
+                <h2 className="text-display-lg section-header__title" style={{ maxWidth: '26ch' }}>
+                  At OriginTrace, we are{' '}
+                  <span className="text-mk-muted">redefining</span> supply chain compliance
+                  by verifying{' '}
+                  <span className="text-mk-brand">every origin.</span>
                 </h2>
+
                 <p className="section-header__body">
                   We are trust infrastructure purpose-built for origin-sensitive supply chains.
-                  From first-mile field operations to port clearance, OriginTrace helps exporters
-                  capture verifiable compliance data at every step — so shipments clear borders,
+                  From first-mile field operations to port clearance, OriginTrace captures
+                  verifiable compliance data at every step — so shipments clear borders,
                   not get rejected at them.
                 </p>
               </div>
             </FadeIn>
 
-            {/* 3-column image grid — center image taller */}
-            <FadeIn delay={0.1}>
+            {/* 3-column portrait image grid — center protrudes higher (Mivora pattern) */}
+            <FadeIn delay={0.12}>
               <div className="grid grid-cols-3 gap-4 items-end margin-bottom margin-xlarge-2">
-                {/* Left image */}
+
+                {/* Left — portrait, shorter */}
+                <div
+                  className="rounded-2xl overflow-hidden flex items-end justify-center pb-6"
+                  style={{
+                    aspectRatio: '3/4',
+                    background: 'linear-gradient(160deg, #0a3d2a 0%, #1a6a4a 50%, #2E7D6B 100%)',
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Sprout className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.22)' }} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Farm Origin
+                    </span>
+                  </div>
+                </div>
+
+                {/* Center — portrait, taller (protrudes above side cards) */}
                 <div
                   className="rounded-2xl overflow-hidden flex items-center justify-center"
                   style={{
-                    aspectRatio: '4/3',
-                    background: 'linear-gradient(135deg, #065f46 0%, #2E7D6B 100%)',
+                    aspectRatio: '2/3',
+                    background: 'linear-gradient(160deg, #047857 0%, #059669 45%, #0d9488 100%)',
+                    marginBottom: '-2rem',
                   }}
                 >
-                  <Sprout className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                  <div className="flex flex-col items-center gap-3 px-4 text-center">
+                    <Shield className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.28)' }} />
+                    <span
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)' }}
+                    >
+                      Compliance Verified
+                    </span>
+                  </div>
                 </div>
 
-                {/* Center image — taller (square aspect) */}
+                {/* Right — portrait, shorter */}
                 <div
-                  className="rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2 relative"
+                  className="rounded-2xl overflow-hidden flex items-end justify-center pb-6"
                   style={{
-                    aspectRatio: '1/1',
-                    background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+                    aspectRatio: '3/4',
+                    background: 'linear-gradient(160deg, #064e3b 0%, #0f5240 50%, #1F5F52 100%)',
                   }}
                 >
-                  <Shield className="w-12 h-12" style={{ color: 'rgba(255,255,255,0.3)' }} />
-                  <span
-                    className="text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)' }}
-                  >
-                    Platform Screenshot
-                  </span>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Globe className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.22)' }} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Export Ready
+                    </span>
+                  </div>
                 </div>
 
-                {/* Right image */}
-                <div
-                  className="rounded-2xl overflow-hidden flex items-center justify-center"
-                  style={{
-                    aspectRatio: '4/3',
-                    background: 'linear-gradient(135deg, #064e3b 0%, #1e293b 100%)',
-                  }}
-                >
-                  <Globe className="w-10 h-10" style={{ color: 'rgba(255,255,255,0.25)' }} />
-                </div>
               </div>
             </FadeIn>
 
-            {/* CTA */}
-            <FadeIn delay={0.2}>
+            {/* CTA — centered pill button */}
+            <FadeIn delay={0.22}>
               <div className="flex justify-center">
                 <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
-                  Explore the Platform
-                  <ArrowRight className="h-4 w-4" />
+                  More about us
                 </Link>
               </div>
             </FadeIn>
