@@ -1619,7 +1619,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.625rem 0.875rem;
   border-radius: 9999px;
   font-size: 0.9375rem; /* 15px */
   font-weight: 500;
