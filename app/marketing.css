@@ -1134,11 +1134,11 @@
      overflow: hidden on section BUT we keep visible for hero-detail-wrap bleed */
   .mk-hero {
     position: relative;
-    /* overflow: visible — required for hero-detail-wrap margin-bottom bleed */
+    /* overflow: visible — required for hero-detail-wrap margin-bottom: -8.3rem bleed */
     min-height: 65vh;
     margin-top: -7rem;
     padding-top: 12rem;
-    padding-bottom: var(--section-md);  /* 8.125rem — Mivora standard */
+    padding-bottom: 0;  /* card bleeds below via hero-detail-wrap margin-bottom: -8.3rem */
     border-bottom-left-radius: 0;
     border-bottom-right-radius: var(--border-radius--md);  /* 1.25rem */
     background-color: var(--color--white);
@@ -1147,7 +1147,7 @@
   @media screen and (max-width: 991px) {
     .mk-hero {
       padding-top: 10rem;
-      padding-bottom: 6.25rem;
+      padding-bottom: 0;
     }
   }
   @media screen and (max-width: 767px) {
