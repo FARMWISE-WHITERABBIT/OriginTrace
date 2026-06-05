@@ -114,18 +114,18 @@ export function MarketingNav() {
       */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:block"
-        style={{ paddingTop: '1rem', paddingBottom: '1rem' }}
+        style={{ paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
         data-testid="marketing-nav"
       >
         {/* .container-full */}
         <div style={{ maxWidth: '100%', marginLeft: 'auto', marginRight: 'auto', paddingLeft: '1.875rem', paddingRight: '2.5rem' }}>
 
-          {/* .grid-nav — 1fr auto, gap 9px */}
+          {/* .grid-nav — 1fr auto, no gap (shape bridges the join) */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr auto',
-              gap: '9px',
+              gap: '0',
               position: 'relative',
               maxWidth: '1390px',
               marginInline: 'auto',
@@ -185,7 +185,7 @@ export function MarketingNav() {
                 )}
               </nav>
 
-              {/* Shape SVG — bridges the gap to the right pill */}
+              {/* Shape SVG — bridges the join between the two pills at natural 57px height */}
               <img
                 src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
                 alt=""
@@ -193,8 +193,9 @@ export function MarketingNav() {
                 style={{
                   position: 'absolute',
                   right: '-15px',
-                  top: 0,
-                  height: '100%',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  height: '57px',
                   width: '30px',
                   pointerEvents: 'none',
                   zIndex: 10,
