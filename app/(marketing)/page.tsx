@@ -194,7 +194,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground />
+          <HeroBackground videoSrc="/videos/origintrace placeholder hearo video.mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -241,7 +241,7 @@ export default function HomePage() {
                       className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        borderRadius: '0.625rem',
+                        borderRadius: '0.625rem 0.625rem 0 0',
                         marginBottom: '-8.3rem',
                         paddingTop: '1.25rem',
                         paddingLeft: '1.25rem',

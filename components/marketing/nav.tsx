@@ -95,7 +95,7 @@ export function MarketingNav() {
     <>
       {/* ── Desktop: single seamless full-width pill ──────────────────────── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 hidden md:block"
+        className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
         style={{
           paddingTop: '1.25rem',
           paddingBottom: '1.25rem',
@@ -104,6 +104,9 @@ export function MarketingNav() {
         }}
         data-testid="marketing-nav"
       >
+        {/* Width-cap wrapper — matches mk-container-wide (1390px) so pill
+            edges align exactly with hero and section content at all viewports */}
+        <div style={{ width: '100%', maxWidth: '1390px' }}>
         <nav
           className="flex items-stretch w-full"
           style={{
@@ -153,6 +156,7 @@ export function MarketingNav() {
             Request Demo
           </Link>
         </nav>
+        </div>
       </header>
 
       {/* ── Mobile nav bar ────────────────────────────────────────────────── */}
