@@ -9,23 +9,22 @@ interface HeroBackgroundProps {
   youtubeId?: string;
   /** Self-hosted video — used when youtubeId is not set. Default: /videos/hero.mp4 */
   videoSrc?: string;
-  /** Poster image shown before the video loads. Default: /videos/hero-poster.jpg */
+  /** Poster image shown before the video loads. Omit to show the gradient fallback. */
   posterSrc?: string;
 }
 
 export default function HeroBackground({
   youtubeId,
   videoSrc = '/videos/hero.mp4',
-  posterSrc = '/videos/hero-poster.jpg',
+  posterSrc,
 }: HeroBackgroundProps) {
   return (
-    <div className="absolute inset-0" style={{ zIndex: 0, overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
       {/* Always-visible fallback gradient behind the video */}
       <div
-        className="absolute inset-0"
         style={{
-          background:
-            'linear-gradient(160deg, #0a2e1e 0%, #0f4a30 25%, #1a6645 50%, #0d3d28 75%, #071e12 100%)',
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(160deg, #0a2e1e 0%, #0f4a30 25%, #1a6645 50%, #0d3d28 75%, #071e12 100%)',
           zIndex: 0,
         }}
       />
@@ -80,9 +79,14 @@ export default function HeroBackground({
           muted
           loop
           playsInline
-          poster={posterSrc}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ zIndex: 1 }}
+          {...(posterSrc ? { poster: posterSrc } : {})}
+          style={{
+            position: 'absolute',
+            top: 0, left: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            zIndex: 1,
+          }}
           aria-hidden
         >
           <source src={videoSrc} type="video/mp4" />
