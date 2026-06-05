@@ -1080,18 +1080,37 @@
 
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   17. HERO SECTION (Mivora .hero-section + .hero-overlay)
+   17. HERO SECTION (Mivora .hero-section exact values)
    ───────────────────────────────────────────────────────────────────────────── */
   .mk-hero {
     position: relative;
-    overflow: visible;
-    min-height: 96svh;
-    display: flex;
-    align-items: stretch;
-    /* Top padding clears the floating pill nav (72px nav + 18px top offset + 20px breathing room) */
-    padding-top: 8rem;
-    padding-bottom: 0;
+    overflow: hidden;
+    margin-top: -7rem;
+    padding-top: 12rem;
+    padding-bottom: 8.125rem;
+    border-bottom-right-radius: 1.25rem;   /* --border-radius--md */
+    background-color: #ffffff;
   }
+
+  @media screen and (min-width: 1280px) {
+    .mk-hero { padding-top: 15rem; }
+  }
+  @media screen and (min-width: 1440px) {
+    .mk-hero { padding-top: 20rem; }
+  }
+  @media screen and (min-width: 1920px) {
+    .mk-hero { padding-top: 24rem; padding-bottom: 8.125rem; }
+  }
+  @media screen and (max-width: 991px) {
+    .mk-hero { padding-top: 10rem; padding-bottom: 6.25rem; }
+  }
+  @media screen and (max-width: 767px) {
+    .mk-hero { padding-top: 9rem; border-radius: 0; }
+  }
+  @media screen and (max-width: 479px) {
+    .mk-hero { border-radius: 0; }
+  }
+
   .mk-hero--inner {
     min-height: 50svh;
     padding-block: var(--section-lg);
