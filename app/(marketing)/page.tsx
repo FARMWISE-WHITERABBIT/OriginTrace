@@ -198,13 +198,23 @@ export default function HomePage() {
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
-            {/* mk-container-lg matches every other section — fixes the "hero appears narrower" issue */}
             <div className="mk-container-lg">
+              {/* SVG clip-path: convex top corners, concave bottom corners.
+                  objectBoundingBox makes it scale with the card's rendered size. */}
+              <svg width="0" height="0" aria-hidden style={{ position: 'absolute', overflow: 'hidden' }}>
+                <defs>
+                  <clipPath id="hero-card-clip" clipPathUnits="objectBoundingBox">
+                    <path d="M 0.028,0 L 0.972,0 Q 1,0 1,0.031 L 1,0.95 Q 0.956,0.95 0.956,1 L 0.044,1 Q 0.044,0.95 0,0.95 L 0,0.031 Q 0,0 0.028,0 Z" />
+                  </clipPath>
+                </defs>
+              </svg>
+
+              {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'center', minHeight: '56vh' }}
+                style={{ alignItems: 'stretch', minHeight: '72vh' }}
               >
-                {/* LEFT — headline, subtitle, CTA */}
+                {/* LEFT — headline, subtitle, CTA — vertically centered */}
                 <div className="flex flex-col justify-center py-8">
                   <FadeIn delay={0.1}>
                     <h1
@@ -233,120 +243,86 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — empty spacer; transition card is rendered AFTER the hero section
-                    so it is NOT clipped by the hero's overflow:hidden */}
-                <div className="hidden lg:block" />
+                {/* RIGHT — card, bottom-flush on desktop, stacked below text on mobile */}
+                <div className="flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="up">
+                    {/* filter:drop-shadow follows the concave clip-path outline */}
+                    <div style={{ filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.22)) drop-shadow(0 2px 8px rgba(0,0,0,0.12))' }}>
+                      <div
+                        className="w-full mx-auto lg:ml-auto lg:mr-0"
+                        style={{
+                          background: '#ffffff',
+                          clipPath: 'url(#hero-card-clip)',
+                          maxWidth: '360px',
+                          paddingTop: '1.25rem',
+                          paddingLeft: '1.25rem',
+                          paddingRight: '1.25rem',
+                          position: 'relative',
+                        }}
+                      >
+                        {/* ── 1. TITLE ── */}
+                        <div className="px-5 pt-5 pb-4">
+                          <p
+                            className="font-semibold leading-snug"
+                            style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
+                          >
+                            How Nigerian cocoa exporters cleared EU borders on the first attempt
+                          </p>
+                        </div>
+
+                        {/* ── 2. IMAGE ── */}
+                        <div
+                          style={{
+                            height: '160px',
+                            background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderRadius: '0.375rem',
+                          }}
+                        >
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
+                              Add your image here
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* ── 3. STAT ROW ── */}
+                        <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 1rem' }}>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                              Farms verified to clear cargo
+                            </p>
+                            <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                              500+
+                            </p>
+                          </div>
+                          <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                              Reduction in customs delays
+                            </p>
+                            <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                              200+
+                            </p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </FadeIn>
+                </div>
+
               </div>
             </div>
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════
-            HERO TRANSITION CARD
-            Placed as a sibling AFTER <section.mk-hero> so it is never
-            clipped by the hero's overflow:hidden.
-            marginTop pulls it up into the hero's bottom area;
-            the about section's paddingTop compensates below.
-            ═══════════════════════════════════════════════════════ */}
-        <div
-          className="mk-container-lg hidden lg:block"
-          style={{ position: 'relative', zIndex: 20, marginTop: '-12rem' }}
-        >
-          {/* SVG clip-path definition — gives the card convex top corners and
-              concave (inverse) bottom corners using objectBoundingBox so it
-              scales with the card's actual rendered size */}
-          <svg width="0" height="0" aria-hidden style={{ position: 'absolute', overflow: 'hidden' }}>
-            <defs>
-              <clipPath id="hero-card-clip" clipPathUnits="objectBoundingBox">
-                {/* Top corners: convex 10px ≈ 0.028 of width
-                    Bottom corners: concave 16px ≈ 0.044 of width
-                    Bezier control points pulled inward → concave arcs */}
-                <path d="M 0.028,0 L 0.972,0 Q 1,0 1,0.031 L 1,0.95 Q 0.956,0.95 0.956,1 L 0.044,1 Q 0.044,0.95 0,0.95 L 0,0.031 Q 0,0 0.028,0 Z" />
-              </clipPath>
-            </defs>
-          </svg>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <FadeIn delay={0.5} direction="left">
-              {/* filter:drop-shadow traces the clip-path outline (including concave arcs)
-                  unlike box-shadow which only follows the rectangular bounding box */}
-              <div style={{ filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.18)) drop-shadow(0 2px 8px rgba(0,0,0,0.1))' }}>
-                <div
-                  style={{
-                    background: '#ffffff',
-                    clipPath: 'url(#hero-card-clip)',
-                    maxWidth: '360px',
-                    paddingTop: '1.25rem',
-                    paddingLeft: '1.25rem',
-                    paddingRight: '1.25rem',
-                    position: 'relative',
-                  }}
-                >
-                  {/* ── 1. TITLE ── */}
-                  <div className="px-5 pt-5 pb-4">
-                    <p
-                      className="font-semibold leading-snug"
-                      style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
-                    >
-                      How Nigerian cocoa exporters cleared EU borders on the first attempt
-                    </p>
-                  </div>
-
-                  {/* ── 2. IMAGE ── */}
-                  <div
-                    style={{
-                      height: '160px',
-                      background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      borderRadius: '0.375rem',
-                    }}
-                  >
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span
-                        style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}
-                      >
-                        Add your image here
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* ── 3. STAT ROW ── */}
-                  <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                        Farms verified to clear cargo
-                      </p>
-                      <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                        500+
-                      </p>
-                    </div>
-
-                    <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
-
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                        Reduction in customs delays
-                      </p>
-                      <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                        200+
-                      </p>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-
 
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
-            paddingTop compensates for the transition card overlap
-            position+zIndex ensures it renders BELOW the card
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ position: 'relative', zIndex: 1, paddingTop: 'calc(var(--section-md) + 8rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'var(--section-md)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
