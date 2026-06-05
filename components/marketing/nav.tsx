@@ -125,26 +125,17 @@ export function MarketingNav() {
         }}
         data-testid="marketing-nav"
       >
-        {/*
-         * Three-piece nav — each piece is its own full pill:
-         *
-         *   [left pill: logo+links]  [short connector]  [right pill: CTA]
-         *
-         * The connector is SHORTER than the pills and centered vertically.
-         * Background shows above/below it. The right curve of the left pill
-         * and left curve of the right pill naturally taper toward each other;
-         * the short white connector fills only the middle gap between those
-         * curves, making the whole thing read as one seamless organic shape.
-         * Each pill has its own shadow; connector has NO shadow.
-         */}
         <div
           className="flex items-center"
           style={{ gap: 0, pointerEvents: 'auto' }}
         >
 
-          {/* ── Left pill: full pill, logo + centered links ──────────────── */}
+          {/* ── Left pill: logo + centered links ─────────────────────────
+           *  position: relative so the connector can be absolutely placed
+           *  at the right edge, extending 11px outward into the gap.       */}
           <div
             style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               borderRadius: '9999px',
@@ -187,18 +178,25 @@ export function MarketingNav() {
                 )
               )}
             </nav>
-          </div>
 
-          {/* ── Connector: short, centered, no shadow ───────────────────── */}
-          <div
-            style={{
-              width: '16px',
-              height: '20px',
-              background: '#ffffff',
-              flexShrink: 0,
-              alignSelf: 'center',
-            }}
-          />
+            {/* ── Connector: absolutely positioned, extends 11px beyond
+             *  the right edge of the left pill. 13×50px, vertically
+             *  centered. No shadow. Bridges the gap to the right pill.    */}
+            <div
+              style={{
+                position: 'absolute',
+                right: '-11px',
+                top: 0,
+                bottom: 0,
+                width: '13px',
+                height: '50px',
+                marginTop: 'auto',
+                marginBottom: 'auto',
+                background: '#ffffff',
+                zIndex: 1,
+              }}
+            />
+          </div>
 
           {/* ── Right pill: full pill, green button inside ───────────────── */}
           <div
