@@ -126,37 +126,35 @@ export function MarketingNav() {
         data-testid="marketing-nav"
       >
         {/*
-         * Three-piece nav — appears as ONE continuous white shape:
-         *   [left pill: logo+links] [connector rect] [right pill: CTA]
+         * Three-piece nav — each piece is its own full pill:
          *
-         * Key: no shadow on individual pieces — shadow sits on the outer
-         * wrapper so it wraps all three as a single unified form.
-         * Left pill rounds only its left side; right pill rounds only its
-         * right side; connector fills the middle at full height.
+         *   [left pill: logo+links]  [short connector]  [right pill: CTA]
+         *
+         * The connector is SHORTER than the pills and centered vertically.
+         * Background shows above/below it. The right curve of the left pill
+         * and left curve of the right pill naturally taper toward each other;
+         * the short white connector fills only the middle gap between those
+         * curves, making the whole thing read as one seamless organic shape.
+         * Each pill has its own shadow; connector has NO shadow.
          */}
         <div
           className="flex items-center"
-          style={{
-            gap: 0,
-            pointerEvents: 'auto',
-            boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
-            borderRadius: '9999px',
-          }}
+          style={{ gap: 0, pointerEvents: 'auto' }}
         >
 
-          {/* ── Left pill: logo + centered links ────────────────────────── */}
+          {/* ── Left pill: full pill, logo + centered links ──────────────── */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '9999px 0 0 9999px',
+              borderRadius: '9999px',
               background: '#ffffff',
               height: '52px',
               padding: '0 1.75rem',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               gap: '2rem',
             }}
           >
-            {/* Logo */}
             <Link href="/" className="shrink-0 flex items-center" aria-label="OriginTrace home">
               <Image
                 src="/images/logo-green.png"
@@ -168,7 +166,6 @@ export function MarketingNav() {
               />
             </Link>
 
-            {/* Nav links — centered within the main pill */}
             <nav className="flex items-center">
               {navLinks.map((link) =>
                 link.dropdown ? (
@@ -192,25 +189,27 @@ export function MarketingNav() {
             </nav>
           </div>
 
-          {/* ── Connector: full-height white rect, no border-radius ──────── */}
+          {/* ── Connector: short, centered, no shadow ───────────────────── */}
           <div
             style={{
               width: '16px',
-              height: '52px',
+              height: '20px',
               background: '#ffffff',
               flexShrink: 0,
+              alignSelf: 'center',
             }}
           />
 
-          {/* ── Right pill: white outer, green button inside ─────────────── */}
+          {/* ── Right pill: full pill, green button inside ───────────────── */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '0 9999px 9999px 0',
+              borderRadius: '9999px',
               background: '#ffffff',
               height: '52px',
-              padding: '5px 5px 5px 0',
+              padding: '6px',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
             }}
           >
             <Link
