@@ -104,75 +104,72 @@ export function MarketingNav() {
         }}
         data-testid="marketing-nav"
       >
-        {/* Width-cap wrapper — matches mk-container-wide (1390px) so pill
-            edges align exactly with hero and section content at all viewports */}
-        <div style={{ width: '100%', maxWidth: '1390px' }}>
-        <nav
-          className="flex items-stretch w-full"
-          style={{
-            background: '#ffffff',
-            borderRadius: '9999px',
-            boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
-            padding: '0.5rem 0.5rem 0.5rem 1.75rem',
-          }}
-        >
-          {/* Logo */}
-          <Link href="/" className="shrink-0 flex items-center" aria-label="OriginTrace home"
-            style={{ marginRight: '2.5rem' }}>
-            <Image src="/images/logo-green.png" alt="OriginTrace" width={140} height={36}
-              style={{ width: 'auto', height: '26px' }} priority />
-          </Link>
+        {/* Width-cap wrapper */}
+        <div style={{ width: '100%', maxWidth: '1390px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 
-          {/* Links — centered */}
-          <div className="flex items-center justify-center gap-0 flex-1">
-            {navLinks.map((link) =>
-              link.dropdown ? (
-                <NavDropdown key={link.href} link={link} pathname={pathname} />
-              ) : (
-                <Link key={link.href} href={link.href} className="mk-nav-link"
-                  data-active={
-                    (link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href.split('#')[0])) || undefined
-                  }
-                  data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                  {link.label}
-                </Link>
-              )
-            )}
-          </div>
-
-          {/* Nav divider shape — Mivora .nav-divider */}
-          <div style={{ position: 'relative', width: '13px', flexShrink: 0, alignSelf: 'stretch' }}>
-            <img
-              src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
-              alt=""
-              aria-hidden
-              style={{
-                position: 'absolute',
-                inset: '0% -11px 0% auto',
-                width: '13px',
-                height: '50px',
-                marginTop: 'auto',
-                marginBottom: 'auto',
-              }}
-            />
-          </div>
-
-          {/* CTA — alignSelf stretch fills full pill height, green pill creates the pinch */}
-          <Link href="/demo"
-            className="flex items-center font-semibold transition-opacity hover:opacity-90"
+          {/* LEFT PILL — logo + links */}
+          <div
+            className="flex items-center flex-1 relative"
             style={{
-              alignSelf: 'stretch',
+              background: '#ffffff',
+              borderRadius: '9999px',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              padding: '0.375rem 0.375rem 0.375rem 1.75rem',
+              minHeight: '52px',
+            }}
+          >
+            {/* Logo */}
+            <Link href="/" className="shrink-0 flex items-center" aria-label="OriginTrace home"
+              style={{ marginRight: '2rem' }}>
+              <Image src="/images/logo-green.png" alt="OriginTrace" width={140} height={36}
+                style={{ width: 'auto', height: '24px' }} priority />
+            </Link>
+
+            {/* Links */}
+            <nav className="flex items-center gap-0 flex-1">
+              {navLinks.map((link) =>
+                link.dropdown ? (
+                  <NavDropdown key={link.href} link={link} pathname={pathname} />
+                ) : (
+                  <Link key={link.href} href={link.href} className="mk-nav-link"
+                    data-active={
+                      (link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href.split('#')[0])) || undefined
+                    }
+                    data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {link.label}
+                  </Link>
+                )
+              )}
+            </nav>
+
+            {/* Nav divider — sits on right edge of left pill, overlaps the CTA pill */}
+            <div style={{ position: 'relative', width: '13px', flexShrink: 0, alignSelf: 'stretch' }}>
+              <img
+                src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+                alt=""
+                aria-hidden
+                className="nav-divider"
+              />
+            </div>
+          </div>
+
+          {/* RIGHT PILL — CTA */}
+          <Link href="/demo"
+            className="flex items-center font-semibold shrink-0"
+            style={{
               background: 'var(--mk-green)',
               color: '#fff',
               borderRadius: '9999px',
-              padding: '0 1.75rem',
-              fontSize: '14px',
+              padding: '0.875rem 1.75rem',
+              fontSize: '0.9375rem',
               whiteSpace: 'nowrap',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              transition: 'background 0.2s',
             }}
             data-testid="nav-request-demo">
             Request Demo
           </Link>
-        </nav>
+
         </div>
       </header>
 
