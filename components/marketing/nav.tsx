@@ -114,19 +114,18 @@ export function MarketingNav() {
       {/* ── Desktop: full-width floating pill ──────────────────────────────── */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
-        style={{ paddingTop: '1.125rem', paddingInline: '1.25rem' }}
+        style={{ paddingTop: '1.125rem', paddingInline: 'clamp(1rem, 7vw, 9rem)' }}
         data-testid="marketing-nav"
       >
         <nav
           className="flex items-center w-full"
           style={{
-            maxWidth: '1300px',
             height: '4.25rem',
             background: '#ffffff',
             borderRadius: '9999px',
             boxShadow: '0 4px 28px rgba(0,0,0,0.11)',
             paddingLeft: '1.75rem',
-            paddingRight: '0.375rem', /* button sits flush to the right curve */
+            paddingRight: '0.375rem',
           }}
         >
           {/* Logo — bigger to match Mivora */}

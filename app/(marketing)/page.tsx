@@ -198,7 +198,7 @@ export default function HomePage() {
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
-            <div className="mk-container-lg">
+            <div className="mk-container-wide">
               {/* 55/45 split — left center, right bottom-aligned */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-14"
@@ -237,12 +237,13 @@ export default function HomePage() {
                 <div className="hidden lg:flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="left">
                     <div
-                      className="rounded-2xl overflow-hidden"
+                      className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
-                        /* extends ~100px below the hero boundary into the white about section */
-                        marginBottom: '-6.25rem',
+                        /* top corners only — bottom flows seamlessly into white about section */
+                        borderRadius: '1rem 1rem 0 0',
+                        /* extends below the hero boundary into the white about section */
+                        marginBottom: '-6.5rem',
                         position: 'relative',
                         zIndex: 10,
                       }}
@@ -336,7 +337,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION — white bg, card from hero overflows in
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6.25rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6.5rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
