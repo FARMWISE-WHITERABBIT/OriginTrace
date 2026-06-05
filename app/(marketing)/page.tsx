@@ -197,24 +197,20 @@ export default function HomePage() {
           <HeroBackground />
           <div className="mk-hero__overlay" />
 
-          {/* White fade at bottom — bleeds into the white about section */}
-          <div
-            className="absolute bottom-0 left-0 right-0"
-            style={{ height: '220px', background: 'linear-gradient(to bottom, transparent 0%, #ffffff 100%)', zIndex: 2, pointerEvents: 'none' }}
-          />
-
           <div className="mk-hero__content">
-            <div className="mk-container-lg" style={{ paddingBottom: '5rem' }}>
-              {/* Left self-center, right self-end — Mivora layout */}
-              <div className="grid lg:grid-cols-[55fr_45fr] gap-10 lg:gap-16" style={{ alignItems: 'stretch', minHeight: '60vh' }}>
-
-                {/* Left — headline + subtitle + CTA, vertically centered */}
-                <div className="flex flex-col justify-center">
+            <div className="mk-container-lg">
+              {/* 55/45 split — left center, right bottom-aligned */}
+              <div
+                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-14"
+                style={{ alignItems: 'stretch', minHeight: '72vh' }}
+              >
+                {/* LEFT — headline, subtitle, CTA — vertically centered */}
+                <div className="flex flex-col justify-center py-16">
                   <FadeIn delay={0.1}>
                     <h1
-                      className="text-display-xl margin-bottom margin-large"
+                      className="text-display-2xl margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{ color: '#ffffff', maxWidth: '16ch', fontFamily: 'var(--font-display)' }}
+                      style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
                     >
                       The Compliance Pulse of Modern Supply Chains
                     </h1>
@@ -223,10 +219,10 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: '1.125rem', lineHeight: 1.72, maxWidth: '42ch', color: 'rgba(255,255,255,0.65)' }}
+                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      Traceability, compliance verification, and export readiness — helping
-                      African exporters clear borders, not get rejected at them.
+                      Eco-friendly, efficient, and future-ready supply chain traceability that
+                      reduces shipment rejections while maximising export readiness.
                     </p>
                   </FadeIn>
 
@@ -237,79 +233,96 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* Right — editorial card pinned to bottom, bleeds below hero into white section */}
-                <div className="hidden lg:flex flex-col justify-end">
-                  <FadeIn delay={0.45} direction="left">
+                {/* RIGHT — card pinned to bottom of hero, overflows into white section below */}
+                <div className="hidden lg:flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="left">
                     <div
                       className="rounded-2xl overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        boxShadow: '0 32px 72px rgba(0,0,0,0.32)',
+                        boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
+                        /* extends ~100px below the hero boundary into the white about section */
+                        marginBottom: '-6.25rem',
                         position: 'relative',
                         zIndex: 10,
-                        marginBottom: '-6rem',
                       }}
                     >
-                      {/* IMAGE SLOT — swap src for a real photo */}
-                      <div
-                        className="w-full overflow-hidden"
-                        style={{ aspectRatio: '4/3', background: '#e5e7eb', position: 'relative' }}
-                      >
-                        {/* Placeholder — replace this div with <Image> when you have the photo */}
-                        <div
-                          className="absolute inset-0 flex items-end p-4"
-                          style={{
-                            background: 'linear-gradient(160deg, #d1fae5 0%, #a7f3d0 40%, #6ee7b7 100%)',
-                          }}
-                        >
-                          <span
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                            style={{ background: 'rgba(255,255,255,0.85)', color: 'var(--mk-green)' }}
-                          >
-                            Case Study
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Title */}
-                      <div className="px-5 pt-4 pb-2">
+                      {/* ── 1. TITLE ── */}
+                      <div className="px-5 pt-5 pb-4">
                         <p
                           className="font-semibold leading-snug"
-                          style={{ fontSize: '1rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}
+                          style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
                         >
                           How Nigerian cocoa exporters cleared EU borders on the first attempt
                         </p>
                       </div>
 
-                      {/* Stat row — matches Mivora exactly */}
+                      {/* ── 2. IMAGE (swap this div for <Image> when your photo is ready) ── */}
                       <div
-                        className="flex items-stretch px-5 pb-5 pt-3"
-                        style={{ borderTop: '1px solid var(--mk-border)', marginTop: '0.75rem' }}
+                        className="w-full"
+                        style={{
+                          aspectRatio: '16/9',
+                          background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
                       >
+                        {/* Image placeholder — remove this inner div and add <Image src="…" fill alt="…" style={{objectFit:'cover'}} /> */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span
+                            className="text-xs font-semibold px-3 py-1 rounded-full"
+                            style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)' }}
+                          >
+                            Add your image here
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ── 3. STAT ROW ── */}
+                      <div className="flex items-stretch px-5 py-4">
                         <div className="flex-1">
-                          <p className="text-xs leading-snug mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                          <p
+                            className="text-xs leading-snug"
+                            style={{ color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch' }}
+                          >
                             Farms verified to clear cargo
                           </p>
                           <p
-                            className="text-2xl font-extrabold leading-none"
-                            style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em' }}
+                            className="font-extrabold leading-none"
+                            style={{
+                              fontSize: '1.75rem',
+                              color: 'var(--mk-text-primary)',
+                              fontFamily: 'var(--font-display)',
+                              letterSpacing: '-0.04em',
+                            }}
                           >
                             500+
                           </p>
                         </div>
-                        <div className="w-px self-stretch mx-4" style={{ background: 'var(--mk-border)' }} />
+
+                        <div className="self-stretch w-px mx-4" style={{ background: 'var(--mk-border)' }} />
+
                         <div className="flex-1">
-                          <p className="text-xs leading-snug mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                          <p
+                            className="text-xs leading-snug"
+                            style={{ color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch' }}
+                          >
                             Reduction in customs delays
                           </p>
                           <p
-                            className="text-2xl font-extrabold leading-none"
-                            style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em' }}
+                            className="font-extrabold leading-none"
+                            style={{
+                              fontSize: '1.75rem',
+                              color: 'var(--mk-text-primary)',
+                              fontFamily: 'var(--font-display)',
+                              letterSpacing: '-0.04em',
+                            }}
                           >
                             200+
                           </p>
                         </div>
                       </div>
+
                     </div>
                   </FadeIn>
                 </div>
@@ -321,9 +334,9 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            2. ABOUT / MISSION
+            2. ABOUT / MISSION — white bg, card from hero overflows in
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6.25rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>

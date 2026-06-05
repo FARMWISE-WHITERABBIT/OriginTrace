@@ -120,12 +120,13 @@ export function MarketingNav() {
         <nav
           className="flex items-center w-full"
           style={{
-            maxWidth: '1390px',
-            height: '4.5rem',       /* 72px — matches Mivora nav height */
+            maxWidth: '1300px',
+            height: '4.25rem',
             background: '#ffffff',
             borderRadius: '9999px',
             boxShadow: '0 4px 28px rgba(0,0,0,0.11)',
-            paddingInline: '1.5rem',
+            paddingLeft: '1.75rem',
+            paddingRight: '0.375rem', /* button sits flush to the right curve */
           }}
         >
           {/* Logo — bigger to match Mivora */}
@@ -161,11 +162,8 @@ export function MarketingNav() {
             )}
           </div>
 
-          {/* Pinch separator + CTA — matches Mivora right side */}
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Vertical separator — the "pinch" before the CTA */}
-            <div style={{ width: '1px', height: '1.75rem', background: 'var(--mk-border)', flexShrink: 0 }} />
-
+          {/* Pinch separator + CTA — Contact us flush to right edge */}
+          <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/auth/login"
               className="text-[15px] font-medium transition-colors"
@@ -181,8 +179,9 @@ export function MarketingNav() {
               style={{
                 background: 'var(--mk-green)',
                 color: '#fff',
-                padding: '0.625rem 1.375rem',
+                padding: '0.75rem 1.625rem',
                 whiteSpace: 'nowrap',
+                lineHeight: 1,
               }}
               data-testid="nav-request-demo"
             >
