@@ -236,18 +236,20 @@ export default function HomePage() {
                 {/* RIGHT — card pinned to bottom of hero, overflows into white section below */}
                 <div className="hidden lg:flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="left">
+                    {/* Card: constrained width, all corners rounded (bottom corners visible in white about section) */}
                     <div
                       className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        /* --border-radius--sm = 0.625rem, top corners only */
-                        borderRadius: '0.625rem 0.625rem 0 0',
+                        borderRadius: '0.625rem',
                         marginBottom: '-8.3rem',
                         paddingTop: '1.25rem',
                         paddingLeft: '1.25rem',
                         paddingRight: '1.25rem',
                         position: 'relative',
                         zIndex: 10,
+                        maxWidth: '360px',
+                        marginLeft: 'auto',
                       }}
                     >
                       {/* ── 1. TITLE ── */}

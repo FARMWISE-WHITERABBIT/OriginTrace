@@ -205,6 +205,8 @@
 
   .mk-container-wide {
     width: 100%;
+    max-width: 1390px;
+    margin-inline: auto;
     padding-inline: clamp(1.5rem, 5vw, 6rem);
   }
 
@@ -1088,6 +1090,7 @@
     margin-top: -7rem;
     padding-top: 9rem;
     padding-bottom: 5rem;
+    border-bottom-left-radius: 1.25rem;
     border-bottom-right-radius: 1.25rem;
     background-color: #ffffff;
   }

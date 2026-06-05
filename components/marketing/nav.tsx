@@ -110,7 +110,7 @@ export function MarketingNav() {
             background: '#ffffff',
             borderRadius: '9999px',
             boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
-            padding: '0.375rem 0.375rem 0.375rem 1.75rem',
+            padding: '0.5rem 0.5rem 0.5rem 1.75rem',
           }}
         >
           {/* Logo */}
