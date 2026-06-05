@@ -1220,11 +1220,9 @@ export default function HomePage() {
 
                 <a
                   href="mailto:hello@origintrace.trade"
-                  className="flex items-center gap-2 text-sm"
-                  style={{ color: 'var(--mk-text-on-dark-2)', textDecoration: 'none', transition: 'color 0.2s' }}
+                  className="mk-contact-link flex items-center gap-2 text-sm"
+                  style={{ textDecoration: 'none' }}
                   data-testid="link-contact-email"
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--mk-green)')}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'var(--mk-text-on-dark-2)')}
                 >
                   <Mail className="h-4 w-4" />
                   hello@origintrace.trade

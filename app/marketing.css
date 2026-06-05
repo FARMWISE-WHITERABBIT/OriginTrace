@@ -1433,3 +1433,11 @@
     from { opacity: 0; transform: scale(0.88); }
     to   { opacity: 1; transform: scale(1); }
   }
+
+.mk-contact-link {
+  color: var(--mk-text-on-dark-2);
+  transition: color 0.2s;
+}
+.mk-contact-link:hover {
+  color: var(--mk-green);
+}
