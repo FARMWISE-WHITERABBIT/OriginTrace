@@ -1080,10 +1080,12 @@
   .mk-hero {
     position: relative;
     overflow: visible;
-    min-height: 92svh;
+    min-height: 96svh;
     display: flex;
-    align-items: center;
-    padding-block: var(--section-xl);
+    align-items: stretch;
+    /* Top padding clears the floating pill nav (72px nav + 18px top offset + 20px breathing room) */
+    padding-top: 8rem;
+    padding-bottom: 0;
   }
   .mk-hero--inner {
     min-height: 50svh;
@@ -1447,9 +1449,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.4rem 0.875rem;
+  padding: 0.5rem 1rem;
   border-radius: 9999px;
-  font-size: 0.875rem;
+  font-size: 0.9375rem; /* 15px */
   font-weight: 500;
   color: var(--mk-text-secondary);
   transition: background 0.15s, color 0.15s;

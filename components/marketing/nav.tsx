@@ -35,18 +35,14 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setOpen(true);
-  };
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 150);
-  };
-
   const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
 
   return (
-    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div
+      className="relative"
+      onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setOpen(true); }}
+      onMouseLeave={() => { timeoutRef.current = setTimeout(() => setOpen(false), 150); }}
+    >
       <Link
         href={link.href}
         className="mk-pill-nav__link"
@@ -54,13 +50,13 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
         data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
       >
         {link.label}
-        <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </Link>
 
-      {/* SEO layer — always in DOM, invisible when closed */}
+      {/* SEO — always in DOM */}
       <div
         aria-hidden={!open}
-        className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 ${open ? 'visible' : 'invisible'}`}
+        className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 ${open ? 'visible' : 'invisible'}`}
         data-seo="dropdown-links"
       >
         {link.dropdown!.map((sub) => (
@@ -70,7 +66,6 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
         ))}
       </div>
 
-      {/* Visible animated dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -78,15 +73,19 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 rounded-xl border py-1.5 z-50"
-            style={{ background: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', borderColor: 'var(--mk-border)' }}
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl py-1.5 z-50"
+            style={{
+              background: '#fff',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              border: '1px solid var(--mk-border)',
+            }}
             data-testid={`dropdown-${link.label.toLowerCase()}`}
           >
             {link.dropdown!.map((sub) => (
               <Link
                 key={sub.href}
                 href={sub.href}
-                className="block px-4 py-2.5 text-sm transition-colors"
+                className="block px-4 py-2.5 text-[15px] transition-colors"
                 style={{ color: pathname === sub.href ? 'var(--mk-green)' : 'var(--mk-text-secondary)' }}
                 data-testid={`dropdown-link-${sub.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
@@ -112,37 +111,37 @@ export function MarketingNav() {
 
   return (
     <>
-      {/* ── Desktop floating pill nav ──────────────────────────────────────── */}
+      {/* ── Desktop: full-width floating pill ──────────────────────────────── */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
-        style={{ paddingTop: '1.25rem' }}
+        style={{ paddingTop: '1.125rem', paddingInline: '1.25rem' }}
         data-testid="marketing-nav"
       >
         <nav
-          className="flex items-center gap-2 px-3 py-2"
+          className="flex items-center w-full"
           style={{
+            maxWidth: '1390px',
+            height: '4.5rem',       /* 72px — matches Mivora nav height */
             background: '#ffffff',
             borderRadius: '9999px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-            minWidth: '720px',
-            maxWidth: '1060px',
-            width: 'calc(100% - 3rem)',
+            boxShadow: '0 4px 28px rgba(0,0,0,0.11)',
+            paddingInline: '1.5rem',
           }}
         >
-          {/* Logo */}
-          <Link href="/" className="shrink-0 mr-3 pl-1" aria-label="OriginTrace home">
+          {/* Logo — bigger to match Mivora */}
+          <Link href="/" className="shrink-0" aria-label="OriginTrace home" style={{ marginRight: '2rem' }}>
             <Image
               src="/images/logo-green.png"
               alt="OriginTrace"
-              width={120}
-              height={32}
-              style={{ width: 'auto', height: '26px' }}
+              width={160}
+              height={44}
+              style={{ width: 'auto', height: '36px' }}
               priority
             />
           </Link>
 
-          {/* Links — centered, fill remaining space */}
-          <div className="flex items-center gap-0.5 flex-1 justify-center">
+          {/* Nav links — fill the space */}
+          <div className="flex items-center gap-1 flex-1">
             {navLinks.map((link) =>
               link.dropdown ? (
                 <NavDropdown key={link.href} link={link} pathname={pathname} />
@@ -162,22 +161,28 @@ export function MarketingNav() {
             )}
           </div>
 
-          {/* Right — sign in + CTA */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Pinch separator + CTA — matches Mivora right side */}
+          <div className="flex items-center gap-4 shrink-0">
+            {/* Vertical separator — the "pinch" before the CTA */}
+            <div style={{ width: '1px', height: '1.75rem', background: 'var(--mk-border)', flexShrink: 0 }} />
+
             <Link
               href="/auth/login"
-              className="text-sm px-3 py-1.5 rounded-full transition-colors"
-              style={{ color: 'var(--mk-text-secondary)' }}
+              className="text-[15px] font-medium transition-colors"
+              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}
               data-testid="nav-sign-in"
             >
               Sign in
             </Link>
+
             <Link
               href="/demo"
-              className="text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+              className="text-[15px] font-semibold rounded-full transition-colors"
               style={{
                 background: 'var(--mk-green)',
                 color: '#fff',
+                padding: '0.625rem 1.375rem',
+                whiteSpace: 'nowrap',
               }}
               data-testid="nav-request-demo"
             >
@@ -187,17 +192,29 @@ export function MarketingNav() {
         </nav>
       </header>
 
-      {/* ── Mobile nav ────────────────────────────────────────────────────── */}
+      {/* ── Mobile nav bar ────────────────────────────────────────────────── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 flex md:hidden items-center justify-between px-4 py-3"
-        style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--mk-border)' }}
+        className="fixed top-0 left-0 right-0 z-50 flex md:hidden items-center justify-between px-5"
+        style={{
+          height: '60px',
+          background: 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--mk-border)',
+        }}
       >
         <Link href="/" aria-label="OriginTrace home">
-          <Image src="/images/logo-green.png" alt="OriginTrace" width={110} height={30} style={{ width: 'auto', height: '24px' }} priority />
+          <Image
+            src="/images/logo-green.png"
+            alt="OriginTrace"
+            width={130}
+            height={36}
+            style={{ width: 'auto', height: '28px' }}
+            priority
+          />
         </Link>
 
         <button
-          className="p-2 rounded-full transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
           style={{ background: 'var(--mk-surface-gray)' }}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
@@ -207,16 +224,23 @@ export function MarketingNav() {
         </button>
       </header>
 
-      {/* Mobile menu drawer */}
+      {/* Mobile drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-14 left-4 right-4 z-50 rounded-2xl border py-3 md:hidden"
-            style={{ background: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.14)', borderColor: 'var(--mk-border)' }}
+            className="fixed z-50 md:hidden rounded-2xl py-3"
+            style={{
+              top: '68px',
+              left: '1rem',
+              right: '1rem',
+              background: '#fff',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
+              border: '1px solid var(--mk-border)',
+            }}
           >
             {navLinks.map((link) => (
               <div key={link.href}>
@@ -224,8 +248,11 @@ export function MarketingNav() {
                   <>
                     <button
                       onClick={() => setMobileExpanded(mobileExpanded === link.label ? null : link.label)}
-                      className="flex items-center justify-between w-full px-5 py-3 text-sm font-medium transition-colors"
-                      style={{ color: pathname?.startsWith(link.href) ? 'var(--mk-green)' : 'var(--mk-text-secondary)' }}
+                      className="flex items-center justify-between w-full px-5 py-3.5 font-medium transition-colors"
+                      style={{
+                        fontSize: '15px',
+                        color: pathname?.startsWith(link.href) ? 'var(--mk-green)' : 'var(--mk-text-secondary)',
+                      }}
                       data-testid={`mobile-nav-${link.label.toLowerCase()}`}
                     >
                       {link.label}
@@ -238,14 +265,17 @@ export function MarketingNav() {
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.15 }}
-                          className="pl-5"
+                          className="overflow-hidden"
                         >
                           {link.dropdown.map((sub) => (
                             <Link
                               key={sub.href}
                               href={sub.href}
-                              className="block px-5 py-2.5 text-sm transition-colors"
-                              style={{ color: pathname === sub.href ? 'var(--mk-green)' : 'var(--mk-text-muted)' }}
+                              className="block px-8 py-3 transition-colors"
+                              style={{
+                                fontSize: '15px',
+                                color: pathname === sub.href ? 'var(--mk-green)' : 'var(--mk-text-muted)',
+                              }}
                               data-testid={`mobile-link-${sub.label.toLowerCase().replace(/\s+/g, '-')}`}
                             >
                               {sub.label}
@@ -258,22 +288,33 @@ export function MarketingNav() {
                 ) : (
                   <Link
                     href={link.href}
-                    className="block px-5 py-3 text-sm font-medium transition-colors"
-                    style={{ color: pathname === link.href ? 'var(--mk-green)' : 'var(--mk-text-secondary)' }}
+                    className="block px-5 py-3.5 font-medium transition-colors"
+                    style={{
+                      fontSize: '15px',
+                      color: pathname === link.href ? 'var(--mk-green)' : 'var(--mk-text-secondary)',
+                    }}
                   >
                     {link.label}
                   </Link>
                 )}
               </div>
             ))}
-            <div className="px-4 pt-2 pb-1 flex flex-col gap-2" style={{ borderTop: '1px solid var(--mk-border)', marginTop: '0.5rem' }}>
-              <Link href="/auth/login" className="block text-center py-2.5 text-sm font-medium" style={{ color: 'var(--mk-text-secondary)' }}>
+
+            <div
+              className="flex flex-col gap-2 px-4 pt-3 pb-2"
+              style={{ borderTop: '1px solid var(--mk-border)', marginTop: '0.5rem' }}
+            >
+              <Link
+                href="/auth/login"
+                className="block text-center py-3 font-medium"
+                style={{ fontSize: '15px', color: 'var(--mk-text-secondary)' }}
+              >
                 Sign in
               </Link>
               <Link
                 href="/demo"
-                className="block text-center py-2.5 text-sm font-semibold rounded-full"
-                style={{ background: 'var(--mk-green)', color: '#fff' }}
+                className="block text-center py-3 font-semibold rounded-full"
+                style={{ fontSize: '15px', background: 'var(--mk-green)', color: '#fff' }}
               >
                 Contact us
               </Link>

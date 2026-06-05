@@ -191,27 +191,30 @@ export default function HomePage() {
       <main>
 
         {/* ═══════════════════════════════════════════════════════
-            1. HERO — full-bleed dark aerial, left headline, right editorial card
+            1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
           <HeroBackground />
           <div className="mk-hero__overlay" />
 
-          <div className="mk-hero__content">
-            <div className="mk-container-lg">
-              <div className="grid lg:grid-cols-[3fr_2fr] gap-12 lg:gap-20 items-center">
+          {/* White fade at bottom — bleeds into the white about section */}
+          <div
+            className="absolute bottom-0 left-0 right-0"
+            style={{ height: '220px', background: 'linear-gradient(to bottom, transparent 0%, #ffffff 100%)', zIndex: 2, pointerEvents: 'none' }}
+          />
 
-                {/* Left — big headline + single CTA */}
-                <div>
+          <div className="mk-hero__content">
+            <div className="mk-container-lg" style={{ paddingBottom: '5rem' }}>
+              {/* Left self-center, right self-end — Mivora layout */}
+              <div className="grid lg:grid-cols-[55fr_45fr] gap-10 lg:gap-16" style={{ alignItems: 'stretch', minHeight: '60vh' }}>
+
+                {/* Left — headline + subtitle + CTA, vertically centered */}
+                <div className="flex flex-col justify-center">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-xl margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{
-                        color: '#ffffff',
-                        maxWidth: '18ch',
-                        fontFamily: 'var(--font-display)',
-                      }}
+                      style={{ color: '#ffffff', maxWidth: '16ch', fontFamily: 'var(--font-display)' }}
                     >
                       The Compliance Pulse of Modern Supply Chains
                     </h1>
@@ -220,115 +223,97 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{
-                        fontSize: '1.0625rem',
-                        lineHeight: 1.72,
-                        maxWidth: '44ch',
-                        color: 'rgba(255,255,255,0.62)',
-                      }}
+                      style={{ fontSize: '1.125rem', lineHeight: 1.72, maxWidth: '42ch', color: 'rgba(255,255,255,0.65)' }}
                     >
-                      Traceability, compliance verification, and export readiness — helping African
-                      exporters clear borders, not get rejected at them.
+                      Traceability, compliance verification, and export readiness — helping
+                      African exporters clear borders, not get rejected at them.
                     </p>
                   </FadeIn>
 
                   <FadeIn delay={0.3}>
-                    <Link
-                      href="#eudr-assessment"
-                      className="btn-mk-primary btn-mk-lg"
-                      data-testid="button-check-readiness"
-                    >
+                    <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
                       Assess Your Export Readiness
                     </Link>
                   </FadeIn>
                 </div>
 
-                {/* Right — editorial article-preview card (Mivora pattern) */}
-                {/* Right card — bleeds below hero into about section */}
-                <FadeIn delay={0.45} direction="left">
-                  <div className="hidden lg:block" style={{ position: 'relative', zIndex: 10, marginBottom: '-10rem' }}>
+                {/* Right — editorial card pinned to bottom, bleeds below hero into white section */}
+                <div className="hidden lg:flex flex-col justify-end">
+                  <FadeIn delay={0.45} direction="left">
                     <div
                       className="rounded-2xl overflow-hidden"
-                      style={{ background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.30)' }}
+                      style={{
+                        background: '#ffffff',
+                        boxShadow: '0 32px 72px rgba(0,0,0,0.32)',
+                        position: 'relative',
+                        zIndex: 10,
+                        marginBottom: '-6rem',
+                      }}
                     >
-                      {/* Card image area */}
+                      {/* IMAGE SLOT — swap src for a real photo */}
                       <div
-                        className="relative w-full flex items-center justify-center overflow-hidden"
-                        style={{
-                          aspectRatio: '16/9',
-                          background: 'linear-gradient(135deg, #065f46 0%, #2E7D6B 50%, #059669 100%)',
-                        }}
+                        className="w-full overflow-hidden"
+                        style={{ aspectRatio: '4/3', background: '#e5e7eb', position: 'relative' }}
                       >
-                        <div className="flex flex-col items-center gap-3 z-10">
-                          <div className="flex items-center gap-3">
-                            {['Farm', 'Collect', 'Process', 'Export'].map((step, idx) => (
-                              <div key={step} className="flex items-center gap-3">
-                                <div className="flex flex-col items-center gap-1.5">
-                                  <div
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                                    style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(4px)' }}
-                                  >
-                                    <div className="w-2.5 h-2.5 rounded-full bg-white opacity-80" />
-                                  </div>
-                                  <span className="text-[9px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                                    {step}
-                                  </span>
-                                </div>
-                                {idx < 3 && (
-                                  <div className="w-5 h-px mb-4" style={{ background: 'rgba(255,255,255,0.25)' }} />
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                        {/* Placeholder — replace this div with <Image> when you have the photo */}
+                        <div
+                          className="absolute inset-0 flex items-end p-4"
+                          style={{
+                            background: 'linear-gradient(160deg, #d1fae5 0%, #a7f3d0 40%, #6ee7b7 100%)',
+                          }}
+                        >
                           <span
-                            className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                            style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(4px)' }}
+                            className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                            style={{ background: 'rgba(255,255,255,0.85)', color: 'var(--mk-green)' }}
                           >
-                            Farm to Export · Verified
+                            Case Study
                           </span>
                         </div>
                       </div>
 
-                      {/* Card body */}
-                      <div className="p-5">
+                      {/* Title */}
+                      <div className="px-5 pt-4 pb-2">
                         <p
-                          className="text-sm font-semibold leading-snug margin-bottom margin-small"
-                          style={{ color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}
+                          className="font-semibold leading-snug"
+                          style={{ fontSize: '1rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em' }}
                         >
                           How Nigerian cocoa exporters cleared EU borders on the first attempt
                         </p>
-                        <div
-                          className="pt-4 flex items-stretch"
-                          style={{ borderTop: '1px solid var(--mk-border)' }}
-                        >
-                          <div className="flex-1 text-center">
-                            <p className="text-xs mb-1" style={{ color: 'var(--mk-text-muted)' }}>
-                              Farms verified to clear cargo
-                            </p>
-                            <p
-                              className="text-xl font-extrabold leading-none"
-                              style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.035em' }}
-                            >
-                              500+
-                            </p>
-                          </div>
-                          <div className="w-px self-stretch mx-4" style={{ background: 'var(--mk-border)' }} />
-                          <div className="flex-1 text-center">
-                            <p className="text-xs mb-1" style={{ color: 'var(--mk-text-muted)' }}>
-                              Reduction in customs delays
-                            </p>
-                            <p
-                              className="text-xl font-extrabold leading-none"
-                              style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.035em' }}
-                            >
-                              200+
-                            </p>
-                          </div>
+                      </div>
+
+                      {/* Stat row — matches Mivora exactly */}
+                      <div
+                        className="flex items-stretch px-5 pb-5 pt-3"
+                        style={{ borderTop: '1px solid var(--mk-border)', marginTop: '0.75rem' }}
+                      >
+                        <div className="flex-1">
+                          <p className="text-xs leading-snug mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                            Farms verified to clear cargo
+                          </p>
+                          <p
+                            className="text-2xl font-extrabold leading-none"
+                            style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em' }}
+                          >
+                            500+
+                          </p>
+                        </div>
+                        <div className="w-px self-stretch mx-4" style={{ background: 'var(--mk-border)' }} />
+                        <div className="flex-1">
+                          <p className="text-xs leading-snug mb-1" style={{ color: 'var(--mk-text-muted)' }}>
+                            Reduction in customs delays
+                          </p>
+                          <p
+                            className="text-2xl font-extrabold leading-none"
+                            style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em' }}
+                          >
+                            200+
+                          </p>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </FadeIn>
+                  </FadeIn>
+                </div>
+
               </div>
             </div>
           </div>
@@ -336,9 +321,9 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            2. ABOUT / MISSION — hero card bleeds into this section
+            2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingBottom: 'var(--section-md)', paddingTop: 'calc(var(--section-md) + 10rem)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
