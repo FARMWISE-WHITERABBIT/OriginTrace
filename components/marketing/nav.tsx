@@ -114,7 +114,7 @@ export function MarketingNav() {
       */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:block"
-        style={{ paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+        style={{ paddingTop: '1.25rem', paddingBottom: '1.25rem' }}
         data-testid="marketing-nav"
       >
         {/* .container-full */}
@@ -126,6 +126,7 @@ export function MarketingNav() {
               display: 'grid',
               gridTemplateColumns: '1fr auto',
               gap: '0',
+              alignItems: 'center',
               position: 'relative',
               maxWidth: '1390px',
               marginInline: 'auto',
