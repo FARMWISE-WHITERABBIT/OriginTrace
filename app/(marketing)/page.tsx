@@ -199,20 +199,10 @@ export default function HomePage() {
 
           <div className="mk-hero__content">
             <div className="mk-container-lg">
-              {/* SVG clip-path: convex top corners, concave bottom corners.
-                  objectBoundingBox makes it scale with the card's rendered size. */}
-              <svg width="0" height="0" aria-hidden style={{ position: 'absolute', overflow: 'hidden' }}>
-                <defs>
-                  <clipPath id="hero-card-clip" clipPathUnits="objectBoundingBox">
-                    <path d="M 0.028,0 L 0.972,0 Q 1,0 1,0.031 L 1,0.95 Q 0.956,0.95 0.956,1 L 0.044,1 Q 0.044,0.95 0,0.95 L 0,0.031 Q 0,0 0.028,0 Z" />
-                  </clipPath>
-                </defs>
-              </svg>
-
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch', minHeight: '72vh' }}
+                style={{ alignItems: 'stretch' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
                 <div className="flex flex-col justify-center py-8">
@@ -243,72 +233,67 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card, bottom-flush on desktop, stacked below text on mobile */}
-                <div className="flex flex-col justify-end pb-0">
+                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
+                <div className="flex flex-col justify-end">
                   <FadeIn delay={0.5} direction="up">
-                    {/* filter:drop-shadow follows the concave clip-path outline */}
-                    <div style={{ filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.22)) drop-shadow(0 2px 8px rgba(0,0,0,0.12))' }}>
+                    <div
+                      className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
+                      style={{
+                        maxWidth: '360px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+                      }}
+                    >
+                      {/* ── 1. TITLE ── */}
+                      <div className="pb-4">
+                        <p
+                          className="font-semibold leading-snug"
+                          style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
+                        >
+                          How Nigerian cocoa exporters cleared EU borders on the first attempt
+                        </p>
+                      </div>
+
+                      {/* ── 2. IMAGE ── */}
                       <div
-                        className="w-full mx-auto lg:ml-auto lg:mr-0"
                         style={{
-                          background: '#ffffff',
-                          clipPath: 'url(#hero-card-clip)',
-                          maxWidth: '360px',
-                          paddingTop: '1.25rem',
-                          paddingLeft: '1.25rem',
-                          paddingRight: '1.25rem',
+                          height: '160px',
+                          background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
                           position: 'relative',
+                          overflow: 'hidden',
+                          borderRadius: '0.375rem',
                         }}
                       >
-                        {/* ── 1. TITLE ── */}
-                        <div className="px-5 pt-5 pb-4">
-                          <p
-                            className="font-semibold leading-snug"
-                            style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
-                          >
-                            How Nigerian cocoa exporters cleared EU borders on the first attempt
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
+                            Add your image here
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ── 3. STAT ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 0' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                            Farms verified to clear cargo
+                          </p>
+                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                            500+
                           </p>
                         </div>
-
-                        {/* ── 2. IMAGE ── */}
-                        <div
-                          style={{
-                            height: '160px',
-                            background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            borderRadius: '0.375rem',
-                          }}
-                        >
-                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
-                              Add your image here
-                            </span>
-                          </div>
+                        <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                            Reduction in customs delays
+                          </p>
+                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                            200+
+                          </p>
                         </div>
-
-                        {/* ── 3. STAT ROW ── */}
-                        <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 1rem' }}>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                              Farms verified to clear cargo
-                            </p>
-                            <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                              500+
-                            </p>
-                          </div>
-                          <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                              Reduction in customs delays
-                            </p>
-                            <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                              200+
-                            </p>
-                          </div>
-                        </div>
-
                       </div>
+
+                      {/* Decorative corner elements */}
+                      <div className="hero-left-decorative" aria-hidden />
+                      <div className="hero-right-decorative" aria-hidden />
                     </div>
                   </FadeIn>
                 </div>
@@ -322,7 +307,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'var(--section-md)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>

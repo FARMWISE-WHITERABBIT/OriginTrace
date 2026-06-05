@@ -40,6 +40,8 @@
    1. DESIGN TOKENS
    ───────────────────────────────────────────────────────────────────────────── */
   :root {
+    --border-radius--sm: 0.625rem;
+    --color--white: #ffffff;
     /* ── Brand colours (OriginTrace) ─────────────────────────────────── */
     --mk-green:          #2E7D6B;   /* Origin Green — primary CTA */
     --mk-green-dark:     #1F5F52;   /* Deep Forest — hover / dark sections */
@@ -1086,10 +1088,11 @@
    ───────────────────────────────────────────────────────────────────────────── */
   .mk-hero {
     position: relative;
-    overflow: hidden;
+    /* overflow: visible — required for hero-detail-wrap margin-bottom bleed */
+    min-height: 65vh;
     margin-top: -7rem;
     padding-top: 9rem;
-    padding-bottom: 2rem;
+    padding-bottom: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 1.25rem;
     background-color: #ffffff;
@@ -1140,6 +1143,59 @@
     position: relative;
     z-index: 3;
     width: 100%;
+  }
+
+  /* Mivora .hero-detail-wrap — card that bleeds below the hero section */
+  .hero-detail-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    margin-bottom: -8.3rem;
+    padding-top: 1.875rem;
+    padding-right: 1.875rem;
+    padding-left: 1.875rem;
+    flex-flow: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    border-top-left-radius: var(--border-radius--sm);
+    border-top-right-radius: var(--border-radius--sm);
+    background-color: var(--color--white);
+    text-decoration: none;
+  }
+
+  .hero-left-decorative {
+    position: absolute;
+    inset: auto auto 3px -25px;
+  }
+
+  .hero-right-decorative {
+    position: absolute;
+    inset: auto -25px 3px auto;
+  }
+
+  @media screen and (max-width: 991px) {
+    .hero-detail-wrap {
+      margin-bottom: -6.3rem;
+      padding-top: 1.25rem;
+      padding-right: 1.25rem;
+      padding-left: 1.25rem;
+    }
+    .hero-left-decorative { bottom: 1px; }
+    .hero-right-decorative { bottom: 1.5px; }
+  }
+
+  @media screen and (max-width: 767px) {
+    .hero-left-decorative  { bottom: 0px; }
+    .hero-right-decorative { bottom: -1px; }
+  }
+
+  @media screen and (max-width: 479px) {
+    .hero-detail-wrap {
+      padding-top: 0.9375rem;
+      padding-right: 0.9375rem;
+      padding-left: 0.9375rem;
+      border-bottom-right-radius: 0;
+    }
   }
 
 

@@ -1,12 +1,10 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 interface HeroBackgroundProps {
-  /** Static image behind everything — always visible, reliable in all environments.
-   *  Default: /images/farmer in field.jpg */
   imageSrc?: string;
-  /** Optional self-hosted video overlay (plays when browser allows autoplay). */
   videoSrc?: string;
-  /** Optional YouTube video ID — takes precedence over videoSrc when set. */
   youtubeId?: string;
 }
 
@@ -15,15 +13,29 @@ export default function HeroBackground({
   videoSrc = '/videos/hero.mp4',
   youtubeId,
 }: HeroBackgroundProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    const p = video.play();
+    if (p !== undefined) p.catch(() => { /* autoplay blocked — static image fallback visible */ });
+  }, []);
+
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-      {/* Layer 0 — dark-green gradient (always visible, zero-dependency fallback) */}
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 0,
+      overflow: 'hidden',
+      borderBottomRightRadius: '1.25rem',
+    }}>
+      {/* Layer 0 — dark-green gradient (zero-dependency fallback) */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 0,
         background: 'linear-gradient(160deg, #0a2e1e 0%, #0f4a30 25%, #1a6645 50%, #0d3d28 75%, #071e12 100%)',
       }} />
 
-      {/* Layer 1 — static image (reliable in every environment) */}
+      {/* Layer 1 — static image */}
       {imageSrc && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 1,
@@ -33,7 +45,7 @@ export default function HeroBackground({
         }} />
       )}
 
-      {/* Layer 2 — video overlay (plays when browser supports autoplay; falls back to image) */}
+      {/* Layer 2 — video overlay */}
       {youtubeId ? (
         <iframe
           src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&disablekb=1&enablejsapi=0`}
@@ -51,11 +63,16 @@ export default function HeroBackground({
         />
       ) : videoSrc ? (
         <video
-          autoPlay muted loop playsInline
-          src={videoSrc}
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2 }}
           aria-hidden
-        />
+        >
+          <source src={videoSrc} type="video/mp4" />
+        </video>
       ) : null}
     </div>
   );
