@@ -1101,17 +1101,16 @@
     padding-block: var(--section-md);
   }
 
-  /* Dark overlay over background image */
+  /* Dark overlay — matches Mivora: background-color #212121, opacity 0.5,
+     border-bottom-right-radius: --border-radius--md (1.25rem) */
   .mk-hero__overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      135deg,
-      hsl(168 51% 10% / 0.82) 0%,
-      hsl(168 40% 18% / 0.65) 60%,
-      hsl(168 30% 25% / 0.4) 100%
-    );
     z-index: 2;
+    height: 100%;
+    background-color: #212121;
+    opacity: 0.5;
+    border-bottom-right-radius: 1.25rem;
   }
 
   /* Content sits above overlay */

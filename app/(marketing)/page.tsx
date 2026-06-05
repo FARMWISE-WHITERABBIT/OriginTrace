@@ -240,10 +240,13 @@ export default function HomePage() {
                       className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        /* top corners only — bottom flows seamlessly into white about section */
-                        borderRadius: '1rem 1rem 0 0',
-                        /* extends below the hero boundary into the white about section */
-                        marginBottom: '-6.5rem',
+                        /* --border-radius--sm = 0.625rem, top corners only */
+                        borderRadius: '0.625rem 0.625rem 0 0',
+                        /* Mivora: margin-bottom -8.3rem */
+                        marginBottom: '-8.3rem',
+                        paddingTop: '1.875rem',
+                        paddingLeft: '1.875rem',
+                        paddingRight: '1.875rem',
                         position: 'relative',
                         zIndex: 10,
                       }}
@@ -337,7 +340,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION — white bg, card from hero overflows in
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 6.5rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
