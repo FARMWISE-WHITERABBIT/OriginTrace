@@ -114,15 +114,25 @@ export function MarketingNav() {
   return (
     <>
       {/* ── Desktop: full-width floating pill (Mivora exact structure) ────── */}
+      {/*
+       * Mivora .navbar: transparent bg, padding 1.25rem top+bottom, fixed position.
+       * The white pill is the inner grid-nav div, NOT the outer header.
+       */}
       <header
         className="fixed top-0 left-0 right-0 z-50 hidden md:block"
-        style={{ paddingTop: '1rem', paddingInline: 'clamp(1rem, 4vw, 5rem)' }}
+        style={{
+          paddingTop: '1.25rem',
+          paddingBottom: '1.25rem',
+          paddingInline: 'clamp(1rem, 4vw, 5rem)',
+          background: 'transparent',
+        }}
         data-testid="marketing-nav"
       >
         {/*
          * Mivora grid-nav: two columns
          *   left  (nav-inner-grid): logo + nav links + divider — flex, left-aligned
          *   right (right-nav):      CTA button
+         * Height is auto (content-driven), not fixed.
          */}
         <div
           style={{
@@ -132,9 +142,10 @@ export function MarketingNav() {
             background: '#ffffff',
             borderRadius: '9999px',
             boxShadow: '0 2px 24px rgba(0,0,0,0.10)',
-            height: '4rem',
             paddingLeft: '1.5rem',
             paddingRight: '0.375rem',
+            paddingTop: '0.375rem',
+            paddingBottom: '0.375rem',
           }}
         >
           {/* LEFT — logo + nav links + divider line */}
@@ -196,7 +207,7 @@ export function MarketingNav() {
             <Link
               href="/auth/login"
               className="flex items-center px-5 text-[14px] font-medium transition-colors"
-              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap', height: '4rem' }}
+              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}
               data-testid="nav-sign-in"
             >
               Sign in
