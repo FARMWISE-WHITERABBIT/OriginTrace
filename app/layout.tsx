@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
+import { Plus_Jakarta_Sans, JetBrains_Mono, Inter_Tight } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import { OrgProvider } from '@/lib/contexts/org-context';
@@ -15,6 +15,11 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600'],
+});
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['600', '700', '800'],
 });
 
 export const metadata: Metadata = {
@@ -62,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} font-sans`} suppressHydrationWarning>
+      <body className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${interTight.variable} font-sans`} suppressHydrationWarning>
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{

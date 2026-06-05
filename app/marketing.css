@@ -1,754 +1,1483 @@
 /**
  * OriginTrace Marketing Design System
- * Extends globals.css with marketing-specific tokens, containers, type scale,
- * section spacing, and component patterns adapted from Mivora/Enerza templates.
+ * =====================================
+ * Faithfully adapted from Mivora (Webestica/Webflow) with OriginTrace brand
+ * substituted throughout — Origin Green #2E7D6B replaces Mivora's #04AF4C,
+ * Deep Forest #1F5F52 replaces charcoal darks, warm earth tones added for
+ * the agricultural supply-chain context.
+ *
+ * Loaded only in app/(marketing)/layout.tsx — zero impact on enterprise app.
+ *
+ * Sections
+ * ─────────
+ *  1.  Design tokens (CSS custom properties)
+ *  2.  Typography — display font + scale
+ *  3.  Container system (940 / 980 / 1200 / 1390px + full)
+ *  4.  Section spacing (8.125rem standard, Mivora baseline)
+ *  5.  Margin scale — 17-step named utility (Mivora combo-class pattern)
+ *  6.  Section surface variants
+ *  7.  Pre-section title chip + section header
+ *  8.  Button variants
+ *  9.  Blog card — image zoom-out + overlay (Mivora exact behaviour)
+ * 10.  Feature / capability card
+ * 11.  Team card
+ * 12.  Stat / counter card
+ * 13.  Mission list item tag pill
+ * 14.  Compliance reg-tag pills
+ * 15.  Logo marquee (infinite scroll, Mivora duplicate-DOM pattern)
+ * 16.  Case study sticky stack
+ * 17.  Hero section
+ * 18.  Nav utilities
+ * 19.  Rich text / blog prose
+ * 20.  Icon badge
+ * 21.  Grid helpers
+ * 22.  Dividers
+ * 23.  Animation utilities (CSS-only; complements motion.tsx framer variants)
  */
 
-/* ─────────────────────────────────────────────────────
-   1. MARKETING DESIGN TOKENS
-   ───────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    /* Type scale — marketing display sizes */
-    --text-display-2xl: clamp(3rem, 6vw, 5rem);      /* 48–80px */
-    --text-display-xl:  clamp(2.5rem, 5vw, 4rem);     /* 40–64px */
-    --text-display-lg:  clamp(2rem, 4vw, 3rem);       /* 32–48px */
-    --text-display-md:  clamp(1.75rem, 3vw, 2.25rem); /* 28–36px */
-    --text-display-sm:  clamp(1.25rem, 2vw, 1.5rem);  /* 20–24px */
+    /* ── Brand colours (OriginTrace) ─────────────────────────────────── */
+    --mk-green:          #2E7D6B;   /* Origin Green — primary CTA */
+    --mk-green-dark:     #1F5F52;   /* Deep Forest — hover / dark sections */
+    --mk-green-mid:      #3d9b86;   /* Mid teal — interactive states */
+    --mk-green-light:    hsl(166 46% 92%);  /* Sage tint — chip bg, card tint */
+    --mk-green-pale:     hsl(166 30% 97%);  /* Near-white green wash */
 
-    /* Section spacing */
-    --section-spacing-xs:  3rem;    /* 48px  — compact */
-    --section-spacing-sm:  5rem;    /* 80px  — tight */
-    --section-spacing-md:  8rem;    /* 128px — standard (Mivora baseline) */
-    --section-spacing-lg:  10rem;   /* 160px — generous */
-    --section-spacing-xl:  13rem;   /* 208px — hero-scale */
+    /* ── Surface variants ────────────────────────────────────────────── */
+    --mk-surface-white:  hsl(0 0% 100%);
+    --mk-surface-warm:   hsl(43 30% 97%);   /* Off-white warm (earthy, agricultural) */
+    --mk-surface-green:  hsl(166 30% 97%);  /* Very light green wash */
+    --mk-surface-gray:   hsl(220 14% 96%);  /* Mivora .background-gray equivalent */
+    --mk-surface-dark:   hsl(168 28% 7%);   /* Near-black — team / CTA sections */
+    --mk-surface-black:  hsl(220 20% 8%);   /* Pure dark — footer, heavy CTA */
 
-    /* Container widths — 7-step hierarchy (Mivora pattern) */
-    --container-2xs: 42rem;   /* 672px  — tight body text */
-    --container-xs:  52rem;   /* 832px  — narrow content */
-    --container-sm:  60rem;   /* 960px  — blog / article */
-    --container-md:  72rem;   /* 1152px — standard section */
-    --container-lg:  80rem;   /* 1280px — wide layout (default) */
-    --container-xl:  86rem;   /* 1376px — full-width hero */
+    /* ── Text hierarchy ──────────────────────────────────────────────── */
+    --mk-text-primary:   hsl(221 39% 11%);
+    --mk-text-secondary: hsl(215 14% 34%);
+    --mk-text-muted:     hsl(215 14% 55%);  /* .text-gray-3 equivalent */
+    --mk-text-on-dark:   hsl(0 0% 95%);
+    --mk-text-on-dark-2: hsl(0 0% 70%);    /* Mivora .white-700-text */
 
-    /* Marketing brand extras */
-    --mk-primary:         hsl(166 46% 34%);   /* Origin Green */
-    --mk-primary-dark:    hsl(168 51% 25%);   /* Deep Forest */
-    --mk-primary-light:   hsl(166 46% 92%);   /* Sage tint */
-    --mk-surface-dark:    hsl(168 25% 7%);    /* Near-black for dark sections */
-    --mk-surface-warm:    hsl(43 40% 97%);    /* Warm off-white (earthy feel) */
-    --mk-surface-green:   hsl(166 30% 96%);   /* Light green wash */
+    /* ── Border ──────────────────────────────────────────────────────── */
+    --mk-border:         hsl(220 13% 91%);
+    --mk-border-dark:    hsl(0 0% 100% / 0.1);
 
-    /* Pre-title chip */
-    --pre-title-color:    hsl(166 46% 34%);
-    --pre-title-bg:       hsl(166 46% 92%);
+    /* ── Section spacing — 8.125rem = 130px is Mivora's standard ──────── */
+    --section-xs:   3rem;      /*  48px — compact utility */
+    --section-sm:   5rem;      /*  80px — tight */
+    --section-md:   8.125rem;  /* 130px — Mivora standard */
+    --section-lg:   10.5rem;   /* 168px — generous */
+    --section-xl:   13.5rem;   /* 216px — hero-scale */
 
-    /* Animation timing */
-    --ease-out-quart: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
-    --duration-entrance: 0.6s;
-    --duration-fast: 0.2s;
-    --duration-slow: 0.9s;
+    /* ── Container widths (Mivora hierarchy) ─────────────────────────── */
+    --container-2xs: 36rem;    /*  576px — caption / pull-quote */
+    --container-xs:  44rem;    /*  704px — narrow body */
+    --container-sm:  61.25rem; /*  980px — Mivora .container-small */
+    --container-md:  75rem;    /* 1200px — standard wide */
+    --container-lg:  86.875rem;/* 1390px — Mivora .container large */
 
-    /* Marketing border radius overrides */
-    --radius-pill:  9999px;
-    --radius-card:  1rem;     /* 16px — softer than enterprise */
-    --radius-hero:  1.5rem;   /* 24px — large media cards */
+    /* ── Border radius ──────────────────────────────────────────────── */
+    --mk-radius-xs:   0.375rem; /* matches app --radius */
+    --mk-radius-sm:   0.625rem;
+    --mk-radius-md:   0.875rem;
+    --mk-radius-card: 1rem;
+    --mk-radius-hero: 1.5rem;
+    --mk-radius-pill: 9999px;
+
+    /* ── Animation ──────────────────────────────────────────────────── */
+    --ease-out-quart:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-in-out-expo:  cubic-bezier(0.87, 0, 0.13, 1);
+    --ease-spring:       cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast:   0.2s;
+    --dur-base:   0.4s;
+    --dur-slow:   0.65s;
+    --dur-enter:  0.6s;
+
+    /* ── Pre-title chip ─────────────────────────────────────────────── */
+    --pre-title-color: var(--mk-green);
+    --pre-title-bg:    var(--mk-green-light);
+
+    /* ── Shadows ────────────────────────────────────────────────────── */
+    --mk-shadow-xs: 0 1px 3px hsl(0 0% 0% / 0.06);
+    --mk-shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.08), 0 1px 2px hsl(0 0% 0% / 0.04);
+    --mk-shadow-md: 0 6px 20px hsl(0 0% 0% / 0.08), 0 2px 6px hsl(0 0% 0% / 0.04);
+    --mk-shadow-lg: 0 16px 40px hsl(0 0% 0% / 0.1), 0 4px 10px hsl(0 0% 0% / 0.06);
+    --mk-shadow-xl: 0 24px 64px hsl(0 0% 0% / 0.12), 0 8px 20px hsl(0 0% 0% / 0.06);
+
+    /* ── Green glow (hover lift accent) ─────────────────────────────── */
+    --mk-glow-green: 0 8px 28px hsl(166 46% 34% / 0.3);
   }
 
   .dark {
-    --mk-surface-dark:    hsl(168 25% 5%);
-    --mk-surface-warm:    hsl(43 15% 10%);
-    --mk-surface-green:   hsl(166 25% 10%);
-    --pre-title-color:    hsl(166 46% 55%);
-    --pre-title-bg:       hsl(166 30% 14%);
+    --mk-surface-white:  hsl(168 18% 9%);
+    --mk-surface-warm:   hsl(43 10% 10%);
+    --mk-surface-green:  hsl(166 20% 10%);
+    --mk-surface-gray:   hsl(220 12% 14%);
+    --mk-surface-dark:   hsl(168 28% 5%);
+    --mk-surface-black:  hsl(0 0% 3%);
+    --mk-text-primary:   hsl(0 0% 95%);
+    --mk-text-secondary: hsl(218 11% 65%);
+    --mk-text-muted:     hsl(218 11% 50%);
+    --mk-border:         hsl(168 15% 20%);
+    --pre-title-color:   hsl(166 46% 55%);
+    --pre-title-bg:      hsl(166 30% 13%);
+    --mk-green-light:    hsl(166 30% 14%);
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   2. CONTAINER SYSTEM
-   ───────────────────────────────────────────────────── */
-@layer components {
-  .mk-container {
-    width: 100%;
-    margin-inline: auto;
-    padding-inline: 1.5rem;
-    max-width: var(--container-lg);
-  }
-  .mk-container-2xs { @apply mk-container; max-width: var(--container-2xs); }
-  .mk-container-xs  { @apply mk-container; max-width: var(--container-xs); }
-  .mk-container-sm  { @apply mk-container; max-width: var(--container-sm); }
-  .mk-container-md  { @apply mk-container; max-width: var(--container-md); }
-  .mk-container-xl  { @apply mk-container; max-width: var(--container-xl); }
-
-  @media (min-width: 768px) {
-    .mk-container,
-    .mk-container-2xs,
-    .mk-container-xs,
-    .mk-container-sm,
-    .mk-container-md,
-    .mk-container-xl {
-      padding-inline: 2.5rem;
-    }
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. TYPOGRAPHY — display font + scale
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  /* Register Inter Tight as the marketing display / heading font */
+  :root {
+    --font-display: var(--font-display, 'Inter Tight', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif);
   }
 }
 
-
-/* ─────────────────────────────────────────────────────
-   3. SECTION SPACING
-   ───────────────────────────────────────────────────── */
 @layer utilities {
-  .section-spacing-xs { padding-block: var(--section-spacing-xs); }
-  .section-spacing-sm { padding-block: var(--section-spacing-sm); }
-  .section-spacing    { padding-block: var(--section-spacing-md); }
-  .section-spacing-lg { padding-block: var(--section-spacing-lg); }
-  .section-spacing-xl { padding-block: var(--section-spacing-xl); }
-
-  /* Half-spacing helpers (pad top or bottom only) */
-  .section-pt    { padding-top: var(--section-spacing-md); }
-  .section-pb    { padding-bottom: var(--section-spacing-md); }
-  .section-pt-lg { padding-top: var(--section-spacing-lg); }
-  .section-pb-lg { padding-bottom: var(--section-spacing-lg); }
-}
-
-
-/* ─────────────────────────────────────────────────────
-   4. MARKETING TYPE SCALE
-   ───────────────────────────────────────────────────── */
-@layer utilities {
+  /* Display scale — fluid clamp() sizing, Inter Tight weight 800 */
   .text-display-2xl {
-    font-size: var(--text-display-2xl);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 6vw, 5rem);     /* 44–80px */
     font-weight: 800;
+    line-height: 1.03;
+    letter-spacing: -0.035em;
   }
   .text-display-xl {
-    font-size: var(--text-display-xl);
-    line-height: 1.1;
-    letter-spacing: -0.025em;
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5vw, 3.75rem);  /* 36–60px */
     font-weight: 800;
+    line-height: 1.07;
+    letter-spacing: -0.03em;
   }
   .text-display-lg {
-    font-size: var(--text-display-lg);
-    line-height: 1.15;
-    letter-spacing: -0.02em;
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 4vw, 3rem);    /* 30–48px */
     font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
   }
   .text-display-md {
-    font-size: var(--text-display-md);
-    line-height: 1.2;
-    letter-spacing: -0.015em;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2.25rem);   /* 24–36px */
     font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
   }
   .text-display-sm {
-    font-size: var(--text-display-sm);
-    line-height: 1.3;
-    letter-spacing: -0.01em;
+    font-family: var(--font-display);
+    font-size: clamp(1.125rem, 2vw, 1.5rem);  /* 18–24px */
     font-weight: 600;
+    line-height: 1.28;
+    letter-spacing: -0.015em;
   }
 
-  /* Two-tone heading technique (Mivora pattern) */
-  .text-muted-heading {
-    color: hsl(var(--muted-foreground));
-  }
-  .text-brand {
-    color: var(--mk-primary);
-  }
+  /* Two-tone heading helpers (Mivora .text-gray-3 / .text-primary pattern) */
+  .text-mk-muted   { color: var(--mk-text-muted); }
+  .text-mk-brand   { color: var(--mk-green); }
+  .text-mk-primary { color: var(--mk-text-primary); }
+  .text-mk-on-dark { color: var(--mk-text-on-dark); }
+
+  /* Dark section .white-700-text equivalent */
+  .text-mk-faded { color: var(--mk-text-on-dark-2); }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   5. SECTION SURFACE VARIANTS
-   ───────────────────────────────────────────────────── */
-@layer utilities {
-  /* White section (default) */
-  .section-white {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
-
-  /* Warm off-white — earthy, agricultural */
-  .section-warm {
-    background-color: var(--mk-surface-warm);
-    color: hsl(var(--foreground));
-  }
-
-  /* Light green wash */
-  .section-green {
-    background-color: var(--mk-surface-green);
-    color: hsl(var(--foreground));
-  }
-
-  /* Dark green — "team" / "CTA" sections */
-  .section-dark {
-    background-color: var(--mk-surface-dark);
-    color: hsl(0 0% 95%);
-  }
-
-  /* Brand primary fill — high emphasis CTA */
-  .section-brand {
-    background-color: var(--mk-primary);
-    color: hsl(0 0% 100%);
-  }
-
-  /* Subtle border strip */
-  .section-bordered {
-    border-top: 1px solid hsl(var(--border));
-    border-bottom: 1px solid hsl(var(--border));
-  }
-}
-
-
-/* ─────────────────────────────────────────────────────
-   6. PRE-SECTION TITLE CHIP  (Mivora pattern)
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. CONTAINER SYSTEM
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
+  /* Base rule — all containers share this */
+  .mk-container,
+  .mk-container-2xs,
+  .mk-container-xs,
+  .mk-container-sm,
+  .mk-container-md,
+  .mk-container-lg,
+  .mk-container-full {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 640px)  { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2rem; } }
+  @media (min-width: 1024px) { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2.5rem; } }
+
+  .mk-container-2xs { max-width: var(--container-2xs); }
+  .mk-container-xs  { max-width: var(--container-xs); }
+  .mk-container-sm  { max-width: var(--container-sm); }  /* 980px — Mivora .container-small */
+  .mk-container     { max-width: var(--container-md); }  /* 1200px — standard */
+  .mk-container-md  { max-width: var(--container-md); }
+  .mk-container-lg  { max-width: var(--container-lg); }  /* 1390px — Mivora .container */
+  .mk-container-full { max-width: none; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. SECTION SPACING
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .section-spacing-xs { padding-block: var(--section-xs); }
+  .section-spacing-sm { padding-block: var(--section-sm); }
+  .section-spacing    { padding-block: var(--section-md); }  /* 8.125rem — Mivora standard */
+  .section-spacing-lg { padding-block: var(--section-lg); }
+  .section-spacing-xl { padding-block: var(--section-xl); }
+
+  .section-pt    { padding-top: var(--section-md); }
+  .section-pb    { padding-bottom: var(--section-md); }
+  .section-pt-lg { padding-top: var(--section-lg); }
+  .section-pb-lg { padding-bottom: var(--section-lg); }
+  .section-pt-sm { padding-top: var(--section-sm); }
+  .section-pb-sm { padding-bottom: var(--section-sm); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. MARGIN SCALE — 17-step (Mivora combo-class pattern)
+   Usage: <div class="margin-bottom margin-large">
+   The direction class (.margin-bottom / .margin-top) reads --mk-margin
+   set by the size class.
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Size tokens */
+  .margin-tiny     { --mk-margin: 0.25rem;  }   /*  4px */
+  .margin-xsmall   { --mk-margin: 0.5rem;   }   /*  8px */
+  .margin-small    { --mk-margin: 0.75rem;  }   /* 12px */
+  .margin-medium   { --mk-margin: 1rem;     }   /* 16px */
+  .margin-medium-2 { --mk-margin: 1.5rem;   }   /* 24px */
+  .margin-large    { --mk-margin: 2rem;     }   /* 32px */
+  .margin-large-2  { --mk-margin: 2.5rem;   }   /* 40px */
+  .margin-xlarge   { --mk-margin: 3rem;     }   /* 48px */
+  .margin-xlarge-2 { --mk-margin: 4rem;     }   /* 64px */
+  .margin-2xlarge  { --mk-margin: 5rem;     }   /* 80px */
+  .margin-2xlarge-2{ --mk-margin: 6rem;     }   /* 96px */
+  .margin-3xlarge  { --mk-margin: 7rem;     }   /* 112px */
+  .margin-3xlarge-2{ --mk-margin: 8.125rem; }   /* 130px — = section-md */
+  .margin-4xlarge  { --mk-margin: 10rem;    }   /* 160px */
+  .margin-4xlarge-2{ --mk-margin: 12rem;    }   /* 192px */
+  .margin-5xlarge  { --mk-margin: 15rem;    }   /* 240px */
+  .margin-huge     { --mk-margin: 20rem;    }   /* 320px */
+
+  /* Direction applicators */
+  .margin-bottom { margin-bottom: var(--mk-margin, 1rem); }
+  .margin-top    { margin-top:    var(--mk-margin, 1rem); }
+  .margin-left   { margin-left:   var(--mk-margin, 1rem); }
+  .margin-right  { margin-right:  var(--mk-margin, 1rem); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   6. SECTION SURFACE VARIANTS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .section-white  { background-color: var(--mk-surface-white); }
+  .section-warm   { background-color: var(--mk-surface-warm); }
+  .section-green  { background-color: var(--mk-surface-green); }
+  .section-gray   { background-color: var(--mk-surface-gray); }   /* Mivora .background-gray */
+  .section-dark   { background-color: var(--mk-surface-dark);  color: var(--mk-text-on-dark); }
+  .section-black  { background-color: var(--mk-surface-black); color: var(--mk-text-on-dark); }
+
+  /* Mivora top/bottom border strips */
+  .section-bordered-t { border-top:    1px solid var(--mk-border); }
+  .section-bordered-b { border-bottom: 1px solid var(--mk-border); }
+  .section-bordered   { border-top: 1px solid var(--mk-border); border-bottom: 1px solid var(--mk-border); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   7. PRE-SECTION TITLE CHIP + SECTION HEADER
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* The chip itself — Mivora .pre-section-title */
   .pre-title {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-pill);
+    padding: 0.3125rem 0.875rem;
+    border-radius: var(--mk-radius-pill);
     background-color: var(--pre-title-bg);
     color: var(--pre-title-color);
-    font-size: 0.6875rem;    /* 11px */
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    margin-bottom: 1rem;
+    line-height: 1;
   }
 
-  /* Dark section variant */
-  .section-dark .pre-title {
+  /* On dark sections, chip becomes semi-opaque white */
+  .section-dark .pre-title,
+  .section-black .pre-title {
     background-color: hsl(0 0% 100% / 0.1);
-    color: hsl(0 0% 100% / 0.8);
+    color: hsl(0 0% 100% / 0.85);
   }
 
-  /* Centered pre-title wrapper */
+  /* Section header wrapper — centred (default) */
   .section-header {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 0.5rem;
-    margin-bottom: 3.5rem;
+    max-width: 52rem;
+    margin-inline: auto;
+    margin-bottom: 4rem;
   }
+  .section-header .pre-title    { margin-bottom: 1rem; }
+  .section-header__title        { max-width: 34ch; }
+  .section-header__body {
+    max-width: 52ch;
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--mk-text-secondary);
+    margin-top: 1rem;
+  }
+  .section-dark  .section-header__body,
+  .section-black .section-header__body { color: var(--mk-text-on-dark-2); }
+
+  /* Left-aligned variant */
   .section-header--left {
     align-items: flex-start;
     text-align: left;
-  }
-  .section-header__title {
-    max-width: 38ch;
-  }
-  .section-header__body {
-    max-width: 50ch;
-    color: hsl(var(--muted-foreground));
-    font-size: 1.0625rem;
-    line-height: 1.65;
-  }
-  .section-dark .section-header__body {
-    color: hsl(0 0% 80%);
+    margin-inline: 0;
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   7. MARKETING BUTTON VARIANTS
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   8. BUTTON VARIANTS (Mivora .button-primary / .button-black / common-button)
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
-  /* Primary CTA — full green pill */
-  .btn-mk-primary {
+  /* Shared base */
+  .btn-mk-primary,
+  .btn-mk-dark,
+  .btn-mk-ghost,
+  .btn-mk-outline {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.8125rem 2rem;
-    border-radius: var(--radius-pill);
-    background-color: var(--mk-primary);
-    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: var(--mk-radius-pill);
+    font-family: var(--font-display);
     font-size: 0.9375rem;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
-    transition: background-color var(--duration-fast) ease, transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
     text-decoration: none;
+    border: 2px solid transparent;
+    transition:
+      background-color var(--dur-fast) ease,
+      border-color     var(--dur-fast) ease,
+      color            var(--dur-fast) ease,
+      transform        var(--dur-fast) var(--ease-spring),
+      box-shadow       var(--dur-fast) ease;
+    white-space: nowrap;
+  }
+
+  /* ── Green / primary — Mivora .button-primary with OriginTrace green ── */
+  .btn-mk-primary {
+    background-color: var(--mk-green);
+    color: #fff;
+    border-color: var(--mk-green);
   }
   .btn-mk-primary:hover {
-    background-color: var(--mk-primary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px hsl(166 46% 34% / 0.35);
+    background-color: var(--mk-green-dark);
+    border-color: var(--mk-green-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--mk-glow-green);
   }
-  .btn-mk-primary:active {
-    transform: translateY(0);
-  }
+  .btn-mk-primary:active { transform: translateY(0); box-shadow: none; }
 
-  /* Dark / black — secondary CTA on light backgrounds */
+  /* ── Black — Mivora .button-black — used on light sections ── */
   .btn-mk-dark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.8125rem 2rem;
-    border-radius: var(--radius-pill);
-    background-color: hsl(220 20% 12%);
+    background-color: var(--mk-surface-black);
     color: #fff;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    transition: background-color var(--duration-fast) ease, transform var(--duration-fast) ease;
-    text-decoration: none;
+    border-color: var(--mk-surface-black);
   }
   .btn-mk-dark:hover {
-    background-color: hsl(220 20% 20%);
-    transform: translateY(-1px);
+    background-color: hsl(220 20% 18%);
+    border-color: hsl(220 20% 18%);
+    transform: translateY(-2px);
+    box-shadow: var(--mk-shadow-md);
+  }
+  .btn-mk-dark:active { transform: translateY(0); }
+
+  /* ── Ghost — on dark sections ── */
+  .btn-mk-ghost {
+    background-color: transparent;
+    color: #fff;
+    border-color: hsl(0 0% 100% / 0.35);
+  }
+  .btn-mk-ghost:hover {
+    background-color: hsl(0 0% 100% / 0.08);
+    border-color: hsl(0 0% 100% / 0.6);
+    transform: translateY(-2px);
+  }
+  .btn-mk-ghost:active { transform: translateY(0); }
+
+  /* ── Outline green — on light sections ── */
+  .btn-mk-outline {
+    background-color: transparent;
+    color: var(--mk-green);
+    border-color: var(--mk-green);
+  }
+  .btn-mk-outline:hover {
+    background-color: var(--mk-green);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: var(--mk-glow-green);
+  }
+  .btn-mk-outline:active { transform: translateY(0); }
+
+  /* Size modifiers */
+  .btn-mk-sm {
+    padding: 0.625rem 1.375rem;
+    font-size: 0.8125rem;
+  }
+  .btn-mk-lg {
+    padding: 1.0625rem 2.5rem;
+    font-size: 1.0625rem;
   }
 
-  /* Ghost — on dark sections */
-  .btn-mk-ghost {
+  /* Icon circle for "top button" scroll-up pattern (Mivora .top-button) */
+  .btn-mk-icon-circle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.8125rem 2rem;
-    border-radius: var(--radius-pill);
-    background-color: transparent;
-    border: 1.5px solid hsl(0 0% 100% / 0.3);
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green);
     color: #fff;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    line-height: 1;
     cursor: pointer;
-    transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
-    text-decoration: none;
+    transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-spring);
+    flex-shrink: 0;
   }
-  .btn-mk-ghost:hover {
-    background-color: hsl(0 0% 100% / 0.1);
-    border-color: hsl(0 0% 100% / 0.5);
-  }
-
-  /* Small variant modifier */
-  .btn-mk-sm {
-    padding: 0.5625rem 1.25rem;
-    font-size: 0.875rem;
+  .btn-mk-icon-circle:hover {
+    background-color: var(--mk-green-dark);
+    transform: translateY(-2px);
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   8. MARKETING CARD PATTERNS
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   9. BLOG CARD — Mivora exact hover behaviour
+      Images start pre-zoomed to scale(1.1) and normalise back to scale(1)
+      on hover (zoom-out reveal), with a dark overlay fade-in layered on top.
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
-  /* Feature / capability card */
-  .mk-card {
-    background-color: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius-card);
-    padding: 1.75rem;
-    transition: box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease;
-  }
-  .mk-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
-  }
-
-  /* Blog card — image + meta + title */
   .mk-blog-card {
-    background-color: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius-card);
+    display: block;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
     overflow: hidden;
-    transition: box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow var(--dur-base) var(--ease-out-quart), transform var(--dur-base) var(--ease-out-quart);
   }
   .mk-blog-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-3px);
+    box-shadow: var(--mk-shadow-lg);
+    transform: translateY(-4px);
   }
+
+  /* Image wrapper — clips both the zoom and the overlay */
   .mk-blog-card__img-wrap {
     position: relative;
     overflow: hidden;
     aspect-ratio: 16 / 10;
   }
+
+  /* The image itself — pre-scaled to 1.1, normalises on card hover */
   .mk-blog-card__img-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s var(--ease-out-quart);
-    transform: scale(1.05);
+    display: block;
+    /* ⚠️ START at 1.1 (Mivora pattern — zoom-out reveal) */
+    transform: scale(1.1);
+    transition: transform 0.7s var(--ease-out-quart);
+    will-change: transform;
   }
   .mk-blog-card:hover .mk-blog-card__img-wrap img {
     transform: scale(1);
   }
-  .mk-blog-card__body {
-    padding: 1.25rem 1.5rem 1.5rem;
+
+  /* Overlay div — Mivora .blog-image-overlay — fades in on hover */
+  .mk-blog-card__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      hsl(168 51% 22% / 0) 0%,
+      hsl(168 51% 22% / 0.55) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.4s var(--ease-out-quart);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .mk-blog-card:hover .mk-blog-card__overlay {
+    opacity: 1;
   }
 
-  /* Team card */
-  .mk-team-card {
-    text-align: center;
+  /* Category chip floating on the image — visible on hover */
+  .mk-blog-card__cat {
+    position: absolute;
+    bottom: 0.875rem;
+    left: 0.875rem;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
   }
+  .mk-blog-card:hover .mk-blog-card__cat {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Card body */
+  .mk-blog-card__body {
+    padding: 1.375rem 1.5rem 1.75rem;
+  }
+  .mk-blog-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--mk-text-muted);
+    margin-bottom: 0.625rem;
+  }
+  .mk-blog-card__title {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    color: var(--mk-text-primary);
+    transition: color var(--dur-fast) ease;
+  }
+  .mk-blog-card:hover .mk-blog-card__title {
+    color: var(--mk-green);
+  }
+  .mk-blog-card__desc {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--mk-text-secondary);
+    margin-top: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Read-more arrow link */
+  .mk-blog-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--mk-green);
+    transition: gap var(--dur-fast) ease;
+  }
+  .mk-blog-card:hover .mk-blog-card__link {
+    gap: 0.625rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   10. FEATURE / CAPABILITY CARD (Mivora .capability-card / .why-choose-item)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .mk-card {
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
+    padding: 2rem;
+    transition: box-shadow var(--dur-base) var(--ease-out-quart), transform var(--dur-base) var(--ease-out-quart);
+  }
+  .mk-card:hover {
+    box-shadow: var(--mk-shadow-lg);
+    transform: translateY(-3px);
+  }
+
+  /* On dark section */
+  .section-dark .mk-card,
+  .section-black .mk-card {
+    background-color: hsl(0 0% 100% / 0.04);
+    border-color: var(--mk-border-dark);
+  }
+  .section-dark .mk-card:hover,
+  .section-black .mk-card:hover {
+    background-color: hsl(0 0% 100% / 0.07);
+  }
+
+  /* Card icon area */
+  .mk-card__icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.75rem;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 1.25rem;
+  }
+  .section-dark .mk-card__icon,
+  .section-black .mk-card__icon {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 60%);
+  }
+
+  .mk-card__title {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--mk-text-primary);
+    margin-bottom: 0.5rem;
+  }
+  .section-dark .mk-card__title,
+  .section-black .mk-card__title { color: var(--mk-text-on-dark); }
+
+  .mk-card__body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--mk-text-secondary);
+  }
+  .section-dark .mk-card__body,
+  .section-black .mk-card__body { color: var(--mk-text-on-dark-2); }
+
+  /* Mivora .capability-arrow / .text-link — bottom read-more row */
+  .mk-card__arrow {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--mk-green);
+    transition: gap var(--dur-fast) ease;
+  }
+  .mk-card:hover .mk-card__arrow { gap: 0.625rem; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   11. TEAM CARD (Mivora team-section / .owner-image-div)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .mk-team-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Image container — clips zoom */
   .mk-team-card__img-wrap {
     position: relative;
     overflow: hidden;
-    border-radius: var(--radius-card);
+    border-radius: var(--mk-radius-card);
     aspect-ratio: 4 / 5;
     margin-bottom: 1rem;
   }
+
+  /* Image — pre-scaled 1.05, normalise on hover (Mivora scroll-triggered scale) */
   .mk-team-card__img-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.6s var(--ease-out-quart);
+    display: block;
+    transform: scale(1.05);
+    transition: transform 0.7s var(--ease-out-quart);
+    will-change: transform;
   }
   .mk-team-card:hover .mk-team-card__img-wrap img {
-    transform: scale(1.04);
+    transform: scale(1);
   }
 
-  /* Stat / metric card */
+  /* Social links overlay on hover */
+  .mk-team-card__socials {
+    position: absolute;
+    bottom: 0.875rem;
+    left: 0.875rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .mk-team-card:hover .mk-team-card__socials {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mk-team-card__social-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: background-color var(--dur-fast) ease;
+  }
+  .mk-team-card__social-icon:hover {
+    background-color: var(--mk-green);
+    color: #fff;
+  }
+
+  .mk-team-card__name {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--mk-text-primary);
+    margin-bottom: 0.1875rem;
+  }
+  .section-dark .mk-team-card__name,
+  .section-black .mk-team-card__name { color: var(--mk-text-on-dark); }
+
+  .mk-team-card__role {
+    font-size: 0.8125rem;
+    color: var(--mk-text-muted);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   12. STAT / COUNTER CARD (Mivora .counter-section / .proven-number-card)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
   .mk-stat-card {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-    padding: 1.5rem;
-    background-color: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius-card);
+    padding: 1.75rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
   }
+  .section-dark .mk-stat-card,
+  .section-black .mk-stat-card {
+    background-color: hsl(0 0% 100% / 0.04);
+    border-color: var(--mk-border-dark);
+  }
+
   .mk-stat-card__value {
-    font-size: 2.5rem;
+    font-family: var(--font-display);
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--mk-green);
+  }
+  .section-dark .mk-stat-card__value,
+  .section-black .mk-stat-card__value { color: hsl(166 46% 58%); }
+
+  .mk-stat-card__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mk-text-secondary);
+    line-height: 1.4;
+  }
+  .section-dark .mk-stat-card__label,
+  .section-black .mk-stat-card__label { color: var(--mk-text-on-dark-2); }
+
+  /* Inline stat row (Mivora .counter-item row with .counter-divider between) */
+  .mk-stat-row {
+    display: flex;
+    align-items: stretch;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .mk-stat-row__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 7rem;
+  }
+  .mk-stat-row__value {
+    font-family: var(--font-display);
+    font-size: 2rem;
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1;
-    color: var(--mk-primary);
+    color: var(--mk-green);
   }
-  .mk-stat-card__label {
-    font-size: 0.875rem;
-    color: hsl(var(--muted-foreground));
+  .mk-stat-row__label {
+    font-size: 0.8125rem;
+    color: var(--mk-text-muted);
     font-weight: 500;
   }
-
-  /* Dark section overrides */
-  .section-dark .mk-card {
-    background-color: hsl(0 0% 100% / 0.05);
-    border-color: hsl(0 0% 100% / 0.1);
-  }
-  .section-dark .mk-stat-card {
-    background-color: hsl(0 0% 100% / 0.05);
-    border-color: hsl(0 0% 100% / 0.1);
-  }
-  .section-dark .mk-stat-card__value {
-    color: hsl(166 46% 60%);
-  }
-  .section-dark .mk-stat-card__label {
-    color: hsl(0 0% 70%);
-  }
-}
-
-
-/* ─────────────────────────────────────────────────────
-   9. LOGO MARQUEE (infinite scroll)
-   ───────────────────────────────────────────────────── */
-@layer components {
-  .mk-marquee-track {
-    display: flex;
-    gap: 4rem;
-    align-items: center;
-    width: max-content;
-    animation: mk-marquee-scroll 30s linear infinite;
-  }
-  .mk-marquee-track:hover {
-    animation-play-state: paused;
-  }
-  .mk-marquee-wrap {
-    overflow: hidden;
-    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
-  }
-
-  @keyframes mk-marquee-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-}
-
-
-/* ─────────────────────────────────────────────────────
-   10. DIVIDER PATTERNS
-   ───────────────────────────────────────────────────── */
-@layer utilities {
-  /* Vertical rule used in stat rows */
-  .mk-divider-v {
+  /* .counter-divider vertical rule */
+  .mk-stat-row__divider {
     width: 1px;
+    background-color: var(--mk-border);
     align-self: stretch;
-    background-color: hsl(var(--border));
     flex-shrink: 0;
   }
-  .section-dark .mk-divider-v {
-    background-color: hsl(0 0% 100% / 0.12);
-  }
-
-  /* Horizontal decorative rule */
-  .mk-divider-h {
-    height: 1px;
-    background-color: hsl(var(--border));
-    border: none;
-  }
-  .section-dark .mk-divider-h {
-    background-color: hsl(0 0% 100% / 0.12);
-  }
+  .section-dark .mk-stat-row__divider,
+  .section-black .mk-stat-row__divider { background-color: var(--mk-border-dark); }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   11. ICON BADGE (marketing scale — larger than app badges)
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   13. MISSION LIST ITEM TAG PILL (Mivora .our-mission-list-item)
+   Inline horizontal items: icon + text, pill-shaped on tinted bg
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
-  .mk-icon-badge {
+  .mk-mission-item {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.75rem;
-    background-color: var(--mk-primary-light);
-    color: var(--mk-primary);
-    flex-shrink: 0;
+    gap: 0.5rem;
+    padding: 0.4375rem 1rem 0.4375rem 0.5rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green-light);
+    color: var(--mk-green-dark);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
   }
-  .mk-icon-badge--lg {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 1rem;
-  }
-  .section-dark .mk-icon-badge {
-    background-color: hsl(0 0% 100% / 0.1);
-    color: hsl(166 46% 60%);
-  }
-}
-
-
-/* ─────────────────────────────────────────────────────
-   12. HERO SECTION PATTERN
-   ───────────────────────────────────────────────────── */
-@layer components {
-  .mk-hero {
-    position: relative;
-    overflow: hidden;
-    min-height: 90svh;
+  .mk-mission-item__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green);
+    color: #fff;
     display: flex;
     align-items: center;
-    padding-block: var(--section-spacing-xl);
+    justify-content: center;
+    flex-shrink: 0;
   }
-  .mk-hero--inner {
-    min-height: 50svh;
-    padding-block: var(--section-spacing-lg);
+  .section-dark .mk-mission-item {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(0 0% 90%);
   }
-  .mk-hero__overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, hsl(168 51% 22% / 0.7), hsl(168 51% 10% / 0.85));
-    z-index: 1;
+  .section-dark .mk-mission-item__icon {
+    background-color: hsl(166 46% 50%);
   }
-  .mk-hero__content {
-    position: relative;
-    z-index: 2;
+
+  /* Industries / feature list item (Mivora .industries-list-item pattern) */
+  .mk-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--mk-text-secondary);
+    line-height: 1.55;
+  }
+  .mk-list-item__icon {
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1875rem;
+  }
+  .section-dark .mk-list-item { color: var(--mk-text-on-dark-2); }
+  .section-dark .mk-list-item__icon {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 55%);
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   13. COMPLIANCE / REGULATORY TAG PILLS
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   14. COMPLIANCE REGULATION TAG PILLS
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
   .reg-tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.3125rem 0.75rem;
-    border-radius: var(--radius-pill);
+    gap: 0.3125rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--mk-radius-pill);
     font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    border: 1px solid currentColor;
-    opacity: 0.85;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1;
+    border: 1.5px solid currentColor;
   }
-  .reg-tag--eudr   { color: #2E7D6B; background: hsl(166 46% 96%); }
-  .reg-tag--fsma   { color: #1D4ED8; background: hsl(217 91% 96%); }
-  .reg-tag--uk     { color: #B45309; background: hsl(43 96% 95%); }
-  .reg-tag--china  { color: #B91C1C; background: hsl(0 72% 96%); }
-  .reg-tag--uae    { color: #6D28D9; background: hsl(258 90% 96%); }
+  .reg-tag--eudr  { color: #2E7D6B; background: hsl(166 46% 95%); }
+  .reg-tag--fsma  { color: #1D4ED8; background: hsl(217 91% 96%); }
+  .reg-tag--uk    { color: #92400E; background: hsl(43 96% 95%); }
+  .reg-tag--china { color: #B91C1C; background: hsl(0 72% 96%); }
+  .reg-tag--uae   { color: #6D28D9; background: hsl(258 90% 96%); }
+  .reg-tag--gacc  { color: #B91C1C; background: hsl(0 72% 96%); }
 
-  .dark .reg-tag--eudr   { color: hsl(166 46% 55%); background: hsl(166 30% 12%); }
-  .dark .reg-tag--fsma   { color: hsl(217 91% 65%); background: hsl(217 60% 12%); }
-  .dark .reg-tag--uk     { color: hsl(43 96% 55%); background: hsl(43 60% 12%); }
-  .dark .reg-tag--china  { color: hsl(0 72% 60%); background: hsl(0 50% 12%); }
-  .dark .reg-tag--uae    { color: hsl(258 90% 70%); background: hsl(258 50% 12%); }
+  .dark .reg-tag--eudr  { color: hsl(166 46% 58%); background: hsl(166 30% 12%); }
+  .dark .reg-tag--fsma  { color: hsl(217 91% 68%); background: hsl(217 60% 12%); }
+  .dark .reg-tag--uk    { color: hsl(43 96% 55%);  background: hsl(43 60% 11%); }
+  .dark .reg-tag--china { color: hsl(0 72% 62%);   background: hsl(0 50% 12%); }
+  .dark .reg-tag--uae   { color: hsl(258 90% 72%); background: hsl(258 50% 12%); }
+  .dark .reg-tag--gacc  { color: hsl(0 72% 62%);   background: hsl(0 50% 12%); }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   14. STICKY CASE STUDY STACKING (scroll-driven)
-   ───────────────────────────────────────────────────── */
-@layer utilities {
+/* ─────────────────────────────────────────────────────────────────────────────
+   15. LOGO MARQUEE — Mivora .client-bg-wrap duplicate-DOM infinite scroll
+   HTML pattern:
+     <div class="mk-marquee-wrap">
+       <div class="mk-marquee-track" aria-hidden="true">
+         <!-- logos × N -->
+       </div>
+       <div class="mk-marquee-track" aria-hidden="true">
+         <!-- exact duplicate of above -->
+       </div>
+     </div>
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* Outer: clips overflow + applies edge fade */
+  .mk-marquee-wrap {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    user-select: none;
+  }
+
+  /* Each track — must be display:flex and wide enough that two copies fill the viewport */
+  .mk-marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 3.5rem;
+    width: max-content;
+    animation: mk-scroll 28s linear infinite;
+    will-change: transform;
+  }
+
+  /* Pause on hover for accessibility */
+  .mk-marquee-wrap:hover .mk-marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* With two duplicate tracks side-by-side we translate -50% to loop seamlessly */
+  @keyframes mk-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Slower / faster speed modifiers */
+  .mk-marquee-track--slow   { animation-duration: 50s; }
+  .mk-marquee-track--fast   { animation-duration: 16s; }
+  .mk-marquee-track--rev    { animation-direction: reverse; }
+
+  /* The wrapping section — Mivora .cta-center-section has marquee below CTA */
+  .mk-marquee-section {
+    padding-block: 3.5rem;
+    background-color: var(--mk-surface-gray);
+    border-top: 1px solid var(--mk-border);
+    border-bottom: 1px solid var(--mk-border);
+  }
+  .section-dark .mk-marquee-section,
+  .section-black .mk-marquee-section {
+    background-color: hsl(0 0% 100% / 0.03);
+    border-color: var(--mk-border-dark);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   16. CASE STUDY STICKY STACK (Mivora .case-study-sticky-container)
+   Cards stack with increasing top offsets — set inline style on each
+   .mk-sticky-card: style="top: calc(5rem + N * 1.5rem)"
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* Outer container must be tall enough to drive the scroll */
+  .mk-sticky-container {
+    position: relative;
+  }
+
+  /* Each card becomes sticky */
   .mk-sticky-card {
     position: sticky;
-    top: 6rem;
-  }
-  /* Cards that stack need an offset per-child — apply via inline style: top: calc(6rem + N * 1.5rem) */
-}
-
-
-/* ─────────────────────────────────────────────────────
-   15. ANIMATION ENTER UTILITIES
-   (complements framer-motion/motion.tsx — for pure CSS fallback)
-   ───────────────────────────────────────────────────── */
-@layer utilities {
-  .animate-fade-in-up {
-    animation: fade-in-up var(--duration-entrance) var(--ease-out-quart) both;
-  }
-  .animate-fade-in {
-    animation: fade-in var(--duration-entrance) var(--ease-out-quart) both;
-  }
-  .animate-scale-in {
-    animation: scale-in var(--duration-entrance) var(--ease-out-quart) both;
+    top: 5rem;  /* override per-card via inline style for stacking offsets */
+    border-radius: var(--mk-radius-hero);
+    overflow: hidden;
+    will-change: transform;
   }
 
-  /* Stagger delays */
-  .animate-delay-100 { animation-delay: 0.1s; }
-  .animate-delay-200 { animation-delay: 0.2s; }
-  .animate-delay-300 { animation-delay: 0.3s; }
-  .animate-delay-400 { animation-delay: 0.4s; }
-  .animate-delay-500 { animation-delay: 0.5s; }
+  /* Inner layout — Mivora splits image left / content right */
+  .mk-sticky-card__inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 26rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-hero);
+    overflow: hidden;
+    box-shadow: var(--mk-shadow-xl);
+  }
+  @media (max-width: 768px) {
+    .mk-sticky-card__inner { grid-template-columns: 1fr; }
+  }
 
-  @keyframes fade-in-up {
-    from { opacity: 0; transform: translateY(2rem); }
-    to   { opacity: 1; transform: translateY(0); }
+  .mk-sticky-card__img {
+    position: relative;
+    overflow: hidden;
+    min-height: 18rem;
   }
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+  .mk-sticky-card__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
-  @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.9); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-}
 
-
-/* ─────────────────────────────────────────────────────
-   16. RICH TEXT / BLOG PROSE
-   ───────────────────────────────────────────────────── */
-@layer components {
-  .mk-prose {
-    font-size: 1.0625rem;
-    line-height: 1.75;
-    color: hsl(var(--foreground));
-    max-width: 68ch;
+  .mk-sticky-card__content {
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
   }
-  .mk-prose h2 {
+  .mk-sticky-card__number {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--mk-green);
+    margin-bottom: 0.25rem;
+  }
+  .mk-sticky-card__title {
+    font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin-top: 2.5rem;
-    margin-bottom: 0.75rem;
+    line-height: 1.25;
+    color: var(--mk-text-primary);
   }
-  .mk-prose h3 {
-    font-size: 1.1875rem;
-    font-weight: 600;
-    margin-top: 2rem;
-    margin-bottom: 0.5rem;
+  .mk-sticky-card__body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--mk-text-secondary);
   }
-  .mk-prose p { margin-bottom: 1.25rem; }
-  .mk-prose ul, .mk-prose ol {
-    margin-bottom: 1.25rem;
-    padding-left: 1.5rem;
+  /* Counter below (Mivora .case-counter-items) */
+  .mk-sticky-card__counters {
+    display: flex;
+    gap: 2rem;
+    margin-top: 0.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--mk-border);
+    flex-wrap: wrap;
   }
-  .mk-prose li { margin-bottom: 0.375rem; }
-  .mk-prose a {
-    color: var(--mk-primary);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  .mk-sticky-card__counter-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--mk-green);
+    display: block;
   }
-  .mk-prose a:hover { opacity: 0.8; }
-  .mk-prose blockquote {
-    border-left: 3px solid var(--mk-primary);
-    padding: 0.75rem 1.25rem;
-    margin: 1.5rem 0;
-    background-color: var(--mk-primary-light);
-    border-radius: 0 0.5rem 0.5rem 0;
-    font-style: italic;
-  }
-  .mk-prose code {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 0.875em;
-    background-color: hsl(var(--muted));
-    padding: 0.125em 0.375em;
-    border-radius: 0.25rem;
-  }
-  .mk-prose pre {
-    background-color: hsl(220 20% 12%);
-    color: hsl(0 0% 90%);
-    padding: 1.25rem 1.5rem;
-    border-radius: 0.75rem;
-    overflow-x: auto;
-    margin-bottom: 1.5rem;
-  }
-  .mk-prose pre code {
-    background: none;
-    padding: 0;
-    font-size: 0.875rem;
-  }
-  .mk-prose img {
-    border-radius: 0.75rem;
-    margin-block: 2rem;
-    width: 100%;
-    height: auto;
+  .mk-sticky-card__counter-label {
+    font-size: 0.75rem;
+    color: var(--mk-text-muted);
+    font-weight: 500;
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   17. NAV UTILITIES
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   17. HERO SECTION (Mivora .hero-section + .hero-overlay)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .mk-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 92svh;
+    display: flex;
+    align-items: center;
+    padding-block: var(--section-xl);
+  }
+  .mk-hero--inner {
+    min-height: 50svh;
+    padding-block: var(--section-lg);
+  }
+  .mk-hero--sm {
+    min-height: 40svh;
+    padding-block: var(--section-md);
+  }
+
+  /* Dark overlay over background image */
+  .mk-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      hsl(168 51% 10% / 0.82) 0%,
+      hsl(168 40% 18% / 0.65) 60%,
+      hsl(168 30% 25% / 0.4) 100%
+    );
+    z-index: 1;
+  }
+
+  /* Content sits above overlay */
+  .mk-hero__content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   18. NAV UTILITIES (Mivora .navbar + scroll-state)
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer components {
   .mk-nav {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 50;
-    height: 4rem;
+    z-index: 100;
+    height: 4.5rem;
     display: flex;
     align-items: center;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      box-shadow       0.3s ease,
+      backdrop-filter  0.3s ease;
   }
   .mk-nav--scrolled {
-    background-color: hsl(var(--background) / 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: var(--shadow-sm);
+    background-color: hsl(var(--background) / 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--mk-shadow-sm);
+  }
+  .mk-nav--transparent {
+    background-color: transparent;
+  }
+
+  /* Nav link */
+  .mk-nav__link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mk-text-secondary);
+    text-decoration: none;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--mk-radius-xs);
+    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+  }
+  .mk-nav__link:hover,
+  .mk-nav__link--active {
+    color: var(--mk-green);
+    background-color: var(--mk-green-light);
+  }
+
+  /* Dropdown panel */
+  .mk-nav__dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 14rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
+    box-shadow: var(--mk-shadow-lg);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .mk-nav__dropdown-link {
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--mk-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mk-text-primary);
+    text-decoration: none;
+    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  }
+  .mk-nav__dropdown-link:hover {
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
   }
 }
 
 
-/* ─────────────────────────────────────────────────────
-   18. GRID HELPERS (marketing layouts)
-   ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   19. RICH TEXT / BLOG PROSE (Mivora .blog-rich-text.w-richtext)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .mk-prose {
+    font-size: 1.0625rem;
+    line-height: 1.78;
+    color: var(--mk-text-primary);
+  }
+  .mk-prose h1,
+  .mk-prose h2,
+  .mk-prose h3,
+  .mk-prose h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-top: 2.5rem;
+    margin-bottom: 0.875rem;
+    color: var(--mk-text-primary);
+  }
+  .mk-prose h2 { font-size: 1.625rem; font-weight: 700; }
+  .mk-prose h3 { font-size: 1.25rem;  font-weight: 700; }
+  .mk-prose h4 { font-size: 1.0625rem; font-weight: 600; }
+  .mk-prose p  { margin-bottom: 1.375rem; }
+  .mk-prose ul,
+  .mk-prose ol { margin-bottom: 1.375rem; padding-left: 1.625rem; }
+  .mk-prose li { margin-bottom: 0.5rem; }
+  .mk-prose a  {
+    color: var(--mk-green);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: opacity var(--dur-fast) ease;
+  }
+  .mk-prose a:hover { opacity: 0.75; }
+  .mk-prose blockquote {
+    border-left: 3px solid var(--mk-green);
+    padding: 1rem 1.5rem;
+    margin: 2rem 0;
+    background-color: var(--mk-green-pale);
+    border-radius: 0 var(--mk-radius-md) var(--mk-radius-md) 0;
+    font-style: italic;
+    font-size: 1.125rem;
+  }
+  .mk-prose code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.875em;
+    background-color: var(--mk-surface-gray);
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    border: 1px solid var(--mk-border);
+  }
+  .mk-prose pre {
+    background-color: hsl(220 20% 10%);
+    color: hsl(0 0% 90%);
+    padding: 1.5rem;
+    border-radius: var(--mk-radius-card);
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+  .mk-prose pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+  }
+  .mk-prose img {
+    border-radius: var(--mk-radius-card);
+    margin-block: 2rem;
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .mk-prose hr {
+    border: none;
+    height: 1px;
+    background-color: var(--mk-border);
+    margin-block: 2.5rem;
+  }
+  .mk-prose strong { font-weight: 700; color: var(--mk-text-primary); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   20. ICON BADGE (marketing-scale, larger than app variants)
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .mk-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.875rem;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    flex-shrink: 0;
+  }
+  .mk-icon-badge--lg {
+    width: 4.25rem;
+    height: 4.25rem;
+    border-radius: 1rem;
+  }
+  .mk-icon-badge--xl {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 1.25rem;
+    font-size: 1.5rem;
+  }
+  /* On dark sections */
+  .section-dark .mk-icon-badge,
+  .section-black .mk-icon-badge {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 58%);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   21. GRID HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* 2-col even split with gap */
-  .mk-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
-  /* 3-col */
-  .mk-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-  /* 4-col */
-  .mk-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
-  /* Responsive auto-fill cards (min 280px) */
-  .mk-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr)); gap: 2rem; }
+  .mk-grid-2    { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+  .mk-grid-3    { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  .mk-grid-4    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+  .mk-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 2rem; }
+
+  /* Gap modifiers */
+  .mk-gap-sm  { gap: 1rem; }
+  .mk-gap-md  { gap: 2rem; }
+  .mk-gap-lg  { gap: 3rem; }
+  .mk-gap-xl  { gap: 4rem; }
 
   @media (max-width: 1024px) {
     .mk-grid-4 { grid-template-columns: repeat(2, 1fr); }
     .mk-grid-3 { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 640px) {
-    .mk-grid-2, .mk-grid-3, .mk-grid-4 { grid-template-columns: 1fr; }
+    .mk-grid-2,
+    .mk-grid-3,
+    .mk-grid-4 { grid-template-columns: 1fr; }
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   22. DIVIDERS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Mivora .counter-divider vertical rule */
+  .mk-divider-v {
+    width: 1px;
+    align-self: stretch;
+    background-color: var(--mk-border);
+    flex-shrink: 0;
+  }
+  .section-dark .mk-divider-v,
+  .section-black .mk-divider-v { background-color: var(--mk-border-dark); }
+
+  /* Horizontal */
+  .mk-divider-h {
+    height: 1px;
+    width: 100%;
+    background-color: var(--mk-border);
+    border: none;
+    display: block;
+  }
+  .section-dark .mk-divider-h,
+  .section-black .mk-divider-h { background-color: var(--mk-border-dark); }
+
+  /* Short decorative rule (Mivora uses ~3rem-wide green line beneath pre-titles) */
+  .mk-rule {
+    display: block;
+    width: 3rem;
+    height: 3px;
+    background-color: var(--mk-green);
+    border-radius: var(--mk-radius-pill);
+    margin-top: 0.75rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   23. ANIMATION UTILITIES
+   CSS-only fallback; primary animation uses framer-motion via motion.tsx.
+   Elements that should animate in can use these classes + IntersectionObserver
+   or simply class-toggle. Mivora uses opacity:0 initial state on all elements
+   and Webflow IX2 to trigger; here we use data-animate attribute.
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Initial hidden state — mirrors Mivora's style="opacity:0" */
+  [data-animate] {
+    opacity: 0;
+    transition:
+      opacity    var(--dur-enter) var(--ease-out-quart),
+      transform  var(--dur-enter) var(--ease-out-quart);
+  }
+
+  [data-animate="fade-up"]   { transform: translateY(2.5rem); }
+  [data-animate="fade-down"] { transform: translateY(-2.5rem); }
+  [data-animate="fade-left"] { transform: translateX(2.5rem); }
+  [data-animate="fade-right"]{ transform: translateX(-2.5rem); }
+  [data-animate="scale"]     { transform: scale(0.88); }
+  [data-animate="scale-up"]  { transform: scale(0.88) translateY(1rem); }
+
+  /* Triggered state — add .is-visible via IntersectionObserver */
+  [data-animate].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Stagger delays */
+  [data-delay="100"] { transition-delay: 0.1s; }
+  [data-delay="200"] { transition-delay: 0.2s; }
+  [data-delay="300"] { transition-delay: 0.3s; }
+  [data-delay="400"] { transition-delay: 0.4s; }
+  [data-delay="500"] { transition-delay: 0.5s; }
+  [data-delay="600"] { transition-delay: 0.6s; }
+  [data-delay="700"] { transition-delay: 0.7s; }
+  [data-delay="800"] { transition-delay: 0.8s; }
+
+  /* Pure CSS keyframe variants (no JS) */
+  .animate-fade-in-up {
+    animation: anim-fade-in-up var(--dur-enter) var(--ease-out-quart) both;
+  }
+  .animate-fade-in {
+    animation: anim-fade-in var(--dur-enter) var(--ease-out-quart) both;
+  }
+  .animate-scale-in {
+    animation: anim-scale-in var(--dur-enter) var(--ease-out-quart) both;
+  }
+
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+  .animate-delay-500 { animation-delay: 0.5s; }
+  .animate-delay-600 { animation-delay: 0.6s; }
+
+  @keyframes anim-fade-in-up {
+    from { opacity: 0; transform: translateY(2.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes anim-scale-in {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
   }
 }
