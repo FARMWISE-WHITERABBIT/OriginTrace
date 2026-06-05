@@ -194,7 +194,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="/origintrace placeholder hearo video.mp4" />
+          <HeroBackground videoSrc="/origintrace%20placeholder%20hearo%20video.mp4" posterSrc="" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -236,20 +236,20 @@ export default function HomePage() {
                 {/* RIGHT — card pinned to bottom of hero, overflows into white section below */}
                 <div className="hidden lg:flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="left">
-                    {/* Card: constrained width, all corners rounded (bottom corners visible in white about section) */}
+                    {/* Shadow wrapper: filter:drop-shadow follows the clip-path boundary */}
+                    <div style={{ filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.13)) drop-shadow(0 2px 6px rgba(0,0,0,0.07))', marginLeft: 'auto', maxWidth: '360px' }}>
                     <div
-                      className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        borderRadius: '0.625rem 0.625rem 0 0',
-                        marginBottom: '-8.3rem',
+                        /* Concave bottom corners (16px) + convex top corners (10px ≈ 0.625rem)
+                           polygon() supports calc() so this scales with card width */
+                        clipPath: 'polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 10px)',
+                        marginBottom: '-10rem',
                         paddingTop: '1.25rem',
                         paddingLeft: '1.25rem',
                         paddingRight: '1.25rem',
                         position: 'relative',
                         zIndex: 10,
-                        maxWidth: '360px',
-                        marginLeft: 'auto',
                       }}
                     >
                       {/* ── 1. TITLE ── */}
@@ -330,6 +330,7 @@ export default function HomePage() {
                       </div>
 
                     </div>
+                    </div>{/* end shadow wrapper */}
                   </FadeIn>
                 </div>
 
@@ -342,7 +343,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION — white bg, card from hero overflows in
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 10rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
