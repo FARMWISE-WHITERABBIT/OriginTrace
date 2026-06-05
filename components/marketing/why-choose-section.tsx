@@ -8,7 +8,7 @@ import { ArrowRight } from 'lucide-react';
 interface Feature {
   title: string;
   body: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ReactNode;
 }
 
 interface WhyChooseSectionProps {
@@ -24,7 +24,6 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
       <div className="flex flex-col">
         {features.map((feature, i) => {
           const isActive = i === activeIndex;
-          const Icon = feature.icon;
 
           return (
             <div key={i}>
@@ -56,7 +55,7 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                         color: isActive ? '#fff' : 'var(--mk-green)',
                       }}
                     >
-                      <Icon className="w-4 h-4" />
+                      {feature.icon}
                     </span>
 
                     <h3

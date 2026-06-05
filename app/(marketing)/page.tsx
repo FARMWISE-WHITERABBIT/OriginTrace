@@ -171,22 +171,22 @@ const whyChooseFeatures = [
   {
     title: 'Pre-Shipment Compliance Scoring',
     body: 'Score every shipment across five dimensions before cargo reaches port. Identify risks, resolve issues, and clear with confidence.',
-    icon: Shield,
+    icon: <Shield className="w-4 h-4" />,
   },
   {
     title: 'Farm-Level GPS Traceability',
     body: 'GPS polygon mapping links every shipment back to its exact farm source — meeting EUDR, FSMA, and buyer standards.',
-    icon: MapPin,
+    icon: <MapPin className="w-4 h-4" />,
   },
   {
     title: 'Offline-First Field Operations',
     body: 'Purpose-built for remote areas. Field agents capture data with zero connectivity, syncing automatically when back in range.',
-    icon: Wifi,
+    icon: <Wifi className="w-4 h-4" />,
   },
   {
     title: 'Buyer Portal & DPP',
     body: 'Give buyers direct traceability access. Generate QR-linked Digital Product Passports that prove full chain of custody.',
-    icon: QrCode,
+    icon: <QrCode className="w-4 h-4" />,
   },
 ];
 
