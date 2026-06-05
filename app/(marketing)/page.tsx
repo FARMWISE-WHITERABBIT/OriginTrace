@@ -4,7 +4,6 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
-import { LogoMarquee } from '@/components/marketing/logo-marquee';
 import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
@@ -245,11 +244,12 @@ export default function HomePage() {
                 </div>
 
                 {/* Right — editorial article-preview card (Mivora pattern) */}
+                {/* Right card — bleeds below hero into about section */}
                 <FadeIn delay={0.45} direction="left">
-                  <div className="hidden lg:block">
+                  <div className="hidden lg:block" style={{ position: 'relative', zIndex: 10, marginBottom: '-10rem' }}>
                     <div
                       className="rounded-2xl overflow-hidden"
-                      style={{ background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.28)' }}
+                      style={{ background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.30)' }}
                     >
                       {/* Card image area */}
                       <div
@@ -259,7 +259,6 @@ export default function HomePage() {
                           background: 'linear-gradient(135deg, #065f46 0%, #2E7D6B 50%, #059669 100%)',
                         }}
                       >
-                        {/* Supply chain visual */}
                         <div className="flex flex-col items-center gap-3 z-10">
                           <div className="flex items-center gap-3">
                             {['Farm', 'Collect', 'Process', 'Export'].map((step, idx) => (
@@ -298,10 +297,8 @@ export default function HomePage() {
                         >
                           How Nigerian cocoa exporters cleared EU borders on the first attempt
                         </p>
-
-                        {/* Stat row */}
                         <div
-                          className="pt-4 flex items-stretch gap-0"
+                          className="pt-4 flex items-stretch"
                           style={{ borderTop: '1px solid var(--mk-border)' }}
                         >
                           <div className="flex-1 text-center">
@@ -310,30 +307,19 @@ export default function HomePage() {
                             </p>
                             <p
                               className="text-xl font-extrabold leading-none"
-                              style={{
-                                color: 'var(--mk-text-primary)',
-                                fontFamily: 'var(--font-display)',
-                                letterSpacing: '-0.035em',
-                              }}
+                              style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.035em' }}
                             >
                               500+
                             </p>
                           </div>
-                          <div
-                            className="w-px self-stretch mx-4"
-                            style={{ background: 'var(--mk-border)' }}
-                          />
+                          <div className="w-px self-stretch mx-4" style={{ background: 'var(--mk-border)' }} />
                           <div className="flex-1 text-center">
                             <p className="text-xs mb-1" style={{ color: 'var(--mk-text-muted)' }}>
                               Reduction in customs delays
                             </p>
                             <p
                               className="text-xl font-extrabold leading-none"
-                              style={{
-                                color: 'var(--mk-text-primary)',
-                                fontFamily: 'var(--font-display)',
-                                letterSpacing: '-0.035em',
-                              }}
+                              style={{ color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.035em' }}
                             >
                               200+
                             </p>
@@ -350,25 +336,9 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            2. MARQUEE STRIP
+            2. ABOUT / MISSION — hero card bleeds into this section
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-bordered section-gray" style={{ paddingBlock: '1.5rem' }}>
-          <div className="mk-container-lg">
-            <p
-              className="text-center text-xs font-semibold uppercase tracking-[0.18em] margin-bottom margin-medium"
-              style={{ color: 'var(--mk-text-muted)' }}
-            >
-              Aligned with global compliance standards
-            </p>
-            <LogoMarquee />
-          </div>
-        </section>
-
-
-        {/* ═══════════════════════════════════════════════════════
-            3. ABOUT / MISSION — Mivora "Driving Change" pattern
-            ═══════════════════════════════════════════════════════ */}
-        <section className="section-spacing section-white">
+        <section className="section-white" style={{ paddingBottom: 'var(--section-md)', paddingTop: 'calc(var(--section-md) + 10rem)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>

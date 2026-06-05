@@ -1079,7 +1079,7 @@
    ───────────────────────────────────────────────────────────────────────────── */
   .mk-hero {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     min-height: 92svh;
     display: flex;
     align-items: center;
@@ -1440,4 +1440,26 @@
 }
 .mk-contact-link:hover {
   color: var(--mk-green);
+}
+
+/* Floating pill nav link */
+.mk-pill-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--mk-text-secondary);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.mk-pill-nav__link:hover {
+  background: var(--mk-surface-gray);
+  color: var(--mk-text-primary);
+}
+.mk-pill-nav__link[data-active] {
+  color: var(--mk-green);
+  background: var(--mk-green-light);
 }
