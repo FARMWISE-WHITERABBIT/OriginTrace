@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import Link from 'next/link';
 
 const commodityTabs = [
   {
@@ -96,7 +95,8 @@ export function IndustriesTabsClient() {
             role="tab"
             aria-selected={i === active}
             aria-controls={`tab-panel-${t.id}`}
-            className={`mk-industries-link-wrap${i === active ? ' is-active' : ''}`}
+            className="mk-industries-link-wrap"
+            data-active={i === active || undefined}
             onClick={() => setActive(i)}
           >
             <span className="mk-tab-icon" aria-hidden>{t.icon}</span>
@@ -105,12 +105,12 @@ export function IndustriesTabsClient() {
         ))}
       </div>
 
-      {/* Tab panel */}
+      {/* Tab panel — white rounded card */}
       <div
         id={`tab-panel-${tab.id}`}
         role="tabpanel"
-        className="mk-industries-tab-content"
         key={tab.id}
+        className="mk-industries-tab-card"
       >
         {/* LEFT — image */}
         <div
@@ -126,6 +126,7 @@ export function IndustriesTabsClient() {
 
         {/* RIGHT — info */}
         <div className="mk-industries-tab-info">
+          <h3 className="mk-industries-tab-title">{tab.label}</h3>
           <p className="mk-industries-tab-desc">{tab.description}</p>
           <ul className="mk-industries-feature-list">
             {tab.features.map((f) => (
@@ -137,9 +138,6 @@ export function IndustriesTabsClient() {
               </li>
             ))}
           </ul>
-          <Link href="/solutions" className="btn-mk-primary btn-mk-sm" style={{ marginTop: '1.5rem', alignSelf: 'flex-start' }}>
-            Learn more
-          </Link>
         </div>
       </div>
     </div>
