@@ -113,62 +113,55 @@ export function MarketingNav() {
 
   return (
     <>
-      {/* ── Desktop: full-width floating pill (Mivora exact structure) ────── */}
-      {/*
-       * Mivora .navbar: transparent bg, padding 1.25rem top+bottom, fixed position.
-       * The white pill is the inner grid-nav div, NOT the outer header.
-       */}
+      {/* ── Desktop nav ───────────────────────────────────────────────────── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 hidden md:block"
+        className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
         style={{
           paddingTop: '1.25rem',
           paddingBottom: '1.25rem',
           paddingInline: 'clamp(1rem, 4vw, 5rem)',
           background: 'transparent',
+          pointerEvents: 'none',
         }}
         data-testid="marketing-nav"
       >
         {/*
-         * Mivora grid-nav: two columns
-         *   left  (nav-inner-grid): logo + nav links + divider — flex, left-aligned
-         *   right (right-nav):      CTA button
-         * Height is auto (content-driven), not fixed.
+         * Three-piece structure:
+         *   [nav-pill-main] [nav-connector] [nav-pill-cta]
+         *
+         * The connector is a plain white rectangle (no border-radius) that
+         * visually bridges the two pills, creating one seamless shape while
+         * letting the right pill "pinch" to the green button size.
          */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            alignItems: 'center',
-            background: '#ffffff',
-            borderRadius: '9999px',
-            boxShadow: '0 2px 24px rgba(0,0,0,0.10)',
-            paddingLeft: '1.5rem',
-            paddingRight: '0.375rem',
-            paddingTop: '0.375rem',
-            paddingBottom: '0.375rem',
-          }}
-        >
-          {/* LEFT — logo + nav links + divider line */}
-          <div className="flex items-center gap-0 overflow-hidden">
+        <div className="flex items-center" style={{ gap: 0, pointerEvents: 'auto' }}>
+
+          {/* ── Main pill: logo (left) + centered links ─────────────────── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              borderRadius: '9999px',
+              background: '#ffffff',
+              height: '52px',
+              padding: '0 1.5rem',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              gap: '2rem',
+            }}
+          >
             {/* Logo */}
-            <Link
-              href="/"
-              className="shrink-0 flex items-center"
-              aria-label="OriginTrace home"
-              style={{ marginRight: '2rem' }}
-            >
+            <Link href="/" className="shrink-0 flex items-center" aria-label="OriginTrace home">
               <Image
                 src="/images/logo-green.png"
                 alt="OriginTrace"
                 width={140}
                 height={36}
-                style={{ width: 'auto', height: '28px' }}
+                style={{ width: 'auto', height: '26px' }}
                 priority
               />
             </Link>
 
-            {/* Nav links — left-aligned, directly after logo */}
-            <nav className="flex items-center gap-0">
+            {/* Nav links — centered within the main pill */}
+            <nav className="flex items-center">
               {navLinks.map((link) =>
                 link.dropdown ? (
                   <NavDropdown key={link.href} link={link} pathname={pathname} />
@@ -189,31 +182,30 @@ export function MarketingNav() {
                 )
               )}
             </nav>
-
-            {/* Decorative divider — mirrors Mivora nav-divider */}
-            <div
-              style={{
-                width: '1px',
-                height: '1.375rem',
-                background: 'var(--mk-border)',
-                marginLeft: '1.25rem',
-                flexShrink: 0,
-              }}
-            />
           </div>
 
-          {/* RIGHT — Sign in + CTA */}
-          <div className="flex items-center gap-0 shrink-0">
-            <Link
-              href="/auth/login"
-              className="flex items-center px-5 text-[14px] font-medium transition-colors"
-              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}
-              data-testid="nav-sign-in"
-            >
-              Sign in
-            </Link>
+          {/* ── Connector: plain white rectangle, no border-radius ───────── */}
+          <div
+            style={{
+              width: '16px',
+              height: '20px',
+              background: '#ffffff',
+              flexShrink: 0,
+            }}
+          />
 
-            {/* CTA — green pill flush to right edge of white pill */}
+          {/* ── CTA pill: white outer, green button inside ───────────────── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              borderRadius: '9999px',
+              background: '#ffffff',
+              height: '52px',
+              padding: '6px',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+            }}
+          >
             <Link
               href="/demo"
               className="flex items-center font-semibold transition-opacity hover:opacity-90"
@@ -221,7 +213,8 @@ export function MarketingNav() {
                 background: 'var(--mk-green)',
                 color: '#fff',
                 borderRadius: '9999px',
-                padding: '0.625rem 1.75rem',
+                padding: '0 1.625rem',
+                height: '100%',
                 fontSize: '14px',
                 whiteSpace: 'nowrap',
               }}
@@ -230,6 +223,7 @@ export function MarketingNav() {
               Request Demo
             </Link>
           </div>
+
         </div>
       </header>
 
