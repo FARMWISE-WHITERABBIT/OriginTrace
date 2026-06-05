@@ -493,7 +493,7 @@ export default function HomePage() {
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch', minHeight: 'calc(65vh - 12rem)' }}
+                style={{ alignItems: 'stretch', flex: 1 }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
                 <div className="flex flex-col justify-center py-8">
@@ -531,7 +531,6 @@ export default function HomePage() {
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
                       style={{
                         maxWidth: '360px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
                       }}
                     >
                       {/* ── 1. TITLE ── */}
