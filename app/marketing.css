@@ -175,14 +175,38 @@
   }
 
   /* All text within marketing pages uses Mivora's body font (Inter) */
-  .mk-container,
-  .mk-container-sm,
-  .mk-container-md,
-  .mk-container-lg,
-  .mk-container-full,
+  .mk-page,
+  .mk-page *,
   .mk-footer,
-  header[data-testid="marketing-nav"] {
+  .mk-footer *,
+  header[data-testid="marketing-nav"],
+  header[data-testid="marketing-nav"] * {
     font-family: var(--font-family--body);
+  }
+
+  /* Display classes and card titles re-apply Instrument Sans explicitly */
+  .text-display-2xl,
+  .text-display-xl,
+  .text-display-lg,
+  .text-display-md,
+  .text-display-sm,
+  .mk-blog-card__title,
+  .mk-card__title,
+  .mk-team-card__name,
+  .mk-stat-card__value,
+  .mk-stat-row__value,
+  .mk-sticky-card__number,
+  .mk-sticky-card__title,
+  .mk-sticky-card__counter-value,
+  .mk-prose h1,
+  .mk-prose h2,
+  .mk-prose h3,
+  .mk-prose h4,
+  .mk-industries-tab-title,
+  .mk-counter-number,
+  .mk-testimonial-name,
+  .mk-footer-col__heading {
+    font-family: var(--font-display);
   }
 
 
@@ -431,9 +455,9 @@
     gap: 0.5rem;
     padding: 0.875rem 2rem;
     border-radius: var(--border-radius--button);
-    font-family: var(--font-display);
+    font-family: var(--font-family--body);
     font-size: 0.9375rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1;
     cursor: pointer;
     text-decoration: none;
