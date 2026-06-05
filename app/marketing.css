@@ -263,6 +263,15 @@
   .section-spacing-lg { padding-block: var(--section-lg); }
   .section-spacing-xl { padding-block: var(--section-xl); }
 
+  /* Mivora exact: section-spacing collapses to 6.25rem at ≤991px */
+  @media screen and (max-width: 991px) {
+    .section-spacing    { padding-block: 6.25rem; }
+    .section-spacing-lg { padding-block: 6.25rem; }
+  }
+  @media screen and (max-width: 767px) {
+    .section-spacing-sm { padding-block: 4rem; }
+  }
+
   .section-pt    { padding-top: var(--section-md); }
   .section-pb    { padding-bottom: var(--section-md); }
   .section-pt-lg { padding-top: var(--section-lg); }
@@ -1119,32 +1128,30 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    17. HERO SECTION (Mivora .hero-section exact values)
    ───────────────────────────────────────────────────────────────────────────── */
+  /* Mivora exact: .hero-section
+     padding-top: 12rem, padding-bottom: 8.125rem, margin-top: -7rem
+     border-bottom-right-radius: var(--border-radius--md) = 1.25rem
+     overflow: hidden on section BUT we keep visible for hero-detail-wrap bleed */
   .mk-hero {
     position: relative;
     /* overflow: visible — required for hero-detail-wrap margin-bottom bleed */
     min-height: 65vh;
     margin-top: -7rem;
-    padding-top: 9rem;
-    padding-bottom: 0;
+    padding-top: 12rem;
+    padding-bottom: var(--section-md);  /* 8.125rem — Mivora standard */
     border-bottom-left-radius: 0;
-    border-bottom-right-radius: 1.25rem;
-    background-color: #ffffff;
+    border-bottom-right-radius: var(--border-radius--md);  /* 1.25rem */
+    background-color: var(--color--white);
   }
 
-  @media screen and (min-width: 1280px) {
-    .mk-hero { padding-top: 11rem; }
-  }
-  @media screen and (min-width: 1440px) {
-    .mk-hero { padding-top: 13rem; }
-  }
-  @media screen and (min-width: 1920px) {
-    .mk-hero { padding-top: 15rem; padding-bottom: 5rem; }
-  }
   @media screen and (max-width: 991px) {
-    .mk-hero { padding-top: 8rem; padding-bottom: 4rem; }
+    .mk-hero {
+      padding-top: 10rem;
+      padding-bottom: 6.25rem;
+    }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { padding-top: 7rem; border-radius: 0; }
+    .mk-hero { padding-top: 8rem; border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1159,16 +1166,15 @@
     padding-block: var(--section-md);
   }
 
-  /* Dark overlay — matches Mivora: background-color #212121, opacity 0.5,
-     border-bottom-right-radius: --border-radius--md (1.25rem) */
+  /* Mivora exact: .hero-overlay — background-color: var(--color--black), opacity: 0.5 */
   .mk-hero__overlay {
     position: absolute;
-    inset: 0;
+    inset: 0%;
     z-index: 2;
     height: 100%;
-    background-color: #212121;
+    background-color: var(--color--black);
     opacity: 0.5;
-    border-bottom-right-radius: 1.25rem;
+    border-bottom-right-radius: var(--border-radius--md);
   }
 
   /* Content sits above overlay */

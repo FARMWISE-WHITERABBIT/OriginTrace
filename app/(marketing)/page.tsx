@@ -337,19 +337,23 @@ function TestimonialsSection() {
     <section
       className="section-spacing"
       style={{
-        background: 'var(--mk-surface-dark)',
+        /* Mivora: background-image over a cover photo, with a dark overlay div on top */
+        backgroundImage: "url('/images/lagos apapa port.jpg')",
+        backgroundPosition: '50%',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
         color: 'var(--mk-text-on-dark)',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* decorative overlay */}
+      {/* Mivora .testimonial-overlay — dark cover over the background image */}
       <div
         aria-hidden
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(46,125,107,0.18) 0%, transparent 70%)',
+          background: 'rgba(33,33,33,0.82)',
           pointerEvents: 'none',
         }}
       />
