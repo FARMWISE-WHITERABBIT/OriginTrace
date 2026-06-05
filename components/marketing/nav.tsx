@@ -99,7 +99,7 @@ export function MarketingNav() {
         style={{
           paddingTop: '1.25rem',
           paddingBottom: '1.25rem',
-          paddingInline: 'clamp(1.5rem, 4vw, 5rem)',
+          paddingInline: 'clamp(1.5rem, 5vw, 6rem)',
           background: 'transparent',
         }}
         data-testid="marketing-nav"

@@ -1090,7 +1090,7 @@
     margin-top: -7rem;
     padding-top: 9rem;
     padding-bottom: 5rem;
-    border-bottom-left-radius: 1.25rem;
+    border-bottom-left-radius: 0;
     border-bottom-right-radius: 1.25rem;
     background-color: #ffffff;
   }

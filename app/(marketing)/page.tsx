@@ -241,7 +241,7 @@ export default function HomePage() {
                       className="overflow-hidden"
                       style={{
                         background: '#ffffff',
-                        borderRadius: '0.625rem',
+                        borderRadius: '0.625rem 0.625rem 0 0',
                         marginBottom: '-8.3rem',
                         paddingTop: '1.25rem',
                         paddingLeft: '1.25rem',
