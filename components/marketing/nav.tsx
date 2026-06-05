@@ -195,8 +195,8 @@ export function MarketingNav() {
                   right: '-15px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  height: '28px',
-                  width: '15px',
+                  height: '42px',
+                  width: '22px',
                   pointerEvents: 'none',
                   zIndex: 10,
                 }}
