@@ -503,7 +503,7 @@ export default function HomePage() {
                       data-testid="text-hero-headline"
                       style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
                     >
-                      The Compliance Pulse of Modern Supply Chains
+                      Compliance infrastructure for agriculture
                     </h1>
                   </FadeIn>
 
@@ -512,15 +512,20 @@ export default function HomePage() {
                       className="margin-bottom margin-xlarge"
                       style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      Eco-friendly, efficient, and future-ready supply chain traceability that
-                      reduces shipment rejections while maximising export readiness.
+                      OriginTrace helps exporters and processors prove origin, manage compliance risk,
+                      and generate audit-ready documentation before shipments leave port.
                     </p>
                   </FadeIn>
 
                   <FadeIn delay={0.3}>
-                    <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                      Assess Your Export Readiness
-                    </Link>
+                    <div className="flex flex-wrap gap-3">
+                      <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
+                        Assess Your Export Readiness
+                      </Link>
+                      <Link href="/demo" className="btn-mk-ghost btn-mk-lg" data-testid="button-request-demo">
+                        Request a Demo
+                      </Link>
+                    </div>
                   </FadeIn>
                 </div>
 
@@ -612,7 +617,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 5rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
