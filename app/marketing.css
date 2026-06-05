@@ -1215,6 +1215,7 @@
     position: relative;
     z-index: 3;
     width: 100%;
+    padding-bottom: 0;
   }
 
   /* Mivora .hero-detail-wrap — card that bleeds below the hero section */
@@ -1235,14 +1236,18 @@
     text-decoration: none;
   }
 
+  /* Quarter-circle concave fills — sit just outside the card's bottom corners,
+     creating a smooth visual join between the card's base and the section below */
   .hero-left-decorative {
     position: absolute;
-    inset: auto auto 3px -25px;
+    bottom: 0;
+    left: -25px;
   }
 
   .hero-right-decorative {
     position: absolute;
-    inset: auto -25px 3px auto;
+    bottom: 0;
+    right: -25px;
   }
 
   @media screen and (max-width: 991px) {
@@ -1252,12 +1257,12 @@
       padding-right: 1.25rem;
       padding-left: 1.25rem;
     }
-    .hero-left-decorative { bottom: 1px; }
-    .hero-right-decorative { bottom: 1.5px; }
+    .hero-left-decorative { bottom: 0; left: -25px; }
+    .hero-right-decorative { bottom: 0; right: -25px; }
   }
 
   @media screen and (max-width: 767px) {
-    .hero-left-decorative  { bottom: 0px; }
+    .hero-left-decorative  { bottom: 0; }
     .hero-right-decorative { bottom: -1px; }
   }
 

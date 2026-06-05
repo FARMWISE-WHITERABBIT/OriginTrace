@@ -211,12 +211,22 @@ export function MarketingNav() {
               </div>
             </div>
 
-            {/* .right-nav — flex center, CTA */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            {/* .right-nav — white pill (matches left pill), green button inside */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: 'var(--border-radius--button)',
+                backgroundColor: 'var(--color--white)',
+                padding: '1rem 1.25rem',
+                boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              }}
+            >
               <Link
                 href="/demo"
                 className="btn-mk-primary"
-                style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.09)', whiteSpace: 'nowrap' }}
+                style={{ whiteSpace: 'nowrap' }}
                 data-testid="nav-request-demo"
               >
                 Request Demo
