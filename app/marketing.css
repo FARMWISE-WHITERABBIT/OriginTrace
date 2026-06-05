@@ -40,32 +40,64 @@
    1. DESIGN TOKENS
    ───────────────────────────────────────────────────────────────────────────── */
   :root {
-    --border-radius--sm: 0.625rem;
-    --color--white: #ffffff;
-    /* ── Brand colours (OriginTrace) ─────────────────────────────────── */
+    /* ── Mivora exact design tokens (sourced from mivora.webflow.css) ─── */
+    --color--black:       #212121;
+    --color--white:       white;
+    --color--gray-1:      #282828;
+    --color--gray-2:      #636363;
+    --color--gray-3:      #7b7b7b;
+    --color--gray-4:      #bebebe;
+    --color--gray-5:      lightgrey;
+    --color--gray-6:      #ebebeb;
+    --color--gray-7:      whitesmoke;
+    --color--gray-8:      #f9f9f9;
+    --color--transparent: #0000;
+    --border-radius--xs:  0.3475rem;
+    --border-radius--sm:  0.625rem;
+    --border-radius--sm-01: 0.4375rem;
+    --border-radius--md:  1.25rem;
+    --border-radius--lg:  3.125rem;
+    --border-radius--button: 6.25rem;
+    --border-radius--form-input: 0.625rem;
+    --font-family--body:    Inter, sans-serif;
+    --font-family--heading: "Instrument Sans", sans-serif;
+    --font-size--size-1:  0.938rem;
+    --font-size--size-2:  1rem;
+    --font-size--size-3:  1.125rem;
+    --font-size--size-4:  1.25rem;
+    --font-size--size-5:  1.375rem;
+    --font-size--size-6:  1.75rem;
+    --font-size--size-7:  2rem;
+    --font-size--size-8:  2.25rem;
+    --font-size--size-9:  2.5rem;
+    --font-size--size-10: 3rem;
+    --font-size--size-11: 3.5rem;
+    --font-size--size-12: 5rem;
+
+    /* ── Brand colours (OriginTrace — replaces Mivora's #7eea57 lime) ─── */
     --mk-green:          #2E7D6B;   /* Origin Green — primary CTA */
     --mk-green-dark:     #1F5F52;   /* Deep Forest — hover / dark sections */
     --mk-green-mid:      #3d9b86;   /* Mid teal — interactive states */
     --mk-green-light:    hsl(166 46% 92%);  /* Sage tint — chip bg, card tint */
     --mk-green-pale:     hsl(166 30% 97%);  /* Near-white green wash */
 
-    /* ── Surface variants ────────────────────────────────────────────── */
-    --mk-surface-white:  hsl(0 0% 100%);
-    --mk-surface-warm:   hsl(43 30% 97%);   /* Off-white warm (earthy, agricultural) */
-    --mk-surface-green:  hsl(166 30% 97%);  /* Very light green wash */
-    --mk-surface-gray:   hsl(220 14% 96%);  /* Mivora .background-gray equivalent */
-    --mk-surface-dark:   hsl(168 28% 7%);   /* Near-black — team / CTA sections */
-    --mk-surface-black:  hsl(220 20% 8%);   /* Pure dark — footer, heavy CTA */
+    /* ── Surface variants (mapped to Mivora grays) ──────────────────── */
+    --mk-surface-white:  var(--color--white);     /* pure white */
+    --mk-surface-warm:   hsl(43 30% 97%);         /* Off-white warm */
+    --mk-surface-green:  hsl(166 30% 97%);        /* Very light green wash */
+    --mk-surface-gray:   var(--color--gray-8);    /* #f9f9f9 — Mivora .background-gray */
+    --mk-surface-dark:   var(--color--black);     /* #212121 — Mivora dark sections */
+    --mk-surface-black:  var(--color--gray-1);    /* #282828 — footer */
 
-    /* ── Text hierarchy ──────────────────────────────────────────────── */
-    --mk-text-primary:   hsl(221 39% 11%);
-    --mk-text-secondary: hsl(215 14% 34%);
-    --mk-text-muted:     hsl(215 14% 55%);  /* .text-gray-3 equivalent */
+    /* ── Text hierarchy (mapped to Mivora grays) ─────────────────────── */
+    --mk-text-primary:   var(--color--black);     /* #212121 */
+    --mk-text-secondary: var(--color--gray-2);    /* #636363 */
+    --mk-text-muted:     var(--color--gray-3);    /* #7b7b7b — Mivora .text-gray-3 */
     --mk-text-on-dark:   hsl(0 0% 95%);
-    --mk-text-on-dark-2: hsl(0 0% 70%);    /* Mivora .white-700-text */
+    --mk-text-on-dark-2: var(--color--gray-4);    /* #bebebe — Mivora .white-700-text */
 
-    /* ── Border ──────────────────────────────────────────────────────── */
-    --mk-border:         hsl(220 13% 91%);
+    /* ── Border (Mivora gray-6 = #ebebeb) ───────────────────────────── */
+    --mk-border:         var(--color--gray-6);    /* #ebebeb */
     --mk-border-dark:    hsl(0 0% 100% / 0.1);
 
     /* ── Section spacing — 8.125rem = 130px is Mivora's standard ──────── */
@@ -134,43 +166,44 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    2. TYPOGRAPHY — display font + scale
    ───────────────────────────────────────────────────────────────────────────── */
-  /* Register Inter Tight as the marketing display / heading font */
+  /* Instrument Sans is Mivora's heading font — matches Webflow source exactly.
+     --font-instrument is set by Next.js font loader in layout.tsx */
   :root {
-    --font-display: var(--font-display, 'Inter Tight', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif);
+    --font-display: var(--font-instrument, var(--font-family--heading, "Instrument Sans", "Inter Tight", ui-sans-serif, system-ui, sans-serif));
   }
 
-  /* Display scale — fluid clamp() sizing, Inter Tight weight 800 */
+  /* Display scale aligned to Mivora's --font-size--size-N tokens */
   .text-display-2xl {
     font-family: var(--font-display);
-    font-size: clamp(2.75rem, 6vw, 5rem);     /* 44–80px */
+    font-size: clamp(2.5rem, 6vw, var(--font-size--size-12));  /* max 5rem */
     font-weight: 800;
     line-height: 1.03;
     letter-spacing: -0.035em;
   }
   .text-display-xl {
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 5vw, 3.75rem);  /* 36–60px */
+    font-size: clamp(2.25rem, 5vw, var(--font-size--size-11)); /* max 3.5rem */
     font-weight: 800;
     line-height: 1.07;
     letter-spacing: -0.03em;
   }
   .text-display-lg {
     font-family: var(--font-display);
-    font-size: clamp(1.875rem, 4vw, 3rem);    /* 30–48px */
+    font-size: clamp(1.875rem, 4vw, var(--font-size--size-9)); /* max 2.5rem */
     font-weight: 700;
     line-height: 1.12;
     letter-spacing: -0.025em;
   }
   .text-display-md {
     font-family: var(--font-display);
-    font-size: clamp(1.5rem, 3vw, 2.25rem);   /* 24–36px */
+    font-size: clamp(1.5rem, 3vw, var(--font-size--size-8));   /* max 2.25rem */
     font-weight: 700;
     line-height: 1.18;
     letter-spacing: -0.02em;
   }
   .text-display-sm {
     font-family: var(--font-display);
-    font-size: clamp(1.125rem, 2vw, 1.5rem);  /* 18–24px */
+    font-size: clamp(1.125rem, 2vw, var(--font-size--size-6)); /* max 1.75rem */
     font-weight: 600;
     line-height: 1.28;
     letter-spacing: -0.015em;
@@ -355,7 +388,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.875rem 2rem;
-    border-radius: var(--mk-radius-pill);
+    border-radius: var(--border-radius--button);
     font-family: var(--font-display);
     font-size: 0.9375rem;
     font-weight: 700;
@@ -466,7 +499,7 @@
     display: block;
     background-color: var(--mk-surface-white);
     border: 1px solid var(--mk-border);
-    border-radius: var(--mk-radius-card);
+    border-radius: var(--border-radius--sm);
     overflow: hidden;
     text-decoration: none;
     color: inherit;
@@ -589,7 +622,7 @@
   .mk-card {
     background-color: var(--mk-surface-white);
     border: 1px solid var(--mk-border);
-    border-radius: var(--mk-radius-card);
+    border-radius: var(--border-radius--sm);
     padding: 2rem;
     transition: box-shadow var(--dur-base) var(--ease-out-quart), transform var(--dur-base) var(--ease-out-quart);
   }
@@ -1547,4 +1580,332 @@
 .mk-nav-link[data-active],
 .mk-pill-nav__link[data-active] {
   color: var(--mk-green);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   24. INDUSTRIES TABS (Mivora industries-tab-section)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-industries-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.mk-industries-tab-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.mk-industries-link-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--mk-radius-pill);
+  border: 1.5px solid var(--mk-border);
+  background: var(--mk-surface-white);
+  color: var(--mk-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+  text-align: left;
+}
+.mk-industries-link-wrap:hover {
+  border-color: var(--mk-green);
+  color: var(--mk-green);
+}
+.mk-industries-link-wrap.is-active {
+  background: var(--mk-green);
+  border-color: var(--mk-green);
+  color: #fff;
+  box-shadow: var(--mk-glow-green);
+}
+
+.mk-tab-icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.mk-tab-text {
+  font-size: 0.9375rem;
+}
+
+.mk-industries-tab-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+  animation: anim-fade-in var(--dur-base) var(--ease-out-quart) both;
+}
+
+.mk-industries-tab-image {
+  position: relative;
+  height: 460px;
+  border-radius: var(--mk-radius-hero);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mk-industries-tag {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: var(--mk-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3125rem 0.75rem;
+  border-radius: var(--mk-radius-pill);
+}
+
+.mk-industries-tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 1rem;
+}
+
+.mk-industries-tab-desc {
+  font-size: 1.0625rem;
+  line-height: 1.72;
+  color: var(--mk-text-secondary);
+}
+
+.mk-industries-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .mk-industries-tab-content { grid-template-columns: 1fr; }
+  .mk-industries-tab-image   { height: 300px; }
+}
+@media (max-width: 640px) {
+  .mk-industries-tab-menu { gap: 0.5rem; }
+  .mk-industries-link-wrap { padding: 0.5rem 0.875rem; font-size: 0.875rem; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   25. COUNTER SECTION (Mivora counter-section — grid-counter)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-counter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+.mk-counter-item {
+  padding: 2.5rem 2rem;
+  border-right: 1px solid var(--mk-border);
+}
+.mk-counter-item:last-child { border-right: none; }
+
+.mk-counter-title {
+  font-size: 0.9375rem;
+  color: var(--mk-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  max-width: 18ch;
+}
+
+.mk-counter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mk-counter-arrow {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--mk-green);
+  line-height: 1;
+  transform: rotate(0deg);
+}
+
+.mk-counter-number {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--mk-text-primary);
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .mk-counter-grid { grid-template-columns: repeat(2, 1fr); }
+  .mk-counter-item:nth-child(2) { border-right: none; }
+  .mk-counter-item:nth-child(3),
+  .mk-counter-item:nth-child(4) { border-top: 1px solid var(--mk-border); }
+}
+@media (max-width: 640px) {
+  .mk-counter-grid { grid-template-columns: 1fr; }
+  .mk-counter-item { border-right: none; border-bottom: 1px solid var(--mk-border); }
+  .mk-counter-item:last-child { border-bottom: none; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   26. TECHNOLOGY SPLIT (Mivora technology-section — grid-technology)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-technology-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 5rem;
+  align-items: start;
+}
+
+.mk-technology-title-wrap {
+  position: sticky;
+  top: 7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mk-technology-info-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.mk-technology-info {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+  .mk-technology-grid          { grid-template-columns: 1fr; gap: 2.5rem; }
+  .mk-technology-title-wrap    { position: static; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   27. TESTIMONIALS (Mivora testimonial-section — dark)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.mk-testimonial-item {
+  position: relative;
+  background: hsl(0 0% 100% / 0.05);
+  border: 1px solid hsl(0 0% 100% / 0.1);
+  border-radius: var(--mk-radius-card);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: background var(--dur-base) ease, border-color var(--dur-base) ease;
+  overflow: hidden;
+}
+.mk-testimonial-item:hover {
+  background: hsl(0 0% 100% / 0.08);
+  border-color: hsl(0 0% 100% / 0.18);
+}
+
+.mk-testimonial-member-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.mk-testimonial-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--mk-green);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mk-testimonial-name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--mk-text-on-dark);
+  margin: 0;
+}
+
+.mk-testimonial-position {
+  font-size: 0.75rem;
+  color: var(--mk-text-on-dark-2);
+  margin-top: 0.125rem;
+}
+
+.mk-testimonial-desc {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--mk-text-on-dark-2);
+  flex: 1;
+}
+
+.mk-testimonial-shape {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.25rem;
+  font-size: 3rem;
+  color: hsl(0 0% 100% / 0.05);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 1024px) {
+  .mk-testimonial-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .mk-testimonial-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   28. CERTIFICATION MARQUEE ITEMS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-cert-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1.5rem;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--mk-text-secondary);
+  border: 1.5px solid var(--mk-border);
+  border-radius: var(--mk-radius-pill);
+  background: var(--mk-surface-white);
+  flex-shrink: 0;
+}
+
+.mk-cert-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--mk-green);
+  flex-shrink: 0;
 }

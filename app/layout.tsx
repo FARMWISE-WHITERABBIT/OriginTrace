@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans, JetBrains_Mono, Inter_Tight } from 'next/font/google';
+import { Plus_Jakarta_Sans, JetBrains_Mono, Inter_Tight, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import { OrgProvider } from '@/lib/contexts/org-context';
@@ -20,6 +20,11 @@ const interTight = Inter_Tight({
   subsets: ['latin'],
   variable: '--font-display',
   weight: ['600', '700', '800'],
+});
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument',
+  weight: ['500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -67,7 +72,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${interTight.variable} font-sans`} suppressHydrationWarning>
+      <body className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${interTight.variable} ${instrumentSans.variable} font-sans`} suppressHydrationWarning>
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{

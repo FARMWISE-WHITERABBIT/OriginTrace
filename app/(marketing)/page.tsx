@@ -9,6 +9,8 @@ import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/mar
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
+import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
+import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import {
   Shield,
   ChevronRight,
@@ -151,6 +153,285 @@ const whyChooseFeatures = [
     icon: <QrCode className="w-4 h-4" />,
   },
 ];
+
+/* ─────────────────────────────────────────────────────────────────
+   INDUSTRIES / COMMODITIES TABS SECTION
+   ───────────────────────────────────────────────────────────────── */
+
+function IndustriesTabSection() {
+  return (
+    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
+      <div className="mk-container-lg">
+        <FadeIn>
+          <div className="section-header">
+            <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
+            <h2 className="text-display-lg section-header__title">
+              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
+              across Africa&apos;s key export commodities
+            </h2>
+          </div>
+        </FadeIn>
+
+        <IndustriesTabsClient />
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   COUNTER SECTION (Mivora counter-section)
+   ───────────────────────────────────────────────────────────────── */
+
+const counterItems = [
+  { label: 'Shipment clearance rate', value: '99%', icon: '↗' },
+  { label: 'Reduction in compliance prep time', value: '85%', icon: '↗' },
+  { label: 'Farms verified and GPS-mapped', value: '500+', icon: '↗' },
+  { label: 'Regulatory frameworks covered', value: '12+', icon: '↗' },
+];
+
+function CounterSection() {
+  return (
+    <section className="section-spacing section-white section-bordered">
+      <div className="mk-container-lg">
+        <FadeIn>
+          <div className="section-header margin-bottom margin-xlarge">
+            <span className="pre-title margin-bottom margin-medium">Compliance in Numbers</span>
+            <h2 className="text-display-lg section-header__title no-margin-bottom">
+              Driving measurable results{' '}
+              <span className="text-mk-muted">across every shipment, farm, and partnership.</span>
+            </h2>
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.1}>
+          <div className="mk-counter-grid">
+            {counterItems.map((item, i) => (
+              <div key={i} className="mk-counter-item">
+                <p className="mk-counter-title">{item.label}</p>
+                <div className="mk-counter-wrap">
+                  <span className="mk-counter-arrow" aria-hidden>↗</span>
+                  <h2 className="mk-counter-number">{item.value}</h2>
+                </div>
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TECHNOLOGY SPLIT SECTION (Mivora technology-section)
+   ───────────────────────────────────────────────────────────────── */
+
+function TechnologySection() {
+  return (
+    <section className="section-spacing section-gray">
+      <div className="mk-container-lg">
+        <div className="mk-technology-grid">
+          {/* LEFT — title + CTA */}
+          <FadeIn direction="right">
+            <div className="mk-technology-title-wrap">
+              <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)' }}>
+                <span className="text-mk-muted">Offline-first</span> field technology{' '}
+                powered by <span className="text-mk-muted">real compliance intelligence</span>
+              </h2>
+              <Link href="/solutions" className="btn-mk-primary" style={{ marginTop: '2rem', display: 'inline-flex' }}>
+                Explore Platform
+              </Link>
+            </div>
+          </FadeIn>
+
+          {/* RIGHT — image + feature list */}
+          <div className="mk-technology-info-wrap">
+            <FadeIn delay={0.1}>
+              <div
+                className="mk-technology-image-wrap"
+                style={{
+                  borderRadius: '1.25rem',
+                  overflow: 'hidden',
+                  aspectRatio: '4/3',
+                  backgroundImage: "url('/images/baged product in wareouse.jpg')",
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+            </FadeIn>
+
+            <FadeIn delay={0.2}>
+              <div className="mk-technology-info">
+                <p style={{ color: 'var(--mk-text-secondary)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+                  At OriginTrace, our field tools and compliance engine go hand-in-hand to deliver
+                  smart, verifiable, and future-ready traceability from the first mile to the final port.
+                </p>
+                <div className="flex flex-col gap-3">
+                  {[
+                    'GPS polygon farm mapping with anti-spoofing',
+                    'Offline-first PWA with automatic sync',
+                    'Pre-shipment 5-dimension compliance scoring',
+                    'EUDR & FSMA deforestation-risk detection',
+                    'Digital Product Passport with QR verification',
+                  ].map((item) => (
+                    <div key={item} className="mk-list-item">
+                      <span className="mk-list-item__icon">
+                        <Check className="w-3 h-3" />
+                      </span>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   TESTIMONIALS SECTION (Mivora testimonial-section — dark)
+   ───────────────────────────────────────────────────────────────── */
+
+const testimonialData = [
+  {
+    name: 'Adebayo Ogundimu',
+    title: 'Export Director',
+    company: 'West Africa Cocoa Cooperative',
+    quote: 'OriginTrace reduced our shipment rejection rate from 12% to under 1%. The pre-shipment compliance scoring caught issues we would have missed — saving hundreds of thousands in lost cargo.',
+    initials: 'AO',
+  },
+  {
+    name: 'Marie-Claire Dupont',
+    title: 'Compliance Manager',
+    company: 'Sahel Commodities S.A.',
+    quote: 'Before OriginTrace, we spent weeks assembling compliance dossiers. Now our EUDR documentation is generated automatically with GPS-verified farm polygons. Our buyers trust us completely.',
+    initials: 'MD',
+  },
+  {
+    name: 'Henrik Johansson',
+    title: 'Head of Procurement',
+    company: 'Nordic Foods Group',
+    quote: 'The buyer portal gives us real-time visibility into our suppliers\' traceability data. We can verify origin claims before shipments even leave port. It\'s transformed how we source.',
+    initials: 'HJ',
+  },
+  {
+    name: 'Fatima Bello',
+    title: 'Operations Manager',
+    company: 'Green Harvest Nigeria',
+    quote: 'Our field agents collect data offline in remote areas, and everything syncs when they\'re back in range. The system just works — even in areas with zero connectivity.',
+    initials: 'FB',
+  },
+  {
+    name: 'James Kariuki',
+    title: 'CEO',
+    company: 'East African Timber Exports',
+    quote: 'The Digital Product Passport feature has been a game-changer. Buyers scan one QR code and see the full chain of custody back to the farm. Audit time went from days to minutes.',
+    initials: 'JK',
+  },
+];
+
+function TestimonialsSection() {
+  return (
+    <section
+      className="section-spacing"
+      style={{
+        background: 'var(--mk-surface-dark)',
+        color: 'var(--mk-text-on-dark)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* decorative overlay */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(46,125,107,0.18) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div className="mk-container-lg" style={{ position: 'relative' }}>
+        <FadeIn>
+          <div className="section-header section-header--center">
+            <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">
+              What our clients <span className="text-mk-brand">say</span>
+            </h2>
+            <p style={{ color: 'var(--mk-text-on-dark-2)', fontSize: '1.0625rem', maxWidth: '44ch', textAlign: 'center', marginInline: 'auto' }}>
+              Trusted by exporters, cooperatives, and commodity buyers across Africa and Europe.
+            </p>
+          </div>
+        </FadeIn>
+
+        <div className="mk-testimonial-grid">
+          {testimonialData.map((t, i) => (
+            <FadeIn key={i} delay={i * 0.07}>
+              <div className="mk-testimonial-item">
+                <div className="mk-testimonial-member-wrap">
+                  <div className="mk-testimonial-avatar">
+                    <span>{t.initials}</span>
+                  </div>
+                  <div>
+                    <h3 className="mk-testimonial-name">{t.name}</h3>
+                    <p className="mk-testimonial-position">{t.title}, {t.company}</p>
+                  </div>
+                </div>
+                <p className="mk-testimonial-desc">&ldquo;{t.quote}&rdquo;</p>
+                {/* decorative quote mark */}
+                <div className="mk-testimonial-shape" aria-hidden>❝</div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CERTIFICATION MARQUEE
+   ───────────────────────────────────────────────────────────────── */
+
+const certifications = [
+  'EUDR Compliant',
+  'FSMA 204 Ready',
+  'Rainforest Alliance',
+  'Fairtrade Certified',
+  'ISO 22000',
+  'GlobalG.A.P.',
+  'UK Environment Act',
+  'CS3D Ready',
+  'GACC Registered',
+  'USDA Organic',
+];
+
+function CertificationMarquee() {
+  const doubled = [...certifications, ...certifications];
+  return (
+    <section
+      className="section-bordered"
+      style={{ paddingBlock: '2.5rem', background: 'var(--mk-surface-gray)' }}
+    >
+      <div className="mk-marquee-wrap">
+        <div className="mk-marquee-track">
+          {doubled.map((cert, i) => (
+            <div
+              key={i}
+              className="mk-cert-item"
+              aria-hidden={i >= certifications.length}
+            >
+              <span className="mk-cert-dot" aria-hidden />
+              {cert}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────────
    PAGE COMPONENT
@@ -416,6 +697,12 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
+            3b. COMMODITIES / INDUSTRIES TABS
+            ═══════════════════════════════════════════════════════ */}
+        <IndustriesTabSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
             4. CAPABILITIES (accordion)
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-gray">
@@ -581,35 +868,21 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            7. STAT ROW
+            6b. TESTIMONIALS (dark grid — Mivora testimonial-section)
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-spacing-sm section-white">
-          <div className="mk-container-sm">
-            <FadeIn>
-              <div className="mk-stat-row justify-center">
-                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
-                  <span className="mk-stat-row__value">500+</span>
-                  <span className="mk-stat-row__label">Farms Mapped</span>
-                </div>
-                <div className="mk-stat-row__divider" />
-                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
-                  <span className="mk-stat-row__value">99.2%</span>
-                  <span className="mk-stat-row__label">Clearance Rate</span>
-                </div>
-                <div className="mk-stat-row__divider" />
-                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
-                  <span className="mk-stat-row__value">12</span>
-                  <span className="mk-stat-row__label">Countries</span>
-                </div>
-                <div className="mk-stat-row__divider" />
-                <div className="mk-stat-row__item text-center" style={{ alignItems: 'center' }}>
-                  <span className="mk-stat-row__value">50+</span>
-                  <span className="mk-stat-row__label">Exporters</span>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
+        <TestimonialsSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            7. COUNTER SECTION (Mivora counter-section pattern)
+            ═══════════════════════════════════════════════════════ */}
+        <CounterSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            7b. TECHNOLOGY SPLIT SECTION
+            ═══════════════════════════════════════════════════════ */}
+        <TechnologySection />
 
 
         {/* ═══════════════════════════════════════════════════════
@@ -1059,6 +1332,12 @@ export default function HomePage() {
             </ScaleIn>
           </div>
         </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            11b. CERTIFICATION MARQUEE
+            ═══════════════════════════════════════════════════════ */}
+        <CertificationMarquee />
 
 
         {/* ═══════════════════════════════════════════════════════
