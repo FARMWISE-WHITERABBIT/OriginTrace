@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function DemoConfirmPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">

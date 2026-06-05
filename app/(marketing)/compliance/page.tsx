@@ -93,7 +93,7 @@ export default function ComplianceHubPage() {
     <>
       <FAQSchema faqs={hubFaqs} />
       <MarketingNav />
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen" style={{ background: 'var(--color--gray-8)' }}>
         <section className="pt-28 pb-20 md:pt-36 md:pb-28 text-center">
           <div className="max-w-6xl mx-auto px-6">
             <FadeIn>

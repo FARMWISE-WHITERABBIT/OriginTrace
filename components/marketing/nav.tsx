@@ -149,6 +149,7 @@ export function MarketingNav() {
                 width: '100%',
                 padding: '1rem 1.25rem',
                 position: 'relative',
+                overflow: 'visible',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >

@@ -102,7 +102,7 @@ const stats = [
 
 export default function TimberPage() {
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
 
       <main>

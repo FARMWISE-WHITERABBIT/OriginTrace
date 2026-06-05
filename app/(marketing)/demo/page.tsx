@@ -9,7 +9,7 @@ import { Shield, MapPin, FileText, Calendar } from 'lucide-react';
 
 export default function DemoPage() {
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
 
       <main className="pt-28 pb-20 md:pb-28">
