@@ -1104,13 +1104,13 @@
       hsl(168 40% 18% / 0.65) 60%,
       hsl(168 30% 25% / 0.4) 100%
     );
-    z-index: 1;
+    z-index: 2;
   }
 
   /* Content sits above overlay */
   .mk-hero__content {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     width: 100%;
   }
 
