@@ -1,0 +1,754 @@
+/**
+ * OriginTrace Marketing Design System
+ * Extends globals.css with marketing-specific tokens, containers, type scale,
+ * section spacing, and component patterns adapted from Mivora/Enerza templates.
+ */
+
+/* ─────────────────────────────────────────────────────
+   1. MARKETING DESIGN TOKENS
+   ───────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Type scale — marketing display sizes */
+    --text-display-2xl: clamp(3rem, 6vw, 5rem);      /* 48–80px */
+    --text-display-xl:  clamp(2.5rem, 5vw, 4rem);     /* 40–64px */
+    --text-display-lg:  clamp(2rem, 4vw, 3rem);       /* 32–48px */
+    --text-display-md:  clamp(1.75rem, 3vw, 2.25rem); /* 28–36px */
+    --text-display-sm:  clamp(1.25rem, 2vw, 1.5rem);  /* 20–24px */
+
+    /* Section spacing */
+    --section-spacing-xs:  3rem;    /* 48px  — compact */
+    --section-spacing-sm:  5rem;    /* 80px  — tight */
+    --section-spacing-md:  8rem;    /* 128px — standard (Mivora baseline) */
+    --section-spacing-lg:  10rem;   /* 160px — generous */
+    --section-spacing-xl:  13rem;   /* 208px — hero-scale */
+
+    /* Container widths — 7-step hierarchy (Mivora pattern) */
+    --container-2xs: 42rem;   /* 672px  — tight body text */
+    --container-xs:  52rem;   /* 832px  — narrow content */
+    --container-sm:  60rem;   /* 960px  — blog / article */
+    --container-md:  72rem;   /* 1152px — standard section */
+    --container-lg:  80rem;   /* 1280px — wide layout (default) */
+    --container-xl:  86rem;   /* 1376px — full-width hero */
+
+    /* Marketing brand extras */
+    --mk-primary:         hsl(166 46% 34%);   /* Origin Green */
+    --mk-primary-dark:    hsl(168 51% 25%);   /* Deep Forest */
+    --mk-primary-light:   hsl(166 46% 92%);   /* Sage tint */
+    --mk-surface-dark:    hsl(168 25% 7%);    /* Near-black for dark sections */
+    --mk-surface-warm:    hsl(43 40% 97%);    /* Warm off-white (earthy feel) */
+    --mk-surface-green:   hsl(166 30% 96%);   /* Light green wash */
+
+    /* Pre-title chip */
+    --pre-title-color:    hsl(166 46% 34%);
+    --pre-title-bg:       hsl(166 46% 92%);
+
+    /* Animation timing */
+    --ease-out-quart: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+    --duration-entrance: 0.6s;
+    --duration-fast: 0.2s;
+    --duration-slow: 0.9s;
+
+    /* Marketing border radius overrides */
+    --radius-pill:  9999px;
+    --radius-card:  1rem;     /* 16px — softer than enterprise */
+    --radius-hero:  1.5rem;   /* 24px — large media cards */
+  }
+
+  .dark {
+    --mk-surface-dark:    hsl(168 25% 5%);
+    --mk-surface-warm:    hsl(43 15% 10%);
+    --mk-surface-green:   hsl(166 25% 10%);
+    --pre-title-color:    hsl(166 46% 55%);
+    --pre-title-bg:       hsl(166 30% 14%);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   2. CONTAINER SYSTEM
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-container {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    max-width: var(--container-lg);
+  }
+  .mk-container-2xs { @apply mk-container; max-width: var(--container-2xs); }
+  .mk-container-xs  { @apply mk-container; max-width: var(--container-xs); }
+  .mk-container-sm  { @apply mk-container; max-width: var(--container-sm); }
+  .mk-container-md  { @apply mk-container; max-width: var(--container-md); }
+  .mk-container-xl  { @apply mk-container; max-width: var(--container-xl); }
+
+  @media (min-width: 768px) {
+    .mk-container,
+    .mk-container-2xs,
+    .mk-container-xs,
+    .mk-container-sm,
+    .mk-container-md,
+    .mk-container-xl {
+      padding-inline: 2.5rem;
+    }
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   3. SECTION SPACING
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  .section-spacing-xs { padding-block: var(--section-spacing-xs); }
+  .section-spacing-sm { padding-block: var(--section-spacing-sm); }
+  .section-spacing    { padding-block: var(--section-spacing-md); }
+  .section-spacing-lg { padding-block: var(--section-spacing-lg); }
+  .section-spacing-xl { padding-block: var(--section-spacing-xl); }
+
+  /* Half-spacing helpers (pad top or bottom only) */
+  .section-pt    { padding-top: var(--section-spacing-md); }
+  .section-pb    { padding-bottom: var(--section-spacing-md); }
+  .section-pt-lg { padding-top: var(--section-spacing-lg); }
+  .section-pb-lg { padding-bottom: var(--section-spacing-lg); }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   4. MARKETING TYPE SCALE
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  .text-display-2xl {
+    font-size: var(--text-display-2xl);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+  }
+  .text-display-xl {
+    font-size: var(--text-display-xl);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-weight: 800;
+  }
+  .text-display-lg {
+    font-size: var(--text-display-lg);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .text-display-md {
+    font-size: var(--text-display-md);
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    font-weight: 700;
+  }
+  .text-display-sm {
+    font-size: var(--text-display-sm);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Two-tone heading technique (Mivora pattern) */
+  .text-muted-heading {
+    color: hsl(var(--muted-foreground));
+  }
+  .text-brand {
+    color: var(--mk-primary);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   5. SECTION SURFACE VARIANTS
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  /* White section (default) */
+  .section-white {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Warm off-white — earthy, agricultural */
+  .section-warm {
+    background-color: var(--mk-surface-warm);
+    color: hsl(var(--foreground));
+  }
+
+  /* Light green wash */
+  .section-green {
+    background-color: var(--mk-surface-green);
+    color: hsl(var(--foreground));
+  }
+
+  /* Dark green — "team" / "CTA" sections */
+  .section-dark {
+    background-color: var(--mk-surface-dark);
+    color: hsl(0 0% 95%);
+  }
+
+  /* Brand primary fill — high emphasis CTA */
+  .section-brand {
+    background-color: var(--mk-primary);
+    color: hsl(0 0% 100%);
+  }
+
+  /* Subtle border strip */
+  .section-bordered {
+    border-top: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   6. PRE-SECTION TITLE CHIP  (Mivora pattern)
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .pre-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--pre-title-bg);
+    color: var(--pre-title-color);
+    font-size: 0.6875rem;    /* 11px */
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  /* Dark section variant */
+  .section-dark .pre-title {
+    background-color: hsl(0 0% 100% / 0.1);
+    color: hsl(0 0% 100% / 0.8);
+  }
+
+  /* Centered pre-title wrapper */
+  .section-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    margin-bottom: 3.5rem;
+  }
+  .section-header--left {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .section-header__title {
+    max-width: 38ch;
+  }
+  .section-header__body {
+    max-width: 50ch;
+    color: hsl(var(--muted-foreground));
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  .section-dark .section-header__body {
+    color: hsl(0 0% 80%);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   7. MARKETING BUTTON VARIANTS
+   ───────────────────────────────────────────────────── */
+@layer components {
+  /* Primary CTA — full green pill */
+  .btn-mk-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8125rem 2rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--mk-primary);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) ease, transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+    text-decoration: none;
+  }
+  .btn-mk-primary:hover {
+    background-color: var(--mk-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px hsl(166 46% 34% / 0.35);
+  }
+  .btn-mk-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Dark / black — secondary CTA on light backgrounds */
+  .btn-mk-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8125rem 2rem;
+    border-radius: var(--radius-pill);
+    background-color: hsl(220 20% 12%);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) ease, transform var(--duration-fast) ease;
+    text-decoration: none;
+  }
+  .btn-mk-dark:hover {
+    background-color: hsl(220 20% 20%);
+    transform: translateY(-1px);
+  }
+
+  /* Ghost — on dark sections */
+  .btn-mk-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8125rem 2rem;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    border: 1.5px solid hsl(0 0% 100% / 0.3);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+    text-decoration: none;
+  }
+  .btn-mk-ghost:hover {
+    background-color: hsl(0 0% 100% / 0.1);
+    border-color: hsl(0 0% 100% / 0.5);
+  }
+
+  /* Small variant modifier */
+  .btn-mk-sm {
+    padding: 0.5625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   8. MARKETING CARD PATTERNS
+   ───────────────────────────────────────────────────── */
+@layer components {
+  /* Feature / capability card */
+  .mk-card {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-card);
+    padding: 1.75rem;
+    transition: box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease;
+  }
+  .mk-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  /* Blog card — image + meta + title */
+  .mk-blog-card {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    transition: box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease;
+  }
+  .mk-blog-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
+  }
+  .mk-blog-card__img-wrap {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+  }
+  .mk-blog-card__img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s var(--ease-out-quart);
+    transform: scale(1.05);
+  }
+  .mk-blog-card:hover .mk-blog-card__img-wrap img {
+    transform: scale(1);
+  }
+  .mk-blog-card__body {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  /* Team card */
+  .mk-team-card {
+    text-align: center;
+  }
+  .mk-team-card__img-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    aspect-ratio: 4 / 5;
+    margin-bottom: 1rem;
+  }
+  .mk-team-card__img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s var(--ease-out-quart);
+  }
+  .mk-team-card:hover .mk-team-card__img-wrap img {
+    transform: scale(1.04);
+  }
+
+  /* Stat / metric card */
+  .mk-stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 1.5rem;
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-card);
+  }
+  .mk-stat-card__value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--mk-primary);
+  }
+  .mk-stat-card__label {
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
+  }
+
+  /* Dark section overrides */
+  .section-dark .mk-card {
+    background-color: hsl(0 0% 100% / 0.05);
+    border-color: hsl(0 0% 100% / 0.1);
+  }
+  .section-dark .mk-stat-card {
+    background-color: hsl(0 0% 100% / 0.05);
+    border-color: hsl(0 0% 100% / 0.1);
+  }
+  .section-dark .mk-stat-card__value {
+    color: hsl(166 46% 60%);
+  }
+  .section-dark .mk-stat-card__label {
+    color: hsl(0 0% 70%);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   9. LOGO MARQUEE (infinite scroll)
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-marquee-track {
+    display: flex;
+    gap: 4rem;
+    align-items: center;
+    width: max-content;
+    animation: mk-marquee-scroll 30s linear infinite;
+  }
+  .mk-marquee-track:hover {
+    animation-play-state: paused;
+  }
+  .mk-marquee-wrap {
+    overflow: hidden;
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  }
+
+  @keyframes mk-marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   10. DIVIDER PATTERNS
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  /* Vertical rule used in stat rows */
+  .mk-divider-v {
+    width: 1px;
+    align-self: stretch;
+    background-color: hsl(var(--border));
+    flex-shrink: 0;
+  }
+  .section-dark .mk-divider-v {
+    background-color: hsl(0 0% 100% / 0.12);
+  }
+
+  /* Horizontal decorative rule */
+  .mk-divider-h {
+    height: 1px;
+    background-color: hsl(var(--border));
+    border: none;
+  }
+  .section-dark .mk-divider-h {
+    background-color: hsl(0 0% 100% / 0.12);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   11. ICON BADGE (marketing scale — larger than app badges)
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    background-color: var(--mk-primary-light);
+    color: var(--mk-primary);
+    flex-shrink: 0;
+  }
+  .mk-icon-badge--lg {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+  }
+  .section-dark .mk-icon-badge {
+    background-color: hsl(0 0% 100% / 0.1);
+    color: hsl(166 46% 60%);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   12. HERO SECTION PATTERN
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 90svh;
+    display: flex;
+    align-items: center;
+    padding-block: var(--section-spacing-xl);
+  }
+  .mk-hero--inner {
+    min-height: 50svh;
+    padding-block: var(--section-spacing-lg);
+  }
+  .mk-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, hsl(168 51% 22% / 0.7), hsl(168 51% 10% / 0.85));
+    z-index: 1;
+  }
+  .mk-hero__content {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   13. COMPLIANCE / REGULATORY TAG PILLS
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .reg-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3125rem 0.75rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid currentColor;
+    opacity: 0.85;
+  }
+  .reg-tag--eudr   { color: #2E7D6B; background: hsl(166 46% 96%); }
+  .reg-tag--fsma   { color: #1D4ED8; background: hsl(217 91% 96%); }
+  .reg-tag--uk     { color: #B45309; background: hsl(43 96% 95%); }
+  .reg-tag--china  { color: #B91C1C; background: hsl(0 72% 96%); }
+  .reg-tag--uae    { color: #6D28D9; background: hsl(258 90% 96%); }
+
+  .dark .reg-tag--eudr   { color: hsl(166 46% 55%); background: hsl(166 30% 12%); }
+  .dark .reg-tag--fsma   { color: hsl(217 91% 65%); background: hsl(217 60% 12%); }
+  .dark .reg-tag--uk     { color: hsl(43 96% 55%); background: hsl(43 60% 12%); }
+  .dark .reg-tag--china  { color: hsl(0 72% 60%); background: hsl(0 50% 12%); }
+  .dark .reg-tag--uae    { color: hsl(258 90% 70%); background: hsl(258 50% 12%); }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   14. STICKY CASE STUDY STACKING (scroll-driven)
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  .mk-sticky-card {
+    position: sticky;
+    top: 6rem;
+  }
+  /* Cards that stack need an offset per-child — apply via inline style: top: calc(6rem + N * 1.5rem) */
+}
+
+
+/* ─────────────────────────────────────────────────────
+   15. ANIMATION ENTER UTILITIES
+   (complements framer-motion/motion.tsx — for pure CSS fallback)
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up var(--duration-entrance) var(--ease-out-quart) both;
+  }
+  .animate-fade-in {
+    animation: fade-in var(--duration-entrance) var(--ease-out-quart) both;
+  }
+  .animate-scale-in {
+    animation: scale-in var(--duration-entrance) var(--ease-out-quart) both;
+  }
+
+  /* Stagger delays */
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+  .animate-delay-500 { animation-delay: 0.5s; }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(2rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   16. RICH TEXT / BLOG PROSE
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-prose {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: hsl(var(--foreground));
+    max-width: 68ch;
+  }
+  .mk-prose h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .mk-prose h3 {
+    font-size: 1.1875rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .mk-prose p { margin-bottom: 1.25rem; }
+  .mk-prose ul, .mk-prose ol {
+    margin-bottom: 1.25rem;
+    padding-left: 1.5rem;
+  }
+  .mk-prose li { margin-bottom: 0.375rem; }
+  .mk-prose a {
+    color: var(--mk-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .mk-prose a:hover { opacity: 0.8; }
+  .mk-prose blockquote {
+    border-left: 3px solid var(--mk-primary);
+    padding: 0.75rem 1.25rem;
+    margin: 1.5rem 0;
+    background-color: var(--mk-primary-light);
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-style: italic;
+  }
+  .mk-prose code {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.875em;
+    background-color: hsl(var(--muted));
+    padding: 0.125em 0.375em;
+    border-radius: 0.25rem;
+  }
+  .mk-prose pre {
+    background-color: hsl(220 20% 12%);
+    color: hsl(0 0% 90%);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+  .mk-prose pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.875rem;
+  }
+  .mk-prose img {
+    border-radius: 0.75rem;
+    margin-block: 2rem;
+    width: 100%;
+    height: auto;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   17. NAV UTILITIES
+   ───────────────────────────────────────────────────── */
+@layer components {
+  .mk-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .mk-nav--scrolled {
+    background-color: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────
+   18. GRID HELPERS (marketing layouts)
+   ───────────────────────────────────────────────────── */
+@layer utilities {
+  /* 2-col even split with gap */
+  .mk-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+  /* 3-col */
+  .mk-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  /* 4-col */
+  .mk-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+  /* Responsive auto-fill cards (min 280px) */
+  .mk-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr)); gap: 2rem; }
+
+  @media (max-width: 1024px) {
+    .mk-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .mk-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .mk-grid-2, .mk-grid-3, .mk-grid-4 { grid-template-columns: 1fr; }
+  }
+}
