@@ -65,11 +65,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        /* Marketing brand tokens */
+        "mk-green":       "var(--mk-green)",
+        "mk-green-dark":  "var(--mk-green-dark)",
+        "mk-green-light": "var(--mk-green-light)",
+        "mk-green-pale":  "var(--mk-green-pale)",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg:   "var(--radius)",
+        md:   "calc(var(--radius) - 2px)",
+        sm:   "calc(var(--radius) - 4px)",
+        pill: "9999px",
+        card: "1rem",
+        hero: "1.5rem",
       },
       keyframes: {
         "accordion-down": {
@@ -96,23 +104,12 @@ export default {
         "mk-md":  "75rem",    /* 1200px */
         "mk-lg":  "86.875rem",/* 1390px — Mivora .container */
       },
-      borderRadius: {
-        pill: "9999px",
-        card: "1rem",
-        hero: "1.5rem",
-      },
       fontSize: {
         "display-2xl": ["clamp(2.75rem,6vw,5rem)",    { lineHeight: "1.03", letterSpacing: "-0.035em", fontWeight: "800" }],
         "display-xl":  ["clamp(2.25rem,5vw,3.75rem)", { lineHeight: "1.07", letterSpacing: "-0.03em",  fontWeight: "800" }],
         "display-lg":  ["clamp(1.875rem,4vw,3rem)",   { lineHeight: "1.12", letterSpacing: "-0.025em", fontWeight: "700" }],
         "display-md":  ["clamp(1.5rem,3vw,2.25rem)",  { lineHeight: "1.18", letterSpacing: "-0.02em",  fontWeight: "700" }],
         "display-sm":  ["clamp(1.125rem,2vw,1.5rem)", { lineHeight: "1.28", letterSpacing: "-0.015em", fontWeight: "600" }],
-      },
-      colors: {
-        "mk-green":       "var(--mk-green)",
-        "mk-green-dark":  "var(--mk-green-dark)",
-        "mk-green-light": "var(--mk-green-light)",
-        "mk-green-pale":  "var(--mk-green-pale)",
       },
     },
   },
