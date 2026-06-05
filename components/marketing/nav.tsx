@@ -126,25 +126,33 @@ export function MarketingNav() {
         data-testid="marketing-nav"
       >
         {/*
-         * Three-piece structure:
-         *   [nav-pill-main] [nav-connector] [nav-pill-cta]
+         * Three-piece nav — appears as ONE continuous white shape:
+         *   [left pill: logo+links] [connector rect] [right pill: CTA]
          *
-         * The connector is a plain white rectangle (no border-radius) that
-         * visually bridges the two pills, creating one seamless shape while
-         * letting the right pill "pinch" to the green button size.
+         * Key: no shadow on individual pieces — shadow sits on the outer
+         * wrapper so it wraps all three as a single unified form.
+         * Left pill rounds only its left side; right pill rounds only its
+         * right side; connector fills the middle at full height.
          */}
-        <div className="flex items-center" style={{ gap: 0, pointerEvents: 'auto' }}>
+        <div
+          className="flex items-center"
+          style={{
+            gap: 0,
+            pointerEvents: 'auto',
+            boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+            borderRadius: '9999px',
+          }}
+        >
 
-          {/* ── Main pill: logo (left) + centered links ─────────────────── */}
+          {/* ── Left pill: logo + centered links ────────────────────────── */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '9999px',
+              borderRadius: '9999px 0 0 9999px',
               background: '#ffffff',
               height: '52px',
-              padding: '0 1.5rem',
-              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              padding: '0 1.75rem',
               gap: '2rem',
             }}
           >
@@ -184,26 +192,25 @@ export function MarketingNav() {
             </nav>
           </div>
 
-          {/* ── Connector: plain white rectangle, no border-radius ───────── */}
+          {/* ── Connector: full-height white rect, no border-radius ──────── */}
           <div
             style={{
               width: '16px',
-              height: '20px',
+              height: '52px',
               background: '#ffffff',
               flexShrink: 0,
             }}
           />
 
-          {/* ── CTA pill: white outer, green button inside ───────────────── */}
+          {/* ── Right pill: white outer, green button inside ─────────────── */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '9999px',
+              borderRadius: '0 9999px 9999px 0',
               background: '#ffffff',
               height: '52px',
-              padding: '6px',
-              boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              padding: '5px 5px 5px 0',
             }}
           >
             <Link
