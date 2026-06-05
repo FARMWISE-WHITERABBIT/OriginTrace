@@ -385,26 +385,33 @@ export default function HomePage() {
             {/* 3-column image grid — bottom-aligned, center protrudes up */}
             <FadeIn delay={0.12}>
               <div
-                className="grid grid-cols-3 gap-5"
-                style={{ alignItems: 'flex-end', marginBottom: '3rem' }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '1rem',
+                  alignItems: 'center',
+                  marginBottom: '3rem',
+                }}
               >
 
                 {/* LEFT — Farmer in field */}
                 <div
-                  className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '480px',
+                    height: '500px',
+                    borderRadius: '1.25rem',
+                    overflow: 'hidden',
                     backgroundImage: "url('/images/farmer in field.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
                   }}
                 />
 
-                {/* CENTER — Bagged product in warehouse (tallest, protrudes above) */}
+                {/* CENTER — Bagged product in warehouse (tallest, protrudes symmetrically) */}
                 <div
-                  className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '620px',
+                    height: '660px',
+                    borderRadius: '1.25rem',
+                    overflow: 'hidden',
                     backgroundImage: "url('/images/baged product in wareouse.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -413,9 +420,10 @@ export default function HomePage() {
 
                 {/* RIGHT — Lagos Apapa port */}
                 <div
-                  className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '480px',
+                    height: '500px',
+                    borderRadius: '1.25rem',
+                    overflow: 'hidden',
                     backgroundImage: "url('/images/lagos apapa port.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
