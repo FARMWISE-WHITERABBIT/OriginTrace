@@ -384,16 +384,19 @@ export default function HomePage() {
 
             {/* 3-column image grid — bottom-aligned, center protrudes up */}
             <FadeIn delay={0.12}>
-              <div className="grid grid-cols-3 gap-5 items-end margin-bottom margin-xlarge-2">
+              <div
+                className="grid grid-cols-3 gap-5"
+                style={{ alignItems: 'flex-end', marginBottom: '3rem' }}
+              >
 
                 {/* LEFT — Farmer in field */}
                 <div
                   className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '400px',
+                    height: '480px',
                     backgroundImage: "url('/images/farmer in field.jpg')",
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center top',
+                    backgroundPosition: 'center center',
                   }}
                 />
 
@@ -401,7 +404,7 @@ export default function HomePage() {
                 <div
                   className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '520px',
+                    height: '620px',
                     backgroundImage: "url('/images/baged product in wareouse.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -412,7 +415,7 @@ export default function HomePage() {
                 <div
                   className="rounded-2xl overflow-hidden w-full"
                   style={{
-                    height: '400px',
+                    height: '480px',
                     backgroundImage: "url('/images/lagos apapa port.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
