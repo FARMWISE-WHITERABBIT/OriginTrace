@@ -24,18 +24,20 @@ const industryLinks = [
 ];
 
 const navLinks = [
-  { href: '/solutions',   label: 'Solutions' },
-  { href: '/compliance',  label: 'Compliance', dropdown: complianceLinks },
-  { href: '/industries',  label: 'Industries', dropdown: industryLinks },
-  { href: '/pedigree',    label: 'Pedigree' },
-  { href: '/blog',        label: 'Insights' },
+  { href: '/',             label: 'Home' },
+  { href: '/solutions',    label: 'Solutions' },
+  { href: '/compliance',   label: 'Compliance', dropdown: complianceLinks },
+  { href: '/industries',   label: 'Industries', dropdown: industryLinks },
+  { href: '/blog',         label: 'Insights' },
 ];
 
 function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: string | null }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
+  const isActive = link.href === '/'
+    ? pathname === '/'
+    : pathname?.startsWith(link.href);
 
   return (
     <div
@@ -45,7 +47,7 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
     >
       <Link
         href={link.href}
-        className="mk-pill-nav__link"
+        className="mk-nav-link"
         data-active={isActive || undefined}
         data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
       >
@@ -53,10 +55,10 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
         <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </Link>
 
-      {/* SEO — always in DOM */}
+      {/* SEO — always in DOM, visually hidden */}
       <div
         aria-hidden={!open}
-        className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 ${open ? 'visible' : 'invisible'}`}
+        className={`absolute top-full left-0 mt-2 w-56 ${open ? 'visible' : 'invisible'}`}
         data-seo="dropdown-links"
       >
         {link.dropdown!.map((sub) => (
@@ -73,7 +75,7 @@ function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: s
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl py-1.5 z-50"
+            className="absolute top-full left-0 mt-2 w-56 rounded-xl py-1.5 z-50"
             style={{
               background: '#fff',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -111,80 +113,104 @@ export function MarketingNav() {
 
   return (
     <>
-      {/* ── Desktop: full-width floating pill ──────────────────────────────── */}
+      {/* ── Desktop: full-width floating pill (Mivora exact structure) ────── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center"
-        style={{ paddingTop: '1rem', paddingInline: 'clamp(1rem, 5vw, 6rem)' }}
+        className="fixed top-0 left-0 right-0 z-50 hidden md:block"
+        style={{ paddingTop: '1rem', paddingInline: 'clamp(1rem, 4vw, 5rem)' }}
         data-testid="marketing-nav"
       >
-        <nav
-          className="flex items-center w-full overflow-hidden"
+        {/*
+         * Mivora grid-nav: two columns
+         *   left  (nav-inner-grid): logo + nav links + divider — flex, left-aligned
+         *   right (right-nav):      CTA button
+         */}
+        <div
           style={{
-            height: '4rem',           /* 64px — matches Mivora pill height */
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            alignItems: 'center',
             background: '#ffffff',
             borderRadius: '9999px',
-            boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
-            padding: '0.3rem 0.3rem 0.3rem 1.75rem',
+            boxShadow: '0 2px 24px rgba(0,0,0,0.10)',
+            height: '4rem',
+            paddingLeft: '1.5rem',
+            paddingRight: '0.375rem',
           }}
         >
-          {/* Logo */}
-          <Link href="/" className="shrink-0" aria-label="OriginTrace home" style={{ marginRight: '1.5rem' }}>
-            <Image
-              src="/images/logo-green.png"
-              alt="OriginTrace"
-              width={140}
-              height={36}
-              style={{ width: 'auto', height: '30px' }}
-              priority
-            />
-          </Link>
+          {/* LEFT — logo + nav links + divider line */}
+          <div className="flex items-center gap-0 overflow-hidden">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="shrink-0 flex items-center"
+              aria-label="OriginTrace home"
+              style={{ marginRight: '2rem' }}
+            >
+              <Image
+                src="/images/logo-green.png"
+                alt="OriginTrace"
+                width={140}
+                height={36}
+                style={{ width: 'auto', height: '28px' }}
+                priority
+              />
+            </Link>
 
-          {/* Nav links — CENTERED between logo and CTA */}
-          <div className="flex items-center justify-center gap-1 flex-1">
-            {navLinks.map((link) =>
-              link.dropdown ? (
-                <NavDropdown key={link.href} link={link} pathname={pathname} />
-              ) : (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="mk-pill-nav__link"
-                  data-active={
-                    (pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href.split('#')[0]))) || undefined
-                  }
-                  data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  {link.label}
-                </Link>
-              )
-            )}
+            {/* Nav links — left-aligned, directly after logo */}
+            <nav className="flex items-center gap-0">
+              {navLinks.map((link) =>
+                link.dropdown ? (
+                  <NavDropdown key={link.href} link={link} pathname={pathname} />
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="mk-nav-link"
+                    data-active={
+                      (link.href === '/'
+                        ? pathname === '/'
+                        : pathname?.startsWith(link.href.split('#')[0])) || undefined
+                    }
+                    data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              )}
+            </nav>
+
+            {/* Decorative divider — mirrors Mivora nav-divider */}
+            <div
+              style={{
+                width: '1px',
+                height: '1.375rem',
+                background: 'var(--mk-border)',
+                marginLeft: '1.25rem',
+                flexShrink: 0,
+              }}
+            />
           </div>
 
-          {/* Right side — sign in + CTA that stretches full pill height (creates the pinch) */}
-          <div className="flex items-stretch gap-2 shrink-0">
+          {/* RIGHT — Sign in + CTA */}
+          <div className="flex items-center gap-0 shrink-0">
             <Link
               href="/auth/login"
-              className="flex items-center text-[14px] font-medium px-4 transition-colors"
-              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}
+              className="flex items-center px-5 text-[14px] font-medium transition-colors"
+              style={{ color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap', height: '4rem' }}
               data-testid="nav-sign-in"
             >
               Sign in
             </Link>
 
-            {/*
-             * align-self: stretch + full border-radius creates the Mivora "pinch":
-             * the tall green pill embedded inside the white pill visually narrows
-             * the white area just before it, exactly as in the screenshot.
-             */}
+            {/* CTA — green pill flush to right edge of white pill */}
             <Link
               href="/demo"
-              className="flex items-center font-semibold transition-colors"
+              className="flex items-center font-semibold transition-opacity hover:opacity-90"
               style={{
-                alignSelf: 'stretch',
                 background: 'var(--mk-green)',
                 color: '#fff',
                 borderRadius: '9999px',
-                padding: '0 1.625rem',
+                padding: '0.625rem 1.75rem',
                 fontSize: '14px',
                 whiteSpace: 'nowrap',
               }}
@@ -193,7 +219,7 @@ export function MarketingNav() {
               Request Demo
             </Link>
           </div>
-        </nav>
+        </div>
       </header>
 
       {/* ── Mobile nav bar ────────────────────────────────────────────────── */}
@@ -320,7 +346,7 @@ export function MarketingNav() {
                 className="block text-center py-3 font-semibold rounded-full"
                 style={{ fontSize: '15px', background: 'var(--mk-green)', color: '#fff' }}
               >
-                Contact us
+                Request Demo
               </Link>
             </div>
           </motion.div>

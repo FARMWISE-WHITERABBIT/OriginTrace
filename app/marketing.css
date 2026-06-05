@@ -1449,12 +1449,13 @@
   color: var(--mk-green);
 }
 
-/* Floating pill nav link */
+/* Nav link — Mivora style: left-aligned group, no background on idle */
+.mk-nav-link,
 .mk-pill-nav__link {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.875rem;
   border-radius: 9999px;
   font-size: 0.9375rem; /* 15px */
   font-weight: 500;
@@ -1462,11 +1463,11 @@
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
+.mk-nav-link:hover,
 .mk-pill-nav__link:hover {
-  background: var(--mk-surface-gray);
   color: var(--mk-text-primary);
 }
+.mk-nav-link[data-active],
 .mk-pill-nav__link[data-active] {
   color: var(--mk-green);
-  background: var(--mk-green-light);
 }
