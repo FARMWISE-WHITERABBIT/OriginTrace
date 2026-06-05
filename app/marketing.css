@@ -1086,26 +1086,26 @@
     position: relative;
     overflow: hidden;
     margin-top: -7rem;
-    padding-top: 12rem;
-    padding-bottom: 8.125rem;
-    border-bottom-right-radius: 1.25rem;   /* --border-radius--md */
+    padding-top: 9rem;
+    padding-bottom: 5rem;
+    border-bottom-right-radius: 1.25rem;
     background-color: #ffffff;
   }
 
   @media screen and (min-width: 1280px) {
-    .mk-hero { padding-top: 15rem; }
+    .mk-hero { padding-top: 11rem; }
   }
   @media screen and (min-width: 1440px) {
-    .mk-hero { padding-top: 20rem; }
+    .mk-hero { padding-top: 13rem; }
   }
   @media screen and (min-width: 1920px) {
-    .mk-hero { padding-top: 24rem; padding-bottom: 8.125rem; }
+    .mk-hero { padding-top: 15rem; padding-bottom: 5rem; }
   }
   @media screen and (max-width: 991px) {
-    .mk-hero { padding-top: 10rem; padding-bottom: 6.25rem; }
+    .mk-hero { padding-top: 8rem; padding-bottom: 4rem; }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { padding-top: 9rem; border-radius: 0; }
+    .mk-hero { padding-top: 7rem; border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }

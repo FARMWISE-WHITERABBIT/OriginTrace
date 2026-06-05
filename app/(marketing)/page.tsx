@@ -201,11 +201,11 @@ export default function HomePage() {
             <div className="mk-container-wide">
               {/* 55/45 split — left center, right bottom-aligned */}
               <div
-                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-14"
-                style={{ alignItems: 'stretch', minHeight: '72vh' }}
+                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
+                style={{ alignItems: 'stretch', minHeight: '52vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-16">
+                <div className="flex flex-col justify-center py-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
@@ -242,11 +242,10 @@ export default function HomePage() {
                         background: '#ffffff',
                         /* --border-radius--sm = 0.625rem, top corners only */
                         borderRadius: '0.625rem 0.625rem 0 0',
-                        /* Mivora: margin-bottom -8.3rem */
                         marginBottom: '-8.3rem',
-                        paddingTop: '1.875rem',
-                        paddingLeft: '1.875rem',
-                        paddingRight: '1.875rem',
+                        paddingTop: '1.25rem',
+                        paddingLeft: '1.25rem',
+                        paddingRight: '1.25rem',
                         position: 'relative',
                         zIndex: 10,
                       }}
@@ -261,14 +260,15 @@ export default function HomePage() {
                         </p>
                       </div>
 
-                      {/* ── 2. IMAGE (swap this div for <Image> when your photo is ready) ── */}
+                      {/* ── 2. IMAGE (swap background-image for your photo when ready) ── */}
                       <div
                         className="w-full"
                         style={{
-                          aspectRatio: '16/9',
+                          height: '160px',
                           background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
                           position: 'relative',
                           overflow: 'hidden',
+                          borderRadius: '0.375rem',
                         }}
                       >
                         {/* Image placeholder — remove this inner div and add <Image src="…" fill alt="…" style={{objectFit:'cover'}} /> */}
@@ -283,7 +283,7 @@ export default function HomePage() {
                       </div>
 
                       {/* ── 3. STAT ROW ── */}
-                      <div className="flex items-stretch px-5 py-4">
+                      <div className="flex items-stretch px-4 py-3">
                         <div className="flex-1">
                           <p
                             className="text-xs leading-snug"
@@ -294,7 +294,7 @@ export default function HomePage() {
                           <p
                             className="font-extrabold leading-none"
                             style={{
-                              fontSize: '1.75rem',
+                              fontSize: '1.375rem',
                               color: 'var(--mk-text-primary)',
                               fontFamily: 'var(--font-display)',
                               letterSpacing: '-0.04em',
@@ -316,7 +316,7 @@ export default function HomePage() {
                           <p
                             className="font-extrabold leading-none"
                             style={{
-                              fontSize: '1.75rem',
+                              fontSize: '1.375rem',
                               color: 'var(--mk-text-primary)',
                               fontFamily: 'var(--font-display)',
                               letterSpacing: '-0.04em',
