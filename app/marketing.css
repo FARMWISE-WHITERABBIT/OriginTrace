@@ -598,33 +598,52 @@
     transform: scale(1);
   }
 
-  /* Overlay div — Mivora .blog-image-overlay — fades in on hover */
+  /* Overlay — always-on bottom gradient so meta text is legible */
   .mk-blog-card__overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to bottom,
-      hsl(168 51% 22% / 0) 0%,
-      hsl(168 51% 22% / 0.55) 100%
+      transparent 40%,
+      hsl(168 51% 12% / 0.7) 100%
     );
-    opacity: 0;
-    transition: opacity 0.4s var(--ease-out-quart);
     z-index: 1;
     pointer-events: none;
   }
-  .mk-blog-card:hover .mk-blog-card__overlay {
-    opacity: 1;
-  }
 
-  /* Category chip floating on the image — always visible at top */
-  .mk-blog-card__cat {
+  /* Meta wrap — bottom of image, always visible (matches .blog-meta-wrap) */
+  .mk-blog-meta-wrap {
     position: absolute;
-    top: 0.875rem;
-    left: 0.875rem;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 2;
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(to top, rgba(10,30,20,0.75) 0%, transparent 100%);
+  }
+
+  /* Category pill (matches .blog-category) */
+  .mk-blog-category {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--mk-green);
+    border-radius: 6.25rem;
+    padding: 0.25rem 0.75rem;
+    line-height: 1.4;
+  }
+
+  /* Date text (matches .blog-date) */
+  .mk-blog-date {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.8);
   }
 
   /* Card body */

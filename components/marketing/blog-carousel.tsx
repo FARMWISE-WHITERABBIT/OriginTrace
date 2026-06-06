@@ -99,14 +99,9 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
                     </div>
                   )}
                   <div className="mk-blog-card__overlay" />
-                  <div className="mk-blog-card__cat">
-                    <span className="pre-title">{post.category}</span>
-                    <span
-                      className="pre-title"
-                      style={{ background: 'rgba(20,40,30,0.72)', color: '#fff', border: 'none' }}
-                    >
-                      {post.date}
-                    </span>
+                  <div className="mk-blog-meta-wrap">
+                    <div className="mk-blog-category">{post.category}</div>
+                    <div className="mk-blog-date">{post.date}</div>
                   </div>
                 </div>
                 <div className="mk-blog-card__body">
