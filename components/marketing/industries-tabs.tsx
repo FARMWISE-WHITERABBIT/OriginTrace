@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
 
 const commodityTabs = [
   {
@@ -99,7 +98,6 @@ export function IndustriesTabsClient() {
             data-active={i === active || undefined}
             onClick={() => setActive(i)}
           >
-            <span className="mk-tab-icon" aria-hidden>{t.icon}</span>
             <span className="mk-tab-text">{t.label}</span>
           </button>
         ))}
@@ -131,9 +129,7 @@ export function IndustriesTabsClient() {
           <ul className="mk-industries-feature-list">
             {tab.features.map((f) => (
               <li key={f} className="mk-list-item">
-                <span className="mk-list-item__icon">
-                  <Check className="w-3 h-3" />
-                </span>
+                <span className="mk-list-item__icon mk-list-item__dot" aria-hidden>•</span>
                 {f}
               </li>
             ))}

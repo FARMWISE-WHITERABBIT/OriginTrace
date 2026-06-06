@@ -160,14 +160,34 @@ const whyChooseFeatures = [
 
 function IndustriesTabSection() {
   return (
-    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
+    <section
+      className="section-spacing"
+      style={{
+        background: 'var(--color--gray-8, #f5f5f5)',
+        borderTopLeftRadius: '1.25rem',
+        borderTopRightRadius: '1.25rem',
+      }}
+    >
       <div className="mk-container-lg">
         <FadeIn>
-          <div className="section-header">
+          <div style={{ marginBottom: '2.5rem' }}>
             <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
-            <h2 className="text-display-lg section-header__title">
-              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
-              across Africa&apos;s key export commodities
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(1.875rem, 3vw, 2.625rem)',
+                fontWeight: 800,
+                lineHeight: 1.15,
+                letterSpacing: '-0.02em',
+                color: 'var(--mk-text-primary)',
+                maxWidth: '24ch',
+                margin: '0.75rem 0 0',
+              }}
+            >
+              Building smarter, cleaner supply chains{' '}
+              <span style={{ color: 'var(--mk-text-muted)' }}>
+                across Africa&apos;s key export commodities
+              </span>
             </h2>
           </div>
         </FadeIn>
@@ -503,7 +523,7 @@ export default function HomePage() {
                       data-testid="text-hero-headline"
                       style={{
                         fontFamily: 'var(--font-display)',
-                        fontSize: 'clamp(2.5rem, 4.5vw, 4rem)',
+                        fontSize: 'clamp(1.875rem, 2.8vw, 2.625rem)',
                         fontWeight: 800,
                         lineHeight: 1.05,
                         letterSpacing: '-0.03em',
