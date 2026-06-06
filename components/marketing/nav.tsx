@@ -147,6 +147,7 @@ export function MarketingNav() {
                 position: 'relative',
                 overflow: 'visible',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+                marginRight: '2px',
               }}
             >
               {/* Logo */}
@@ -193,7 +194,7 @@ export function MarketingNav() {
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-13px',
+                  right: '-12.5px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   height: '28px',
