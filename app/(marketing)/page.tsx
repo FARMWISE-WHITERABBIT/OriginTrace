@@ -484,7 +484,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             1. HERO
             ═══════════════════════════════════════════════════════ */}
-        <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
+        <section className="mk-hero" style={{ backgroundColor: '#0d3520', minHeight: '88vh' }}>
           <YouTubeHeroBg videoId="Ifr4moOLxDI" />
           <div className="mk-hero__overlay" />
 
@@ -493,10 +493,10 @@ export default function HomePage() {
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch', minHeight: '65vh' }}
+                style={{ alignItems: 'end', width: '100%' }}
               >
-                {/* LEFT — headline, subtitle, CTA — flush to bottom */}
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '2.5rem', paddingTop: '2rem' }}>
+                {/* LEFT — sits at bottom because mk-hero__content is flex-end */}
+                <div style={{ paddingBottom: '0' }}>
                   <FadeIn delay={0.1}>
                     <h1
                       className="margin-bottom margin-large"
