@@ -4,7 +4,8 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
-import { getRecentPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/blog';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import YouTubeHeroBg from '@/components/marketing/youtube-hero-bg';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
@@ -469,7 +470,7 @@ function CertificationMarquee() {
    ───────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
-  const recentPosts = getRecentPosts(3);
+  const allPosts = getAllPosts();
 
   /* Schema markup */
   const organizationSchema = {
@@ -1444,90 +1445,11 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12. BLOG — 2-col: heading left, cards right
+            12. BLOG — carousel (2-up, navigable)
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">
-            <div className="mk-blog-layout">
-              {/* LEFT — pre-title + heading */}
-              <FadeIn>
-                <div className="mk-blog-layout__heading">
-                  <span className="pre-title margin-bottom margin-medium">Our Blog</span>
-                  <h2
-                    className="text-display-lg"
-                    data-testid="text-blog-headline"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 800,
-                      letterSpacing: '-0.025em',
-                      lineHeight: 1.15,
-                      color: 'var(--mk-text-primary)',
-                      marginTop: '0.75rem',
-                    }}
-                  >
-                    Insights &amp;{' '}
-                    <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
-                      case studies
-                    </span>{' '}
-                    from our team
-                  </h2>
-                  <div style={{ marginTop: '2rem' }}>
-                    <Link href="/blog" className="btn-mk-outline">
-                      View All Insights
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* RIGHT — 2 blog cards with carousel arrows */}
-              <div className="mk-blog-cards-wrap">
-                <button className="mk-blog-arrow mk-blog-arrow--prev" aria-label="Previous posts">
-                  <ChevronRight className="h-4 w-4" style={{ transform: 'rotate(180deg)' }} />
-                </button>
-                <button className="mk-blog-arrow mk-blog-arrow--next" aria-label="Next posts">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-                <div className="mk-blog-layout__cards">
-                  {recentPosts.slice(0, 2).map((post, i) => (
-                    <FadeIn key={post.slug} delay={i * 0.1}>
-                      <Link href={`/blog/${post.slug}`} className="mk-blog-card">
-                        <div className="mk-blog-card__img-wrap">
-                          {post.coverImage ? (
-                            <Image
-                              src={post.coverImage}
-                              alt={post.coverImageAlt || post.title}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 768px) 100vw, 40vw"
-                            />
-                          ) : (
-                            <div
-                              className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
-                            >
-                              <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
-                            </div>
-                          )}
-                          <div className="mk-blog-card__overlay" />
-                          <div className="mk-blog-card__cat">
-                            <span className="pre-title">{post.category}</span>
-                            <span
-                              className="pre-title"
-                              style={{ background: 'rgba(20,40,30,0.72)', color: '#fff', border: 'none' }}
-                            >
-                              {post.date}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mk-blog-card__body">
-                          <h3 className="mk-blog-card__title">{post.title}</h3>
-                        </div>
-                      </Link>
-                    </FadeIn>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <BlogCarousel posts={allPosts} />
           </div>
         </section>
 
