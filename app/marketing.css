@@ -1193,19 +1193,19 @@
     position: relative;
     overflow: visible;
     margin-top: -7rem;
-    min-height: 92svh;
+    min-height: calc(100svh + 7rem);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: var(--border-radius--md);
     background-color: var(--color--white);
   }
 
   @media screen and (max-width: 991px) {
-    .mk-hero { min-height: 85svh; }
-    .mk-hero__content { padding-bottom: 6.3rem; }
+    .mk-hero { min-height: calc(100svh + 7rem); }
+    .mk-hero__content { padding-bottom: 3rem; }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { min-height: 80svh; border-radius: 0; }
-    .mk-hero__content { padding-bottom: 4rem; }
+    .mk-hero { min-height: calc(100svh + 5rem); border-radius: 0; }
+    .mk-hero__content { padding-bottom: 2.5rem; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1238,7 +1238,7 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding-bottom: 8.3rem;
+    padding-bottom: 3rem;
   }
 
   /* Mivora .hero-detail-wrap — card that bleeds below the hero section */

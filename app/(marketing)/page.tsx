@@ -503,7 +503,7 @@ export default function HomePage() {
                       data-testid="text-hero-headline"
                       style={{
                         fontFamily: 'var(--font-display)',
-                        fontSize: 'clamp(2.25rem, 3.2vw, 3.5rem)',
+                        fontSize: 'clamp(2.5rem, 3.5vw, 4rem)',
                         fontWeight: 800,
                         lineHeight: 1.08,
                         letterSpacing: '-0.03em',
@@ -537,7 +537,7 @@ export default function HomePage() {
                 </div>
 
                 {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
-                <div className="flex flex-col justify-end">
+                <div className="flex flex-col justify-end" style={{ paddingBottom: '8.3rem' }}>
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
