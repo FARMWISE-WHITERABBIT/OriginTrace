@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Leaf, Coffee, Sprout, TreePine, Flower2 } from 'lucide-react';
 
 const commodityTabs = [
   {
     id: 'cocoa',
     label: 'Cocoa',
-    icon: '🍫',
+    icon: <Leaf className="w-4 h-4" />,
     image: '/images/farmer in field.jpg',
     description: 'End-to-end traceability for cocoa from smallholder farms to EU port clearance — GPS mapping, EUDR compliance, and deforestation-free certification.',
     features: [
@@ -22,7 +22,7 @@ const commodityTabs = [
   {
     id: 'coffee',
     label: 'Coffee',
-    icon: '☕',
+    icon: <Coffee className="w-4 h-4" />,
     image: '/images/farmer in field.jpg',
     description: 'Track every coffee lot from farm to roaster. Verify altitude, varietal, processing method, and sustainability certifications in a single audit-ready package.',
     features: [
@@ -37,7 +37,7 @@ const commodityTabs = [
   {
     id: 'cashew',
     label: 'Cashew',
-    icon: '🥜',
+    icon: <Sprout className="w-4 h-4" />,
     image: '/images/baged product in wareouse.jpg',
     description: 'Capture cashew origin data across fragmented smallholder networks in West Africa. Link raw nuts to processed kernels with verifiable mass balance.',
     features: [
@@ -52,7 +52,7 @@ const commodityTabs = [
   {
     id: 'timber',
     label: 'Timber',
-    icon: '🌲',
+    icon: <TreePine className="w-4 h-4" />,
     image: '/images/lagos apapa port.jpg',
     description: 'Prove legal origin and EUDR compliance for tropical timber exports. Track species, harvest location, and forest concession records from stump to shipment.',
     features: [
@@ -67,7 +67,7 @@ const commodityTabs = [
   {
     id: 'shea',
     label: 'Shea & Sesame',
-    icon: '🌿',
+    icon: <Flower2 className="w-4 h-4" />,
     image: '/images/farmer in field.jpg',
     description: 'Document sustainable wild collection and processing for shea butter and sesame, meeting buyer requirements for natural ingredients with verified provenance.',
     features: [
@@ -130,10 +130,8 @@ export function IndustriesTabsClient() {
           <p className="mk-industries-tab-desc">{tab.description}</p>
           <ul className="mk-industries-feature-list">
             {tab.features.map((f) => (
-              <li key={f} className="mk-list-item">
-                <span className="mk-list-item__icon">
-                  <Check className="w-3 h-3" />
-                </span>
+              <li key={f} className="mk-industries-feature-item">
+                <span className="mk-industries-feature-dot" aria-hidden>•</span>
                 {f}
               </li>
             ))}

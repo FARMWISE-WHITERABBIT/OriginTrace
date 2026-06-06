@@ -85,6 +85,9 @@ export function MarketingFooter() {
               />
             </div>
 
+            {/* Spacer — pushes tagline/form/attribution to bottom */}
+            <div style={{ flex: 1 }} />
+
             {/* Tagline */}
             <p className="mk-footer-panel__tagline">
               Trust infrastructure for origin-sensitive supply chains. From farm to port,

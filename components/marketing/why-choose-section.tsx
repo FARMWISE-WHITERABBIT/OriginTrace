@@ -41,32 +41,14 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                 />
 
                 <div className="flex-1 min-w-0">
-                  {/* Icon + title row */}
-                  <div className="flex items-center gap-3 mb-0.5">
-                    <span
-                      className="mk-icon-badge flex-shrink-0 transition-colors duration-200"
-                      style={{
-                        width: '2rem',
-                        height: '2rem',
-                        borderRadius: '0.5rem',
-                        backgroundColor: isActive
-                          ? 'var(--mk-green)'
-                          : 'var(--mk-green-light)',
-                        color: isActive ? '#fff' : 'var(--mk-green)',
-                      }}
-                    >
-                      {feature.icon}
-                    </span>
-
-                    <h3
-                      className="text-display-sm transition-colors duration-200"
-                      style={{
-                        color: isActive ? 'var(--mk-green)' : 'var(--mk-text-primary)',
-                      }}
-                    >
-                      {feature.title}
-                    </h3>
-                  </div>
+                  <h3
+                    className="text-display-sm transition-colors duration-200"
+                    style={{
+                      color: isActive ? 'var(--mk-green)' : 'var(--mk-text-primary)',
+                    }}
+                  >
+                    {feature.title}
+                  </h3>
 
                   {/* Expandable body */}
                   <AnimatePresence initial={false}>

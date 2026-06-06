@@ -160,13 +160,34 @@ const whyChooseFeatures = [
 
 function IndustriesTabSection() {
   return (
-    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
+    <section
+      className="section-spacing"
+      style={{
+        background: 'var(--color--gray-8, #f5f5f5)',
+        borderTopLeftRadius: '1.25rem',
+        borderTopRightRadius: '1.25rem',
+      }}
+    >
       <div className="mk-container-lg">
         <FadeIn>
-          <div className="section-header">
+          <div style={{ marginBottom: '2.5rem' }}>
             <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
-            <h2 className="text-display-lg section-header__title">
-              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(1.875rem, 2.8vw, 2.75rem)',
+                fontWeight: 800,
+                lineHeight: 1.15,
+                letterSpacing: '-0.025em',
+                color: 'var(--mk-text-primary)',
+                marginTop: '0.75rem',
+                marginBottom: 0,
+              }}
+            >
+              Building{' '}
+              <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
+                smarter, compliant supply chains
+              </span>{' '}
               across Africa&apos;s key export commodities
             </h2>
           </div>
@@ -790,12 +811,43 @@ export default function HomePage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-lg">
             <FadeIn>
-              <div className="section-header section-header--left margin-bottom margin-xlarge">
-                <span className="pre-title margin-bottom margin-medium">Our Capabilities</span>
-                <h2 className="text-display-lg section-header__title">
-                  Six capabilities.{' '}
-                  <span className="text-mk-brand">One platform.</span>
-                </h2>
+              <div
+                className="margin-bottom margin-xlarge"
+                style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '2rem' }}
+              >
+                <div>
+                  <span className="pre-title margin-bottom margin-medium">Our Services</span>
+                  <h2
+                    className="text-display-lg"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15, color: '#fff', marginTop: '0.75rem' }}
+                  >
+                    Compliance infrastructure{' '}
+                    <span style={{ color: 'var(--mk-green)' }}>&amp; traceability.</span>
+                  </h2>
+                </div>
+                {/* Nav arrows */}
+                <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
+                  <Link href="/solutions" aria-label="View all services"
+                    style={{
+                      width: '3rem', height: '3rem', borderRadius: '50%',
+                      border: '1.5px dashed rgba(255,255,255,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'rgba(255,255,255,0.5)', transition: 'border-color 0.2s, color 0.2s',
+                    }}
+                  >
+                    <ArrowRight className="w-4 h-4" style={{ transform: 'rotate(180deg)' }} />
+                  </Link>
+                  <Link href="/solutions" aria-label="View all services"
+                    style={{
+                      width: '3rem', height: '3rem', borderRadius: '50%',
+                      border: '1.5px dashed rgba(255,255,255,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', transition: 'border-color 0.2s',
+                    }}
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
             </FadeIn>
 
@@ -812,14 +864,18 @@ export default function HomePage() {
                     Identify risks early and clear shipments with confidence.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                    View detail <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  {/* Bottom illustration */}
-                  <div
-                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(31,95,82,0.5) 100%)' }}
-                  >
-                    <Shield className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  {/* Line-art illustration */}
+                  <div className="mk-card__illustration" aria-hidden>
+                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                      <rect x="40" y="15" width="80" height="100" rx="6" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
+                      <line x1="55" y1="40" x2="105" y2="40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="55" y1="55" x2="95" y2="55" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="55" y1="70" x2="100" y2="70" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="145" cy="75" r="28" stroke="rgba(46,180,130,0.5)" strokeWidth="1.5"/>
+                      <polyline points="133,75 141,83 157,67" stroke="rgba(46,180,130,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </div>
               </StaggerItem>
@@ -836,13 +892,18 @@ export default function HomePage() {
                     meeting EUDR, FSMA, and buyer traceability standards from day one.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                    View detail <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  <div
-                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(5,95,70,0.5) 100%)' }}
-                  >
-                    <MapPin className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  <div className="mk-card__illustration" aria-hidden>
+                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                      <path d="M30 80 Q60 20 100 60 Q140 100 170 40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="100" cy="60" r="4" fill="rgba(46,180,130,0.8)"/>
+                      <circle cx="60" cy="38" r="3" fill="rgba(255,255,255,0.25)"/>
+                      <circle cx="140" cy="80" r="3" fill="rgba(255,255,255,0.25)"/>
+                      <path d="M130 30 C130 40 120 50 120 50 C120 50 110 40 110 30 C110 24 114.5 20 120 20 C125.5 20 130 24 130 30Z" stroke="rgba(46,180,130,0.8)" strokeWidth="1.5" fill="none"/>
+                      <circle cx="120" cy="30" r="4" stroke="rgba(46,180,130,0.8)" strokeWidth="1.5"/>
+                      <rect x="20" y="85" width="160" height="1" fill="rgba(255,255,255,0.08)"/>
+                    </svg>
                   </div>
                 </div>
               </StaggerItem>
@@ -859,13 +920,19 @@ export default function HomePage() {
                     connectivity, syncing automatically when back in range — no data loss.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    Learn more <ArrowRight className="w-3.5 h-3.5" />
+                    View detail <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  <div
-                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(20,80,65,0.5) 100%)' }}
-                  >
-                    <Wifi className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  <div className="mk-card__illustration" aria-hidden>
+                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                      <rect x="75" y="20" width="50" height="85" rx="8" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
+                      <line x1="75" y1="35" x2="125" y2="35" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+                      <line x1="75" y1="90" x2="125" y2="90" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+                      <circle cx="100" cy="99" r="3" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
+                      <path d="M55 55 Q100 35 145 55" stroke="rgba(46,180,130,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3"/>
+                      <path d="M65 65 Q100 50 135 65" stroke="rgba(46,180,130,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3"/>
+                      <path d="M75 75 Q100 65 125 75" stroke="rgba(46,180,130,0.9)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="100" cy="62" r="4" fill="rgba(46,180,130,0.8)"/>
+                    </svg>
                   </div>
                 </div>
               </StaggerItem>
@@ -1377,72 +1444,82 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12. BLOG — 3-col mk-blog-card grid
+            12. BLOG — 2-col: heading left, cards right
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header">
-                <span className="pre-title margin-bottom margin-medium">Insights</span>
-                <h2
-                  className="text-display-md section-header__title"
-                  data-testid="text-blog-headline"
-                >
-                  Expert Insights &amp; Compliance Updates
-                </h2>
-                <p className="section-header__body">
-                  Stay ahead of regulatory changes and learn best practices for
-                  origin-sensitive supply chain compliance.
-                </p>
-              </div>
-            </FadeIn>
+            <div className="mk-blog-layout">
+              {/* LEFT — pre-title + heading */}
+              <FadeIn>
+                <div className="mk-blog-layout__heading">
+                  <span className="pre-title margin-bottom margin-medium">Our Blog</span>
+                  <h2
+                    className="text-display-lg"
+                    data-testid="text-blog-headline"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 800,
+                      letterSpacing: '-0.025em',
+                      lineHeight: 1.15,
+                      color: 'var(--mk-text-primary)',
+                      marginTop: '0.75rem',
+                    }}
+                  >
+                    Insights &amp;{' '}
+                    <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
+                      compliance updates
+                    </span>{' '}
+                    from our team
+                  </h2>
+                  <div style={{ marginTop: '2rem' }}>
+                    <Link href="/blog" className="btn-mk-outline">
+                      View All Insights
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </FadeIn>
 
-            <StaggerContainer className="mk-grid-3 margin-bottom margin-xlarge-2">
-              {recentPosts.map((post) => (
-                <StaggerItem key={post.slug}>
-                  <Link href={`/blog/${post.slug}`} className="mk-blog-card">
-                    <div className="mk-blog-card__img-wrap">
-                      {post.coverImage ? (
-                        <Image
-                          src={post.coverImage}
-                          alt={post.coverImageAlt || post.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
-                        >
-                          <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+              {/* RIGHT — 2 blog cards */}
+              <div className="mk-blog-layout__cards">
+                {recentPosts.slice(0, 2).map((post, i) => (
+                  <FadeIn key={post.slug} delay={i * 0.1}>
+                    <Link href={`/blog/${post.slug}`} className="mk-blog-card">
+                      <div className="mk-blog-card__img-wrap">
+                        {post.coverImage ? (
+                          <Image
+                            src={post.coverImage}
+                            alt={post.coverImageAlt || post.title}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 40vw"
+                          />
+                        ) : (
+                          <div
+                            className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
+                          >
+                            <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                          </div>
+                        )}
+                        <div className="mk-blog-card__overlay" />
+                        <div className="mk-blog-card__cat">
+                          <span className="pre-title">{post.category}</span>
+                          <span
+                            className="pre-title"
+                            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}
+                          >
+                            {post.date}
+                          </span>
                         </div>
-                      )}
-                      <div className="mk-blog-card__overlay" />
-                      <div className="mk-blog-card__cat">
-                        <span className="pre-title">{post.category}</span>
                       </div>
-                    </div>
-                    <div className="mk-blog-card__body">
-                      <div className="mk-blog-card__meta">{post.date}</div>
-                      <h3 className="mk-blog-card__title">{post.title}</h3>
-                      <p className="mk-blog-card__desc">{post.description}</p>
-                      <span className="mk-blog-card__link">
-                        Read More <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-
-            <FadeIn>
-              <div className="flex justify-center">
-                <Link href="/blog" className="btn-mk-outline">
-                  View All Insights
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                      <div className="mk-blog-card__body">
+                        <h3 className="mk-blog-card__title">{post.title}</h3>
+                      </div>
+                    </Link>
+                  </FadeIn>
+                ))}
               </div>
-            </FadeIn>
+            </div>
           </div>
         </section>
 
