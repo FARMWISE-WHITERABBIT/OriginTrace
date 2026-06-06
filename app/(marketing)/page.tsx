@@ -6,6 +6,7 @@ import { ComplianceCalculator } from '@/components/marketing/compliance-calculat
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
+import YouTubeHeroBg from '@/components/marketing/youtube-hero-bg';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
@@ -484,28 +485,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
-          {/* YouTube background — oversized iframe centred, clipped by wrapper */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 0,
-            overflow: 'hidden',
-            borderBottomRightRadius: '1.25rem',
-          }}>
-            <iframe
-              src="https://www.youtube-nocookie.com/embed/Ifr4moOLxDI?autoplay=1&mute=1&loop=1&playlist=Ifr4moOLxDI&controls=0&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=0&iv_load_policy=3&enablejsapi=0"
-              allow="autoplay; encrypted-media"
-              style={{
-                position: 'absolute',
-                top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 'max(100vw, calc(100vh * 16 / 9))',
-                height: 'max(100vh, calc(100vw * 9 / 16))',
-                border: 'none',
-                pointerEvents: 'none',
-              }}
-              title="Hero background video"
-              aria-hidden="true"
-            />
-          </div>
+          <YouTubeHeroBg videoId="Ifr4moOLxDI" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
