@@ -580,7 +580,7 @@
   .mk-blog-card__img-wrap {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 4 / 3;
   }
 
   /* The image itself — pre-scaled to 1.1, normalises on card hover */
@@ -616,19 +616,15 @@
     opacity: 1;
   }
 
-  /* Category chip floating on the image — visible on hover */
+  /* Category chip floating on the image — always visible at top */
   .mk-blog-card__cat {
     position: absolute;
-    bottom: 0.875rem;
+    top: 0.875rem;
     left: 0.875rem;
     z-index: 2;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-  }
-  .mk-blog-card:hover .mk-blog-card__cat {
-    opacity: 1;
-    transform: translateY(0);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   /* Card body */
@@ -1816,9 +1812,42 @@
   gap: 1.5rem;
 }
 
+/* Cards wrapper with overflow-visible so arrows can extend outside */
+.mk-blog-cards-wrap {
+  position: relative;
+}
+
+/* Carousel arrow buttons */
+.mk-blog-arrow {
+  position: absolute;
+  top: 37.5%; /* midpoint of 4/3 image (75% height / 2 = 37.5%) */
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--mk-border);
+  box-shadow: var(--mk-shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mk-text-primary);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.mk-blog-arrow:hover {
+  box-shadow: var(--mk-shadow-md);
+  transform: translateY(-50%) scale(1.05);
+}
+.mk-blog-arrow--prev { left: -1.375rem; }
+.mk-blog-arrow--next { right: -1.375rem; }
+
 @media (max-width: 1024px) {
   .mk-blog-layout { grid-template-columns: 1fr; gap: 2.5rem; }
   .mk-blog-layout__heading { position: static; }
+  .mk-blog-arrow--prev { left: 0; }
+  .mk-blog-arrow--next { right: 0; }
 }
 @media (max-width: 640px) {
   .mk-blog-layout__cards { grid-template-columns: 1fr; }

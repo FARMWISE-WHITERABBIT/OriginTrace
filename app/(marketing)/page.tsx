@@ -1467,7 +1467,7 @@ export default function HomePage() {
                   >
                     Insights &amp;{' '}
                     <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
-                      compliance updates
+                      case studies
                     </span>{' '}
                     from our team
                   </h2>
@@ -1480,44 +1480,52 @@ export default function HomePage() {
                 </div>
               </FadeIn>
 
-              {/* RIGHT — 2 blog cards */}
-              <div className="mk-blog-layout__cards">
-                {recentPosts.slice(0, 2).map((post, i) => (
-                  <FadeIn key={post.slug} delay={i * 0.1}>
-                    <Link href={`/blog/${post.slug}`} className="mk-blog-card">
-                      <div className="mk-blog-card__img-wrap">
-                        {post.coverImage ? (
-                          <Image
-                            src={post.coverImage}
-                            alt={post.coverImageAlt || post.title}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, 40vw"
-                          />
-                        ) : (
-                          <div
-                            className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
-                          >
-                            <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+              {/* RIGHT — 2 blog cards with carousel arrows */}
+              <div className="mk-blog-cards-wrap">
+                <button className="mk-blog-arrow mk-blog-arrow--prev" aria-label="Previous posts">
+                  <ChevronRight className="h-4 w-4" style={{ transform: 'rotate(180deg)' }} />
+                </button>
+                <button className="mk-blog-arrow mk-blog-arrow--next" aria-label="Next posts">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <div className="mk-blog-layout__cards">
+                  {recentPosts.slice(0, 2).map((post, i) => (
+                    <FadeIn key={post.slug} delay={i * 0.1}>
+                      <Link href={`/blog/${post.slug}`} className="mk-blog-card">
+                        <div className="mk-blog-card__img-wrap">
+                          {post.coverImage ? (
+                            <Image
+                              src={post.coverImage}
+                              alt={post.coverImageAlt || post.title}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 40vw"
+                            />
+                          ) : (
+                            <div
+                              className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
+                            >
+                              <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                            </div>
+                          )}
+                          <div className="mk-blog-card__overlay" />
+                          <div className="mk-blog-card__cat">
+                            <span className="pre-title">{post.category}</span>
+                            <span
+                              className="pre-title"
+                              style={{ background: 'rgba(20,40,30,0.72)', color: '#fff', border: 'none' }}
+                            >
+                              {post.date}
+                            </span>
                           </div>
-                        )}
-                        <div className="mk-blog-card__overlay" />
-                        <div className="mk-blog-card__cat">
-                          <span className="pre-title">{post.category}</span>
-                          <span
-                            className="pre-title"
-                            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}
-                          >
-                            {post.date}
-                          </span>
                         </div>
-                      </div>
-                      <div className="mk-blog-card__body">
-                        <h3 className="mk-blog-card__title">{post.title}</h3>
-                      </div>
-                    </Link>
-                  </FadeIn>
-                ))}
+                        <div className="mk-blog-card__body">
+                          <h3 className="mk-blog-card__title">{post.title}</h3>
+                        </div>
+                      </Link>
+                    </FadeIn>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
