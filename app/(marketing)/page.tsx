@@ -492,18 +492,18 @@ export default function HomePage() {
             <div className="mk-container-lg">
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
-                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
+                className="grid lg:grid-cols-[60fr_40fr] gap-8 lg:gap-12"
                 style={{ alignItems: 'end' }}
               >
                 {/* LEFT — headline, subtitle, CTA */}
-                <div>
+                <div style={{ paddingBottom: '3rem' }}>
                   <FadeIn delay={0.1}>
                     <h1
                       className="margin-bottom margin-large"
                       data-testid="text-hero-headline"
                       style={{
                         fontFamily: 'var(--font-display)',
-                        fontSize: 'clamp(2.5rem, 3.5vw, 4rem)',
+                        fontSize: 'clamp(2.5rem, 3.5vw, 3.5rem)',
                         fontWeight: 800,
                         lineHeight: 1.08,
                         letterSpacing: '-0.03em',
@@ -536,8 +536,8 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
-                <div className="flex flex-col justify-end" style={{ paddingBottom: '8.3rem' }}>
+                {/* RIGHT — card bottom aligns with hero section bottom */}
+                <div className="flex flex-col justify-end">
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
@@ -624,7 +624,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 5rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'var(--section-lg)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>

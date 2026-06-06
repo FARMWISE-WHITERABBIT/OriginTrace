@@ -1201,11 +1201,9 @@
 
   @media screen and (max-width: 991px) {
     .mk-hero { min-height: calc(100svh + 7rem); }
-    .mk-hero__content { padding-bottom: 3rem; }
   }
   @media screen and (max-width: 767px) {
     .mk-hero { min-height: calc(100svh + 5rem); border-radius: 0; }
-    .mk-hero__content { padding-bottom: 2.5rem; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1238,15 +1236,15 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding-bottom: 3rem;
+    padding-bottom: 0;
   }
 
-  /* Mivora .hero-detail-wrap — card that bleeds below the hero section */
+  /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
   .hero-detail-wrap {
     position: relative;
     z-index: 2;
     display: flex;
-    margin-bottom: -8.3rem;
+    margin-bottom: 0;
     padding-top: 1.875rem;
     padding-right: 1.875rem;
     padding-left: 1.875rem;
@@ -1275,7 +1273,7 @@
 
   @media screen and (max-width: 991px) {
     .hero-detail-wrap {
-      margin-bottom: -6.3rem;
+      margin-bottom: 0;
       padding-top: 1.25rem;
       padding-right: 1.25rem;
       padding-left: 1.25rem;
