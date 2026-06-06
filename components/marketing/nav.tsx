@@ -125,7 +125,7 @@ export function MarketingNav() {
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr auto',
-              gap: '10px',
+              gap: '9px',
               alignItems: 'center',
               position: 'relative',
               maxWidth: '1390px',
@@ -194,11 +194,11 @@ export function MarketingNav() {
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-10.25px',
+                  right: '-11.75px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  height: '20px',
-                  width: '11px',
+                  height: '28px',
+                  width: '15px',
                   pointerEvents: 'none',
                   zIndex: 10,
                 }}
