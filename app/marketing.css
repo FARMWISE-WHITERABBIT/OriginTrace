@@ -1825,10 +1825,9 @@
   top: 6rem;
 }
 
+/* Single-card slider — full right-column width */
 .mk-blog-layout__cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  width: 100%;
 }
 
 /* Cards wrapper with overflow-visible so arrows can extend outside */
@@ -1868,9 +1867,7 @@
   .mk-blog-arrow--prev { left: 0; }
   .mk-blog-arrow--next { right: 0; }
 }
-@media (max-width: 640px) {
-  .mk-blog-layout__cards { grid-template-columns: 1fr; }
-}
+/* .mk-blog-layout__cards is already single-column — no mobile override needed */
 
 /* ─────────────────────────────────────────────────────────────────────────────
    25c. DARK CARD ILLUSTRATION

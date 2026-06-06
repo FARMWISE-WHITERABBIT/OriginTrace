@@ -13,9 +13,8 @@ interface BlogCarouselProps {
 
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
-  const perPage = 2;
-  const totalPages = Math.ceil(posts.length / perPage);
-  const visible = posts.slice(page * perPage, page * perPage + perPage);
+  const totalPages = posts.length;
+  const visible = posts[page];
 
   function prev() {
     setPage((p) => (p - 1 + totalPages) % totalPages);
@@ -77,55 +76,49 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
           <ChevronRight className="h-4 w-4" />
         </button>
 
-        {/* Cards */}
-        <div className="mk-blog-layout__cards">
-          {visible.map((post, i) => (
-            <FadeIn key={`${page}-${post.slug}`} delay={i * 0.08}>
-              <Link href={`/blog/${post.slug}`} className="mk-blog-card">
-                <div className="mk-blog-card__img-wrap">
-                  {post.coverImage ? (
-                    <Image
-                      src={post.coverImage}
-                      alt={post.coverImageAlt || post.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 40vw"
-                    />
-                  ) : (
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
-                    >
-                      <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
-                    </div>
-                  )}
-                  <div className="mk-blog-card__overlay" />
-                  <div className="mk-blog-meta-wrap">
-                    <div className="mk-blog-category">{post.category}</div>
-                    <div className="mk-blog-date">{post.date}</div>
-                  </div>
+        {/* Single card — full width of right column */}
+        <FadeIn key={`${page}-${visible.slug}`}>
+          <Link href={`/blog/${visible.slug}`} className="mk-blog-card">
+            <div className="mk-blog-card__img-wrap">
+              {visible.coverImage ? (
+                <Image
+                  src={visible.coverImage}
+                  alt={visible.coverImageAlt || visible.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 55vw"
+                />
+              ) : (
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${visible.coverGradient} flex items-center justify-center`}
+                >
+                  <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
                 </div>
-                <div className="mk-blog-card__body">
-                  <h3 className="mk-blog-card__title">{post.title}</h3>
-                </div>
-              </Link>
-            </FadeIn>
+              )}
+              <div className="mk-blog-card__overlay" />
+              <div className="mk-blog-meta-wrap">
+                <div className="mk-blog-category">{visible.category}</div>
+                <div className="mk-blog-date">{visible.date}</div>
+              </div>
+            </div>
+            <div className="mk-blog-card__body">
+              <h3 className="mk-blog-card__title">{visible.title}</h3>
+            </div>
+          </Link>
+        </FadeIn>
+
+        {/* Dot nav — show first 8 posts as dots */}
+        <div className="mk-blog-dots">
+          {posts.slice(0, 8).map((_, i) => (
+            <button
+              key={i}
+              className="mk-blog-dot"
+              data-active={i === page || undefined}
+              aria-label={`Show post ${i + 1}`}
+              onClick={() => setPage(i)}
+            />
           ))}
         </div>
-
-        {/* Dot nav */}
-        {totalPages > 1 && (
-          <div className="mk-blog-dots">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                className="mk-blog-dot"
-                data-active={i === page || undefined}
-                aria-label={`Go to page ${i + 1}`}
-                onClick={() => setPage(i)}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
