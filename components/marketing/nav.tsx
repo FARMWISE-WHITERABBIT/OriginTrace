@@ -120,12 +120,12 @@ export function MarketingNav() {
         {/* .container-full */}
         <div style={{ maxWidth: '100%', marginLeft: 'auto', marginRight: 'auto', paddingLeft: '1.875rem', paddingRight: '2.5rem' }}>
 
-          {/* .grid-nav — 1fr auto, no gap (shape bridges the join) */}
+          {/* .grid-nav — 1fr auto, 10px gap bridged by shape SVG */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr auto',
-              gap: '0',
+              gap: '10px',
               alignItems: 'center',
               position: 'relative',
               maxWidth: '1390px',
@@ -160,7 +160,7 @@ export function MarketingNav() {
                   alt="OriginTrace"
                   width={140}
                   height={36}
-                  style={{ width: 'auto', height: '24px' }}
+                  style={{ width: 'auto', height: '29px' }}
                   priority
                 />
               </Link>
@@ -193,11 +193,11 @@ export function MarketingNav() {
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-5.5px',
+                  right: '-16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  height: '21px',
-                  width: '11px',
+                  height: '42px',
+                  width: '22px',
                   pointerEvents: 'none',
                   zIndex: 10,
                 }}
@@ -212,7 +212,7 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '0.3125rem 0.875rem',
+                padding: '0.3125rem 1.25rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >

@@ -485,7 +485,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="/origintrace%20placeholder%20hearo%20video.mp4" />
+          <HeroBackground videoSrc="/videos/hero-placeholder.mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -495,15 +495,15 @@ export default function HomePage() {
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
                 style={{ alignItems: 'stretch', minHeight: '65vh' }}
               >
-                {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-8">
+                {/* LEFT — headline, subtitle, CTA — aligned to bottom */}
+                <div className="flex flex-col justify-end pb-10 pt-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
+                      style={{ color: '#ffffff', maxWidth: '22ch', fontFamily: 'var(--font-display)' }}
                     >
-                      Compliance infrastructure for agriculture
+                      Compliance infrastructure<br />for Agriculture
                     </h1>
                   </FadeIn>
 
