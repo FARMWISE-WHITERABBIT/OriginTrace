@@ -147,6 +147,7 @@ export function MarketingNav() {
                 position: 'relative',
                 overflow: 'visible',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+                marginLeft: '0.5px',
               }}
             >
               {/* Logo */}
