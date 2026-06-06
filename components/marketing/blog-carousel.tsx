@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight, BookOpen, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowRight } from 'lucide-react';
 import { FadeIn } from '@/components/marketing/motion';
 import type { BlogPost } from '@/lib/blog';
 
@@ -11,16 +11,19 @@ interface BlogCarouselProps {
   posts: BlogPost[];
 }
 
+/* Show 4 posts in the slider, matching the Webflow reference */
+const SLIDES = 4;
+
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
-  const totalPages = posts.length;
-  const visible = posts[page];
+  const slides = posts.slice(0, SLIDES);
+  const visible = slides[page];
 
   function prev() {
-    setPage((p) => (p - 1 + totalPages) % totalPages);
+    setPage((p) => (p - 1 + SLIDES) % SLIDES);
   }
   function next() {
-    setPage((p) => (p + 1) % totalPages);
+    setPage((p) => (p + 1) % SLIDES);
   }
 
   return (
@@ -56,69 +59,85 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
         </div>
       </FadeIn>
 
-      {/* RIGHT — carousel */}
-      <div className="mk-blog-cards-wrap">
-        {/* Prev arrow */}
+      {/* RIGHT — slider (.blog-slider equivalent) */}
+      <div className="mk-blog-slider" role="region" aria-label="Blog posts carousel">
+
+        {/* Mask — clips the active slide */}
+        <div className="mk-blog-mask">
+          <FadeIn key={`${page}-${visible.slug}`}>
+            <Link href={`/blog/${visible.slug}`} className="mk-blog-item">
+              <div className="mk-blog-image-wrap">
+                {visible.coverImage ? (
+                  <Image
+                    src={visible.coverImage}
+                    alt={visible.coverImageAlt || visible.title}
+                    fill
+                    className="mk-blog-image object-cover"
+                    sizes="(max-width: 768px) 100vw, 55vw"
+                  />
+                ) : (
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${visible.coverGradient} flex items-center justify-center`}
+                  >
+                    <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                  </div>
+                )}
+                <div className="mk-blog-image-overlay" />
+                <div className="mk-blog-meta-wrap">
+                  <div className="mk-blog-category">{visible.category}</div>
+                  <div className="mk-blog-date">{visible.date}</div>
+                </div>
+              </div>
+              <div className="mk-blog-info">
+                <h2 className="mk-blog-title">{visible.title}</h2>
+              </div>
+            </Link>
+          </FadeIn>
+        </div>
+
+        {/* Left arrow (.blog-arrow-wrap left) */}
         <button
-          className="mk-blog-arrow mk-blog-arrow--prev"
-          aria-label="Previous posts"
+          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--left"
+          aria-label="previous slide"
           onClick={prev}
         >
-          <ChevronRight className="h-4 w-4" style={{ transform: 'rotate(180deg)' }} />
+          <div className="mk-blog-arrow-inner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </div>
         </button>
 
-        {/* Next arrow */}
+        {/* Right arrow (.blog-arrow-wrap right) */}
         <button
-          className="mk-blog-arrow mk-blog-arrow--next"
-          aria-label="Next posts"
+          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--right"
+          aria-label="next slide"
           onClick={next}
         >
-          <ChevronRight className="h-4 w-4" />
+          <div className="mk-blog-arrow-inner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </div>
         </button>
 
-        {/* Single card — full width of right column */}
-        <FadeIn key={`${page}-${visible.slug}`}>
-          <Link href={`/blog/${visible.slug}`} className="mk-blog-card">
-            <div className="mk-blog-card__img-wrap">
-              {visible.coverImage ? (
-                <Image
-                  src={visible.coverImage}
-                  alt={visible.coverImageAlt || visible.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 55vw"
-                />
-              ) : (
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${visible.coverGradient} flex items-center justify-center`}
-                >
-                  <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
-                </div>
-              )}
-              <div className="mk-blog-card__overlay" />
-              <div className="mk-blog-meta-wrap">
-                <div className="mk-blog-category">{visible.category}</div>
-                <div className="mk-blog-date">{visible.date}</div>
-              </div>
-            </div>
-            <div className="mk-blog-card__body">
-              <h3 className="mk-blog-card__title">{visible.title}</h3>
-            </div>
-          </Link>
-        </FadeIn>
-
-        {/* Dot nav — show first 8 posts as dots */}
-        <div className="mk-blog-dots">
-          {posts.slice(0, 8).map((_, i) => (
+        {/* Numbered dot nav (.slide-nav w-round w-num) */}
+        <div className="mk-slide-nav" role="tablist" aria-label="Slides">
+          {slides.map((_, i) => (
             <button
               key={i}
-              className="mk-blog-dot"
+              className="mk-slide-dot"
+              role="tab"
+              aria-pressed={i === page}
+              aria-label={`Show slide ${i + 1} of ${SLIDES}`}
               data-active={i === page || undefined}
-              aria-label={`Show post ${i + 1}`}
               onClick={() => setPage(i)}
-            />
+            >
+              {i + 1}
+            </button>
           ))}
         </div>
+
       </div>
     </div>
   );
