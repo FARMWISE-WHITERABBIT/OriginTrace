@@ -6,7 +6,6 @@ import { ComplianceCalculator } from '@/components/marketing/compliance-calculat
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
-import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
@@ -485,7 +484,24 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
-          <HeroBackground videoSrc="/videos/hero-placeholder.mp4" />
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            src="/videos/hero-placeholder.mp4"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              zIndex: 0,
+              pointerEvents: 'none',
+            }}
+            aria-hidden="true"
+          />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
