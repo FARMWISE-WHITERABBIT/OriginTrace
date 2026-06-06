@@ -973,16 +973,6 @@
     flex-shrink: 0;
     margin-top: 0.1875rem;
   }
-  .mk-list-item__dot {
-    width: auto;
-    height: auto;
-    border-radius: 0;
-    background-color: transparent;
-    font-size: 1.25rem;
-    line-height: 1.2;
-    margin-top: 0;
-    color: var(--mk-green);
-  }
   .section-dark .mk-list-item { color: var(--mk-text-on-dark-2); }
   .section-dark .mk-list-item__icon {
     background-color: hsl(0 0% 100% / 0.08);
@@ -1203,21 +1193,19 @@
     position: relative;
     overflow: visible;
     margin-top: -7rem;
-    padding-top: 12rem;
-    padding-bottom: 8.3rem;
+    min-height: 92svh;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: var(--border-radius--md);
     background-color: var(--color--white);
   }
 
   @media screen and (max-width: 991px) {
-    .mk-hero {
-      padding-top: 10rem;
-      padding-bottom: 6.3rem;
-    }
+    .mk-hero { min-height: 85svh; }
+    .mk-hero__content { padding-bottom: 6.3rem; }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { padding-top: 8rem; border-radius: 0; }
+    .mk-hero { min-height: 80svh; border-radius: 0; }
+    .mk-hero__content { padding-bottom: 4rem; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1242,7 +1230,7 @@
     border-bottom-right-radius: var(--border-radius--md);
   }
 
-  /* Content fills entire hero section, pushes children to bottom */
+  /* Content fills section and pushes to bottom */
   .mk-hero__content {
     position: absolute;
     inset: 0;
@@ -1250,7 +1238,6 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding-top: 7rem;
     padding-bottom: 8.3rem;
   }
 
@@ -1695,27 +1682,28 @@
 .mk-industries-link-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.125rem;
-  border-radius: 0.375rem;
-  border: 1.5px solid transparent;
-  background: transparent;
+  gap: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--mk-radius-pill);
+  border: 1.5px solid var(--mk-border);
+  background: var(--mk-surface-white);
   color: var(--mk-text-secondary);
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
   white-space: nowrap;
   text-align: left;
 }
 .mk-industries-link-wrap:hover {
-  color: var(--mk-text-primary);
-  background: rgba(0,0,0,0.04);
+  border-color: var(--mk-green);
+  color: var(--mk-green);
 }
 .mk-industries-link-wrap[data-active] {
-  border: 1.5px dashed var(--mk-green);
+  border-style: dashed;
+  border-color: var(--mk-green);
   color: var(--mk-green);
-  background: transparent;
+  background: var(--mk-green-pale);
 }
 
 .mk-tab-icon {

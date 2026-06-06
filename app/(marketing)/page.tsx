@@ -160,34 +160,14 @@ const whyChooseFeatures = [
 
 function IndustriesTabSection() {
   return (
-    <section
-      className="section-spacing"
-      style={{
-        background: 'var(--color--gray-8, #f5f5f5)',
-        borderTopLeftRadius: '1.25rem',
-        borderTopRightRadius: '1.25rem',
-      }}
-    >
+    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
       <div className="mk-container-lg">
         <FadeIn>
-          <div style={{ marginBottom: '2.5rem' }}>
+          <div className="section-header">
             <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
-            <h2
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1.875rem, 3vw, 2.625rem)',
-                fontWeight: 800,
-                lineHeight: 1.15,
-                letterSpacing: '-0.02em',
-                color: 'var(--mk-text-primary)',
-                maxWidth: '24ch',
-                margin: '0.75rem 0 0',
-              }}
-            >
-              Building smarter, cleaner supply chains{' '}
-              <span style={{ color: 'var(--mk-text-muted)' }}>
-                across Africa&apos;s key export commodities
-              </span>
+            <h2 className="text-display-lg section-header__title">
+              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
+              across Africa&apos;s key export commodities
             </h2>
           </div>
         </FadeIn>
@@ -504,7 +484,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             1. HERO
             ═══════════════════════════════════════════════════════ */}
-        <section className="mk-hero" style={{ backgroundColor: '#0d3520', minHeight: '88vh' }}>
+        <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
           <YouTubeHeroBg videoId="Ifr4moOLxDI" />
           <div className="mk-hero__overlay" />
 
@@ -513,22 +493,21 @@ export default function HomePage() {
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'end', width: '100%' }}
+                style={{ alignItems: 'end' }}
               >
-                {/* LEFT — sits at bottom because mk-hero__content is flex-end */}
-                <div style={{ paddingBottom: '0' }}>
+                {/* LEFT — headline, subtitle, CTA */}
+                <div>
                   <FadeIn delay={0.1}>
                     <h1
                       className="margin-bottom margin-large"
                       data-testid="text-hero-headline"
                       style={{
                         fontFamily: 'var(--font-display)',
-                        fontSize: 'clamp(1.875rem, 2.8vw, 2.625rem)',
+                        fontSize: 'clamp(2.25rem, 3.2vw, 3.5rem)',
                         fontWeight: 800,
-                        lineHeight: 1.05,
+                        lineHeight: 1.08,
                         letterSpacing: '-0.03em',
                         color: '#ffffff',
-                        maxWidth: '16ch',
                       }}
                     >
                       Compliance infrastructure<br />for Agriculture
