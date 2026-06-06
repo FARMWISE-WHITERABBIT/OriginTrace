@@ -484,7 +484,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             1. HERO
             ═══════════════════════════════════════════════════════ */}
-        <section className="mk-hero">
+        <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
           <HeroBackground videoSrc="/videos/hero-placeholder.mp4" />
           <div className="mk-hero__overlay" />
 
@@ -495,13 +495,21 @@ export default function HomePage() {
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
                 style={{ alignItems: 'stretch', minHeight: '65vh' }}
               >
-                {/* LEFT — headline, subtitle, CTA — aligned to bottom */}
-                <div className="flex flex-col justify-end pb-10 pt-8">
+                {/* LEFT — headline, subtitle, CTA — flush to bottom */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '2.5rem', paddingTop: '2rem' }}>
                   <FadeIn delay={0.1}>
                     <h1
-                      className="text-display-2xl margin-bottom margin-large"
+                      className="margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{ color: '#ffffff', maxWidth: '22ch', fontFamily: 'var(--font-display)' }}
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 'clamp(2.5rem, 4.5vw, 4rem)',
+                        fontWeight: 800,
+                        lineHeight: 1.05,
+                        letterSpacing: '-0.03em',
+                        color: '#ffffff',
+                        maxWidth: '16ch',
+                      }}
                     >
                       Compliance infrastructure<br />for Agriculture
                     </h1>
@@ -510,7 +518,7 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: '#ffffff' }}
                     >
                       OriginTrace helps exporters and processors prove origin, manage compliance risk,
                       and generate audit-ready documentation before shipments leave port.

@@ -193,11 +193,11 @@ export function MarketingNav() {
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-16px',
+                  right: '-13px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  height: '42px',
-                  width: '22px',
+                  height: '28px',
+                  width: '15px',
                   pointerEvents: 'none',
                   zIndex: 10,
                 }}
@@ -212,7 +212,7 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '0.3125rem 1.25rem',
+                padding: '0.3125rem 0.3125rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
