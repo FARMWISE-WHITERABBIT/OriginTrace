@@ -484,24 +484,28 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            src="/videos/hero-placeholder.mp4"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              zIndex: 0,
-              pointerEvents: 'none',
-            }}
-            aria-hidden="true"
-          />
+          {/* YouTube background — oversized iframe centred, clipped by wrapper */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            overflow: 'hidden',
+            borderBottomRightRadius: '1.25rem',
+          }}>
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/Ifr4moOLxDI?autoplay=1&mute=1&loop=1&playlist=Ifr4moOLxDI&controls=0&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=0&iv_load_policy=3&enablejsapi=0"
+              allow="autoplay; encrypted-media"
+              style={{
+                position: 'absolute',
+                top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'max(100vw, calc(100vh * 16 / 9))',
+                height: 'max(100vh, calc(100vw * 9 / 16))',
+                border: 'none',
+                pointerEvents: 'none',
+              }}
+              title="Hero background video"
+              aria-hidden="true"
+            />
+          </div>
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
