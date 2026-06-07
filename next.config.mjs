@@ -88,7 +88,7 @@ const securityHeaders = [
       "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
       "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
-      "media-src 'self' blob:",
+      "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
     ].join('; '),
   },
 ];
