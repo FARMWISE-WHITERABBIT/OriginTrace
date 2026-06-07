@@ -4,13 +4,11 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
-import { getAllPosts } from '@/lib/blog';
-import { BlogCarousel } from '@/components/marketing/blog-carousel';
+import { getRecentPosts } from '@/lib/blog';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
-import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import {
   Shield,
@@ -183,44 +181,6 @@ function IndustriesTabSection() {
    COUNTER SECTION (Mivora counter-section)
    ───────────────────────────────────────────────────────────────── */
 
-const counterItems = [
-  { label: 'Shipment clearance rate', value: '99%', icon: '↗' },
-  { label: 'Reduction in compliance prep time', value: '85%', icon: '↗' },
-  { label: 'Farms verified and GPS-mapped', value: '500+', icon: '↗' },
-  { label: 'Regulatory frameworks covered', value: '12+', icon: '↗' },
-];
-
-function CounterSection() {
-  return (
-    <section className="section-spacing section-white section-bordered">
-      <div className="mk-container-lg">
-        <FadeIn>
-          <div className="section-header margin-bottom margin-xlarge">
-            <span className="pre-title margin-bottom margin-medium">Compliance in Numbers</span>
-            <h2 className="text-display-lg section-header__title no-margin-bottom">
-              Driving measurable results{' '}
-              <span className="text-mk-muted">across every shipment, farm, and partnership.</span>
-            </h2>
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={0.1}>
-          <div className="mk-counter-grid">
-            {counterItems.map((item, i) => (
-              <div key={i} className="mk-counter-item">
-                <p className="mk-counter-title">{item.label}</p>
-                <div className="mk-counter-wrap">
-                  <span className="mk-counter-arrow" aria-hidden>↗</span>
-                  <h2 className="mk-counter-number">{item.value}</h2>
-                </div>
-              </div>
-            ))}
-          </div>
-        </FadeIn>
-      </div>
-    </section>
-  );
-}
 
 /* ─────────────────────────────────────────────────────────────────
    TECHNOLOGY SPLIT SECTION (Mivora technology-section)
@@ -253,7 +213,7 @@ function TechnologySection() {
                   borderRadius: '1.25rem',
                   overflow: 'hidden',
                   aspectRatio: '4/3',
-                  backgroundImage: "url('/images/pexels-jose-carlos-alexandre-2433751-17797257.jpg')",
+                  backgroundImage: "url('/images/baged product in wareouse.jpg')",
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
@@ -295,141 +255,44 @@ function TechnologySection() {
    TESTIMONIALS SECTION (Mivora testimonial-section — dark)
    ───────────────────────────────────────────────────────────────── */
 
-const testimonialData = [
-  {
-    name: 'Adebayo Ogundimu',
-    title: 'Export Director',
-    company: 'West Africa Cocoa Cooperative',
-    quote: 'OriginTrace reduced our shipment rejection rate from 12% to under 1%. The pre-shipment compliance scoring caught issues we would have missed — saving hundreds of thousands in lost cargo.',
-    initials: 'AO',
-  },
-  {
-    name: 'Marie-Claire Dupont',
-    title: 'Compliance Manager',
-    company: 'Sahel Commodities S.A.',
-    quote: 'Before OriginTrace, we spent weeks assembling compliance dossiers. Now our EUDR documentation is generated automatically with GPS-verified farm polygons. Our buyers trust us completely.',
-    initials: 'MD',
-  },
-  {
-    name: 'Henrik Johansson',
-    title: 'Head of Procurement',
-    company: 'Nordic Foods Group',
-    quote: 'The buyer portal gives us real-time visibility into our suppliers\' traceability data. We can verify origin claims before shipments even leave port. It\'s transformed how we source.',
-    initials: 'HJ',
-  },
-  {
-    name: 'Fatima Bello',
-    title: 'Operations Manager',
-    company: 'Green Harvest Nigeria',
-    quote: 'Our field agents collect data offline in remote areas, and everything syncs when they\'re back in range. The system just works — even in areas with zero connectivity.',
-    initials: 'FB',
-  },
-  {
-    name: 'James Kariuki',
-    title: 'CEO',
-    company: 'East African Timber Exports',
-    quote: 'The Digital Product Passport feature has been a game-changer. Buyers scan one QR code and see the full chain of custody back to the farm. Audit time went from days to minutes.',
-    initials: 'JK',
-  },
-];
-
-function TestimonialsSection() {
-  return (
-    <section
-      className="section-spacing"
-      style={{
-        /* Mivora: background-image over a cover photo, with a dark overlay div on top */
-        backgroundImage: "url('/images/pexels-tomfisk-1427107.jpg')",
-        backgroundPosition: '50%',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: 'cover',
-        color: 'var(--mk-text-on-dark)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Mivora .testimonial-overlay — dark cover over the background image */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(33,33,33,0.82)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div className="mk-container-lg" style={{ position: 'relative' }}>
-        <FadeIn>
-          <div className="section-header section-header--center">
-            <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">
-              What our clients <span className="text-mk-brand">say</span>
-            </h2>
-            <p style={{ color: 'var(--mk-text-on-dark-2)', fontSize: '1.0625rem', maxWidth: '44ch', textAlign: 'center', marginInline: 'auto' }}>
-              Trusted by exporters, cooperatives, and commodity buyers across Africa and Europe.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="mk-testimonial-grid">
-          {testimonialData.map((t, i) => (
-            <FadeIn key={i} delay={i * 0.07}>
-              <div className="mk-testimonial-item">
-                <div className="mk-testimonial-member-wrap">
-                  <div className="mk-testimonial-avatar">
-                    <span>{t.initials}</span>
-                  </div>
-                  <div>
-                    <h3 className="mk-testimonial-name">{t.name}</h3>
-                    <p className="mk-testimonial-position">{t.title}, {t.company}</p>
-                  </div>
-                </div>
-                <p className="mk-testimonial-desc">&ldquo;{t.quote}&rdquo;</p>
-                <img
-                  src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
-                  alt=""
-                  aria-hidden
-                  className="mk-testimonial-shape"
-                  width={30}
-                  height={57}
-                />
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /* ─────────────────────────────────────────────────────────────────
-   CLIENT LOGO TICKER — matches .client-section reference HTML
-   Two duplicate rows scroll via CSS animation for seamless loop
+   CERTIFICATION MARQUEE
    ───────────────────────────────────────────────────────────────── */
 
-const clientLogos = [
-  { name: 'Olam Agri',       abbr: 'OA' },
-  { name: 'Barry Callebaut', abbr: 'BC' },
-  { name: 'Touton',          abbr: 'TT' },
-  { name: 'Ecom Trading',    abbr: 'EC' },
-  { name: 'NASFAM',          abbr: 'NF' },
-  { name: 'Armajaro',        abbr: 'AJ' },
+const certifications = [
+  'EUDR Compliant',
+  'FSMA 204 Ready',
+  'Rainforest Alliance',
+  'Fairtrade Certified',
+  'ISO 22000',
+  'GlobalG.A.P.',
+  'UK Environment Act',
+  'CS3D Ready',
+  'GACC Registered',
+  'USDA Organic',
 ];
 
-function ClientMarquee() {
+function CertificationMarquee() {
+  const doubled = [...certifications, ...certifications];
   return (
-    <section className="mk-client-section">
-      <div className="mk-client-wrap">
-        {[0, 1].map((row) => (
-          <div key={row} className="mk-client-item" aria-hidden={row === 1}>
-            {clientLogos.map((logo) => (
-              <div key={logo.name} className="mk-client-logo">
-                <span className="mk-client-logo__abbr">{logo.abbr}</span>
-                <span className="mk-client-logo__name">{logo.name}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+    <section
+      className="section-bordered"
+      style={{ paddingBlock: '2.5rem', background: 'var(--mk-surface-gray)' }}
+    >
+      <div className="mk-marquee-wrap">
+        <div className="mk-marquee-track">
+          {doubled.map((cert, i) => (
+            <div
+              key={i}
+              className="mk-cert-item"
+              aria-hidden={i >= certifications.length}
+            >
+              <span className="mk-cert-dot" aria-hidden />
+              {cert}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -440,8 +303,7 @@ function ClientMarquee() {
    ───────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
-  const allPosts = getAllPosts();
-  const featuredPost = allPosts[0];
+  const recentPosts = getRecentPosts(3);
 
   /* Schema markup */
   const organizationSchema = {
@@ -526,59 +388,52 @@ export default function HomePage() {
                         maxWidth: '360px',
                       }}
                     >
-                      {/* ── 1. IMAGE ── */}
-                      <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
-                        <div
-                          style={{
-                            height: '180px',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            borderRadius: '0.5rem',
-                          }}
+                      {/* ── 1. TITLE ── */}
+                      <div className="pb-4">
+                        <p
+                          className="font-semibold leading-snug"
+                          style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
                         >
-                          {featuredPost.coverImage ? (
-                            <img
-                              src={featuredPost.coverImage}
-                              alt={featuredPost.coverImageAlt || featuredPost.title}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            />
-                          ) : (
-                            <div className={`w-full h-full bg-gradient-to-br ${featuredPost.coverGradient}`} />
-                          )}
-                          {/* Category + date chips */}
-                          <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', display: 'flex', gap: '0.4rem' }}>
-                            <span style={{ background: 'var(--mk-green)', color: '#fff', fontSize: '0.625rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              {featuredPost.category}
-                            </span>
-                            <span style={{ background: 'rgba(20,20,20,0.72)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backdropFilter: 'blur(4px)' }}>
-                              {featuredPost.date}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-
-                      {/* ── 2. TITLE ── */}
-                      <div style={{ padding: '0.75rem 0 0.5rem' }}>
-                        <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--mk-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>
-                          Latest Insight
+                          How Nigerian cocoa exporters cleared EU borders on the first attempt
                         </p>
-                        <Link href={`/blog/${featuredPost.slug}`} style={{ textDecoration: 'none' }}>
-                          <p
-                            className="font-semibold leading-snug"
-                            style={{ fontSize: '0.9375rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em', maxWidth: '30ch', lineHeight: 1.45 }}
-                          >
-                            {featuredPost.title}
-                          </p>
-                        </Link>
                       </div>
 
-                      {/* ── 3. META ROW ── */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)' }}>{featuredPost.readingTime}</span>
-                        <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'var(--mk-text-muted)' }} aria-hidden />
-                        <Link href="/blog" style={{ fontSize: '0.75rem', color: 'var(--mk-green)', fontWeight: 600, textDecoration: 'none' }}>
-                          View all insights →
-                        </Link>
+                      {/* ── 2. IMAGE ── */}
+                      <div
+                        style={{
+                          height: '160px',
+                          background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          borderRadius: '0.375rem',
+                        }}
+                      >
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
+                            Add your image here
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ── 3. STAT ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 0' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                            Farms verified to clear cargo
+                          </p>
+                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                            500+
+                          </p>
+                        </div>
+                        <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
+                            Reduction in customs delays
+                          </p>
+                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                            200+
+                          </p>
+                        </div>
                       </div>
 
                       {/* Decorative corner elements */}
@@ -675,7 +530,7 @@ export default function HomePage() {
                     height: '500px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-josiah-matthew-145486517-10697911.jpg')",
+                    backgroundImage: "url('/images/farmer in field.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
                   }}
@@ -687,7 +542,7 @@ export default function HomePage() {
                     height: '660px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')",
+                    backgroundImage: "url('/images/baged product in wareouse.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
@@ -699,7 +554,7 @@ export default function HomePage() {
                     height: '500px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-rafael-de-campos-2705062-4256976.jpg')",
+                    backgroundImage: "url('/images/lagos apapa port.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
@@ -892,15 +747,35 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            6b. TESTIMONIALS (dark grid — Mivora testimonial-section)
+            6b. INSTITUTIONAL PARTNERSHIPS
             ═══════════════════════════════════════════════════════ */}
-        <TestimonialsSection />
+        <section className="section-spacing-sm section-white section-bordered">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="flex flex-col items-center gap-6 text-center">
+                <p className="text-sm font-medium" style={{ color: 'var(--mk-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Backed by institutions that matter to Nigerian exporters
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-10">
+                  <Image
+                    src="/images/nepc-logo.png"
+                    alt="Nigerian Export Promotion Council"
+                    width={120}
+                    height={48}
+                    style={{ width: 'auto', height: '40px', opacity: 0.75 }}
+                  />
+                </div>
+                <p className="text-sm" style={{ color: 'var(--mk-text-muted)', maxWidth: '44ch' }}>
+                  OriginTrace is currently onboarding pilot exporters in Nigeria.{' '}
+                  <Link href="/demo" style={{ color: 'var(--mk-green)', fontWeight: 600 }}>Apply for early access →</Link>
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
 
 
-        {/* ═══════════════════════════════════════════════════════
-            7. COUNTER SECTION (Mivora counter-section pattern)
-            ═══════════════════════════════════════════════════════ */}
-        <CounterSection />
+        {/* Counter section removed — no verified numbers to display yet */}
 
 
         {/* ═══════════════════════════════════════════════════════
@@ -1359,18 +1234,80 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12. BLOG — 2-up carousel
+            11b. CERTIFICATION MARQUEE
+            ═══════════════════════════════════════════════════════ */}
+        <CertificationMarquee />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12. BLOG — 3-col mk-blog-card grid
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">
-            <BlogCarousel posts={allPosts} />
+            <FadeIn>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">Insights</span>
+                <h2
+                  className="text-display-md section-header__title"
+                  data-testid="text-blog-headline"
+                >
+                  Expert Insights &amp; Compliance Updates
+                </h2>
+                <p className="section-header__body">
+                  Stay ahead of regulatory changes and learn best practices for
+                  origin-sensitive supply chain compliance.
+                </p>
+              </div>
+            </FadeIn>
+
+            <StaggerContainer className="mk-grid-3 margin-bottom margin-xlarge-2">
+              {recentPosts.map((post) => (
+                <StaggerItem key={post.slug}>
+                  <Link href={`/blog/${post.slug}`} className="mk-blog-card">
+                    <div className="mk-blog-card__img-wrap">
+                      {post.coverImage ? (
+                        <Image
+                          src={post.coverImage}
+                          alt={post.coverImageAlt || post.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
+                        >
+                          <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                        </div>
+                      )}
+                      <div className="mk-blog-card__overlay" />
+                      <div className="mk-blog-card__cat">
+                        <span className="pre-title">{post.category}</span>
+                      </div>
+                    </div>
+                    <div className="mk-blog-card__body">
+                      <div className="mk-blog-card__meta">{post.date}</div>
+                      <h3 className="mk-blog-card__title">{post.title}</h3>
+                      <p className="mk-blog-card__desc">{post.description}</p>
+                      <span className="mk-blog-card__link">
+                        Read More <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </Link>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+
+            <FadeIn>
+              <div className="flex justify-center">
+                <Link href="/blog" className="btn-mk-outline">
+                  View All Insights
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </FadeIn>
           </div>
         </section>
-
-        {/* ═══════════════════════════════════════════════════════
-            12b. CLIENT LOGO TICKER — below blog, matches reference
-            ═══════════════════════════════════════════════════════ */}
-        <ClientMarquee />
 
 
         {/* ═══════════════════════════════════════════════════════
