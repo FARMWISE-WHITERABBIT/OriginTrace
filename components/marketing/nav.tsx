@@ -211,12 +211,21 @@ export function MarketingNav() {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
+                gap: '0.5rem',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
                 padding: '0.3125rem 0.3125rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
+              <Link
+                href="/auth/login"
+                className="mk-nav-link"
+                style={{ whiteSpace: 'nowrap', fontSize: '0.875rem' }}
+                data-testid="nav-sign-in"
+              >
+                Sign In
+              </Link>
               <Link
                 href="/demo"
                 className="btn-mk-primary"
@@ -335,6 +344,14 @@ export function MarketingNav() {
               className="flex flex-col gap-2 px-4 pt-3 pb-2"
               style={{ borderTop: '1px solid var(--mk-border)', marginTop: '0.5rem' }}
             >
+              <Link
+                href="/auth/login"
+                className="block text-center py-3 font-semibold rounded-full"
+                style={{ fontSize: '15px', border: '1px solid var(--mk-border)', color: 'var(--mk-text-primary)' }}
+                data-testid="nav-sign-in-mobile"
+              >
+                Sign In
+              </Link>
               <Link
                 href="/demo"
                 className="block text-center py-3 font-semibold rounded-full"
