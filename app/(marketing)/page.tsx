@@ -5,13 +5,13 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getAllPosts } from '@/lib/blog';
-import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
-import YouTubeHeroBg from '@/components/marketing/youtube-hero-bg';
+import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import {
   Shield,
   ChevronRight,
@@ -161,34 +161,13 @@ const whyChooseFeatures = [
 
 function IndustriesTabSection() {
   return (
-    <section
-      className="section-spacing"
-      style={{
-        background: 'var(--color--gray-8, #f5f5f5)',
-        borderTopLeftRadius: '1.25rem',
-        borderTopRightRadius: '1.25rem',
-      }}
-    >
+    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
       <div className="mk-container-lg">
         <FadeIn>
-          <div style={{ marginBottom: '2.5rem' }}>
+          <div className="section-header">
             <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
-            <h2
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1.875rem, 2.8vw, 2.75rem)',
-                fontWeight: 800,
-                lineHeight: 1.15,
-                letterSpacing: '-0.025em',
-                color: 'var(--mk-text-primary)',
-                marginTop: '0.75rem',
-                marginBottom: 0,
-              }}
-            >
-              Building{' '}
-              <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
-                smarter, compliant supply chains
-              </span>{' '}
+            <h2 className="text-display-lg section-header__title">
+              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
               across Africa&apos;s key export commodities
             </h2>
           </div>
@@ -427,39 +406,31 @@ function TestimonialsSection() {
    CERTIFICATION MARQUEE
    ───────────────────────────────────────────────────────────────── */
 
-const certifications = [
-  'EUDR Compliant',
-  'FSMA 204 Ready',
-  'Rainforest Alliance',
-  'Fairtrade Certified',
-  'ISO 22000',
-  'GlobalG.A.P.',
-  'UK Environment Act',
-  'CS3D Ready',
-  'GACC Registered',
-  'USDA Organic',
+/* Partner/client logos for the ticker — text fallbacks since we don't have SVGs */
+const clientLogos = [
+  { name: 'Olam Agri', abbr: 'OA' },
+  { name: 'Barry Callebaut', abbr: 'BC' },
+  { name: 'Touton', abbr: 'TT' },
+  { name: 'Ecom Trading', abbr: 'EC' },
+  { name: 'NASFAM', abbr: 'NF' },
+  { name: 'Armajaro', abbr: 'AJ' },
 ];
 
-function CertificationMarquee() {
-  const doubled = [...certifications, ...certifications];
+function ClientMarquee() {
   return (
-    <section
-      className="section-bordered"
-      style={{ paddingBlock: '2.5rem', background: 'var(--mk-surface-gray)' }}
-    >
-      <div className="mk-marquee-wrap">
-        <div className="mk-marquee-track">
-          {doubled.map((cert, i) => (
-            <div
-              key={i}
-              className="mk-cert-item"
-              aria-hidden={i >= certifications.length}
-            >
-              <span className="mk-cert-dot" aria-hidden />
-              {cert}
-            </div>
-          ))}
-        </div>
+    <section className="mk-client-section">
+      <div className="mk-client-wrap">
+        {/* Two identical rows for seamless infinite scroll */}
+        {[0, 1].map((row) => (
+          <div key={row} className="mk-client-item" aria-hidden={row === 1}>
+            {clientLogos.map((logo) => (
+              <div key={logo.name} className="mk-client-logo">
+                <span className="mk-client-logo__abbr">{logo.abbr}</span>
+                <span className="mk-client-logo__name">{logo.name}</span>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -506,59 +477,47 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             1. HERO
             ═══════════════════════════════════════════════════════ */}
-        <section className="mk-hero" style={{ backgroundColor: '#0d3520' }}>
-          <YouTubeHeroBg videoId="Ifr4moOLxDI" />
+        <section className="mk-hero">
+          <HeroBackground videoSrc="/origintrace%20placeholder%20hearo%20video.mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
             <div className="mk-container-lg">
               {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
               <div
-                className="grid lg:grid-cols-[60fr_40fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'end' }}
+                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
+                style={{ alignItems: 'stretch', minHeight: '65vh' }}
               >
-                {/* LEFT — headline, subtitle, CTA */}
-                <div style={{ paddingBottom: '3rem' }}>
+                {/* LEFT — headline, subtitle, CTA — vertically centered */}
+                <div className="flex flex-col justify-center py-8">
                   <FadeIn delay={0.1}>
                     <h1
-                      className="margin-bottom margin-large"
+                      className="text-display-2xl margin-bottom margin-large"
                       data-testid="text-hero-headline"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 'clamp(2.5rem, 3.5vw, 3.5rem)',
-                        fontWeight: 800,
-                        lineHeight: 1.08,
-                        letterSpacing: '-0.03em',
-                        color: '#ffffff',
-                      }}
+                      style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
                     >
-                      Compliance infrastructure<br />for Agriculture
+                      The Compliance Pulse of Modern Supply Chains
                     </h1>
                   </FadeIn>
 
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: '#ffffff' }}
+                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      OriginTrace helps exporters and processors prove origin, manage compliance risk,
-                      and generate audit-ready documentation before shipments leave port.
+                      Eco-friendly, efficient, and future-ready supply chain traceability that
+                      reduces shipment rejections while maximising export readiness.
                     </p>
                   </FadeIn>
 
                   <FadeIn delay={0.3}>
-                    <div className="flex flex-wrap gap-3">
-                      <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                        Assess Your Export Readiness
-                      </Link>
-                      <Link href="/demo" className="btn-mk-ghost btn-mk-lg" data-testid="button-request-demo">
-                        Request a Demo
-                      </Link>
-                    </div>
+                    <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
+                      Assess Your Export Readiness
+                    </Link>
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card bottom aligns with hero section bottom */}
+                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
                 <div className="flex flex-col justify-end">
                   <FadeIn delay={0.5} direction="up">
                     <div
@@ -646,7 +605,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'var(--section-lg)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
@@ -812,43 +771,12 @@ export default function HomePage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-lg">
             <FadeIn>
-              <div
-                className="margin-bottom margin-xlarge"
-                style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '2rem' }}
-              >
-                <div>
-                  <span className="pre-title margin-bottom margin-medium">Our Services</span>
-                  <h2
-                    className="text-display-lg"
-                    style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15, color: '#fff', marginTop: '0.75rem' }}
-                  >
-                    Compliance infrastructure{' '}
-                    <span style={{ color: 'var(--mk-green)' }}>&amp; traceability.</span>
-                  </h2>
-                </div>
-                {/* Nav arrows */}
-                <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
-                  <Link href="/solutions" aria-label="View all services"
-                    style={{
-                      width: '3rem', height: '3rem', borderRadius: '50%',
-                      border: '1.5px dashed rgba(255,255,255,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'rgba(255,255,255,0.5)', transition: 'border-color 0.2s, color 0.2s',
-                    }}
-                  >
-                    <ArrowRight className="w-4 h-4" style={{ transform: 'rotate(180deg)' }} />
-                  </Link>
-                  <Link href="/solutions" aria-label="View all services"
-                    style={{
-                      width: '3rem', height: '3rem', borderRadius: '50%',
-                      border: '1.5px dashed rgba(255,255,255,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', transition: 'border-color 0.2s',
-                    }}
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
+              <div className="section-header section-header--left margin-bottom margin-xlarge">
+                <span className="pre-title margin-bottom margin-medium">Our Capabilities</span>
+                <h2 className="text-display-lg section-header__title">
+                  Six capabilities.{' '}
+                  <span className="text-mk-brand">One platform.</span>
+                </h2>
               </div>
             </FadeIn>
 
@@ -865,18 +793,14 @@ export default function HomePage() {
                     Identify risks early and clear shipments with confidence.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    View detail <ArrowRight className="w-3.5 h-3.5" />
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  {/* Line-art illustration */}
-                  <div className="mk-card__illustration" aria-hidden>
-                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-                      <rect x="40" y="15" width="80" height="100" rx="6" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
-                      <line x1="55" y1="40" x2="105" y2="40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <line x1="55" y1="55" x2="95" y2="55" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <line x1="55" y1="70" x2="100" y2="70" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="145" cy="75" r="28" stroke="rgba(46,180,130,0.5)" strokeWidth="1.5"/>
-                      <polyline points="133,75 141,83 157,67" stroke="rgba(46,180,130,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  {/* Bottom illustration */}
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(31,95,82,0.5) 100%)' }}
+                  >
+                    <Shield className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
                   </div>
                 </div>
               </StaggerItem>
@@ -893,18 +817,13 @@ export default function HomePage() {
                     meeting EUDR, FSMA, and buyer traceability standards from day one.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    View detail <ArrowRight className="w-3.5 h-3.5" />
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  <div className="mk-card__illustration" aria-hidden>
-                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-                      <path d="M30 80 Q60 20 100 60 Q140 100 170 40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="100" cy="60" r="4" fill="rgba(46,180,130,0.8)"/>
-                      <circle cx="60" cy="38" r="3" fill="rgba(255,255,255,0.25)"/>
-                      <circle cx="140" cy="80" r="3" fill="rgba(255,255,255,0.25)"/>
-                      <path d="M130 30 C130 40 120 50 120 50 C120 50 110 40 110 30 C110 24 114.5 20 120 20 C125.5 20 130 24 130 30Z" stroke="rgba(46,180,130,0.8)" strokeWidth="1.5" fill="none"/>
-                      <circle cx="120" cy="30" r="4" stroke="rgba(46,180,130,0.8)" strokeWidth="1.5"/>
-                      <rect x="20" y="85" width="160" height="1" fill="rgba(255,255,255,0.08)"/>
-                    </svg>
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(5,95,70,0.5) 100%)' }}
+                  >
+                    <MapPin className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
                   </div>
                 </div>
               </StaggerItem>
@@ -921,19 +840,13 @@ export default function HomePage() {
                     connectivity, syncing automatically when back in range — no data loss.
                   </p>
                   <Link href="/solutions" className="mk-card__arrow">
-                    View detail <ArrowRight className="w-3.5 h-3.5" />
+                    Learn more <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  <div className="mk-card__illustration" aria-hidden>
-                    <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-                      <rect x="75" y="20" width="50" height="85" rx="8" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
-                      <line x1="75" y1="35" x2="125" y2="35" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
-                      <line x1="75" y1="90" x2="125" y2="90" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
-                      <circle cx="100" cy="99" r="3" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-                      <path d="M55 55 Q100 35 145 55" stroke="rgba(46,180,130,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3"/>
-                      <path d="M65 65 Q100 50 135 65" stroke="rgba(46,180,130,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3"/>
-                      <path d="M75 75 Q100 65 125 75" stroke="rgba(46,180,130,0.9)" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="100" cy="62" r="4" fill="rgba(46,180,130,0.8)"/>
-                    </svg>
+                  <div
+                    className="h-32 rounded-lg mt-4 overflow-hidden flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(46,125,107,0.3) 0%, rgba(20,80,65,0.5) 100%)' }}
+                  >
+                    <Wifi className="w-16 h-16" style={{ color: 'rgba(255,255,255,0.15)' }} />
                   </div>
                 </div>
               </StaggerItem>
@@ -1439,13 +1352,13 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            11b. CERTIFICATION MARQUEE
+            11b. CLIENT LOGO TICKER
             ═══════════════════════════════════════════════════════ */}
-        <CertificationMarquee />
+        <ClientMarquee />
 
 
         {/* ═══════════════════════════════════════════════════════
-            12. BLOG — carousel (2-up, navigable)
+            12. BLOG — 2-up card carousel
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">

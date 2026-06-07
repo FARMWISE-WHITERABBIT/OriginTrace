@@ -11,12 +11,13 @@ interface BlogCarouselProps {
   posts: BlogPost[];
 }
 
-/* Show 2 cards at a time, page through all posts */
+/* Show 2 cards at a time; numbered dots for first 4 posts (matches Webflow "1 of 4") */
 const PER_PAGE = 2;
+const DOTS = 4;
 
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(posts.length / PER_PAGE);
+  const totalPages = Math.ceil(Math.min(posts.length, DOTS * PER_PAGE) / PER_PAGE);
   const visible = posts.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
 
   function prev() {
@@ -63,7 +64,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
       {/* RIGHT — 2-up card slider */}
       <div className="mk-blog-slider">
 
-        {/* Left arrow — at outer left edge of card group */}
+        {/* Left arrow */}
         <button
           className="mk-blog-arrow-wrap mk-blog-arrow-wrap--left"
           aria-label="Previous posts"
@@ -76,7 +77,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
           </div>
         </button>
 
-        {/* Right arrow — at outer right edge of card group */}
+        {/* Right arrow */}
         <button
           className="mk-blog-arrow-wrap mk-blog-arrow-wrap--right"
           aria-label="Next posts"
@@ -94,8 +95,6 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
           {visible.map((post, i) => (
             <FadeIn key={`${page}-${post.slug}`} delay={i * 0.06}>
               <Link href={`/blog/${post.slug}`} className="mk-blog-item">
-
-                {/* Image with chips overlaid at top */}
                 <div className="mk-blog-image-wrap">
                   {post.coverImage ? (
                     <Image
@@ -112,20 +111,33 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
                       <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
                     </div>
                   )}
-                  {/* Chips at top of image */}
                   <div className="mk-blog-chips">
                     <span className="mk-blog-category">{post.category}</span>
                     <span className="mk-blog-date">{post.date}</span>
                   </div>
                 </div>
-
-                {/* Title below image */}
                 <div className="mk-blog-info">
                   <h2 className="mk-blog-title">{post.title}</h2>
                 </div>
-
               </Link>
             </FadeIn>
+          ))}
+        </div>
+
+        {/* Numbered dot nav — 1 2 3 4 (matching .slide-nav w-round w-num) */}
+        <div className="mk-slide-nav" role="tablist" aria-label="Blog slides">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              className="mk-slide-dot"
+              role="tab"
+              aria-pressed={i === page}
+              aria-label={`Show slide ${i + 1} of ${totalPages}`}
+              data-active={i === page || undefined}
+              onClick={() => setPage(i)}
+            >
+              {i + 1}
+            </button>
           ))}
         </div>
 

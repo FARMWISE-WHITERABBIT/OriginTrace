@@ -2197,6 +2197,77 @@
   flex-shrink: 0;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   29. CLIENT LOGO TICKER — matches .client-section / .client-wrap / .client-item
+   Two duplicate .mk-client-item rows scroll continuously via CSS animation.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-client-section {
+  padding-block: 2.5rem;
+  background: var(--color--white, #fff);
+  border-top: 1px solid var(--mk-border);
+  border-bottom: 1px solid var(--mk-border);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.mk-client-wrap {
+  display: flex;
+  width: max-content;
+  animation: mk-client-scroll 28s linear infinite;
+}
+.mk-client-wrap:hover {
+  animation-play-state: paused;
+}
+
+@keyframes mk-client-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.mk-client-item {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+  padding-inline: 1.75rem;
+  flex-shrink: 0;
+}
+
+.mk-client-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+.mk-client-logo:hover {
+  opacity: 1;
+}
+
+.mk-client-logo__abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background: var(--mk-green-light);
+  color: var(--mk-green);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.mk-client-logo__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--mk-text-primary);
+  letter-spacing: -0.01em;
+}
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    29. FOOTER (Mivora footer — forest background + two floating panels)
@@ -2395,4 +2466,194 @@
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BLOG LAYOUT — heading left + 2-up card slider right
+   Matches: .grid-blog-main / .blog-slider / .blog-slide structure
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-blog-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+.mk-blog-layout__heading {
+  position: sticky;
+  top: 6rem;
+}
+
+/* Slider wrapper (.blog-slider) — overflow visible so arrows bleed outside */
+.mk-blog-slider {
+  position: relative;
+}
+
+/* 2-column card grid (.blog-mask shows 2 slides at once) */
+.mk-blog-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Card link (.blog-item) — no border, clean rounded image */
+.mk-blog-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.25s ease;
+}
+.mk-blog-item:hover {
+  transform: translateY(-4px);
+}
+
+/* Image wrapper (.blog-image-wrap) */
+.mk-blog-image-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--border-radius--sm);
+}
+
+/* Image — pre-zoomed scale(1.1), normalises on hover (.blog-image) */
+.mk-blog-image {
+  transform: scale(1.1);
+  transform-origin: center;
+  transition: transform 0.7s ease;
+}
+.mk-blog-item:hover .mk-blog-image {
+  transform: scale(1);
+}
+
+/* Chips at top of image (.blog-meta-wrap equivalent) */
+.mk-blog-chips {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Category chip — green pill (.blog-category) */
+.mk-blog-category {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: var(--mk-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Date chip — dark charcoal pill (.blog-date) */
+.mk-blog-date {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: rgba(20, 20, 20, 0.75);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* Title below image (.blog-info / .blog-title) */
+.mk-blog-info {
+  padding: 0.875rem 0 0;
+}
+.mk-blog-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--mk-text-primary);
+  margin: 0;
+  transition: color 0.15s ease;
+}
+.mk-blog-item:hover .mk-blog-title {
+  color: var(--mk-green);
+}
+
+/* Arrows at outer edges of card group (.blog-arrow-wrap left / right) */
+.mk-blog-arrow-wrap {
+  position: absolute;
+  top: 40%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--mk-border);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mk-text-primary);
+  padding: 0;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.mk-blog-arrow-wrap:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  transform: translateY(-50%) scale(1.07);
+}
+.mk-blog-arrow-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.mk-blog-arrow-wrap--left  { left:  -1.25rem; }
+.mk-blog-arrow-wrap--right { right: -1.25rem; }
+
+/* Numbered dot nav (.slide-nav w-round w-num) */
+.mk-slide-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+}
+.mk-slide-dot {
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  border: 1px solid var(--mk-border);
+  background: transparent;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--mk-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.mk-slide-dot[data-active] {
+  background: var(--mk-green);
+  border-color: var(--mk-green);
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .mk-blog-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+  .mk-blog-layout__heading { position: static; }
+  .mk-blog-arrow-wrap--left  { left:  0.25rem; }
+  .mk-blog-arrow-wrap--right { right: 0.25rem; }
+}
+@media (max-width: 640px) {
+  .mk-blog-cards { grid-template-columns: 1fr; }
 }
