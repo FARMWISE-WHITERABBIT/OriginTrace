@@ -150,22 +150,41 @@ export const WEBHOOK_EVENTS = [
   'shipment.scored',
   // Collection
   'batch.created',
+  'batch.updated',
+  'batch.completed',
   // Documents
   'document.uploaded',
   'document.expired',
+  'document.verified',
   // Compliance
   'compliance.changed',
+  'compliance.warning',
+  'compliance.alert',
   // Payments
   'payment.recorded',
   'payment.disbursed',
+  'payment.failed',
   // Farms
   'farm.approved',
   'farm.rejected',
+  'farm.updated',
   // Certifications
   'certification.expiring',
+  'certification.expired',
+  'certification.renewed',
   // Trade
   'tender.created',
   'tender.awarded',
+  'tender.cancelled',
+  // Contracts
+  'contract.signed',
+  'contract.updated',
+  'contract.terminated',
+  // Org & profile
+  'profile.updated',
+  'role.changed',
+  'organization.updated',
+  'organization.downgraded',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
