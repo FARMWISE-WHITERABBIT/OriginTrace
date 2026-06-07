@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '10 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/farmer in field.jpg',
+  coverImageAlt: 'Farmer working in an agricultural field',
   coverGradient: 'from-amber-900/20 to-slate-800/50',
   tags: ['Food Safety', 'Traceability', 'FSMA', 'Farm to Fork', 'Supply Chain', 'Food Export'],
   content: [

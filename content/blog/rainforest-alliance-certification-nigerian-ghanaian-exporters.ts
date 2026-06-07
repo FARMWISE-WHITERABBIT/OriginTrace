@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '10 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/farmer in field.jpg',
+  coverImageAlt: 'Farmer working in an agricultural field',
   coverGradient: 'from-emerald-900/40 to-teal-800/30',
   tags: ['Rainforest Alliance', 'Certification', 'Nigeria', 'Ghana', 'EUDR', 'Export Compliance', 'Cocoa', 'Coffee', 'West Africa', 'Sustainability'],
   content: [

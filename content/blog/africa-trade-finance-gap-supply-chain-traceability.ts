@@ -11,6 +11,8 @@ export const post: BlogPost = {
   readingTime: '12 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/farmer in field.jpg',
+  coverImageAlt: 'Farmer working in an agricultural field',
   coverGradient: 'from-violet-900/20 to-slate-800/50',
   tags: [
     'Africa',

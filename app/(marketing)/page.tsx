@@ -441,6 +441,7 @@ function ClientMarquee() {
 
 export default function HomePage() {
   const allPosts = getAllPosts();
+  const featuredPost = allPosts[0];
 
   /* Schema markup */
   const organizationSchema = {
@@ -525,52 +526,59 @@ export default function HomePage() {
                         maxWidth: '360px',
                       }}
                     >
-                      {/* ── 1. TITLE ── */}
-                      <div className="pb-4">
-                        <p
-                          className="font-semibold leading-snug"
-                          style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
+                      {/* ── 1. IMAGE ── */}
+                      <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
+                        <div
+                          style={{
+                            height: '180px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderRadius: '0.5rem',
+                          }}
                         >
-                          How Nigerian cocoa exporters cleared EU borders on the first attempt
+                          {featuredPost.coverImage ? (
+                            <img
+                              src={featuredPost.coverImage}
+                              alt={featuredPost.coverImageAlt || featuredPost.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-br ${featuredPost.coverGradient}`} />
+                          )}
+                          {/* Category + date chips */}
+                          <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', display: 'flex', gap: '0.4rem' }}>
+                            <span style={{ background: 'var(--mk-green)', color: '#fff', fontSize: '0.625rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {featuredPost.category}
+                            </span>
+                            <span style={{ background: 'rgba(20,20,20,0.72)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backdropFilter: 'blur(4px)' }}>
+                              {featuredPost.date}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* ── 2. TITLE ── */}
+                      <div style={{ padding: '0.75rem 0 0.5rem' }}>
+                        <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--mk-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>
+                          Latest Insight
                         </p>
+                        <Link href={`/blog/${featuredPost.slug}`} style={{ textDecoration: 'none' }}>
+                          <p
+                            className="font-semibold leading-snug"
+                            style={{ fontSize: '0.9375rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em', maxWidth: '30ch', lineHeight: 1.45 }}
+                          >
+                            {featuredPost.title}
+                          </p>
+                        </Link>
                       </div>
 
-                      {/* ── 2. IMAGE ── */}
-                      <div
-                        style={{
-                          height: '160px',
-                          background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          borderRadius: '0.375rem',
-                        }}
-                      >
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
-                            Add your image here
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* ── 3. STAT ROW ── */}
-                      <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 0' }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                            Farms verified to clear cargo
-                          </p>
-                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            500+
-                          </p>
-                        </div>
-                        <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                            Reduction in customs delays
-                          </p>
-                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            200+
-                          </p>
-                        </div>
+                      {/* ── 3. META ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)' }}>{featuredPost.readingTime}</span>
+                        <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'var(--mk-text-muted)' }} aria-hidden />
+                        <Link href="/blog" style={{ fontSize: '0.75rem', color: 'var(--mk-green)', fontWeight: 600, textDecoration: 'none' }}>
+                          View all insights →
+                        </Link>
                       </div>
 
                       {/* Decorative corner elements */}

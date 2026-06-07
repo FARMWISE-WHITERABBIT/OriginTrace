@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '10 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/baged product in wareouse.jpg',
+  coverImageAlt: 'Bagged agricultural commodities in a warehouse',
   coverGradient: 'from-amber-900/20 to-emerald-900/20',
   tags: ['EUDR', 'Cocoa', 'Exporters', 'GPS Mapping', 'Due Diligence'],
   content: [

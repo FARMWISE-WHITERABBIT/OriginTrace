@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '11 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/farmer in field.jpg',
+  coverImageAlt: 'Farmer working in an agricultural field',
   coverGradient: 'from-amber-800/30 to-slate-800/50',
   tags: ['GACC', 'Nigeria', 'Sesame Seeds', 'Gum Arabic', 'Lagos', 'China Export', 'Traceability', 'Export Compliance', 'Northern Nigeria', 'NAFDAC', 'NAQS'],
   content: [

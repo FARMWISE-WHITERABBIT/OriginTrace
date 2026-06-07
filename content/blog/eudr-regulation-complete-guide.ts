@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '11 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/lagos apapa port.jpg',
+  coverImageAlt: 'Cargo ships at Lagos Apapa port',
   coverGradient: 'from-emerald-900/20 to-slate-800/50',
   tags: ['EUDR', 'Deforestation', 'Regulation', 'Compliance', 'EU Market', 'Exporters'],
   content: [

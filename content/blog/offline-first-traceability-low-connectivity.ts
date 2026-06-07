@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '7 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/farmer in field.jpg',
+  coverImageAlt: 'Farmer working in an agricultural field',
   coverGradient: 'from-slate-800/50 to-blue-900/20',
   tags: ['Offline', 'Traceability', 'Technology', 'Field Operations', 'Rural', 'PWA'],
   content: [
