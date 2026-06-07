@@ -143,29 +143,6 @@ export function backoffMs(attempt: number): number {
   return webhookBackoffMs(attempt);
 }
 
-export const WEBHOOK_EVENTS = [
-  // Shipments
-  'shipment.created',
-  'shipment.updated',
-  'shipment.scored',
-  // Collection
-  'batch.created',
-  // Documents
-  'document.uploaded',
-  'document.expired',
-  // Compliance
-  'compliance.changed',
-  // Payments
-  'payment.recorded',
-  'payment.disbursed',
-  // Farms
-  'farm.approved',
-  'farm.rejected',
-  // Certifications
-  'certification.expiring',
-  // Trade
-  'tender.created',
-  'tender.awarded',
-] as const;
+export const WEBHOOK_EVENTS = _CATALOG_EVENTS;
 
-export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number];
+export type WebhookEventType = PlatformEventType;

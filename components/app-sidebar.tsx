@@ -38,7 +38,8 @@ import {
   CollapsibleTrigger 
 } from '@/components/ui/collapsible';
 import { getNavigationConfig, UserRole } from '@/lib/config/navigation';
-import { hasTierAccess, TIER_LABELS, type SubscriptionTier } from '@/lib/config/tier-gating';
+import { hasTierAccess } from '@/modules/identity-access/domain/tier-policy';
+import { TIER_LABELS, type SubscriptionTier } from '@/lib/config/tier-gating';
 import { useOnlineStatus } from '@/lib/hooks/use-online-status';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState, useEffect } from 'react';

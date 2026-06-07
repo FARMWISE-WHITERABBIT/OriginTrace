@@ -22,7 +22,7 @@ export async function PATCH(
 ) {
   try {
     const supabase = createServiceClient();
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Only superadmin or platform admins can review KYC
