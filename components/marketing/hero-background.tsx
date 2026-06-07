@@ -12,8 +12,9 @@ export default function HeroBackground({ videoSrc }: HeroBackgroundProps) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    // Fallback play() call for browsers that don't honour the autoPlay attribute
+    // Do NOT call video.load() here — it aborts the browser's native autoplay
     video.muted = true;
-    video.load();
     const p = video.play();
     if (p !== undefined) p.catch(() => {});
   }, []);
