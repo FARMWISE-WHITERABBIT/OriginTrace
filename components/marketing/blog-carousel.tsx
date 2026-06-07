@@ -11,13 +11,12 @@ interface BlogCarouselProps {
   posts: BlogPost[];
 }
 
-/* Show 2 cards at a time; numbered dots for first 4 posts (matches Webflow "1 of 4") */
+/* Show 2 cards at a time, page through all posts */
 const PER_PAGE = 2;
-const DOTS = 4;
 
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(Math.min(posts.length, DOTS * PER_PAGE) / PER_PAGE);
+  const totalPages = Math.ceil(posts.length / PER_PAGE);
   const visible = posts.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
 
   function prev() {
@@ -124,22 +123,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
           ))}
         </div>
 
-        {/* Numbered dot nav — 1 2 3 4 (matching .slide-nav w-round w-num) */}
-        <div className="mk-slide-nav" role="tablist" aria-label="Blog slides">
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              className="mk-slide-dot"
-              role="tab"
-              aria-pressed={i === page}
-              aria-label={`Show slide ${i + 1} of ${totalPages}`}
-              data-active={i === page || undefined}
-              onClick={() => setPage(i)}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
+
 
       </div>
     </div>
