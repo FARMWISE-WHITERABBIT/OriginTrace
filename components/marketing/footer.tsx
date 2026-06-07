@@ -57,14 +57,18 @@ export function MarketingFooter() {
 
   return (
     <footer className="mk-footer" data-testid="marketing-footer">
-      {/* ── Background image + dark overlay ─────────────────────────── */}
-      <div
-        className="mk-footer__bg"
-        style={{
-          backgroundImage: "url('/images/lagos apapa port.jpg')",
-        }}
+      {/* ── Background video + dark overlay ─────────────────────────── */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
         aria-hidden
-      />
+        className="mk-footer__bg"
+        style={{ objectFit: 'cover' }}
+      >
+        <source src="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" type="video/mp4" />
+      </video>
       <div className="mk-footer__overlay" aria-hidden />
 
       {/* ── Content ─────────────────────────────────────────────────── */}

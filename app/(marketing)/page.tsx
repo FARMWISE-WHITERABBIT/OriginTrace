@@ -253,7 +253,7 @@ function TechnologySection() {
                   borderRadius: '1.25rem',
                   overflow: 'hidden',
                   aspectRatio: '4/3',
-                  backgroundImage: "url('/images/baged product in wareouse.jpg')",
+                  backgroundImage: "url('/images/pexels-jose-carlos-alexandre-2433751-17797257.jpg')",
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
@@ -339,7 +339,7 @@ function TestimonialsSection() {
       className="section-spacing"
       style={{
         /* Mivora: background-image over a cover photo, with a dark overlay div on top */
-        backgroundImage: "url('/images/lagos apapa port.jpg')",
+        backgroundImage: "url('/images/pexels-tomfisk-1427107.jpg')",
         backgroundPosition: '50%',
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
@@ -478,7 +478,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/hero-bg.mp4" />
+          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -675,7 +675,7 @@ export default function HomePage() {
                     height: '500px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/farmer in field.jpg')",
+                    backgroundImage: "url('/images/pexels-josiah-matthew-145486517-10697911.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
                   }}
@@ -687,7 +687,7 @@ export default function HomePage() {
                     height: '660px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/baged product in wareouse.jpg')",
+                    backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
@@ -699,7 +699,7 @@ export default function HomePage() {
                     height: '500px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/lagos apapa port.jpg')",
+                    backgroundImage: "url('/images/pexels-rafael-de-campos-2705062-4256976.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}

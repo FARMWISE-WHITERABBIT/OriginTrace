@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '12 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/baged product in wareouse.jpg',
-  coverImageAlt: 'Bagged agricultural commodities in a warehouse',
+  coverImage: '/images/pexels-zeal-creative-studios-58866141-31283913.jpg',
+  coverImageAlt: 'Hands sorting and spreading drying cocoa beans',
   coverGradient: 'from-amber-900/30 to-emerald-900/40',
   tags: ['Nigeria', 'Ghana', 'Cocoa Export', 'Cashew Export', 'Sesame Export', 'EUDR', 'GACC', 'Export Compliance', 'West Africa', 'EU Market'],
   content: [

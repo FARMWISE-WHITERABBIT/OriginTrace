@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '12 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/lagos apapa port.jpg',
-  coverImageAlt: 'Cargo ships at Lagos Apapa port',
+  coverImage: '/images/pexels-rafael-de-campos-2705062-4256976.jpg',
+  coverImageAlt: 'Aerial view of a busy cargo port with shipping containers',
   coverGradient: 'from-red-900/20 to-slate-800/50',
   tags: ['China Export', 'GACC', 'Registration', 'Food Safety', 'Compliance', 'Market Access'],
   content: [

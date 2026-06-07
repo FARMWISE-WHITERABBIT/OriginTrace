@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '9 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/baged product in wareouse.jpg',
-  coverImageAlt: 'Bagged agricultural commodities in a warehouse',
+  coverImage: '/images/pexels-masudar-37218946.jpg',
+  coverImageAlt: 'Farmer spraying a bright green field',
   coverGradient: 'from-yellow-900/20 to-emerald-900/20',
   tags: ['EUDR', 'Ginger', 'Herbs', 'Spices', 'Turmeric', 'Exporters', 'Traceability'],
   content: [

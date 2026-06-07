@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '8 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/farmer in field.jpg',
-  coverImageAlt: 'Farmer working in an agricultural field',
+  coverImage: '/images/pexels-pedrofurtadoo-28903100.jpg',
+  coverImageAlt: 'Tractor moving through agricultural rows under a dramatic sky',
   coverGradient: 'from-green-900/20 to-slate-800/50',
   tags: ['Soybean', 'EUDR', 'Nigeria', 'West Africa', 'Export Compliance', 'Deforestation'],
   content: [

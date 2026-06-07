@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '9 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/farmer in field.jpg',
-  coverImageAlt: 'Farmer working in an agricultural field',
+  coverImage: '/images/pexels-andromeda99-36192545.jpg',
+  coverImageAlt: 'Two farmers tend to vivid green terraced rice paddies',
   coverGradient: 'from-blue-900/30 to-emerald-800/30',
   tags: ['Supply Chain Transparency', 'Traceability', 'Nigeria', 'Ghana', 'Export Compliance', 'Global Trade', 'Buyers', 'West Africa'],
   content: [

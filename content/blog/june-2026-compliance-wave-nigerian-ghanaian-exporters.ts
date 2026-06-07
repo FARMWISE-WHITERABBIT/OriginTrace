@@ -10,8 +10,8 @@ export const post: BlogPost = {
   readingTime: '10 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
-  coverImage: '/images/lagos apapa port.jpg',
-  coverImageAlt: 'Cargo ships at Lagos Apapa port',
+  coverImage: '/images/pexels-tomfisk-1427107.jpg',
+  coverImageAlt: 'Overhead aerial of a large port terminal with multicolored shipping containers',
   coverGradient: 'from-red-800/30 to-emerald-900/40',
   tags: ['GACC', 'EUDR', 'Nigeria', 'Ghana', 'Export Compliance', 'West Africa', 'Regulatory', 'June 2026'],
   content: [
