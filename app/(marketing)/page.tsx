@@ -5,13 +5,13 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getAllPosts } from '@/lib/blog';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
-import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import {
   Shield,
   ChevronRight,
@@ -403,24 +403,23 @@ function TestimonialsSection() {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   CERTIFICATION MARQUEE
+   CLIENT LOGO TICKER — matches .client-section reference HTML
+   Two duplicate rows scroll via CSS animation for seamless loop
    ───────────────────────────────────────────────────────────────── */
 
-/* Partner/client logos for the ticker — text fallbacks since we don't have SVGs */
 const clientLogos = [
-  { name: 'Olam Agri', abbr: 'OA' },
+  { name: 'Olam Agri',       abbr: 'OA' },
   { name: 'Barry Callebaut', abbr: 'BC' },
-  { name: 'Touton', abbr: 'TT' },
-  { name: 'Ecom Trading', abbr: 'EC' },
-  { name: 'NASFAM', abbr: 'NF' },
-  { name: 'Armajaro', abbr: 'AJ' },
+  { name: 'Touton',          abbr: 'TT' },
+  { name: 'Ecom Trading',    abbr: 'EC' },
+  { name: 'NASFAM',          abbr: 'NF' },
+  { name: 'Armajaro',        abbr: 'AJ' },
 ];
 
 function ClientMarquee() {
   return (
     <section className="mk-client-section">
       <div className="mk-client-wrap">
-        {/* Two identical rows for seamless infinite scroll */}
         {[0, 1].map((row) => (
           <div key={row} className="mk-client-item" aria-hidden={row === 1}>
             {clientLogos.map((logo) => (
@@ -1352,19 +1351,18 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            11b. CLIENT LOGO TICKER
-            ═══════════════════════════════════════════════════════ */}
-        <ClientMarquee />
-
-
-        {/* ═══════════════════════════════════════════════════════
-            12. BLOG — 2-up card carousel
+            12. BLOG — 2-up carousel
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">
             <BlogCarousel posts={allPosts} />
           </div>
         </section>
+
+        {/* ═══════════════════════════════════════════════════════
+            12b. CLIENT LOGO TICKER — below blog, matches reference
+            ═══════════════════════════════════════════════════════ */}
+        <ClientMarquee />
 
 
         {/* ═══════════════════════════════════════════════════════
