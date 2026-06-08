@@ -9,8 +9,8 @@ const industryTabs = [
     id: 'cocoa-coffee',
     label: 'Cocoa & Coffee',
     icon: Leaf,
-    image: '/images/pexels-pixabay-50707.jpg',
-    imagePosition: 'left center',
+    image: '/images/pexels-michael-burrows-7125465.jpg',
+    imagePosition: 'center',
     tag: 'EUDR Ready',
     description:
       'Full traceability for EUDR-covered tree crops — from GPS-mapped farm plots to EU port clearance. Cover your due diligence statement before you book freight.',
@@ -26,7 +26,7 @@ const industryTabs = [
     id: 'cashew-sesame',
     label: 'Cashew & Sesame',
     icon: Sprout,
-    image: '/images/pexels-zeal-creative-studios-58866141-31283908.jpg',
+    image: '/images/pexels-traveliving-4663476.jpg',
     imagePosition: 'center',
     tag: 'GACC & FSMA Ready',
     description:
@@ -60,7 +60,7 @@ const industryTabs = [
     id: 'timber-rubber',
     label: 'Timber & Rubber',
     icon: TreePine,
-    image: '/images/lagos apapa port.jpg',
+    image: '/images/pexels-jan-van-der-wolf-11680885-15780139.jpg',
     imagePosition: 'center',
     tag: 'EUDR / Lacey Act',
     description:
@@ -77,7 +77,7 @@ const industryTabs = [
     id: 'mining',
     label: 'Mining & Minerals',
     icon: Gem,
-    image: '/images/pexels-stephanefabricebass-10319259.jpg',
+    image: '/images/pexels-tomfisk-2101135.jpg',
     imagePosition: 'center',
     tag: 'OECD / LBMA Ready',
     description:
