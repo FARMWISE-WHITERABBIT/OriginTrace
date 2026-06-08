@@ -92,7 +92,7 @@ const frameworks = [
 
 export function ComplianceStack() {
   return (
-    <section className="section-spacing section-white">
+    <section style={{ paddingBlock: '6.25rem', background: 'var(--mk-surface-white)' }}>
       <div className="mk-container-lg">
 
         {/* Header row */}
@@ -118,12 +118,18 @@ export function ComplianceStack() {
         </FadeIn>
 
         {/* Sticky stack */}
-        <div className="mk-sticky-container" style={{ paddingBottom: `${(frameworks.length - 1) * 1.5}rem` }}>
+        <div style={{ position: 'relative' }}>
           {frameworks.map((fw, i) => (
             <div
               key={fw.id}
-              className="mk-sticky-card"
-              style={{ top: `calc(5rem + ${i} * 1.5rem)`, marginBottom: '1rem' }}
+              style={{
+                position: 'sticky',
+                top: `calc(5rem + ${i} * 1.5rem)`,
+                marginBottom: i < frameworks.length - 1 ? '40vh' : 0,
+                borderRadius: 'var(--mk-radius-hero)',
+                overflow: 'hidden',
+                zIndex: i + 1,
+              }}
             >
               <div className="mk-sticky-card__inner">
 
