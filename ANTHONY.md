@@ -649,3 +649,38 @@ After pulling `main`, the verification lane surfaced three follow-up issues: `/r
 ## 37. Project Status: Phase 22 Complete
 
 - [X] **Phase 22: Post-Merge QA Hardening** - Resolved the post-merge robots route conflict, restored CVE config posture, stabilized marketing smoke navigation, and verified security, marketing, type-check, and production build lanes.
+
+---
+
+## 38. Phase 23: Authenticated App Performance and GFW Integration
+
+This phase focuses on the signed-in `/app` experience and the deforestation check path used from the farm map.
+
+### What's New
+
+- **Faster authenticated startup:** The app shell now lazy-loads non-critical extras such as the command palette, PWA install prompt, cache warmer, auto-sync runtime, and onboarding tour assets so first render is not competing with background work.
+- **Role dashboards load only when needed:** `/app` now dynamically imports the active user's dashboard instead of loading every role dashboard into the shared startup path.
+- **Shared sync status:** Sidebar, mobile navigation, connectivity UI, cache warming, and auto-sync now share one sync-status provider rather than polling IndexedDB independently.
+- **Lighter dashboard and notifications:** The dashboard uses a smaller `section=dashboard` analytics response first, then loads heavier strategic/audit/alert data after idle. Notifications fetch unread count first and load the full list only when the popover opens.
+- **More reliable production assets:** Google-hosted fonts were replaced with a system-font fallback, Sentry Replay is gated by explicit sampling configuration, and PWA caching now avoids broad storage/document caching while keeping stable reference data fast.
+- **Global Forest Watch live integration path:** Deforestation checks now target the stable `umd_tree_cover_loss/v1.9` Data API contract with a server-only `GFW_API_KEY`, request `Origin`, dataset/version metadata, and a manual-review fallback when live GFW is unavailable.
+
+### Fixes
+
+- **Manual-review clarity:** Farm-map results now distinguish confirmed GFW forest-loss findings from country-risk fallback results when satellite data is unavailable.
+- **First-load request reduction:** `/api/profile` now carries profile, organization, system-admin, and impersonation state so the authenticated shell no longer needs a duplicate `/api/impersonate` read.
+- **Live GFW smoke coverage:** Added a required `npm run test:gfw:live` command that validates fields and a real polygon query once a GFW key is configured.
+
+### Verification
+
+- `npm run check` passed.
+- `npx vitest run tests/gfw-deforestation.test.ts --reporter=verbose` passed 6/6.
+- `npx playwright test tests/e2e/performance-smoke.spec.ts --project=chromium --reporter=line --retries=0 --timeout=90000` passed 3/3.
+- `npx playwright test tests/e2e/untested-entity-details.spec.ts:78 --project=chromium --reporter=line` passed 2/2.
+- `npm run test:gfw:live` stopped with the expected setup failure because `GFW_API_KEY` is not set. Live verification remains blocked until a real GFW key is created and allowlisted for `localhost`.
+
+---
+
+## 39. Project Status: Phase 23 Complete
+
+- [X] **Phase 23: Authenticated App Performance and GFW Integration** - Reduced authenticated startup work, added a performance smoke lane, wired the stable GFW tree-cover-loss API path with safe fallback metadata, and documented the remaining live-key requirement.
