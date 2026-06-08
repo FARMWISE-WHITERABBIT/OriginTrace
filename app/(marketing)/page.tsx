@@ -29,24 +29,29 @@ import {
 
 const whyChooseFeatures = [
   {
-    title: 'Pre-Shipment Compliance Scoring',
-    body: 'Score every shipment across five dimensions before cargo reaches port. Identify risks, resolve issues, and clear with confidence.',
+    title: 'Know your compliance status before you load',
+    body: 'Run your shipment against EU, UK, US, China, and UAE requirements in one check. Resolve gaps before you book freight — not at the border.',
     icon: <Shield className="w-4 h-4" />,
   },
   {
-    title: 'Farm-Level GPS Traceability',
-    body: 'GPS polygon mapping links every shipment back to its exact farm source — meeting EUDR, FSMA, and buyer standards.',
+    title: 'Prove origin down to the source',
+    body: 'GPS-verified registration for every farm plot or extraction site. Every batch traces back to a verified location — not a declaration.',
     icon: <MapPin className="w-4 h-4" />,
   },
   {
-    title: 'Offline-First Field Operations',
-    body: 'Purpose-built for remote areas. Field agents capture data with zero connectivity, syncing automatically when back in range.',
+    title: 'Capture data where there is no signal',
+    body: 'Field agents log collections in full offline mode. Data syncs automatically when connectivity returns — no gaps, no manual re-entry.',
     icon: <Wifi className="w-4 h-4" />,
   },
   {
-    title: 'Buyer Portal & DPP',
-    body: 'Give buyers direct traceability access. Generate QR-linked Digital Product Passports that prove full chain of custody.',
+    title: 'Give buyers proof, not promises',
+    body: 'Share a QR-linked traceability record and compliance evidence directly with your buyer. Close deals faster with verified data.',
     icon: <QrCode className="w-4 h-4" />,
+  },
+  {
+    title: 'Get paid when compliance is confirmed',
+    body: 'Your buyer pays into escrow. Funds release automatically when the shipment is verified. No chasing. No trust-based risk.',
+    icon: <Check className="w-4 h-4" />,
   },
 ];
 
