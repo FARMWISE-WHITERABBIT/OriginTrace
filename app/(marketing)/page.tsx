@@ -206,7 +206,7 @@ export default function HomePage() {
                       data-testid="text-hero-headline"
                       style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
                     >
-                      The operating system for African agricultural exporters.
+                      Know you're compliant before you export.
                     </h1>
                   </FadeIn>
 
@@ -215,8 +215,7 @@ export default function HomePage() {
                       className="margin-bottom margin-xlarge"
                       style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      From farm record to payment receipt — OriginTrace handles compliance
-                      documentation, shipment tracking, and payment settlement in one platform.
+                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, US, and China requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
                   </FadeIn>
 
