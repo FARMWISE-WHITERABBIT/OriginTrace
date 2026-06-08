@@ -99,10 +99,15 @@ export function MarketingFooter() {
             {/* Spacer — pushes tagline/form/attribution to bottom */}
             <div style={{ flex: 1 }} />
 
-            {/* Tagline */}
+            {/* Tagline — large, prominent */}
             <p className="mk-footer-panel__tagline">
-              Trust infrastructure for origin-sensitive supply chains. From farm to port,
-              compliance verified.
+              We believe <span style={{ color: 'var(--mk-green)' }}>verified origin</span> starts
+              deep within the supply chain.
+            </p>
+
+            {/* Subscribe label */}
+            <p style={{ fontSize: '0.8125rem', color: 'var(--mk-text-secondary)', marginBottom: '0.75rem' }}>
+              Join our exporter community.
             </p>
 
             {/* Email subscribe */}
@@ -137,20 +142,19 @@ export function MarketingFooter() {
 
           {/* ── RIGHT PANEL ────────────────────────────────────── */}
           <div className="mk-footer-panel mk-footer-panel--right">
+            {/* TOP ROW — Pages | Address */}
             <div className="mk-footer-grid">
 
-              {/* Pages */}
+              {/* Pages — two-column list */}
               <div className="mk-footer-col">
                 <h4 className="mk-footer-col__heading">Pages</h4>
-                <ul className="mk-footer-col__list">
-                  {footerLinks.slice(0, 6).map((link) => (
-                    <li key={link.href}>
-                      <Link href={link.href} className="mk-footer-col__link" data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {link.label}
-                      </Link>
-                    </li>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem' }}>
+                  {footerLinks.map((link) => (
+                    <Link key={link.href} href={link.href} className="mk-footer-col__link" data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {link.label}
+                    </Link>
                   ))}
-                </ul>
+                </div>
               </div>
 
               {/* Address */}
@@ -163,6 +167,13 @@ export function MarketingFooter() {
                   <p>East Africa &amp; Europe</p>
                 </address>
               </div>
+            </div>
+
+            {/* Dashed divider */}
+            <div style={{ borderTop: '1px dashed var(--mk-border)', margin: '1.75rem 0' }} />
+
+            {/* BOTTOM ROW — Contact | Social Media */}
+            <div className="mk-footer-grid">
 
               {/* Contact */}
               <div className="mk-footer-col">
@@ -206,8 +217,8 @@ export function MarketingFooter() {
                 </div>
               </div>
 
-            </div>
-          </div>
+            </div>{/* end bottom grid */}
+          </div>{/* end right panel */}
 
         </div>
       </div>

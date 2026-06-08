@@ -1900,28 +1900,26 @@
 /* Arrows at outer edges of card group, vertically centred at image midpoint */
 .mk-blog-arrow-wrap {
   position: absolute;
-  /* 3/4 aspect → image height = 133% of card width. Half = 66.7% of card width.
-     As % of slider height: image fills ~90% of visible area, so ~45% from top */
-  top: 40%;
+  top: 38%;
   transform: translateY(-50%);
   z-index: 10;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
-  background: #fff;
-  border: 1px solid var(--mk-border);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  background: transparent;
+  border: 1.5px dashed rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--mk-text-primary);
+  color: var(--mk-text-secondary);
   padding: 0;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
 }
 .mk-blog-arrow-wrap:hover {
-  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-  transform: translateY(-50%) scale(1.07);
+  border-color: var(--mk-text-primary);
+  color: var(--mk-text-primary);
+  transform: translateY(-50%) scale(1.06);
 }
 .mk-blog-arrow-inner {
   display: flex;
@@ -1929,8 +1927,8 @@
   justify-content: center;
   line-height: 0;
 }
-.mk-blog-arrow-wrap--left  { left:  -1.25rem; }
-.mk-blog-arrow-wrap--right { right: -1.25rem; }
+.mk-blog-arrow-wrap--left  { left:  0.5rem; }
+.mk-blog-arrow-wrap--right { right: 0.5rem; }
 
 @media (max-width: 1024px) {
   .mk-blog-layout { grid-template-columns: 1fr; gap: 2.5rem; }
@@ -2352,10 +2350,13 @@
 }
 
 .mk-footer-panel__tagline {
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  color: var(--mk-text-secondary);
-  max-width: 30ch;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--mk-text-primary);
+  max-width: 24ch;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 /* Subscribe form */
@@ -2454,19 +2455,16 @@
 .mk-footer-social-icon {
   display: inline-flex;
   align-items: center;
-  gap: 0.625rem;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.5rem;
-  background: var(--mk-surface-gray);
-  color: var(--mk-text-secondary);
   justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--mk-text-primary);
   text-decoration: none;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s, transform 0.15s;
 }
 .mk-footer-social-icon:hover {
-  background: var(--mk-green);
-  color: #fff;
+  color: var(--mk-green);
+  transform: scale(1.1);
 }
 
 @media (max-width: 1024px) {
@@ -2613,26 +2611,26 @@
 /* Arrows at outer edges of card group (.blog-arrow-wrap left / right) */
 .mk-blog-arrow-wrap {
   position: absolute;
-  top: 40%;
+  top: 38%;
   transform: translateY(-50%);
   z-index: 10;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
-  background: #fff;
-  border: 1px solid var(--mk-border);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  background: transparent;
+  border: 1.5px dashed rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--mk-text-primary);
+  color: var(--mk-text-secondary);
   padding: 0;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
 }
 .mk-blog-arrow-wrap:hover {
-  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-  transform: translateY(-50%) scale(1.07);
+  border-color: var(--mk-text-primary);
+  color: var(--mk-text-primary);
+  transform: translateY(-50%) scale(1.06);
 }
 .mk-blog-arrow-inner {
   display: flex;
@@ -2640,8 +2638,8 @@
   justify-content: center;
   line-height: 0;
 }
-.mk-blog-arrow-wrap--left  { left:  -1.25rem; }
-.mk-blog-arrow-wrap--right { right: -1.25rem; }
+.mk-blog-arrow-wrap--left  { left:  0.5rem; }
+.mk-blog-arrow-wrap--right { right: 0.5rem; }
 
 /* Numbered dot nav (.slide-nav w-round w-num) */
 .mk-slide-nav {
