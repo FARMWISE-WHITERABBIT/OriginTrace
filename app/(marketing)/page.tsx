@@ -358,7 +358,7 @@ export default function HomePage() {
                       data-testid="text-hero-headline"
                       style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
                     >
-                      The Compliance Pulse of Modern Supply Chains
+                      The operating system for African agricultural exporters.
                     </h1>
                   </FadeIn>
 
@@ -367,15 +367,20 @@ export default function HomePage() {
                       className="margin-bottom margin-xlarge"
                       style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      Eco-friendly, efficient, and future-ready supply chain traceability that
-                      reduces shipment rejections while maximising export readiness.
+                      From farm record to payment receipt — OriginTrace handles compliance
+                      documentation, shipment tracking, and payment settlement in one platform.
                     </p>
                   </FadeIn>
 
                   <FadeIn delay={0.3}>
-                    <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                      Assess Your Export Readiness
-                    </Link>
+                    <div className="flex flex-wrap gap-3">
+                      <Link href="/demo" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
+                        Request Access
+                      </Link>
+                      <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
+                        See How It Works
+                      </Link>
+                    </div>
                   </FadeIn>
                 </div>
 
@@ -388,52 +393,35 @@ export default function HomePage() {
                         maxWidth: '360px',
                       }}
                     >
-                      {/* ── 1. TITLE ── */}
+                      {/* ── 1. LABEL ── */}
+                      <div className="pb-3">
+                        <span style={{ background: 'var(--mk-green-light)', color: 'var(--mk-green)', fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.65rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          Now accepting pilot applications
+                        </span>
+                      </div>
+
+                      {/* ── 2. HEADLINE ── */}
                       <div className="pb-4">
                         <p
                           className="font-semibold leading-snug"
                           style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
                         >
-                          How Nigerian cocoa exporters cleared EU borders on the first attempt
+                          Export with verified compliance — from first farm to final payment.
                         </p>
                       </div>
 
-                      {/* ── 2. IMAGE ── */}
-                      <div
-                        style={{
-                          height: '160px',
-                          background: 'linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 40%, #34d399 100%)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          borderRadius: '0.375rem',
-                        }}
-                      >
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ background: 'rgba(255,255,255,0.7)', color: 'var(--mk-green)', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
-                            Add your image here
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* ── 3. STAT ROW ── */}
-                      <div style={{ display: 'flex', alignItems: 'stretch', padding: '0.75rem 0' }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                            Farms verified to clear cargo
-                          </p>
-                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            500+
-                          </p>
-                        </div>
-                        <div style={{ width: '1px', background: 'var(--mk-border)', margin: '0 1rem', alignSelf: 'stretch' }} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', marginBottom: '0.375rem', maxWidth: '16ch', lineHeight: 1.4 }}>
-                            Reduction in customs delays
-                          </p>
-                          <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            200+
-                          </p>
-                        </div>
+                      {/* ── 3. PARTNERSHIP ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0', borderTop: '1px solid var(--mk-border)' }}>
+                        <Image
+                          src="/images/nepc-logo.png"
+                          alt="NEPC"
+                          width={60}
+                          height={24}
+                          style={{ width: 'auto', height: '20px', opacity: 0.7 }}
+                        />
+                        <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', lineHeight: 1.4 }}>
+                          Backed by the Nigerian Export Promotion Council
+                        </p>
                       </div>
 
                       {/* Decorative corner elements */}
@@ -494,20 +482,21 @@ export default function HomePage() {
                   <line x1="9.87"  y1="26.13" x2="6.34"  y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
 
-                <span className="pre-title margin-bottom margin-medium">Driving Change</span>
+                <span className="pre-title margin-bottom margin-medium">The Problem We Solve</span>
 
                 <h2 className="text-display-lg section-header__title" style={{ maxWidth: '26ch' }}>
-                  At OriginTrace, we are{' '}
-                  <span className="text-mk-muted">redefining</span> supply chain compliance
-                  by verifying{' '}
-                  <span className="text-mk-brand">every origin.</span>
+                  The problem is not{' '}
+                  <span className="text-mk-muted">production.</span>{' '}
+                  It is{' '}
+                  <span className="text-mk-brand">proof.</span>
                 </h2>
 
                 <p className="section-header__body">
-                  We are trust infrastructure purpose-built for origin-sensitive supply chains.
-                  From first-mile field operations to port clearance, OriginTrace captures
-                  verifiable compliance data at every step — so shipments clear borders,
-                  not get rejected at them.
+                  Nigeria and West Africa produce commodities the world demands — sesame, cocoa,
+                  cashew, ginger, timber. The challenge is not supply. It is that exporters cannot
+                  prove their supply chain to the standard that buyers and regulators now require.
+                  OriginTrace was built to close that gap — not for the buyer, not for the
+                  certification body, but for the exporter.
                 </p>
               </div>
             </FadeIn>
@@ -567,7 +556,7 @@ export default function HomePage() {
             <FadeIn delay={0.22}>
               <div className="flex justify-center">
                 <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
-                  More about us
+                  See the platform
                 </Link>
               </div>
             </FadeIn>
@@ -584,7 +573,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             4. CAPABILITIES (accordion)
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-spacing section-gray">
+        <section id="how-it-works" className="section-spacing section-gray">
           <div className="mk-container-lg">
             <FadeIn>
               <div className="section-header section-header--left margin-bottom margin-xlarge">
@@ -596,18 +585,18 @@ export default function HomePage() {
                     color: 'var(--mk-green)',
                   }}
                 >
-                  Platform Capabilities
+                  How It Works
                 </span>
                 <h2
                   className="text-display-lg section-header__title"
                   data-testid="text-capabilities-headline"
                 >
-                  Everything you need{' '}
-                  <span className="text-mk-muted">to ship with confidence</span>
+                  From farm to payment —{' '}
+                  <span className="text-mk-muted">every step connected</span>
                 </h2>
                 <p className="section-header__body" style={{ textAlign: 'left', marginInline: 0 }}>
-                  A complete compliance infrastructure — from first-mile field capture to
-                  pre-shipment scoring and buyer-facing transparency.
+                  OriginTrace is the only platform that follows your produce all the way from
+                  the farm to the moment you get paid. No missing links. No compliance gaps.
                 </p>
                 <div className="flex gap-3 mt-4">
                   <Link
@@ -636,8 +625,8 @@ export default function HomePage() {
               <div className="section-header section-header--left margin-bottom margin-xlarge">
                 <span className="pre-title margin-bottom margin-medium">Our Capabilities</span>
                 <h2 className="text-display-lg section-header__title">
-                  Six capabilities.{' '}
-                  <span className="text-mk-brand">One platform.</span>
+                  Prove. Clear.{' '}
+                  <span className="text-mk-brand">Get paid.</span>
                 </h2>
               </div>
             </FadeIn>
@@ -735,8 +724,8 @@ export default function HomePage() {
                   Why OriginTrace
                 </span>
                 <h2 className="text-display-lg section-header__title">
-                  Built for Africa.{' '}
-                  <span className="text-mk-muted">Trusted globally.</span>
+                  Built for exporters.{' '}
+                  <span className="text-mk-muted">Not just buyers.</span>
                 </h2>
               </div>
             </FadeIn>
@@ -796,11 +785,12 @@ export default function HomePage() {
                   className="text-display-md section-header__title"
                   data-testid="text-compliance-headline"
                 >
-                  Multi-Regulatory Compliance Coverage
+                  One shipment.{' '}
+                  <span className="text-mk-muted">Five markets. All covered.</span>
                 </h2>
                 <p className="section-header__body">
-                  One trust infrastructure serving multiple regulatory frameworks, verticals,
-                  and buyer requirements.
+                  OriginTrace tracks the regulatory frameworks that determine whether your
+                  produce enters — or gets turned back at port.
                 </p>
               </div>
             </FadeIn>
@@ -1251,11 +1241,12 @@ export default function HomePage() {
                   className="text-display-md section-header__title"
                   data-testid="text-blog-headline"
                 >
-                  Expert Insights &amp; Compliance Updates
+                  Compliance updates for{' '}
+                  <span className="text-mk-muted">African exporters</span>
                 </h2>
                 <p className="section-header__body">
-                  Stay ahead of regulatory changes and learn best practices for
-                  origin-sensitive supply chain compliance.
+                  Regulatory deadlines, market access guides, and practical compliance
+                  resources — written for exporters in Nigeria and West Africa.
                 </p>
               </div>
             </FadeIn>
@@ -1328,15 +1319,16 @@ export default function HomePage() {
                   className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
                   data-testid="text-final-cta-headline"
                 >
-                  Ready to build trust into your supply chain?
+                  The pilot is open. Places are limited.
                 </h2>
 
                 <p
                   className="margin-bottom margin-xlarge-2"
                   style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
                 >
-                  Join exporters and processors across agriculture, timber, minerals, and seafood
-                  who trust OriginTrace for supply chain compliance.
+                  OriginTrace is working with a select group of exporters in Nigeria and
+                  West Africa. Apply now to get your supply chain compliance-ready before
+                  your next export season.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 margin-bottom margin-large-2">
@@ -1345,7 +1337,7 @@ export default function HomePage() {
                     className="btn-mk-primary btn-mk-lg"
                     data-testid="button-get-started"
                   >
-                    Get Started
+                    Apply for Early Access
                     <ChevronRight className="h-5 w-5" />
                   </Link>
                   <Link
@@ -1354,7 +1346,7 @@ export default function HomePage() {
                     data-testid="button-schedule-call"
                   >
                     <Phone className="h-4 w-4" />
-                    Schedule a Call
+                    Book a 30-min Walkthrough
                   </Link>
                 </div>
 
