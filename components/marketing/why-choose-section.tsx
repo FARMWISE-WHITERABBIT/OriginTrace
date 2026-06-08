@@ -108,57 +108,61 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
         })}
       </div>
 
-      {/* ── Right column — tall photo with overlaid offset-border CTA ───── */}
+      {/* ── Right column — image with pill straddling the bottom edge ───── */}
       <div className="relative lg:sticky lg:top-24">
-        <div
-          className="relative w-full overflow-hidden"
-          style={{ aspectRatio: '3/4', borderRadius: '1.5rem' }}
-        >
-          {/* Photo */}
+        {/* Padding-bottom reserves space for the pill that hangs below */}
+        <div className="relative w-full" style={{ paddingBottom: '2.25rem' }}>
+          {/* Image card clips independently */}
           <div
-            className="absolute inset-0"
             style={{
-              backgroundImage: "url('/images/pexels-matt-arellano-1239978561-23022542.jpg')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '3/4',
+              borderRadius: '1.5rem',
+              overflow: 'hidden',
             }}
-          />
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: "url('/images/pexels-matt-arellano-1239978561-23022542.jpg')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 55%, rgba(10,35,28,0.35) 100%)',
+              }}
+            />
+          </div>
 
-          {/* Bottom gradient */}
+          {/* Pill straddles the bottom edge: half over image, half below */}
           <div
-            className="absolute inset-0"
             style={{
-              background: 'linear-gradient(to bottom, transparent 45%, rgba(10,35,28,0.75) 100%)',
+              position: 'absolute',
+              bottom: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 20,
             }}
-          />
-
-          {/* Offset-border CTA button */}
-          <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center px-6">
+          >
             <Link
               href="/demo"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem',
-                padding: '0.7rem 1.5rem',
+                padding: '1.1rem 3rem',
                 borderRadius: '9999px',
-                fontSize: '0.9rem',
+                fontSize: '1rem',
                 fontWeight: 600,
-                background: '#fff',
+                background: 'var(--color--gray-7)',
                 color: 'var(--mk-text-primary)',
                 textDecoration: 'none',
-                /* Offset border: solid shadow shifted down-right */
-                boxShadow: '3px 4px 0 0 var(--mk-green)',
-                transition: 'box-shadow 0.18s, transform 0.18s',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 0 var(--mk-green)';
-                (e.currentTarget as HTMLElement).style.transform = 'translate(1px, 2px)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = '3px 4px 0 0 var(--mk-green)';
-                (e.currentTarget as HTMLElement).style.transform = 'translate(0, 0)';
+                whiteSpace: 'nowrap',
               }}
             >
               Request a Demo
