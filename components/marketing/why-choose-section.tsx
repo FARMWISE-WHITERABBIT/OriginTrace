@@ -138,7 +138,7 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
             />
           </div>
 
-          {/* Pill straddles the bottom edge: half over image, half below */}
+          {/* Outer pill (section bg colour) wraps green inner button, straddles bottom edge */}
           <div
             style={{
               position: 'absolute',
@@ -146,6 +146,9 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
               left: '50%',
               transform: 'translateX(-50%)',
               zIndex: 20,
+              background: 'var(--color--gray-7)',
+              borderRadius: '9999px',
+              padding: '0.4rem',
             }}
           >
             <Link
@@ -155,12 +158,12 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                padding: '1.1rem 3rem',
+                padding: '0.85rem 2.5rem',
                 borderRadius: '9999px',
                 fontSize: '1rem',
                 fontWeight: 600,
-                background: 'var(--color--gray-7)',
-                color: 'var(--mk-text-primary)',
+                background: 'var(--mk-green)',
+                color: '#fff',
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',
               }}
