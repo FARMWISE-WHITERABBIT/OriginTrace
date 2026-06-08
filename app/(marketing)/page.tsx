@@ -484,6 +484,42 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
+            12b. PARTNER / BODY LOGOS
+            ═══════════════════════════════════════════════════════ */}
+        <section style={{ background: 'var(--mk-surface-gray)', borderTop: '1px solid var(--mk-border)', paddingBlock: '2.25rem' }}>
+          <div className="mk-container-lg">
+            <p style={{ textAlign: 'center', fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mk-text-muted)', marginBottom: '1.5rem' }}>
+              Trusted by exporters. Recognised by bodies that matter.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {[
+                { abbr: 'NEPC', name: 'Nigerian Export Promotion Council' },
+                { abbr: 'NAFDAC', name: 'NAFDAC' },
+                { abbr: 'NCS', name: 'Nigeria Customs Service' },
+                { abbr: 'COCOBOD', name: 'Ghana Cocobod' },
+                { abbr: 'KEBS', name: 'Kenya Bureau of Standards' },
+                { abbr: 'ECOWAS', name: 'ECOWAS Trade' },
+              ].map((org, i, arr) => (
+                <div
+                  key={org.abbr}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0 2.25rem',
+                    borderRight: i < arr.length - 1 ? '1px solid var(--mk-border)' : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--mk-green)', background: 'rgba(46,125,107,0.08)', padding: '0.2rem 0.45rem', borderRadius: '0.25rem', letterSpacing: '0.04em' }}>{org.abbr}</span>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--mk-text-secondary)', whiteSpace: 'nowrap' }}>{org.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
             13. FINAL CTA
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-dark">

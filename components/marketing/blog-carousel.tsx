@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -50,42 +50,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
             </span>{' '}
             from our team
           </h2>
-
-          {/* Arrow nav — matches How It Works dashed circle style */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
-            <button
-              onClick={prev}
-              aria-label="Previous posts"
-              style={{
-                width: '3rem', height: '3rem', borderRadius: '50%',
-                border: '1.5px dashed var(--mk-border)',
-                background: 'transparent',
-                color: 'var(--mk-text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'border-color 0.2s, color 0.2s',
-              }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={next}
-              aria-label="Next posts"
-              style={{
-                width: '3rem', height: '3rem', borderRadius: '50%',
-                border: '1.5px dashed var(--mk-border)',
-                background: 'transparent',
-                color: 'var(--mk-text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'border-color 0.2s, color 0.2s',
-              }}
-            >
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div style={{ marginTop: '1.25rem' }}>
+          <div style={{ marginTop: '2rem' }}>
             <Link href="/blog" className="btn-mk-outline">
               View All Insights
               <ArrowRight className="h-4 w-4" />
@@ -94,8 +59,31 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
         </div>
       </FadeIn>
 
-      {/* RIGHT — sliding card track */}
+      {/* RIGHT — sliding card track with side circle arrows */}
       <div className="mk-blog-slider">
+
+        {/* Left arrow at card left edge */}
+        <button
+          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--left"
+          aria-label="Previous posts"
+          onClick={prev}
+        >
+          <div className="mk-blog-arrow-inner">
+            <ArrowLeft width={16} height={16} strokeWidth={2} />
+          </div>
+        </button>
+
+        {/* Right arrow at card right edge */}
+        <button
+          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--right"
+          aria-label="Next posts"
+          onClick={next}
+        >
+          <div className="mk-blog-arrow-inner">
+            <ArrowRight width={16} height={16} strokeWidth={2} />
+          </div>
+        </button>
+
         {/* Sliding track */}
         <div style={{ overflow: 'hidden' }}>
           <div
@@ -107,7 +95,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
               transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             }}
           >
-            {posts.map((post, i) => (
+            {posts.map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`} className="mk-blog-item">
                 <div className="mk-blog-image-wrap">
                   {post.coverImage ? (
