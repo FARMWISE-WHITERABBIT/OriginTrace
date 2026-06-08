@@ -75,6 +75,13 @@ export function MarketingFooter() {
       <div className="mk-footer__inner">
         {/* Two floating white panels */}
         <div className="mk-footer__panels">
+          {/* Shape connector between panels */}
+          <img
+            src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+            alt=""
+            aria-hidden
+            className="mk-footer__shape"
+          />
 
           {/* ── LEFT PANEL ─────────────────────────────────────── */}
           <div className="mk-footer-panel mk-footer-panel--left">

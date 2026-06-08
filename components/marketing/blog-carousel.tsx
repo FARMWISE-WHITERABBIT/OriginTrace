@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
 import { FadeIn } from '@/components/marketing/motion';
 import type { BlogPost } from '@/lib/blog';
 
@@ -11,13 +11,12 @@ interface BlogCarouselProps {
   posts: BlogPost[];
 }
 
-/* Show 2 cards at a time, page through all posts */
 const PER_PAGE = 2;
 
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(posts.length / PER_PAGE);
-  const visible = posts.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
+  const total = posts.length;
 
   function prev() {
     setPage((p) => (p - 1 + totalPages) % totalPages);
@@ -51,7 +50,42 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
             </span>{' '}
             from our team
           </h2>
-          <div style={{ marginTop: '2rem' }}>
+
+          {/* Arrow nav — matches How It Works dashed circle style */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem' }}>
+            <button
+              onClick={prev}
+              aria-label="Previous posts"
+              style={{
+                width: '3rem', height: '3rem', borderRadius: '50%',
+                border: '1.5px dashed var(--mk-border)',
+                background: 'transparent',
+                color: 'var(--mk-text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s, color 0.2s',
+              }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Next posts"
+              style={{
+                width: '3rem', height: '3rem', borderRadius: '50%',
+                border: '1.5px dashed var(--mk-border)',
+                background: 'transparent',
+                color: 'var(--mk-text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s, color 0.2s',
+              }}
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div style={{ marginTop: '1.25rem' }}>
             <Link href="/blog" className="btn-mk-outline">
               View All Insights
               <ArrowRight className="h-4 w-4" />
@@ -60,40 +94,21 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
         </div>
       </FadeIn>
 
-      {/* RIGHT — 2-up card slider */}
+      {/* RIGHT — sliding card track */}
       <div className="mk-blog-slider">
-
-        {/* Left arrow */}
-        <button
-          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--left"
-          aria-label="Previous posts"
-          onClick={prev}
-        >
-          <div className="mk-blog-arrow-inner">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </div>
-        </button>
-
-        {/* Right arrow */}
-        <button
-          className="mk-blog-arrow-wrap mk-blog-arrow-wrap--right"
-          aria-label="Next posts"
-          onClick={next}
-        >
-          <div className="mk-blog-arrow-inner">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </div>
-        </button>
-
-        {/* 2 cards */}
-        <div className="mk-blog-cards">
-          {visible.map((post, i) => (
-            <FadeIn key={`${page}-${post.slug}`} delay={i * 0.06}>
-              <Link href={`/blog/${post.slug}`} className="mk-blog-item">
+        {/* Sliding track */}
+        <div style={{ overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${total}, calc((100% - 1rem) / 2))`,
+              gap: '1rem',
+              transform: `translateX(calc(-${page} * (100% / ${total}) * ${total / PER_PAGE}))`,
+              transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            }}
+          >
+            {posts.map((post, i) => (
+              <Link key={post.slug} href={`/blog/${post.slug}`} className="mk-blog-item">
                 <div className="mk-blog-image-wrap">
                   {post.coverImage ? (
                     <Image
@@ -119,12 +134,30 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
                   <h2 className="mk-blog-title">{post.title}</h2>
                 </div>
               </Link>
-            </FadeIn>
-          ))}
+            ))}
+          </div>
         </div>
 
-
-
+        {/* Dot pagination */}
+        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '1.5rem' }}>
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              aria-label={`Go to page ${i + 1}`}
+              style={{
+                width: i === page ? '1.5rem' : '0.375rem',
+                height: '0.375rem',
+                borderRadius: '9999px',
+                background: i === page ? 'var(--mk-green)' : 'var(--mk-border)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                transition: 'width 0.3s, background 0.3s',
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
