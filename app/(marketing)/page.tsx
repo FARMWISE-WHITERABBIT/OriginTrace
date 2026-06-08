@@ -4,7 +4,8 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { ComplianceCalculator } from '@/components/marketing/compliance-calculator';
 import { IndustryTicker } from '@/components/marketing/industry-ticker';
-import { getRecentPosts } from '@/lib/blog';
+import { getAllPosts } from '@/lib/blog';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { FadeIn, StaggerContainer, StaggerItem, ScaleIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
@@ -303,7 +304,8 @@ function CertificationMarquee() {
    ───────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
-  const recentPosts = getRecentPosts(3);
+  const allPosts = getAllPosts();
+  const featuredPost = allPosts[0];
 
   /* Schema markup */
   const organizationSchema = {
@@ -374,8 +376,8 @@ export default function HomePage() {
 
                   <FadeIn delay={0.3}>
                     <div className="flex flex-wrap gap-3">
-                      <Link href="/demo" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                        Request Access
+                      <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
+                        Assess Your Export Readiness
                       </Link>
                       <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
                         See How It Works
@@ -393,39 +395,62 @@ export default function HomePage() {
                         maxWidth: '360px',
                       }}
                     >
-                      {/* ── 1. LABEL ── */}
-                      <div className="pb-3">
-                        <span style={{ background: 'var(--mk-green-light)', color: 'var(--mk-green)', fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.65rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          Now accepting pilot applications
-                        </span>
-                      </div>
-
-                      {/* ── 2. HEADLINE ── */}
-                      <div className="pb-4">
-                        <p
-                          className="font-semibold leading-snug"
-                          style={{ fontSize: '1.0625rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.015em', maxWidth: '28ch' }}
+                      {/* ── 1. IMAGE ── */}
+                      <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
+                        <div
+                          style={{
+                            height: '180px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderRadius: '0.5rem',
+                          }}
                         >
-                          Export with verified compliance — from first farm to final payment.
+                          {featuredPost.coverImage ? (
+                            <img
+                              src={featuredPost.coverImage}
+                              alt={featuredPost.coverImageAlt || featuredPost.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-br ${featuredPost.coverGradient}`} />
+                          )}
+                          {/* Category + date chips */}
+                          <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', display: 'flex', gap: '0.4rem' }}>
+                            <span style={{ background: 'var(--mk-green)', color: '#fff', fontSize: '0.625rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {featuredPost.category}
+                            </span>
+                            <span style={{ background: 'rgba(20,20,20,0.72)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backdropFilter: 'blur(4px)' }}>
+                              {featuredPost.date}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* ── 2. TITLE ── */}
+                      <div style={{ padding: '0.75rem 0 0.5rem' }}>
+                        <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--mk-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>
+                          Latest Insight
                         </p>
+                        <Link href={`/blog/${featuredPost.slug}`} style={{ textDecoration: 'none' }}>
+                          <p
+                            className="font-semibold leading-snug"
+                            style={{ fontSize: '0.9375rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em', maxWidth: '30ch', lineHeight: 1.45 }}
+                          >
+                            {featuredPost.title}
+                          </p>
+                        </Link>
                       </div>
 
-                      {/* ── 3. PARTNERSHIP ROW ── */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0', borderTop: '1px solid var(--mk-border)' }}>
-                        <Image
-                          src="/images/nepc-logo.png"
-                          alt="NEPC"
-                          width={60}
-                          height={24}
-                          style={{ width: 'auto', height: '20px', opacity: 0.7 }}
-                        />
-                        <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', lineHeight: 1.4 }}>
-                          Backed by the Nigerian Export Promotion Council
-                        </p>
+                      {/* ── 3. META ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)' }}>{featuredPost.readingTime}</span>
+                        <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'var(--mk-text-muted)' }} aria-hidden />
+                        <Link href="/blog" style={{ fontSize: '0.75rem', color: 'var(--mk-green)', fontWeight: 600, textDecoration: 'none' }}>
+                          View all insights →
+                        </Link>
                       </div>
 
                       {/* Decorative corner elements */}
-                      {/* Mivora concave quarter-circle corner fills */}
                       <img
                         src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
                         alt=""
@@ -1230,73 +1255,11 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12. BLOG — 3-col mk-blog-card grid
+            12. BLOG — 2-up carousel
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
           <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header">
-                <span className="pre-title margin-bottom margin-medium">Insights</span>
-                <h2
-                  className="text-display-md section-header__title"
-                  data-testid="text-blog-headline"
-                >
-                  Compliance updates for{' '}
-                  <span className="text-mk-muted">African exporters</span>
-                </h2>
-                <p className="section-header__body">
-                  Regulatory deadlines, market access guides, and practical compliance
-                  resources — written for exporters in Nigeria and West Africa.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="mk-grid-3 margin-bottom margin-xlarge-2">
-              {recentPosts.map((post) => (
-                <StaggerItem key={post.slug}>
-                  <Link href={`/blog/${post.slug}`} className="mk-blog-card">
-                    <div className="mk-blog-card__img-wrap">
-                      {post.coverImage ? (
-                        <Image
-                          src={post.coverImage}
-                          alt={post.coverImageAlt || post.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-br ${post.coverGradient} flex items-center justify-center`}
-                        >
-                          <BookOpen className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
-                        </div>
-                      )}
-                      <div className="mk-blog-card__overlay" />
-                      <div className="mk-blog-card__cat">
-                        <span className="pre-title">{post.category}</span>
-                      </div>
-                    </div>
-                    <div className="mk-blog-card__body">
-                      <div className="mk-blog-card__meta">{post.date}</div>
-                      <h3 className="mk-blog-card__title">{post.title}</h3>
-                      <p className="mk-blog-card__desc">{post.description}</p>
-                      <span className="mk-blog-card__link">
-                        Read More <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-
-            <FadeIn>
-              <div className="flex justify-center">
-                <Link href="/blog" className="btn-mk-outline">
-                  View All Insights
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </FadeIn>
+            <BlogCarousel posts={allPosts} />
           </div>
         </section>
 
