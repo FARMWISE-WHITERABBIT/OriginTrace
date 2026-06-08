@@ -12,7 +12,7 @@ const frameworks = [
     abbr: 'EUDR',
     market: 'European Union',
     deadline: 'Dec 2025',
-    image: '/images/pexels-kltdinusha-7450070.jpg',
+    image: '/images/pexels-seunadeniyi-14371700.jpg',
     body: 'Cocoa, coffee, timber, palm oil, soya, cattle, rubber, and derived products entering the EU must carry verifiable proof of zero-deforestation origin.',
     commodities: 'Cocoa · Coffee · Timber · Palm Oil · Rubber',
     stats: [
@@ -28,7 +28,7 @@ const frameworks = [
     abbr: 'OECD DDG',
     market: 'Global / LBMA / RMI',
     deadline: 'Ongoing',
-    image: '/images/pexels-tomfisk-2101135.jpg',
+    image: '/images/pexels-tomfisk-1427107.jpg',
     body: 'Gold, coltan, tungsten, tin, and tantalum exports to responsible smelters require documented chain-of-custody and conflict-minerals declarations.',
     commodities: 'Gold · Coltan · Lithium · Tin · Tungsten',
     stats: [
@@ -44,7 +44,7 @@ const frameworks = [
     abbr: 'FSMA 204',
     market: 'United States',
     deadline: 'Jan 2026',
-    image: '/images/pexels-traveliving-4663476.jpg',
+    image: '/images/pexels-josiah-matthew-145486517-10697911.jpg',
     body: 'US FDA requires traceability records for high-risk food commodities at every step. OriginTrace captures KDEs at farm level and links them to every Critical Tracking Event.',
     commodities: 'Sesame · Cashew · Shea · Cocoa · Spices',
     stats: [
@@ -60,7 +60,7 @@ const frameworks = [
     abbr: 'GACC',
     market: 'China',
     deadline: 'Ongoing',
-    image: '/images/baged product in wareouse.jpg',
+    image: '/images/pexels-masudar-37218946.jpg',
     body: "China's Customs requires registered facilities and verifiable origin documentation for agricultural imports. OriginTrace manages registration records and links farm-to-processor traceability.",
     commodities: 'Sesame · Cashew · Groundnuts · Cocoa',
     stats: [
@@ -76,7 +76,7 @@ const frameworks = [
     abbr: 'CS3D · Lacey',
     market: 'EU · United States',
     deadline: '2027 onwards',
-    image: '/images/pexels-jan-van-der-wolf-11680885-15780139.jpg',
+    image: '/images/pexels-stephanefabricebass-10319259.jpg',
     body: "The EU's CS3D and the US Lacey Act demand documented legal harvest origin for timber and forest-risk commodities. OriginTrace records species ID, concession GPS boundaries, and chain-of-custody.",
     commodities: 'Timber · Rubber · Charcoal · Wood Products',
     stats: [
