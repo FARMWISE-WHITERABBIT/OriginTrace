@@ -2304,7 +2304,7 @@
 .mk-footer__panels {
   display: grid;
   grid-template-columns: 1fr 1.8fr;
-  gap: 1.5rem;
+  gap: 30px; /* matches shape SVG width exactly */
   align-items: start;
   position: relative;
 }
@@ -2312,8 +2312,8 @@
 .mk-footer__shape {
   position: absolute;
   top: 50%;
-  /* left panel is ~35.7% of container; gap is 1.5rem; shape centre = left panel edge */
-  left: calc(35.7% - 0.75rem - 15px);
+  /* left panel = 1/2.8 of (100% - 30px gap). Shape fills the gap precisely. */
+  left: calc((100% - 30px) / 2.8);
   transform: translateY(-50%);
   z-index: 10;
   pointer-events: none;
