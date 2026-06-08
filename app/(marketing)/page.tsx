@@ -365,7 +365,7 @@ export default function HomePage() {
                 marginBottom: '3rem',
               }}
             >
-              {/* LEFT — Cocoa/commodity at source */}
+              {/* LEFT — Cocoa on tree at source */}
               <FadeIn delay={0.1} direction="up">
                 <div
                   style={{
@@ -374,19 +374,19 @@ export default function HomePage() {
                     overflow: 'hidden',
                     backgroundImage: "url('/images/pexels-pixabay-50707.jpg')",
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    backgroundPosition: 'left center',
                   }}
                 />
               </FadeIn>
 
-              {/* CENTER — Processing / drying (tallest, protrudes) */}
+              {/* CENTER — Cocoa drying / processing (tallest, protrudes) */}
               <FadeIn delay={0.22} direction="up">
                 <div
                   style={{
                     height: '640px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-stephanefabricebass-10319259.jpg')",
+                    backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
