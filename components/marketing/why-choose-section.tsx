@@ -98,7 +98,7 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: "url('/images/farmer in field.jpg')",
+              backgroundImage: "url('/images/pexels-matt-arellano-1239978561-23022542.jpg')",
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
