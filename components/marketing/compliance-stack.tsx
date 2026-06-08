@@ -87,9 +87,9 @@ const frameworks = [
   },
 ];
 
-// Card width ≈ one card visible at a time in a ~1280px container
+// 1.5 cards visible: card fills ~2/3 of the visible container width
 // Scroll per card = card width + gap so each step reveals exactly 1 card
-const CARD_W = 460;
+const CARD_W = 780;
 const CARD_GAP = 28;
 const STEP = CARD_W + CARD_GAP; // scroll distance to advance one card
 
@@ -130,7 +130,7 @@ export function ComplianceStack() {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        paddingBlock: '2.5rem',
+        paddingBlock: '1.5rem',
       }}>
 
         {/* Section header */}
