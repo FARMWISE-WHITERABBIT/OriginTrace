@@ -178,7 +178,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
       <MarketingNav />
@@ -476,7 +476,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             12. BLOG — 2-up carousel
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-spacing section-white">
+        <section className="section-spacing-sm section-white">
           <div className="mk-container-lg">
             <BlogCarousel posts={allPosts} />
           </div>
