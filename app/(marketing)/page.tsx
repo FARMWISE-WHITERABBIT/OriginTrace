@@ -26,45 +26,6 @@ import {
    DATA CONSTANTS — unchanged from original
    ───────────────────────────────────────────────────────────────── */
 
-const capabilities = [
-  {
-    number: '01',
-    title: 'Pre-Shipment Compliance Scoring',
-    description: 'Every shipment is scored across five compliance dimensions before cargo reaches port. Identify risks, resolve issues, and clear shipments with confidence.',
-    points: ['5-dimension risk scoring (traceability, contamination, documentation, storage, regulatory)', 'Automated issue flagging with recommended resolution actions', 'Real-time clearance probability estimation'],
-  },
-  {
-    number: '02',
-    title: 'Farm-Level Traceability & GPS Mapping',
-    description: 'Capture verified origin data at the plot level with GPS polygon mapping. Every bag links back to its exact source — down to the coordinates.',
-    points: ['GPS polygon farm boundary mapping with anti-spoofing', 'Hybrid bag-batch traceability from farm to export', 'Deforestation and boundary conflict detection'],
-  },
-  {
-    number: '03',
-    title: 'Offline-First Field Operations',
-    description: 'Purpose-built for remote areas with zero connectivity. Field agents collect, grade, and sync data automatically when back in range.',
-    points: ['Full data capture in offline mode via PWA', 'Automatic sync with conflict resolution', 'Anti-fraud protections (yield validation, GPS verification)'],
-  },
-  {
-    number: '04',
-    title: 'Buyer Portal & Supply Chain Visibility',
-    description: 'Give your buyers direct access to traceability data, shipment status, and compliance evidence — building trust and accelerating procurement decisions.',
-    points: ['Buyer-invites-exporter connection flow', 'Contract management and shipment tracking', 'Shared document access with audit trails'],
-  },
-  {
-    number: '05',
-    title: 'Digital Product Passport (DPP)',
-    description: 'Generate JSON-LD Digital Product Passports that link finished goods to their full chain of custody. One QR code proves everything.',
-    points: ['JSON-LD output meeting EU DPP specifications', 'QR code linking to public verification page', 'Sustainability claims and certification evidence'],
-  },
-  {
-    number: '06',
-    title: 'Document Vault & Regulatory Exports',
-    description: 'Store, track, and manage all compliance documents in one vault. Auto-alerts for expiring certificates. Export audit-ready dossiers on demand.',
-    points: ['Centralized document storage with expiry tracking', 'GeoJSON export for EUDR due diligence statements', 'Entity-linked documents (batch, shipment, contract)'],
-  },
-];
-
 
 const whyChooseFeatures = [
   {
@@ -466,7 +427,7 @@ export default function HomePage() {
             ═══════════════════════════════════════════════════════ */}
         <section id="how-it-works" className="section-spacing section-dark">
           <div className="mk-container-lg">
-            <CapabilitySlider capabilities={capabilities} />
+            <CapabilitySlider />
           </div>
         </section>
 
