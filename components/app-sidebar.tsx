@@ -39,68 +39,18 @@ import {
 } from '@/components/ui/collapsible';
 import { getNavigationConfig, UserRole } from '@/lib/config/navigation';
 import { hasTierAccess, TIER_LABELS, type SubscriptionTier } from '@/lib/config/tier-gating';
-import { useOnlineStatus } from '@/lib/hooks/use-online-status';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useState, useEffect } from 'react';
-
-interface ImpersonationSession {
-  org_id: string;
-  org_name: string;
-}
+import { useSyncStatus } from '@/components/sync-status-provider';
+import { useState } from 'react';
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { profile, organization, isLoading, isSystemAdmin } = useOrg();
+  const { profile, organization, isLoading, isSystemAdmin, impersonation } = useOrg();
   const { state } = useSidebar();
   const router = useRouter();
   const supabase = createClient();
-  const isOnline = useOnlineStatus();
-  const [impersonation, setImpersonation] = useState<ImpersonationSession | null>(null);
-  const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const { isOnline, pendingCount: unsyncedCount } = useSyncStatus();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
-
-  // Check for impersonation session
-  useEffect(() => {
-    async function checkImpersonation() {
-      try {
-        const res = await fetch('/api/impersonate');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.impersonating) {
-            setImpersonation({
-              org_id: data.org_id,
-              org_name: data.org_name || 'Unknown Org'
-            });
-          } else {
-            setImpersonation(null);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to check impersonation:', err);
-      }
-    }
-    if (isSystemAdmin) {
-      checkImpersonation();
-    }
-  }, [isSystemAdmin]);
-
-  // Check for unsynced records (for sync badge)
-  useEffect(() => {
-    async function checkUnsyncedRecords() {
-      try {
-        if (typeof window !== 'undefined' && 'indexedDB' in window) {
-          const { getSyncStats } = await import('@/lib/offline/sync-store');
-          const stats = await getSyncStats();
-          setUnsyncedCount(stats.pending + stats.error);
-        }
-      } catch (err) {
-        setUnsyncedCount(0);
-      }
-    }
-    checkUnsyncedRecords();
-    const interval = setInterval(checkUnsyncedRecords, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleLogout = async () => {
     if (supabase) {
@@ -148,7 +98,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="relative">
         {/* Impersonation indicator */}
-        {impersonation && (
+        {impersonation.isImpersonating && (
           <div className="absolute -top-1 -right-1 z-10">
             <div className="relative">
               <AlertCircle className="h-5 w-5 text-red-500 animate-pulse" />
@@ -190,10 +140,10 @@ export function AppSidebar() {
                 <span className="truncate text-xs font-medium text-sidebar-foreground/70">{organization.name}</span>
               </div>
             )}
-            {impersonation && (
+            {impersonation.isImpersonating && (
               <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
                 <AlertCircle className="h-3 w-3" />
-                <span className="truncate">Impersonating: {impersonation.org_name}</span>
+                <span className="truncate">Impersonating: {impersonation.orgName}</span>
               </div>
             )}
           </div>

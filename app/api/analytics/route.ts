@@ -114,6 +114,11 @@ export async function GET(request: NextRequest) {
     const orgId = profile.org_id;
 
     const result: Record<string, any> = { period };
+    const includeOperational = section === 'all' || section === 'operational' || section === 'dashboard';
+    const includeStrategic = section === 'all' || section === 'strategic';
+    const includeShipments = section === 'all' || section === 'shipments' || section === 'dashboard';
+    const includeDocuments = section === 'all' || section === 'documents' || section === 'dashboard';
+    const includeFinancial = section === 'all' || section === 'financial';
 
     const calcTrend = (curr: number, prev: number) =>
       prev > 0 ? Math.round(((curr - prev) / prev) * 100) : curr > 0 ? 100 : 0;
@@ -140,7 +145,7 @@ export async function GET(request: NextRequest) {
           .lt('created_at', periodStart),
         supabase
           .from('farms')
-          .select('id, compliance_status, commodity, area_hectares, deforestation_check')
+          .select('id, compliance_status, commodity, area_hectares, deforestation_check, boundary_geo, state_id')
           .eq('org_id', orgId),
         supabase
           .from('bags')
@@ -166,7 +171,7 @@ export async function GET(request: NextRequest) {
     const currentBags = batches.reduce((s, b) => s + Number(b.bag_count || 0), 0);
     const previousBags = prevBatches.reduce((s, b) => s + Number(b.bag_count || 0), 0);
 
-    if (section === 'all' || section === 'operational') {
+    if (includeOperational) {
       try {
         const volumeTrends = groupByInterval(
           batches.map(b => ({ created_at: b.created_at, total_weight: Number(b.total_weight || 0), bag_count: Number(b.bag_count || 0) })),
@@ -234,7 +239,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (section === 'all' || section === 'strategic') {
+    if (includeStrategic) {
       try {
         const farmCommodityMap = new Map<string, string>();
         for (const f of farms) {
@@ -335,7 +340,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (section === 'all' || section === 'shipments') {
+    if (includeShipments) {
       try {
         const shipmentsRes = await supabase
           .from('shipments')
@@ -400,7 +405,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (section === 'all' || section === 'documents') {
+    if (includeDocuments) {
       try {
         const { data: documents, error: docError } = await supabase
           .from('documents')
@@ -435,7 +440,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (section === 'all' || section === 'financial') {
+    if (includeFinancial) {
       try {
         const { data: payments, error: payError } = await supabase
           .from('payments')

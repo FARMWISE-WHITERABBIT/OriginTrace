@@ -6,6 +6,8 @@
 
 @layer base {
   :root {
+    --font-sans: "Plus Jakarta Sans", "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "JetBrains Mono", "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, ui-monospace, monospace;
     /* OriginTrace Light Theme — Enterprise regulatory UI */
 
     --background: 150 17% 98%;

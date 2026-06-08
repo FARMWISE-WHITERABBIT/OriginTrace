@@ -2,6 +2,39 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { profileUpdateSchema, parseBody } from '@/lib/api/validation';
+import { cookies } from 'next/headers';
+import { verifyCookiePayload } from '@/lib/security/signed-cookie';
+
+const IMPERSONATION_COOKIE = 'origintrace_impersonation';
+
+async function readImpersonationState() {
+  try {
+    const cookieStore = await cookies();
+    const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
+    if (!impersonationCookie) return { isImpersonating: false };
+
+    const payload = await verifyCookiePayload<{
+      org_id?: number;
+      org_name?: string;
+      original_admin_id?: string;
+      expires_at?: string;
+    }>(impersonationCookie.value);
+
+    if (!payload?.org_id || !payload.expires_at || new Date(payload.expires_at) <= new Date()) {
+      return { isImpersonating: false };
+    }
+
+    return {
+      isImpersonating: true,
+      orgId: payload.org_id,
+      orgName: payload.org_name,
+      originalAdminId: payload.original_admin_id,
+      expiresAt: payload.expires_at,
+    };
+  } catch {
+    return { isImpersonating: false };
+  }
+}
 
 function normalizeBuyerProfile(buyerProfile: any, buyerOrganization: any, userEmail?: string | null) {
   return {
@@ -71,6 +104,7 @@ export async function GET(request: NextRequest) {
     }
 
     const isSystemAdmin = !!systemAdminResult.data;
+    const impersonation = await readImpersonationState();
     let profile = profileResult.data;
     let organization = profile?.organizations || null;
 
@@ -108,6 +142,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (isSystemAdmin && impersonation.isImpersonating && impersonation.orgId) {
+      const { data: impersonatedOrg, error: impersonatedOrgError } = await supabaseAdmin
+        .from('organizations')
+        .select('*')
+        .eq('id', impersonation.orgId)
+        .maybeSingle();
+
+      if (impersonatedOrgError) {
+        console.error('Impersonated organization fetch error:', impersonatedOrgError);
+        return NextResponse.json(
+          { error: 'Service temporarily unavailable, please try again' },
+          { status: 503 }
+        );
+      }
+
+      if (impersonatedOrg) {
+        organization = impersonatedOrg;
+      }
+    }
+
     if (!profile && isSystemAdmin) {
       return NextResponse.json({
         profile: {
@@ -116,15 +170,17 @@ export async function GET(request: NextRequest) {
           email: user.email,
           role: 'superadmin',
         },
-        organization: null,
-        isSystemAdmin: true
+        organization,
+        isSystemAdmin: true,
+        impersonation
       });
     }
 
     return NextResponse.json({
       profile,
       organization,
-      isSystemAdmin
+      isSystemAdmin,
+      impersonation
     });
 
   } catch (error) {

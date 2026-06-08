@@ -19,28 +19,29 @@ const withPWA = withPWAInit({
       options: {
         cacheName: 'supabase-api-cache',
         expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
-        networkTimeoutSeconds: 10,
+        networkTimeoutSeconds: 5,
       },
     },
     // ── Supabase Storage (images, docs) — CacheFirst for performance ────────
+    // ── App-specific API routes — NetworkFirst, fall back to cache ──────────
+    // Supabase storage is intentionally not cached here because the documents bucket can contain sensitive files.
+    // Covers read-only lookup endpoints useful while offline:
+    // locations, commodities, and tenant field farmer lists
     {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
-      handler: 'CacheFirst',
+      urlPattern: /^\/api\/(locations|commodities)\b.*/i,
+      handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'supabase-storage-cache',
-        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+        cacheName: 'app-reference-cache',
+        expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 }, // 24h
       },
     },
-    // ── App-specific API routes — NetworkFirst, fall back to cache ──────────
-    // Covers read-only lookup endpoints useful while offline:
-    // locations, commodities, farmers list, batches list
     {
-      urlPattern: /^\/api\/(locations|commodities|collect\/farmers|farmers)\b.*/i,
+      urlPattern: /^\/api\/(collect\/farmers|farmers)\b.*/i,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'app-api-cache',
-        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 }, // 24h
-        networkTimeoutSeconds: 8,
+        cacheName: 'app-field-data-cache',
+        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 4 }, // 4h
+        networkTimeoutSeconds: 4,
       },
     },
     // ── Next.js static assets — CacheFirst, long TTL ────────────────────────

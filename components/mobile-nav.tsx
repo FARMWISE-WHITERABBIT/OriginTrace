@@ -11,7 +11,7 @@ import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { getNavigationConfig, UserRole, agentBottomNavItems } from '@/lib/config/navigation';
-import { useOnlineStatus } from '@/lib/hooks/use-online-status';
+import { useSyncStatus } from '@/components/sync-status-provider';
 import Image from 'next/image';
 
 export function MobileNav() {
@@ -20,7 +20,7 @@ export function MobileNav() {
   const { profile, organization, isSystemAdmin } = useOrg();
   const router = useRouter();
   const supabase = createClient();
-  const isOnline = useOnlineStatus();
+  const { isOnline } = useSyncStatus();
 
   const handleLogout = async () => {
     if (supabase) {

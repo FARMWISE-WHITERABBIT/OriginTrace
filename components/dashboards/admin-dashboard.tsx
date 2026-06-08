@@ -21,6 +21,7 @@ import {
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS, VIZ_COLORS } from '@/lib/chart-colors';
+import { runWhenIdle } from '@/lib/utils/idle';
 
 // Semantic colors for known African export commodities
 const COMMODITY_HUE: Record<string, string> = {
@@ -142,33 +143,62 @@ export function AdminDashboard() {
   const [operationalAlerts, setOperationalAlerts] = useState<AlertItem[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeferredLoading, setIsDeferredLoading] = useState(false);
   const { organization } = useOrg();
 
   const fetchAnalytics = useCallback(async () => {
     if (!organization) return;
     setIsLoading(true);
+    setIsDeferredLoading(false);
     try {
-      const [analyticsRes, auditRes, alertsRes] = await Promise.all([
-        fetch(`/api/analytics?period=${period}&section=all`),
-        fetch('/api/audit-readiness'),
-        fetch('/api/alerts'),
-      ]);
+      const analyticsRes = await fetch(`/api/analytics?period=${period}&section=dashboard`);
       if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
-      if (auditRes.ok) setAuditScore(await auditRes.json());
-      if (alertsRes.ok) {
-        const alertsJson = await alertsRes.json();
-        setOperationalAlerts(alertsJson.alerts ?? []);
-      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
       setIsLoading(false);
+      setIsDeferredLoading(true);
     }
   }, [organization, period]);
 
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
+  useEffect(() => {
+    if (!organization || isLoading || !isDeferredLoading) return;
+
+    let cancelled = false;
+    const cancelIdle = runWhenIdle(() => {
+      Promise.all([
+        fetch(`/api/analytics?period=${period}&section=strategic`),
+        fetch('/api/audit-readiness'),
+        fetch('/api/alerts'),
+      ])
+        .then(async ([strategicRes, auditRes, alertsRes]) => {
+          if (cancelled) return;
+          if (strategicRes.ok) {
+            const strategic = await strategicRes.json();
+            setAnalytics(prev => prev ? { ...prev, ...strategic, period: prev.period } : strategic);
+          }
+          if (auditRes.ok) setAuditScore(await auditRes.json());
+          if (alertsRes.ok) {
+            const alertsJson = await alertsRes.json();
+            setOperationalAlerts(alertsJson.alerts ?? []);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to fetch deferred dashboard data:', error);
+        })
+        .finally(() => {
+          if (!cancelled) setIsDeferredLoading(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle();
+    };
+  }, [isDeferredLoading, isLoading, organization, period]);
 
   const overallComplianceRate = analytics
     ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
@@ -307,6 +337,7 @@ export function AdminDashboard() {
       Loading chart...
     </div>
   );
+  const isStrategicPending = isLoading || (isDeferredLoading && !analytics?.commodityBreakdown);
 
   return (
     <div className="space-y-6" data-testid="admin-dashboard">
@@ -475,7 +506,7 @@ export function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? loadingPlaceholder : commodityPieData.length > 0 ? (
+            {isStrategicPending ? loadingPlaceholder : commodityPieData.length > 0 ? (
               <>
                 <PieDonutChart
                   data={commodityPieData}
@@ -636,7 +667,7 @@ export function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? loadingPlaceholder : complianceDonutData.length > 0 ? (
+            {isStrategicPending ? loadingPlaceholder : complianceDonutData.length > 0 ? (
               <PieDonutChart
                 data={complianceDonutData}
                 donut
@@ -666,7 +697,7 @@ export function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? loadingPlaceholder : gradeBarData.length > 0 ? (
+            {isStrategicPending ? loadingPlaceholder : gradeBarData.length > 0 ? (
               <VerticalBarChart
                 data={gradeBarData}
                 dataKey="count"

@@ -55,6 +55,9 @@ export function addSyncListener(listener: (stats: Awaited<ReturnType<typeof getS
 async function notifyListeners() {
   const stats = await getSyncStats();
   syncListeners.forEach(listener => listener(stats));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('origintrace:sync-stats', { detail: stats }));
+  }
 }
 
 export function isLocalFarmId(farmId?: string | null): boolean {
@@ -508,15 +511,27 @@ export async function updateSyncStatus(deviceId?: string): Promise<void> {
   }
 }
 
-export function setupAutoSync(intervalMs: number = 30000): () => void {
+export function setupAutoSync(
+  intervalMs: number = 30000,
+  options: { immediate?: boolean } = {}
+): () => void {
   const sync = async () => {
     if (navigator.onLine) {
+      const stats = await getSyncStats();
+      const hasPendingWork = stats.pending + stats.error + stats.conflict > 0;
+      if (!hasPendingWork) {
+        await notifyListeners();
+        return;
+      }
+
       await syncFieldWorkQueue();
       await updateSyncStatus();
     }
   };
 
-  sync();
+  if (options.immediate ?? true) {
+    sync();
+  }
 
   const intervalId = setInterval(sync, intervalMs);
 

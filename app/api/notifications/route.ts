@@ -10,7 +10,9 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get('unread') === 'true';
-    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const summaryOnly = url.searchParams.get('summary') === 'true';
+    const requestedLimit = parseInt(url.searchParams.get('limit') || '20');
+    const limit = summaryOnly ? 1 : requestedLimit;
 
     let notifications: any[] = [];
     let unreadCount = 0;
@@ -48,6 +50,10 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .eq('is_read', false);
       unreadCount = count || 0;
+    }
+
+    if (summaryOnly) {
+      return NextResponse.json({ unread_count: unreadCount });
     }
 
     return NextResponse.json({ notifications, unread_count: unreadCount });
