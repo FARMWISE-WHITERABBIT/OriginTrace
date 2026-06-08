@@ -1,60 +1,70 @@
 'use client';
 
 import { useState } from 'react';
-import { Leaf, Coffee, Sprout, TreePine, Flower2 } from 'lucide-react';
+import Image from 'next/image';
+import { Leaf, Sprout, Flower2, TreePine, Gem } from 'lucide-react';
 
-const commodityTabs = [
+const industryTabs = [
   {
-    id: 'cocoa',
-    label: 'Cocoa',
-    icon: <Leaf className="w-4 h-4" />,
-    image: '/images/farmer in field.jpg',
-    description: 'End-to-end traceability for cocoa from smallholder farms to EU port clearance — GPS mapping, EUDR compliance, and deforestation-free certification.',
+    id: 'cocoa-coffee',
+    label: 'Cocoa & Coffee',
+    icon: Leaf,
+    image: '/images/pexels-pixabay-50707.jpg',
+    imagePosition: 'left center',
+    tag: 'EUDR Ready',
+    description:
+      'Full traceability for EUDR-covered tree crops — from GPS-mapped farm plots to EU port clearance. Cover your due diligence statement before you book freight.',
     features: [
       'GPS polygon farm boundary mapping with anti-spoofing',
-      'EUDR geolocation & deforestation-risk scoring',
+      'EUDR deforestation-risk scoring per plot',
       'Cooperative batch aggregation with mass balance',
       'Export documentation & phytosanitary records',
-      'Buyer portal access with QR-linked pedigree',
+      'Buyer portal with QR-linked pedigree certificate',
     ],
-    tag: 'EUDR Ready',
   },
   {
-    id: 'coffee',
-    label: 'Coffee',
-    icon: <Coffee className="w-4 h-4" />,
-    image: '/images/farmer in field.jpg',
-    description: 'Track every coffee lot from farm to roaster. Verify altitude, varietal, processing method, and sustainability certifications in a single audit-ready package.',
+    id: 'cashew-sesame',
+    label: 'Cashew & Sesame',
+    icon: Sprout,
+    image: '/images/pexels-zeal-creative-studios-58866141-31283908.jpg',
+    imagePosition: 'center',
+    tag: 'GACC & FSMA Ready',
+    description:
+      'Track raw nut and seed origin across fragmented smallholder networks. Link collection points to processed output with verifiable mass balance — for China, EU, and US buyers.',
     features: [
-      'Farm-level GPS traceability with variety metadata',
-      'Multi-certification tracking (Rainforest Alliance, Fairtrade, Organic)',
-      'Dry/wet processing chain documentation',
-      'Export license and ICO certificate management',
-      'Digital Product Passport for specialty buyers',
+      'Smallholder GPS registration and identity verification',
+      'Raw-to-processed mass balance tracking',
+      'GACC facility registration documentation',
+      'Aflatoxin & pesticide residue record management',
+      'Multi-market compliance scoring before loading',
     ],
-    tag: 'Certification Ready',
   },
   {
-    id: 'cashew',
-    label: 'Cashew',
-    icon: <Sprout className="w-4 h-4" />,
+    id: 'shea-palm',
+    label: 'Shea & Palm Oil',
+    icon: Flower2,
     image: '/images/baged product in wareouse.jpg',
-    description: 'Capture cashew origin data across fragmented smallholder networks in West Africa. Link raw nuts to processed kernels with verifiable mass balance.',
+    imagePosition: 'center',
+    tag: 'EU Cosmetics Ready',
+    description:
+      'Document sustainable wild collection and processing for natural ingredients. Meet buyer provenance requirements without manual paperwork across multiple systems.',
     features: [
-      'Smallholder aggregation with GPS verification',
-      'Raw nut to kernel mass balance tracking',
-      'GACC registration and China export compliance',
-      'Aflatoxin & pesticide residue documentation',
-      'Exporter-to-buyer digital product passports',
+      'Wild collection zone GPS mapping',
+      'Women collector group identity and payment records',
+      'Processing site, temperature, and batch logs',
+      'Organic and fair trade certification support',
+      'EU cosmetics and food-grade compliance exports',
     ],
-    tag: 'GACC Compliant',
   },
   {
-    id: 'timber',
-    label: 'Timber',
-    icon: <TreePine className="w-4 h-4" />,
+    id: 'timber-rubber',
+    label: 'Timber & Rubber',
+    icon: TreePine,
     image: '/images/lagos apapa port.jpg',
-    description: 'Prove legal origin and EUDR compliance for tropical timber exports. Track species, harvest location, and forest concession records from stump to shipment.',
+    imagePosition: 'center',
+    tag: 'EUDR / Lacey Act',
+    description:
+      'Prove legal origin and zero-deforestation for forest-risk commodities. Species, harvest location, and forest concession records — from stump to shipment.',
     features: [
       'Species identification and CITES documentation',
       'Forest concession GPS boundary mapping',
@@ -62,76 +72,184 @@ const commodityTabs = [
       'EUDR & UK Forest Risk Commodities compliance',
       'Lacey Act due care documentation for US buyers',
     ],
-    tag: 'EUDR / Lacey Act',
   },
   {
-    id: 'shea',
-    label: 'Shea & Sesame',
-    icon: <Flower2 className="w-4 h-4" />,
-    image: '/images/farmer in field.jpg',
-    description: 'Document sustainable wild collection and processing for shea butter and sesame, meeting buyer requirements for natural ingredients with verified provenance.',
+    id: 'mining',
+    label: 'Mining & Minerals',
+    icon: Gem,
+    image: '/images/pexels-stephanefabricebass-10319259.jpg',
+    imagePosition: 'center',
+    tag: 'OECD / LBMA Ready',
+    description:
+      'Trace gold, coltan, lithium, and other minerals from extraction site to point of export. Satisfy international smelter and buyer due diligence requirements before your shipment moves.',
     features: [
-      'Wild collection zone GPS mapping',
-      'Women collector group documentation',
-      'Processing site and temperature records',
-      'Organic and fair trade certification support',
-      'EU cosmetic and food-grade compliance exports',
+      'Extraction site GPS registration and operator KYC',
+      'Mine-to-export chain of custody documentation',
+      'OECD Due Diligence Guidance compliance',
+      'LBMA Responsible Gold Guidance support',
+      'Conflict minerals declaration and audit trail',
     ],
-    tag: 'Organic Ready',
   },
 ];
 
 export function IndustriesTabsClient() {
   const [active, setActive] = useState(0);
-  const tab = commodityTabs[active];
+  const tab = industryTabs[active];
+  const Icon = tab.icon;
 
   return (
-    <div className="mk-industries-tabs">
-      {/* Tab menu */}
-      <div className="mk-industries-tab-menu" role="tablist">
-        {commodityTabs.map((t, i) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={i === active}
-            aria-controls={`tab-panel-${t.id}`}
-            className="mk-industries-link-wrap"
-            data-active={i === active || undefined}
-            onClick={() => setActive(i)}
-          >
-            <span className="mk-tab-icon" aria-hidden>{t.icon}</span>
-            <span className="mk-tab-text">{t.label}</span>
-          </button>
-        ))}
+    <div>
+      {/* Tab bar */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.625rem',
+          marginBottom: '1.75rem',
+        }}
+        role="tablist"
+      >
+        {industryTabs.map((t, i) => {
+          const TabIcon = t.icon;
+          const isActive = i === active;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tab-panel-${t.id}`}
+              onClick={() => setActive(i)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.55rem 1.1rem',
+                borderRadius: '9999px',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.18s',
+                border: isActive
+                  ? '1.5px dashed var(--mk-text-primary)'
+                  : '1px solid var(--mk-border)',
+                background: isActive ? 'var(--mk-surface-white)' : 'var(--mk-surface-white)',
+                color: isActive ? 'var(--mk-text-primary)' : 'var(--mk-text-secondary)',
+                boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
+              }}
+            >
+              <TabIcon
+                style={{
+                  width: '1rem',
+                  height: '1rem',
+                  color: isActive ? 'var(--mk-text-primary)' : 'var(--mk-text-muted)',
+                  flexShrink: 0,
+                }}
+                strokeWidth={1.75}
+              />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tab panel — white rounded card */}
+      {/* Content card */}
       <div
         id={`tab-panel-${tab.id}`}
         role="tabpanel"
         key={tab.id}
-        className="mk-industries-tab-card"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.1fr 1fr',
+          borderRadius: '1.25rem',
+          overflow: 'hidden',
+          background: 'var(--mk-surface-white)',
+          border: '1px solid var(--mk-border)',
+          minHeight: '480px',
+        }}
       >
         {/* LEFT — image */}
         <div
-          className="mk-industries-tab-image"
           style={{
             backgroundImage: `url('${tab.image}')`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundPosition: tab.imagePosition,
+            position: 'relative',
+            minHeight: '420px',
           }}
         >
-          <span className="mk-industries-tag">{tab.tag}</span>
+          <span
+            style={{
+              position: 'absolute',
+              top: '1.25rem',
+              left: '1.25rem',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+              background: 'var(--mk-green)',
+              color: '#fff',
+              padding: '0.25rem 0.7rem',
+              borderRadius: '9999px',
+            }}
+          >
+            {tab.tag}
+          </span>
         </div>
 
-        {/* RIGHT — info */}
-        <div className="mk-industries-tab-info">
-          <h3 className="mk-industries-tab-title">{tab.label}</h3>
-          <p className="mk-industries-tab-desc">{tab.description}</p>
-          <ul className="mk-industries-feature-list">
+        {/* RIGHT — content */}
+        <div
+          style={{
+            padding: '2.5rem 2.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '1.375rem',
+              fontWeight: 700,
+              color: 'var(--mk-text-primary)',
+              marginBottom: '0.875rem',
+              lineHeight: 1.25,
+            }}
+          >
+            {tab.label}
+          </h3>
+          <p
+            style={{
+              fontSize: '0.9375rem',
+              color: 'var(--mk-text-secondary)',
+              lineHeight: 1.7,
+              marginBottom: '1.75rem',
+            }}
+          >
+            {tab.description}
+          </p>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', margin: 0, padding: 0, listStyle: 'none' }}>
             {tab.features.map((f) => (
-              <li key={f} className="mk-industries-feature-item">
-                <span className="mk-industries-feature-dot" aria-hidden>•</span>
+              <li
+                key={f}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.625rem',
+                  fontSize: '0.9rem',
+                  color: 'var(--mk-text-secondary)',
+                  lineHeight: 1.55,
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: '0.45rem',
+                    height: '0.45rem',
+                    borderRadius: '50%',
+                    background: 'var(--mk-green)',
+                    flexShrink: 0,
+                    marginTop: '0.45rem',
+                  }}
+                />
                 {f}
               </li>
             ))}

@@ -56,14 +56,28 @@ const whyChooseFeatures = [
 
 function IndustriesTabSection() {
   return (
-    <section className="section-spacing section-white" style={{ background: 'var(--mk-surface-white)' }}>
+    <section
+      className="section-spacing"
+      style={{
+        background: 'var(--color--gray-7)',
+        borderRadius: '2rem 2rem 0 0',
+        marginTop: '-2rem',
+        position: 'relative',
+        zIndex: 1,
+      }}
+    >
       <div className="mk-container-lg">
         <FadeIn>
-          <div className="section-header">
-            <span className="pre-title margin-bottom margin-medium">Commodities We Serve</span>
-            <h2 className="text-display-lg section-header__title">
-              Building <span className="text-mk-muted">smarter, compliant supply chains</span>{' '}
-              across Africa&apos;s key export commodities
+          <div className="section-header--left margin-bottom margin-xlarge">
+            <span
+              className="pre-title margin-bottom margin-medium"
+              style={{ background: 'transparent', border: '1px solid var(--mk-border)', color: 'var(--mk-text-muted)' }}
+            >
+              Industries We Serve
+            </span>
+            <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)', maxWidth: '28rem' }}>
+              Traceability built for{' '}
+              <span className="text-mk-muted">the commodities Africa exports</span>
             </h2>
           </div>
         </FadeIn>
