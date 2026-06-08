@@ -70,6 +70,16 @@ interface DeforestationResult {
   analysis_date: string;
   data_source: string;
   risk_level: 'low' | 'medium' | 'high';
+  verification_status?: 'verified' | 'manual_review_required';
+  manual_review_required?: boolean;
+}
+
+function requiresDeforestationManualReview(result: DeforestationResult | null | undefined) {
+  return !!result && (
+    result.manual_review_required ||
+    result.verification_status === 'manual_review_required' ||
+    /gfw unavailable|manual review/i.test(result.data_source || '')
+  );
 }
 
 const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, loading: () => (
@@ -231,7 +241,15 @@ function HybridFarmMappingContent() {
       if (res.ok && data.result) {
         setDeforestationResult(data.result);
         setSelectedFarm(prev => prev ? { ...prev, deforestation_check: data.result } : prev);
-        toast({ title: 'Deforestation Check Complete', description: data.result.deforestation_free ? 'Farm is deforestation-free.' : 'Risk detected — review the results.' });
+        const manualReviewRequired = requiresDeforestationManualReview(data.result);
+        toast({
+          title: 'Deforestation Check Complete',
+          description: data.result.deforestation_free
+            ? 'Farm is deforestation-free.'
+            : manualReviewRequired
+              ? 'Satellite data unavailable - manual review is required.'
+              : 'Risk detected - review the results.',
+        });
       } else {
         toast({ title: 'Check Failed', description: data.error || 'Could not complete deforestation check.', variant: 'destructive' });
       }
@@ -829,6 +847,11 @@ function HybridFarmMappingContent() {
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Deforestation-Free
                         </Badge>
+                      ) : requiresDeforestationManualReview(deforestationResult) ? (
+                        <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-manual-review">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Manual Review Required
+                        </Badge>
                       ) : deforestationResult.risk_level === 'high' ? (
                         <Badge className="bg-red-600 text-white" data-testid="badge-deforestation-risk">
                           <ShieldAlert className="h-3 w-3 mr-1" />
@@ -841,19 +864,34 @@ function HybridFarmMappingContent() {
                         </Badge>
                       )}
                       <span className="text-xs text-muted-foreground">
-                        {deforestationResult.risk_level} risk
+                        {requiresDeforestationManualReview(deforestationResult)
+                          ? `${deforestationResult.risk_level} country risk`
+                          : `${deforestationResult.risk_level} risk`}
                       </span>
                     </div>
 
+                    {requiresDeforestationManualReview(deforestationResult) && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                        <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                        <span data-testid="text-deforestation-manual-review">
+                          Global Forest Watch data was unavailable for this check. The farm is flagged from country risk only, not confirmed forest loss. Review supporting evidence before clearance.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-2 bg-muted/50 rounded-md">
-                        <div className="text-xs text-muted-foreground">Forest Loss</div>
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Forest Loss' : 'Forest Loss'}
+                        </div>
                         <div className="text-sm font-medium" data-testid="text-forest-loss-hectares">
                           {deforestationResult.forest_loss_hectares} ha
                         </div>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-md">
-                        <div className="text-xs text-muted-foreground">Loss Percentage</div>
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Loss Percentage' : 'Loss Percentage'}
+                        </div>
                         <div className="text-sm font-medium" data-testid="text-forest-loss-percentage">
                           {deforestationResult.forest_loss_percentage}%
                         </div>

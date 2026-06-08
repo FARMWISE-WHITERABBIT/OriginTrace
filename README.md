@@ -199,8 +199,14 @@ SUPABASE_SERVICE_ROLE_KEY=
 PAYSTACK_SECRET_KEY=
 PAYSTACK_WEBHOOK_SECRET=
 CRON_SECRET=                    # for /api/cron/webhook-retry
+GFW_API_KEY=                    # server-only Global Forest Watch Data API key
+GFW_API_ORIGIN=http://localhost:5000
 NEXT_PUBLIC_APP_URL=
 ```
+
+`GFW_API_KEY` must be created in Global Forest Watch and allowlisted for the
+request origin. Use `GFW_API_ORIGIN=http://localhost:5000` locally; set it to
+the deployed app domain in production.
 
 ### Installation
 

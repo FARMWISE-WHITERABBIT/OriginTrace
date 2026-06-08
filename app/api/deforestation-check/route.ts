@@ -4,6 +4,14 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { sendEmail } from '@/lib/email/resend-client';
 import { buildDeforestationRiskEmail } from '@/lib/email/templates';
 import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
+import {
+  calculatePolygonAreaHectares,
+  GFW_TREE_COVER_LOSS_DATASET,
+  GFW_TREE_COVER_LOSS_VERSION,
+  queryGfwTreeCoverLoss,
+  type DeforestationResult,
+  type GfwPolygon,
+} from '@/lib/services/gfw-deforestation';
 import { z } from 'zod';
 
 const coordinatePairSchema = z.tuple([
@@ -58,96 +66,6 @@ const COUNTRY_RISK_MAP: Record<string, { risk_level: 'low' | 'medium' | 'high'; 
   'DEFAULT': { risk_level: 'medium', forest_loss_percentage: 1.0 },
 };
 
-interface DeforestationResult {
-  deforestation_free: boolean;
-  forest_loss_hectares: number;
-  forest_loss_percentage: number;
-  analysis_date: string;
-  data_source: string;
-  risk_level: 'low' | 'medium' | 'high';
-}
-
-async function queryGFWApi(polygon: any): Promise<DeforestationResult | null> {
-  try {
-    const geoJson = {
-      type: 'Polygon',
-      coordinates: polygon.coordinates,
-    };
-
-    const response = await fetch('https://data-api.globalforestwatch.org/dataset/gfw_integrated_alerts/latest/query', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        geometry: geoJson,
-        sql: `SELECT SUM(alert__count) as total_alerts, SUM(area__ha) as total_area_ha FROM results WHERE umd_tree_cover_loss__year >= 2021`,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (data?.data && data.data.length > 0) {
-      const result = data.data[0];
-      const forestLossHa = parseFloat(result.total_area_ha || '0');
-      const polygonAreaHa = calculatePolygonArea(polygon);
-      const lossPercentage = polygonAreaHa > 0 ? (forestLossHa / polygonAreaHa) * 100 : 0;
-
-      let riskLevel: 'low' | 'medium' | 'high' = 'low';
-      if (lossPercentage > 5) riskLevel = 'high';
-      else if (lossPercentage > 1) riskLevel = 'medium';
-
-      return {
-        deforestation_free: forestLossHa === 0,
-        forest_loss_hectares: Math.round(forestLossHa * 100) / 100,
-        forest_loss_percentage: Math.round(lossPercentage * 100) / 100,
-        analysis_date: new Date().toISOString(),
-        data_source: 'Global Forest Watch (GFW)',
-        risk_level: riskLevel,
-      };
-    }
-
-    // Empty result = GFW has no deforestation alerts for this polygon = clean area
-    return {
-      deforestation_free: true,
-      forest_loss_hectares: 0,
-      forest_loss_percentage: 0,
-      analysis_date: new Date().toISOString(),
-      data_source: 'Global Forest Watch (GFW)',
-      risk_level: 'low' as const,
-    };
-  } catch (error) {
-    console.error('GFW API error:', error);
-    return null;
-  }
-}
-
-function calculatePolygonArea(polygon: any): number {
-  if (!polygon?.coordinates?.[0]) return 0;
-
-  const coords = polygon.coordinates[0];
-  const R = 6371000;
-  let area = 0;
-
-  for (let i = 0; i < coords.length - 1; i++) {
-    const [lon1, lat1] = coords[i];
-    const [lon2, lat2] = coords[i + 1];
-    const phi1 = (lat1 * Math.PI) / 180;
-    const phi2 = (lat2 * Math.PI) / 180;
-    const lambda1 = (lon1 * Math.PI) / 180;
-    const lambda2 = (lon2 * Math.PI) / 180;
-    area += (lambda2 - lambda1) * (2 + Math.sin(phi1) + Math.sin(phi2));
-  }
-
-  area = Math.abs((area * R * R) / 2);
-  return area / 10000;
-}
-
 function getFallbackResult(_areaHectares: number, countryCode: string = 'NG'): DeforestationResult {
   const risk = COUNTRY_RISK_MAP[countryCode] || COUNTRY_RISK_MAP['DEFAULT'];
 
@@ -156,8 +74,12 @@ function getFallbackResult(_areaHectares: number, countryCode: string = 'NG'): D
     forest_loss_hectares: 0,
     forest_loss_percentage: 0,
     analysis_date: new Date().toISOString(),
-    data_source: `GFW unavailable — country risk: ${risk.risk_level.toUpperCase()} (manual review required)`,
+    data_source: `GFW unavailable - country risk: ${risk.risk_level.toUpperCase()} (manual review required)`,
     risk_level: risk.risk_level,
+    verification_status: 'manual_review_required',
+    manual_review_required: true,
+    gfw_dataset: GFW_TREE_COVER_LOSS_DATASET,
+    gfw_version: GFW_TREE_COVER_LOSS_VERSION,
   };
 }
 
@@ -232,11 +154,11 @@ export async function POST(request: NextRequest) {
     let result: DeforestationResult;
 
     if (farmPolygon && farmPolygon.type === 'Polygon' && farmPolygon.coordinates) {
-      const gfwResult = await queryGFWApi(farmPolygon);
+      const gfwResult = await queryGfwTreeCoverLoss(farmPolygon as GfwPolygon);
       if (gfwResult) {
         result = gfwResult;
       } else {
-        const area = farmAreaHectares > 0 ? farmAreaHectares : calculatePolygonArea(farmPolygon);
+        const area = farmAreaHectares > 0 ? farmAreaHectares : calculatePolygonAreaHectares(farmPolygon);
         result = getFallbackResult(area, country_code || 'NG');
       }
     } else {
