@@ -10,6 +10,7 @@ import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
+import { ComplianceStack } from '@/components/marketing/compliance-stack';
 import {
   Shield,
   ChevronRight,
@@ -464,6 +465,12 @@ export default function HomePage() {
             <WhyChooseSection features={whyChooseFeatures} />
           </div>
         </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            7. COMPLIANCE COVERAGE — sticky stack
+            ═══════════════════════════════════════════════════════ */}
+        <ComplianceStack />
 
 
         {/* ═══════════════════════════════════════════════════════
