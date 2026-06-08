@@ -462,25 +462,6 @@ export default function HomePage() {
             ═══════════════════════════════════════════════════════ */}
         <section className="section-spacing section-gray">
           <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header section-header--left margin-bottom margin-xlarge">
-                <span
-                  className="pre-title margin-bottom margin-medium"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--mk-green)',
-                    color: 'var(--mk-green)',
-                  }}
-                >
-                  Why OriginTrace
-                </span>
-                <h2 className="text-display-lg section-header__title">
-                  Built for exporters.{' '}
-                  <span className="text-mk-muted">Not just buyers.</span>
-                </h2>
-              </div>
-            </FadeIn>
-
             <WhyChooseSection features={whyChooseFeatures} />
           </div>
         </section>

@@ -20,8 +20,30 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
 
   return (
     <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-      {/* ── Left column — accordion list ───────────────────────────────── */}
+      {/* ── Left column — header + accordion ───────────────────────────── */}
       <div className="flex flex-col">
+        {/* Section header sits at the top of the left col, aligned with image top */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <span
+            className="pre-title margin-bottom margin-medium"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--mk-green)',
+              color: 'var(--mk-green)',
+            }}
+          >
+            Why OriginTrace
+          </span>
+          <h2
+            className="text-display-lg"
+            style={{ color: 'var(--mk-text-primary)', marginTop: '0.75rem' }}
+          >
+            Built for exporters.{' '}
+            <span className="text-mk-muted">Not just buyers.</span>
+          </h2>
+        </div>
+
+        {/* Accordion */}
         {features.map((feature, i) => {
           const isActive = i === activeIndex;
 
@@ -50,7 +72,6 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                     {feature.title}
                   </h3>
 
-                  {/* Expandable body */}
                   <AnimatePresence initial={false}>
                     {isActive && (
                       <motion.div
@@ -62,7 +83,7 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                         style={{ overflow: 'hidden' }}
                       >
                         <p
-                          className="text-sm leading-relaxed pt-3 pb-1 pl-0"
+                          className="text-sm leading-relaxed pt-3 pb-1"
                           style={{ color: 'var(--mk-text-secondary)' }}
                         >
                           {feature.body}
@@ -73,7 +94,6 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
                 </div>
               </button>
 
-              {/* Dashed divider between items */}
               {i < features.length - 1 && (
                 <div
                   style={{
@@ -88,13 +108,13 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
         })}
       </div>
 
-      {/* ── Right column — tall photo with overlaid CTA button ───────────── */}
+      {/* ── Right column — tall photo with overlaid offset-border CTA ───── */}
       <div className="relative lg:sticky lg:top-24">
         <div
           className="relative w-full overflow-hidden"
           style={{ aspectRatio: '3/4', borderRadius: '1.5rem' }}
         >
-          {/* Real photo */}
+          {/* Photo */}
           <div
             className="absolute inset-0"
             style={{
@@ -104,18 +124,44 @@ export function WhyChooseSection({ features }: WhyChooseSectionProps) {
             }}
           />
 
-          {/* Subtle bottom gradient so CTA button reads clearly */}
+          {/* Bottom gradient */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(to bottom, transparent 50%, rgba(20,50,40,0.65) 100%)',
+              background: 'linear-gradient(to bottom, transparent 45%, rgba(10,35,28,0.75) 100%)',
             }}
           />
 
-          {/* Overlaid CTA button — absolutely positioned at bottom */}
+          {/* Offset-border CTA button */}
           <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center px-6">
-            <Link href="/solutions" className="btn-mk-primary">
-              Meet our team
+            <Link
+              href="/demo"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.7rem 1.5rem',
+                borderRadius: '9999px',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                background: '#fff',
+                color: 'var(--mk-text-primary)',
+                textDecoration: 'none',
+                /* Offset border: solid shadow shifted down-right */
+                boxShadow: '3px 4px 0 0 var(--mk-green)',
+                transition: 'box-shadow 0.18s, transform 0.18s',
+                position: 'relative',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 0 var(--mk-green)';
+                (e.currentTarget as HTMLElement).style.transform = 'translate(1px, 2px)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.boxShadow = '3px 4px 0 0 var(--mk-green)';
+                (e.currentTarget as HTMLElement).style.transform = 'translate(0, 0)';
+              }}
+            >
+              Request a Demo
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
