@@ -307,7 +307,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             2. ABOUT / MISSION
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-white" style={{ paddingTop: 'calc(var(--section-md) + 8.3rem)', paddingBottom: 'var(--section-md)' }}>
+        <section className="section-white" style={{ paddingTop: 'var(--section-md)', paddingBottom: 'var(--section-md)' }}>
           <div className="mk-container-sm">
             {/* Centered header */}
             <FadeIn>
@@ -344,55 +344,60 @@ export default function HomePage() {
                 </h2>
 
                 <p className="section-header__body">
-                  Nigeria and West Africa produce commodities the world demands — sesame, cocoa,
-                  cashew, ginger, timber. The challenge is not supply. It is that exporters cannot
-                  prove their supply chain to the standard that buyers and regulators now require.
-                  OriginTrace was built to close that gap — not for the buyer, not for the
-                  certification body, but for the exporter.
+                  Your commodity clears the field or the mine. Then it hits a wall — unverifiable
+                  declarations, missing documentation, and compliance gaps that stop it at the
+                  border. Buyers want proof. Regulators demand data. Exporters with systems win
+                  the contract. OriginTrace gives you the infrastructure to prove your chain,
+                  from first collection to final payment.
                 </p>
               </div>
             </FadeIn>
+          </div>
 
-            {/* 3-column image grid — bottom-aligned, center protrudes up */}
-            <FadeIn delay={0.12}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: '1rem',
-                  alignItems: 'center',
-                  marginBottom: '3rem',
-                }}
-              >
-
-                {/* LEFT — Farmer in field */}
+          {/* 3-column image grid — wider than text column, center card taller */}
+          <div className="mk-container-lg" style={{ marginTop: '3rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1.15fr 1fr',
+                gap: '1rem',
+                alignItems: 'center',
+                marginBottom: '3rem',
+              }}
+            >
+              {/* LEFT — Cocoa/commodity at source */}
+              <FadeIn delay={0.1} direction="up">
                 <div
                   style={{
-                    height: '500px',
+                    height: '480px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
-                    backgroundImage: "url('/images/farmer in field.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center center',
-                  }}
-                />
-
-                {/* CENTER — Bagged product in warehouse (tallest, protrudes symmetrically) */}
-                <div
-                  style={{
-                    height: '660px',
-                    borderRadius: '1.25rem',
-                    overflow: 'hidden',
-                    backgroundImage: "url('/images/baged product in wareouse.jpg')",
+                    backgroundImage: "url('/images/pexels-pixabay-50707.jpg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                   }}
                 />
+              </FadeIn>
 
-                {/* RIGHT — Lagos Apapa port */}
+              {/* CENTER — Processing / drying (tallest, protrudes) */}
+              <FadeIn delay={0.22} direction="up">
                 <div
                   style={{
-                    height: '500px',
+                    height: '640px',
+                    borderRadius: '1.25rem',
+                    overflow: 'hidden',
+                    backgroundImage: "url('/images/pexels-stephanefabricebass-10319259.jpg')",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              </FadeIn>
+
+              {/* RIGHT — Port / export */}
+              <FadeIn delay={0.34} direction="up">
+                <div
+                  style={{
+                    height: '480px',
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
                     backgroundImage: "url('/images/lagos apapa port.jpg')",
@@ -400,12 +405,11 @@ export default function HomePage() {
                     backgroundPosition: 'center',
                   }}
                 />
-
-              </div>
-            </FadeIn>
+              </FadeIn>
+            </div>
 
             {/* CTA — centered pill button */}
-            <FadeIn delay={0.22}>
+            <FadeIn delay={0.44}>
               <div className="flex justify-center">
                 <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
                   See the platform
