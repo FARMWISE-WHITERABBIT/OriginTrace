@@ -7,7 +7,7 @@ import { getAllPosts } from '@/lib/blog';
 import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
-import { HomeCapabilityAccordion } from '@/components/marketing/home-capability-accordion';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import {
@@ -462,47 +462,11 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            4. CAPABILITIES (accordion)
+            4. CAPABILITIES (sliding cards)
             ═══════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className="section-spacing section-gray">
+        <section id="how-it-works" className="section-spacing section-dark">
           <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header section-header--left margin-bottom margin-xlarge">
-                <span
-                  className="pre-title margin-bottom margin-medium"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--mk-green)',
-                    color: 'var(--mk-green)',
-                  }}
-                >
-                  How It Works
-                </span>
-                <h2
-                  className="text-display-lg section-header__title"
-                  data-testid="text-capabilities-headline"
-                >
-                  From farm to payment —{' '}
-                  <span className="text-mk-muted">every step connected</span>
-                </h2>
-                <p className="section-header__body" style={{ textAlign: 'left', marginInline: 0 }}>
-                  OriginTrace is the only platform that follows your produce all the way from
-                  the farm to the moment you get paid. No missing links. No compliance gaps.
-                </p>
-                <div className="flex gap-3 mt-4">
-                  <Link
-                    href="/demo"
-                    className="btn-mk-primary btn-mk-sm"
-                    data-testid="button-capabilities-cta"
-                  >
-                    Request a Demo
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </div>
-            </FadeIn>
-
-            <HomeCapabilityAccordion capabilities={capabilities} />
+            <CapabilitySlider capabilities={capabilities} />
           </div>
         </section>
 
