@@ -195,13 +195,13 @@ export default function HomePage() {
 
           <div className="mk-hero__content">
             <div className="mk-container-lg">
-              {/* Two-col on desktop, single-col on mobile (card stacks below text) */}
+              {/* Two-col on desktop, single-col on mobile (card hidden on mobile) */}
               <div
                 className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
-                style={{ alignItems: 'stretch', minHeight: '65vh' }}
+                style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-8">
+                <div className="flex flex-col justify-center py-16 lg:py-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
@@ -215,7 +215,7 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: '1.0625rem', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
                       From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, US, and China requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
@@ -231,8 +231,8 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
-                <div className="flex flex-col justify-end">
+                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem, hidden on mobile */}
+                <div className="hidden lg:flex flex-col justify-end">
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"

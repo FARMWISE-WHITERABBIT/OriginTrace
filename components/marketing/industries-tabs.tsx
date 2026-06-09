@@ -99,16 +99,8 @@ export function IndustriesTabsClient() {
 
   return (
     <div>
-      {/* Tab bar */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.625rem',
-          marginBottom: '1.75rem',
-        }}
-        role="tablist"
-      >
+      {/* Tab bar — pill row on desktop, vertical list on mobile */}
+      <div className="mk-industries-tabbar" role="tablist">
         {industryTabs.map((t, i) => {
           const TabIcon = t.icon;
           const isActive = i === active;
@@ -119,33 +111,12 @@ export function IndustriesTabsClient() {
               aria-selected={isActive}
               aria-controls={`tab-panel-${t.id}`}
               onClick={() => setActive(i)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.55rem 1.1rem',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.18s',
-                border: isActive
-                  ? '1.5px dashed var(--mk-text-primary)'
-                  : '1px solid var(--mk-border)',
-                background: isActive ? 'var(--mk-surface-white)' : 'var(--mk-surface-white)',
-                color: isActive ? 'var(--mk-text-primary)' : 'var(--mk-text-secondary)',
-                boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
-              }}
+              className="mk-industries-tab-btn"
+              data-active={isActive || undefined}
             >
-              <TabIcon
-                style={{
-                  width: '1rem',
-                  height: '1rem',
-                  color: isActive ? 'var(--mk-text-primary)' : 'var(--mk-text-muted)',
-                  flexShrink: 0,
-                }}
-                strokeWidth={1.75}
-              />
+              <span className="mk-industries-tab-icon-wrap">
+                <TabIcon style={{ width: '1rem', height: '1rem', flexShrink: 0 }} strokeWidth={1.75} />
+              </span>
               {t.label}
             </button>
           );
