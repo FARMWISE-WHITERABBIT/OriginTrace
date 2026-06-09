@@ -129,15 +129,6 @@ export function IndustriesTabsClient() {
         role="tabpanel"
         key={tab.id}
         className="mk-industries-tab-card"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.1fr 1fr',
-          borderRadius: '1.25rem',
-          overflow: 'hidden',
-          background: 'var(--mk-surface-white)',
-          border: '1px solid var(--mk-border)',
-          minHeight: '480px',
-        }}
       >
         {/* LEFT — image */}
         <div
@@ -146,8 +137,6 @@ export function IndustriesTabsClient() {
             backgroundImage: `url('${tab.image}')`,
             backgroundSize: 'cover',
             backgroundPosition: tab.imagePosition,
-            position: 'relative',
-            minHeight: '420px',
           }}
         >
           <span
@@ -172,12 +161,6 @@ export function IndustriesTabsClient() {
         {/* RIGHT — content */}
         <div
           className="mk-industries-tab-content"
-          style={{
-            padding: '2rem 1.75rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
         >
           <h3
             style={{

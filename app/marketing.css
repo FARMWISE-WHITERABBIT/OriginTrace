@@ -1703,22 +1703,30 @@
 
 .mk-industries-tab-card {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.1fr 1fr;
   gap: 0;
   align-items: stretch;
   background: var(--mk-surface-white);
-  border-radius: var(--border-radius--md);
+  border-radius: 1.25rem;
   overflow: hidden;
   box-shadow: var(--mk-shadow-lg);
   border: 1px solid var(--mk-border);
+  min-height: 480px;
   animation: anim-fade-in var(--dur-base) var(--ease-out-quart) both;
 }
 
 .mk-industries-tab-image {
   position: relative;
-  min-height: 380px;
+  min-height: 420px;
   overflow: hidden;
   flex-shrink: 0;
+}
+
+.mk-industries-tab-content {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .mk-industries-tag {
