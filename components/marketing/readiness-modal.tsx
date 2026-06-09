@@ -34,8 +34,7 @@ export function ReadinessModal() {
       {open && (
         <div
           className="fixed inset-0 flex"
-          style={{ zIndex: 9999 }}
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+          style={{ zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
         >
           {/* Full-page panel */}
           <div className="relative flex w-full h-full overflow-hidden" style={{ maxWidth: '1100px', margin: 'auto', height: 'min(96vh, 820px)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.45)' }}>
