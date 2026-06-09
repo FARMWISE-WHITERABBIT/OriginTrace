@@ -75,12 +75,12 @@ export function MarketingFooter() {
       <div className="mk-footer__inner">
         {/* Two floating white panels */}
         <div className="mk-footer__panels">
-          {/* Shape connector between panels */}
+          {/* Shape connector — desktop: sits in gap between side-by-side panels */}
           <img
             src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
             alt=""
             aria-hidden
-            className="mk-footer__shape"
+            className="mk-footer__shape mk-footer__shape--desktop"
           />
 
           {/* ── LEFT PANEL ─────────────────────────────────────── */}
@@ -138,6 +138,16 @@ export function MarketingFooter() {
             <p className="mk-footer-panel__attr">
               &copy; 2026 OriginTrace. All rights reserved.
             </p>
+          </div>
+
+          {/* Shape connector — mobile only: sits between stacked panels */}
+          <div className="mk-footer__shape-mobile-wrap" aria-hidden>
+            <img
+              src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+              alt=""
+              aria-hidden
+              className="mk-footer__shape--mobile"
+            />
           </div>
 
           {/* ── RIGHT PANEL ────────────────────────────────────── */}

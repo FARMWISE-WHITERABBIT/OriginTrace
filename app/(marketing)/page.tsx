@@ -195,13 +195,13 @@ export default function HomePage() {
 
           <div className="mk-hero__content">
             <div className="mk-container-lg">
-              {/* Two-col on desktop, single-col on mobile (card hidden on mobile) */}
+              {/* Two-col on desktop, stacked on mobile — both columns visible */}
               <div
-                className="grid lg:grid-cols-[55fr_45fr] gap-8 lg:gap-12"
+                className="grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
                 style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-16 lg:py-8">
+                <div className="flex flex-col justify-center pt-24 pb-6 lg:py-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
@@ -231,8 +231,8 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
-                <div className="flex flex-col justify-end lg:justify-end justify-center">
+                {/* RIGHT — card, visible on all sizes */}
+                <div className="flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
@@ -449,7 +449,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════════
             12. BLOG — 2-up carousel
             ═══════════════════════════════════════════════════════ */}
-        <section className="section-spacing-sm section-white">
+        <section className="section-spacing-sm section-white mk-blog-section">
           <div className="mk-container-lg">
             <BlogCarousel posts={allPosts} />
           </div>

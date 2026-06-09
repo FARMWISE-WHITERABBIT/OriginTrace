@@ -256,7 +256,7 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '0.375rem 1rem',
+                padding: '0.5rem 1.25rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
                 position: 'relative',
                 flex: 1,
@@ -266,33 +266,33 @@ export function MarketingNav() {
                 <Image
                   src="/images/logo-green.png"
                   alt="OriginTrace"
-                  width={120}
-                  height={32}
-                  style={{ width: 'auto', height: '26px' }}
+                  width={140}
+                  height={38}
+                  style={{ width: 'auto', height: '34px' }}
                   priority
                 />
               </Link>
 
-              {/* Shape connector — right edge of left pill */}
+              {/* Shape connector — right edge of left pill, nests into both pills */}
               <img
                 src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
                 alt=""
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-10px',
+                  right: '-14px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  height: '28px',
-                  width: '14px',
+                  height: '36px',
+                  width: '18px',
                   pointerEvents: 'none',
                   zIndex: 10,
                 }}
               />
             </div>
 
-            {/* Spacer for shape gap */}
-            <div style={{ width: '9px', flexShrink: 0 }} />
+            {/* Spacer — shape overlaps both pills by ~5px each side */}
+            <div style={{ width: '4px', flexShrink: 0 }} />
 
             {/* Right pill — hamburger */}
             <div
@@ -301,12 +301,12 @@ export function MarketingNav() {
                 alignItems: 'center',
                 borderRadius: 'var(--border-radius--button)',
                 backgroundColor: 'var(--color--white)',
-                padding: '0.375rem',
+                padding: '0.5rem',
                 boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
               }}
             >
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-full transition-colors"
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
                 style={{ background: mobileMenuOpen ? 'var(--mk-green)' : 'transparent', color: mobileMenuOpen ? '#fff' : 'var(--mk-text-primary)' }}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 aria-label="Toggle menu"
