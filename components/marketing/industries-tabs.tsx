@@ -115,7 +115,7 @@ export function IndustriesTabsClient() {
               data-active={isActive || undefined}
             >
               <span className="mk-industries-tab-icon-wrap">
-                <TabIcon style={{ width: '1rem', height: '1rem', flexShrink: 0 }} strokeWidth={1.75} />
+                <TabIcon style={{ width: '1.1rem', height: '1.1rem', flexShrink: 0 }} strokeWidth={1.75} />
               </span>
               {t.label}
             </button>

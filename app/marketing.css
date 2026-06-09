@@ -1185,11 +1185,7 @@
     .mk-hero { min-height: calc(100svh + 7rem); }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { min-height: calc(100svh + 5rem); border-radius: 0; }
-    .mk-hero__content {
-      justify-content: flex-start;
-      overflow-y: auto;
-    }
+    .mk-hero { min-height: calc(180svh); border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1781,11 +1777,38 @@
   .mk-industries-tabbar {
     flex-direction: column;
     flex-wrap: nowrap;
-    gap: 0.5rem;
+    gap: 0.625rem;
+    margin-bottom: 1.25rem;
   }
+  /* Each tab becomes a full-width bordered row — matches reference design */
   .mk-industries-tab-btn {
     width: 100%;
     justify-content: flex-start;
+    border-radius: 0.75rem;
+    border: 1.5px dashed var(--mk-border);
+    padding: 0.875rem 1rem;
+    white-space: normal;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    background: var(--mk-surface-white);
+  }
+  .mk-industries-tab-btn[data-active] {
+    border: 1.5px solid var(--mk-text-primary);
+    border-radius: 0.75rem;
+  }
+  /* Icon in a small square box on mobile */
+  .mk-industries-tab-icon-wrap {
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--color--gray-6);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mk-industries-tab-btn[data-active] .mk-industries-tab-icon-wrap {
+    background: var(--color--gray-6);
   }
 }
 
@@ -1826,7 +1849,6 @@
   .mk-industries-tab-card   { border-radius: 1rem; min-height: unset; }
   .mk-industries-tab-image  { min-height: 240px; }
   .mk-industries-tab-content { padding: 1.5rem 1.25rem !important; }
-  .mk-industries-tab-btn { font-size: 0.8125rem; padding: 0.45rem 0.875rem; }
 }
 @media (max-width: 640px) {
   .mk-industries-tab-menu { gap: 0.5rem; }
