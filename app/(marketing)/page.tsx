@@ -231,13 +231,13 @@ export default function HomePage() {
                   </FadeIn>
                 </div>
 
-                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem, hidden on mobile */}
-                <div className="hidden lg:flex flex-col justify-end">
+                {/* RIGHT — card bleeds below hero via margin-bottom: -8.3rem */}
+                <div className="flex flex-col justify-end lg:justify-end justify-center">
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
                       style={{
-                        maxWidth: '360px',
+                        maxWidth: '480px',
                       }}
                     >
                       {/* ── 1. IMAGE ── */}
