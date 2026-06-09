@@ -374,7 +374,7 @@ export default function HomePage() {
 
           {/* 3-column image grid — wider than text column, center card taller */}
           <div className="mk-container-lg" style={{ marginTop: '3rem' }}>
-            {/* Desktop: 3-col staggered | Mobile: single tall image */}
+            {/* Desktop: 3-col staggered */}
             <div className="hidden md:grid" style={{
               gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem',
               alignItems: 'center', marginBottom: '3rem',
@@ -389,9 +389,15 @@ export default function HomePage() {
                 <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
-            {/* Mobile: single image */}
+            {/* Mobile: all 3 images — tall centre flanked by two shorter side cards */}
             <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
-              <div style={{ height: '280px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              {/* Large centre image */}
+              <div style={{ height: '260px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '0.625rem' }} />
+              {/* Two side images side by side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </div>
             </div>
 
             {/* CTA — centered pill button */}
