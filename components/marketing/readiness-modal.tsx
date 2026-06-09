@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import { ComplianceCalculator } from './compliance-calculator';
 
@@ -46,12 +47,9 @@ export function ReadinessModal() {
               style={{ width: '380px', background: 'var(--mk-green, #1a3d2b)', color: '#fff' }}
             >
               <div>
-                {/* Logo mark */}
-                <div className="flex items-center gap-2 mb-12">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  </div>
-                  <span className="font-semibold text-sm tracking-wide" style={{ color: 'rgba(255,255,255,0.9)' }}>OriginTrace</span>
+                {/* Logo */}
+                <div className="mb-12">
+                  <Image src="/images/logo-white.png" alt="OriginTrace" width={160} height={40} style={{ height: '32px', width: 'auto' }} />
                 </div>
 
                 <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>Export Readiness Tool</p>
@@ -87,11 +85,8 @@ export function ReadinessModal() {
               {/* Top bar */}
               <div className="flex items-center justify-between px-8 py-5 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
                 {/* Mobile logo */}
-                <div className="flex items-center gap-2 lg:hidden">
-                  <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'var(--mk-green, #1a3d2b)' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  </div>
-                  <span className="text-sm font-semibold" style={{ color: 'var(--mk-green, #1a3d2b)' }}>OriginTrace</span>
+                <div className="lg:hidden">
+                  <Image src="/images/logo-green.png" alt="OriginTrace" width={130} height={34} style={{ height: '26px', width: 'auto' }} />
                 </div>
                 <div className="hidden lg:block" />
 
