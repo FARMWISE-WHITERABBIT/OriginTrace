@@ -33,7 +33,8 @@ export function ReadinessModal() {
 
       {open && (
         <div
-          className="fixed inset-0 z-[200] flex"
+          className="fixed inset-0 flex"
+          style={{ zIndex: 9999 }}
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
         >
           {/* Full-page panel */}
