@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, MapPin, Package, ShieldCheck, FileText, Banknote } from 'lucide-react';
 
@@ -48,7 +48,15 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
   const steps = capabilities ?? journeySteps;
   const [active, setActive] = useState(0);
 
-  const VISIBLE = 3;
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => { setIsMobile(e.matches); setActive(0); };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const VISIBLE = isMobile ? 1 : 3;
   const total = steps.length;
   const maxActive = Math.max(0, total - VISIBLE);
 
@@ -114,7 +122,7 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${total}, calc((100% - 2rem) / 3))`,
+            gridTemplateColumns: `repeat(${total}, calc((100% - ${(VISIBLE - 1)}rem) / ${VISIBLE}))`,
             gap: '1rem',
             transform: `translateX(calc(-${active} * (100% / ${total}) * ${total / VISIBLE}))`,
             transition: 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -134,7 +142,7 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
                   padding: '2rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  minHeight: '420px',
+                  minHeight: isMobile ? '360px' : '420px',
                 }}
               >
                 {/* Icon */}

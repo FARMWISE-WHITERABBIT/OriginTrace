@@ -1770,6 +1770,11 @@
   .mk-industries-tab-card  { grid-template-columns: 1fr; }
   .mk-industries-tab-image { min-height: 260px; }
 }
+@media (max-width: 767px) {
+  .mk-industries-tab-card   { border-radius: 1rem; min-height: unset; }
+  .mk-industries-tab-image  { min-height: 220px; }
+  .mk-industries-tab-content { padding: 1.5rem 1.25rem !important; }
+}
 @media (max-width: 640px) {
   .mk-industries-tab-menu { gap: 0.5rem; }
   .mk-industries-link-wrap { padding: 0.5rem 0.875rem; font-size: 0.875rem; }

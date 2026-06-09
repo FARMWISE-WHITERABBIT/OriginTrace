@@ -374,56 +374,24 @@ export default function HomePage() {
 
           {/* 3-column image grid — wider than text column, center card taller */}
           <div className="mk-container-lg" style={{ marginTop: '3rem' }}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1.15fr 1fr',
-                gap: '1rem',
-                alignItems: 'center',
-                marginBottom: '3rem',
-              }}
-            >
-              {/* LEFT — Cocoa on tree at source */}
+            {/* Desktop: 3-col staggered | Mobile: single tall image */}
+            <div className="hidden md:grid" style={{
+              gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem',
+              alignItems: 'center', marginBottom: '3rem',
+            }}>
               <FadeIn delay={0.1} direction="up">
-                <div
-                  style={{
-                    height: '480px',
-                    borderRadius: '1.25rem',
-                    overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-pixabay-50707.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'left center',
-                  }}
-                />
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
               </FadeIn>
-
-              {/* CENTER — Cocoa drying / processing (tallest, protrudes) */}
               <FadeIn delay={0.22} direction="up">
-                <div
-                  style={{
-                    height: '640px',
-                    borderRadius: '1.25rem',
-                    overflow: 'hidden',
-                    backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
+                <div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
-
-              {/* RIGHT — Port / export */}
               <FadeIn delay={0.34} direction="up">
-                <div
-                  style={{
-                    height: '480px',
-                    borderRadius: '1.25rem',
-                    overflow: 'hidden',
-                    backgroundImage: "url('/images/lagos apapa port.jpg')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
+            </div>
+            {/* Mobile: single image */}
+            <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
+              <div style={{ height: '280px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
             </div>
 
             {/* CTA — centered pill button */}
