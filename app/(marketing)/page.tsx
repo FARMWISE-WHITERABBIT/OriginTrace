@@ -223,7 +223,7 @@ export default function HomePage() {
                   <FadeIn delay={0.3}>
                     <div className="flex flex-wrap gap-3">
                       <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                        Assess Your Export Readiness
+                        Check Your Export Readiness
                       </Link>
                       <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
                         See How It Works
