@@ -2573,11 +2573,12 @@
   }
   /* Hide the desktop shape (positioned in side gap) */
   .mk-footer__shape--desktop { display: none; }
-  /* Show the mobile shape wrapper between panels */
+  /* Show the mobile shape wrapper — negative margins nest it into both panels */
   .mk-footer__shape-mobile-wrap {
     display: flex;
-    height: 30px;              /* match rotated shape height so it has space */
-    margin-block: 0;
+    height: 30px;
+    margin-top: -15px;
+    margin-bottom: -15px;
   }
 }
 
