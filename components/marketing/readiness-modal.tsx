@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ComplianceCalculator } from './compliance-calculator';
 
@@ -31,7 +32,7 @@ export function ReadinessModal() {
         Check Your Export Readiness
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 flex"
           style={{ zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
@@ -110,7 +111,8 @@ export function ReadinessModal() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
