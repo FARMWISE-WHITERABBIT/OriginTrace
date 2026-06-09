@@ -240,35 +240,84 @@ export function MarketingNav() {
         </div>
       </header>
 
-      {/* ── Mobile nav bar ───────────────────────────────────────────────────── */}
+      {/* ── Mobile nav bar — two-pill design matching desktop ───────────────── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 flex md:hidden items-center justify-between px-5"
-        style={{
-          height: '60px',
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid var(--mk-border)',
-        }}
+        className="fixed top-0 left-0 right-0 z-50 md:hidden"
+        style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}
+        data-testid="marketing-nav-mobile"
       >
-        <Link href="/" aria-label="OriginTrace home">
-          <Image
-            src="/images/logo-green.png"
-            alt="OriginTrace"
-            width={130}
-            height={36}
-            style={{ width: 'auto', height: '28px' }}
-            priority
-          />
-        </Link>
-        <button
-          className="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
-          style={{ background: 'var(--mk-surface-gray)' }}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle menu"
-          data-testid="button-mobile-menu"
-        >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div style={{ paddingLeft: '1rem', paddingRight: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+
+            {/* Left pill — logo */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 'var(--border-radius--button)',
+                backgroundColor: 'var(--color--white)',
+                padding: '0.375rem 1rem',
+                boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+                position: 'relative',
+                flex: 1,
+              }}
+            >
+              <Link href="/" aria-label="OriginTrace home">
+                <Image
+                  src="/images/logo-green.png"
+                  alt="OriginTrace"
+                  width={120}
+                  height={32}
+                  style={{ width: 'auto', height: '26px' }}
+                  priority
+                />
+              </Link>
+
+              {/* Shape connector — right edge of left pill */}
+              <img
+                src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
+                alt=""
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  right: '-10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  height: '28px',
+                  width: '14px',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              />
+            </div>
+
+            {/* Spacer for shape gap */}
+            <div style={{ width: '9px', flexShrink: 0 }} />
+
+            {/* Right pill — hamburger */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 'var(--border-radius--button)',
+                backgroundColor: 'var(--color--white)',
+                padding: '0.375rem',
+                boxShadow: '0 2px 20px rgba(0,0,0,0.09)',
+              }}
+            >
+              <button
+                className="flex items-center justify-center w-9 h-9 rounded-full transition-colors"
+                style={{ background: mobileMenuOpen ? 'var(--mk-green)' : 'transparent', color: mobileMenuOpen ? '#fff' : 'var(--mk-text-primary)' }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+                data-testid="button-mobile-menu"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
+
+          </div>
+        </div>
       </header>
 
       {/* ── Mobile drawer ────────────────────────────────────────────────────── */}
@@ -281,7 +330,7 @@ export function MarketingNav() {
             transition={{ duration: 0.2 }}
             className="fixed z-50 md:hidden rounded-2xl py-3"
             style={{
-              top: '68px',
+              top: '72px',
               left: '1rem',
               right: '1rem',
               background: '#fff',

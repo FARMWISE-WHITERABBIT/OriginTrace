@@ -1808,38 +1808,10 @@
   .mk-industries-tab-image { min-height: 260px; }
 }
 @media (max-width: 767px) {
-  /* Vertical list style on mobile */
-  .mk-industries-tabbar {
-    flex-direction: column;
-    gap: 0;
-    margin-bottom: 1.25rem;
-    border: 1px solid var(--mk-border);
-    border-radius: 1rem;
-    overflow: hidden;
-  }
-  .mk-industries-tab-btn {
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid var(--mk-border);
-    padding: 0.875rem 1.125rem;
-    font-size: 0.9rem;
-    width: 100%;
-    justify-content: flex-start;
-  }
-  .mk-industries-tab-btn:last-child { border-bottom: none; }
-  .mk-industries-tab-btn[data-active] {
-    border: none;
-    border-bottom: 1px solid var(--mk-border);
-    background: rgba(26,61,43,0.05);
-    color: var(--mk-green, #1a3d2b);
-    box-shadow: none;
-  }
-  .mk-industries-tab-btn[data-active] .mk-industries-tab-icon-wrap { color: var(--mk-green, #1a3d2b); }
-  .mk-industries-tab-btn:last-child.mk-industries-tab-btn[data-active] { border-bottom: none; }
-
   .mk-industries-tab-card   { border-radius: 1rem; min-height: unset; }
-  .mk-industries-tab-image  { min-height: 220px; }
+  .mk-industries-tab-image  { min-height: 240px; }
   .mk-industries-tab-content { padding: 1.5rem 1.25rem !important; }
+  .mk-industries-tab-btn { font-size: 0.8125rem; padding: 0.45rem 0.875rem; }
 }
 @media (max-width: 640px) {
   .mk-industries-tab-menu { gap: 0.5rem; }
@@ -2007,8 +1979,14 @@
   .mk-blog-arrow-wrap--left  { left:  0.25rem; }
   .mk-blog-arrow-wrap--right { right: 0.25rem; }
 }
-@media (max-width: 640px) {
-  .mk-blog-cards { grid-template-columns: 1fr; }
+@media (max-width: 767px) {
+  /* Single card: arrows sit inside card edges */
+  .mk-blog-arrow-wrap--left  { left:  0.5rem; }
+  .mk-blog-arrow-wrap--right { right: 0.5rem; }
+  .mk-blog-arrow-wrap {
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -2536,6 +2514,15 @@
   }
   .mk-footer-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  /* Shape connector: panels are stacked, so rotate to bridge vertically */
+  .mk-footer__shape {
+    top: auto;
+    left: 50%;
+    bottom: calc(0px - 15px);
+    transform: translateX(-50%) rotate(90deg);
+    width: 57px;
+    height: 30px;
   }
 }
 
