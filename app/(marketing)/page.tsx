@@ -11,6 +11,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import { ComplianceStack } from '@/components/marketing/compliance-stack';
+import { ReadinessModal } from '@/components/marketing/readiness-modal';
 import {
   Shield,
   ChevronRight,
@@ -222,9 +223,7 @@ export default function HomePage() {
 
                   <FadeIn delay={0.3}>
                     <div className="flex flex-wrap gap-3">
-                      <Link href="#eudr-assessment" className="btn-mk-primary btn-mk-lg" data-testid="button-check-readiness">
-                        Check Your Export Readiness
-                      </Link>
+                      <ReadinessModal />
                       <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
                         See How It Works
                       </Link>
