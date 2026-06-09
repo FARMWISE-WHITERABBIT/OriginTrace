@@ -2581,12 +2581,23 @@
   }
   /* Hide the desktop shape (positioned in side gap) */
   .mk-footer__shape--desktop { display: none; }
-  /* Show the mobile shape wrapper — negative margins nest it into both panels */
+  /* Gap between stacked panels — shape sits in this gap, overlapping into both */
+  .mk-footer__panels { gap: 8px; }
+  /* Shape wrapper: zero height, overflow visible so shape bleeds into both panels */
   .mk-footer__shape-mobile-wrap {
     display: flex;
-    height: 30px;
-    margin-top: -15px;
-    margin-bottom: -15px;
+    justify-content: center;
+    align-items: center;
+    height: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
+  }
+  .mk-footer__shape--mobile {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
   }
 }
 
