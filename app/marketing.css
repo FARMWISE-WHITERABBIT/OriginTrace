@@ -1184,11 +1184,23 @@
   @media screen and (max-width: 991px) {
     .mk-hero { min-height: calc(100svh + 7rem); }
   }
+  @media screen and (max-width: 991px) {
+    .mk-hero { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  }
   @media screen and (max-width: 767px) {
     .mk-hero { min-height: calc(180svh); border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
+  }
+
+  /* Hero left column — mobile: align to top so headline sits high on screen */
+  @media screen and (max-width: 767px) {
+    .hero-left-col {
+      justify-content: flex-start !important;
+      padding-top: 4.75rem !important;
+      padding-bottom: 1.5rem !important;
+    }
   }
 
   .mk-hero--inner {
@@ -2597,6 +2609,8 @@
     position: absolute;
     top: 50%;
     left: 50%;
+    width: 72px;   /* larger than base 57px — more overlap into each panel */
+    height: 38px;
     transform: translate(-50%, -50%) rotate(90deg);
   }
 }

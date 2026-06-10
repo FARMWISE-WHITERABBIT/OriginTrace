@@ -201,7 +201,7 @@ export default function HomePage() {
                 style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-16 lg:py-8" style={{ paddingTop: 'clamp(5rem, 20vw, 8rem)' }}>
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8" style={{ paddingTop: 'clamp(5rem, 20vw, 8rem)' }}>
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
@@ -236,9 +236,6 @@ export default function HomePage() {
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
-                      style={{
-                        maxWidth: '480px',
-                      }}
                     >
                       {/* ── 1. IMAGE ── */}
                       <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>

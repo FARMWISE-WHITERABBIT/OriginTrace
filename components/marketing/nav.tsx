@@ -273,14 +273,14 @@ export function MarketingNav() {
                 />
               </Link>
 
-              {/* Shape connector — right edge of left pill, nests into both pills */}
+              {/* Shape connector — centred in gap between pills, 7px overlap each side */}
               <img
                 src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
                 alt=""
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-14px',
+                  right: '-11px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   height: '36px',
