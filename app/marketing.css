@@ -1189,7 +1189,7 @@
     }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { min-height: calc(180svh); border-radius: 0; }
+    .mk-hero { min-height: calc(100svh + 7rem); border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
