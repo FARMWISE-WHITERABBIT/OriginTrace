@@ -1265,6 +1265,8 @@
       padding-bottom: 0 !important;
     }
     .hero-right-col { padding-bottom: 0; }
+    /* Card fills full mobile width — no desktop max-width constraint */
+    .hero-detail-wrap { max-width: none; margin-left: 0; margin-right: 0; }
   }
 
   /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
@@ -1282,6 +1284,10 @@
     border-top-left-radius: var(--border-radius--sm);
     border-top-right-radius: var(--border-radius--sm);
     background-color: var(--color--white);
+    /* Desktop: cap card width so it doesn't stretch across the full 45fr column */
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: 0;
     text-decoration: none;
   }
 
