@@ -2863,13 +2863,14 @@
    SOLUTIONS PAGE — hero, stats card, intro twin-columns
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* Hero modifier — inner-page variant: no negative margin-top slide,
-   4/6 of the viewport tall, headline at top (below nav), stats card at bottom */
+/* Hero modifier — inner-page variant.
+   min-height: 66svh (4/6 of viewport). Content is position:relative so
+   the section height = content height (card bottom = section bottom).
+   Background/overlay remain position:absolute and fill the section. */
 .mk-hero--solutions {
   min-height: 66svh;
   margin-top: 0;
-  display: flex;
-  flex-direction: column;
+  height: auto;
 }
 
 /* Overlay — no bottom-right radius on solutions page */
@@ -2877,40 +2878,17 @@
   border-bottom-right-radius: 0 !important;
 }
 
-/* Content — fills hero, distributes content top-to-bottom */
+/* Content — in-flow (not absolute) so section height = content height.
+   Reuses .hero-content-grid / .hero-left-col / .hero-right-col from
+   the homepage so the card lands in exactly the same horizontal position. */
 .mk-hero__content--solutions {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  inset: unset;
   z-index: 3;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  /* Top padding = nav height (5.5rem) + gap */
   padding-top: 7rem;
   padding-bottom: 0;
-}
-
-/* Two-column grid inside the hero (headline left | spacer right) */
-.solutions-hero-grid {
-  display: grid;
-  grid-template-columns: 55fr 45fr;
-  gap: 2rem;
-  align-items: start;
-  width: 100%;
-}
-
-/* Left column — headline + subtitle + CTA */
-.solutions-hero-left {
-  padding-bottom: 4rem;
-}
-
-/* Stats card — inherits dimensions/surface from .hero-detail-wrap
-   (420px max-width, white, top-rounded, right-aligned). This modifier
-   only handles hero placement and the inner stats row. */
-.solutions-stats-card {
-  align-self: flex-end;
-  width: 100%;
-  z-index: 4;
 }
 
 .solutions-stats-row {
@@ -2937,32 +2915,11 @@
 
 /* ── Mobile ────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .mk-hero--solutions {
-    min-height: auto;
-    height: auto;
-  }
-
+  /* On mobile the shared .hero-content-grid / .hero-left-col CSS takes over,
+     same as the homepage. Only override what differs on solutions. */
   .mk-hero__content--solutions {
-    position: relative;
-    inset: unset;
-    justify-content: flex-start;
-    padding-top: calc(5.5rem + 1rem);
-    padding-bottom: 0;
+    padding-top: calc(7rem + 5.5rem);
   }
-
-  .solutions-hero-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .solutions-stats-card {
-    margin-top: 2rem;
-  }
-
-  .solutions-stats-col {
-    padding: 0 0.875rem;
-  }
-  .solutions-stats-col:first-child { padding-left: 0; }
-  .solutions-stats-col:last-child  { padding-right: 0; }
 
   .solutions-twin-cols {
     grid-template-columns: 1fr;

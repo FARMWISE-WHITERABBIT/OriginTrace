@@ -135,98 +135,101 @@ export default function SolutionsPage() {
 
           <div className="mk-hero__content mk-hero__content--solutions">
             <div className="mk-container-lg" style={{ width: '100%' }}>
-              <div className="solutions-hero-grid">
+              {/* Same grid structure as homepage: 55fr left col, 45fr right col with card at bottom */}
+              <div
+                className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}
+              >
 
-                {/* LEFT — headline + subtitle + CTA */}
-                <FadeIn delay={0.1}>
-                  <div className="solutions-hero-left">
+                {/* LEFT — headline + subtitle + CTA, vertically centered */}
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                  <FadeIn delay={0.1}>
                     <h1
-                      className="text-display-2xl"
+                      className="text-display-2xl margin-bottom margin-large"
                       style={{
                         color: '#ffffff',
                         fontFamily: 'var(--font-display)',
                         maxWidth: '12ch',
-                        lineHeight: 1.08,
-                        letterSpacing: '-0.03em',
-                        marginBottom: '1.5rem',
                       }}
                     >
                       The Platform
                     </h1>
+                  </FadeIn>
+                  <FadeIn delay={0.2}>
                     <p
+                      className="margin-bottom margin-xlarge"
                       style={{
-                        fontSize: 'clamp(0.95rem, 2vw, 1.0625rem)',
+                        fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)',
                         lineHeight: 1.75,
-                        color: 'rgba(255,255,255,0.65)',
-                        maxWidth: '38ch',
-                        marginBottom: '2.5rem',
+                        maxWidth: '40ch',
+                        color: 'rgba(255,255,255,0.62)',
                       }}
                     >
                       We are the trust infrastructure for origin-sensitive exports —
                       connecting verified sources, compliance scoring, export documentation,
                       and payment settlement in one system built for African supply chains.
                     </p>
+                  </FadeIn>
+                  <FadeIn delay={0.3}>
                     <Link href="/demo" className="btn-mk-primary btn-mk-lg">
                       Get your compliance score
                       <ChevronRight className="h-5 w-5" />
                     </Link>
-                  </div>
-                </FadeIn>
+                  </FadeIn>
+                </div>
 
-                {/* Spacer pushes stats card to bottom-right */}
-                <div />
+                {/* RIGHT — stats card, pinned to bottom of column */}
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="up">
+                    <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                      <div className="solutions-stats-row">
+                        {stats.map((stat, i) => (
+                          <div
+                            key={i}
+                            className="solutions-stats-col"
+                            style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
+                          >
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
+                              {stat.label}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: '1.75rem',
+                                color: 'var(--mk-text-primary)',
+                                fontFamily: 'var(--font-display)',
+                                fontWeight: 800,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {stat.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Decorative corner elements — same as homepage */}
+                      <img
+                        src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-left-decorative"
+                        width={25}
+                        height={25}
+                      />
+                      <img
+                        src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-right-decorative"
+                        width={25}
+                        height={25}
+                      />
+                    </div>
+                  </FadeIn>
+                </div>
 
               </div>
             </div>
-
-            {/* Stats card — same hero-detail-wrap treatment as the homepage card:
-                420px max-width, white, top-rounded, quarter-circle corner fills */}
-            <FadeIn delay={0.5} direction="up">
-              <div className="hero-detail-wrap solutions-stats-card">
-                <div className="solutions-stats-row">
-                  {stats.map((stat, i) => (
-                    <div
-                      key={i}
-                      className="solutions-stats-col"
-                      style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
-                    >
-                      <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
-                        {stat.label}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: '1.75rem',
-                          color: 'var(--mk-text-primary)',
-                          fontFamily: 'var(--font-display)',
-                          fontWeight: 800,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Decorative corner elements — concave fills joining card base to hero edge */}
-                <img
-                  src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
-                  alt=""
-                  aria-hidden
-                  className="hero-left-decorative"
-                  width={25}
-                  height={25}
-                />
-                <img
-                  src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
-                  alt=""
-                  aria-hidden
-                  className="hero-right-decorative"
-                  width={25}
-                  height={25}
-                />
-              </div>
-            </FadeIn>
           </div>
         </section>
 
