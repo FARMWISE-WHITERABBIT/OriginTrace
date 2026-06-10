@@ -1189,7 +1189,7 @@
     }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { min-height: calc(100svh + 7rem); border-radius: 0; }
+    .mk-hero { min-height: unset; height: auto; border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1232,37 +1232,39 @@
      .mk-hero has margin-top: -7rem so hero content starts 112px ABOVE the
      viewport top (slides behind the fixed nav). All padding-top values must
      add that 7rem offset to appear correctly below the nav.
-     Headline at top (below nav), card pinned to bottom of 180svh hero.
+     Headline at top (below nav), card directly below — hero shrinks to content.
      ── */
   @media screen and (max-width: 767px) {
+    /* Switch from absolute to in-flow so hero height = content height */
     .mk-hero__content {
+      position: relative;
+      inset: unset;
       justify-content: flex-start;
       /* 7rem = hero margin offset + 5.5rem = nav height (~74px) + ~14px gap */
       padding-top: calc(7rem + 5.5rem);
+      padding-bottom: 0;
     }
-    /* Container grows to fill full hero height */
+    /* Container — natural flow */
     .mk-hero .mk-container-lg {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+      flex: unset;
+      display: block;
     }
-    /* Grid becomes a flex column: headline at top, card at bottom */
+    /* Grid — natural column stack, no forced height */
     .hero-content-grid {
-      flex: 1 !important;
+      flex: unset !important;
       display: flex !important;
       flex-direction: column;
-      justify-content: space-between;
-      gap: 0 !important;
+      justify-content: flex-start;
+      gap: 2rem !important;
       min-height: unset !important;
+      height: auto !important;
     }
-    /* Headline group — minimal padding, content sits high on screen */
+    /* Headline group */
     .hero-left-col {
-      flex-shrink: 0;
       padding-top: 0 !important;
-      padding-bottom: 2rem;
+      padding-bottom: 0 !important;
     }
-    /* Card group — natural height, space-between pushes it to bottom */
-    .hero-right-col { flex-shrink: 0; }
+    .hero-right-col { padding-bottom: 0; }
   }
 
   /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
