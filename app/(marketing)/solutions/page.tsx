@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn } from '@/components/marketing/motion';
+import HeroBackground from '@/components/marketing/hero-background';
 import {
   Globe,
   MapPin,
@@ -18,6 +20,14 @@ import {
   ChevronRight,
   Banknote,
 } from 'lucide-react';
+
+/* ─── DATA ─────────────────────────────────────────────────────────── */
+
+const stats = [
+  { label: 'Compliance frameworks checked per shipment', value: '5' },
+  { label: 'Countries with active compliance requirements', value: '40+' },
+  { label: 'Traceability — from plot to payment', value: '100%' },
+];
 
 const roles = [
   {
@@ -37,12 +47,12 @@ const roles = [
     id: 'cooperatives',
     label: 'Cooperative / Aggregator',
     icon: Users,
-    headline: 'Hundreds of farmers. One verified traceability record.',
-    body: 'You work with smallholder farmers across multiple communities. OriginTrace helps you register every farm, log every collection, and generate a single verified batch record — even without internet.',
+    headline: 'Hundreds of contributors. One verified traceability record.',
+    body: 'You work with smallholder farmers or community collectors across multiple sites. OriginTrace helps you register every plot or site, log every collection, and generate a single verified batch record — even without internet.',
     features: [
-      'GPS farm registration for every contributing plot',
+      'GPS registration for every contributing farm plot or extraction site',
       'Offline-first batch collection — syncs when connectivity returns',
-      'Bag-level traceability from farm to export warehouse',
+      'Bag-level traceability from source to export warehouse',
       'Anti-fraud yield validation to protect your data integrity',
     ],
   },
@@ -50,10 +60,10 @@ const roles = [
     id: 'compliance',
     label: 'Compliance Officer',
     icon: ClipboardCheck,
-    headline: 'Stop assembling compliance packs at midnight.',
+    headline: 'Stop assembling compliance packs the night before loading.',
     body: 'You are responsible for ensuring every shipment meets destination market requirements. OriginTrace runs your shipment against all five major frameworks simultaneously and flags gaps before loading.',
     features: [
-      'EUDR, FSMA 204, UK Environment Act, GACC, ESMA — all in one check',
+      'EUDR, FSMA 204, UK Environment Act, GACC, ESMA — one check',
       'Automated gap detection with resolution guidance',
       'Audit-ready dossiers generated on demand',
       'Document vault with expiry tracking and alerts',
@@ -77,75 +87,217 @@ const roles = [
 const workflowSteps = [
   {
     number: '01',
-    title: 'Farm Registration',
-    body: 'Register every farm and farmer with GPS coordinates and identity verification. Your supply chain starts with verified origin — not declarations.',
+    title: 'Register Your Sources',
+    body: 'GPS-map every farm plot, forest concession, or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
     icon: MapPin,
   },
   {
     number: '02',
-    title: 'Batch Collection',
-    body: 'Field agents log aggregation in real time — even offline. Every bag is traceable to the farm it came from. Syncs automatically when connectivity returns.',
+    title: 'Capture & Aggregate',
+    body: 'Field agents log collection in real time — even without internet. Every unit is traceable to the exact source it came from. Data syncs automatically when connectivity returns.',
     icon: Factory,
   },
   {
     number: '03',
-    title: 'Compliance Clearance',
-    body: 'Run your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and fix gaps before you book freight.',
+    title: 'Run a Compliance Check',
+    body: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and resolve gaps before you book freight — not at the border.',
     icon: ShieldCheck,
   },
   {
     number: '04',
-    title: 'Shipment & Documentation',
-    body: 'Generate your pedigree certificate, waybill, and full compliance pack in one place. No more assembling files from multiple sources the night before loading.',
+    title: 'Generate Your Documents',
+    body: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No more assembling files from multiple sources the night before loading.',
     icon: FileText,
   },
   {
     number: '05',
-    title: 'Payment Settlement',
-    body: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No more chasing. No more trust-based risk.',
+    title: 'Settle Payment',
+    body: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
     icon: Banknote,
   },
 ];
 
+/* ─── PAGE ─────────────────────────────────────────────────────────── */
+
 export default function SolutionsPage() {
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
       <MarketingNav />
 
       <main>
 
-        {/* ── HERO ─────────────────────────────────────────────── */}
-        <section className="section-spacing section-dark" style={{ paddingTop: 'calc(var(--section-md) + 5rem)' }}>
-          <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header section-header--left" style={{ maxWidth: '42rem' }}>
-                <span className="pre-title margin-bottom margin-medium">Platform</span>
-                <h1 className="text-display-xl section-header__title" style={{ color: 'var(--mk-text-on-dark)' }}>
-                  One platform.{' '}
-                  <span style={{ color: 'var(--mk-green-mid)' }}>Every step from farm to payment.</span>
-                </h1>
-                <p className="section-header__body" style={{ color: 'var(--mk-text-on-dark-2)', textAlign: 'left', marginInline: 0 }}>
-                  Built for exporters, cooperatives, and compliance teams who need to prove
-                  their supply chain — not just describe it. OriginTrace connects every step
-                  from first-mile field capture to payment settlement.
-                </p>
-                <div className="flex flex-wrap gap-3 mt-8">
-                  <Link href="/demo" className="btn-mk-primary btn-mk-lg">
-                    Request Access
-                    <ChevronRight className="h-5 w-5" />
-                  </Link>
-                  <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
-                    See the workflow
-                  </Link>
-                </div>
+        {/* ══════════════════════════════════════════════════════════
+            1. HERO — full-bleed background, headline left, stats card
+            ══════════════════════════════════════════════════════════ */}
+        <section className="mk-hero mk-hero--solutions">
+          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+
+          <div className="mk-hero__content mk-hero__content--solutions">
+            <div className="mk-container-lg" style={{ width: '100%' }}>
+              <div className="solutions-hero-grid">
+
+                {/* LEFT — headline + subtitle + CTA */}
+                <FadeIn delay={0.1}>
+                  <div className="solutions-hero-left">
+                    <h1
+                      className="text-display-2xl"
+                      style={{
+                        color: '#ffffff',
+                        fontFamily: 'var(--font-display)',
+                        maxWidth: '12ch',
+                        lineHeight: 1.08,
+                        letterSpacing: '-0.03em',
+                        marginBottom: '1.5rem',
+                      }}
+                    >
+                      The Platform
+                    </h1>
+                    <p
+                      style={{
+                        fontSize: 'clamp(0.95rem, 2vw, 1.0625rem)',
+                        lineHeight: 1.75,
+                        color: 'rgba(255,255,255,0.65)',
+                        maxWidth: '38ch',
+                        marginBottom: '2.5rem',
+                      }}
+                    >
+                      We are the trust infrastructure for origin-sensitive exports —
+                      connecting verified sources, compliance scoring, export documentation,
+                      and payment settlement in one system built for African supply chains.
+                    </p>
+                    <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                      Get your compliance score
+                      <ChevronRight className="h-5 w-5" />
+                    </Link>
+                  </div>
+                </FadeIn>
+
+                {/* Spacer pushes stats card to bottom-right */}
+                <div />
+
+              </div>
+            </div>
+
+            {/* Stats card — pinned bottom-right, same white-card treatment as Mivora */}
+            <FadeIn delay={0.5} direction="up">
+              <div className="solutions-stats-card">
+                {stats.map((stat, i) => (
+                  <div
+                    key={i}
+                    className="solutions-stats-col"
+                    style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
+                  >
+                    <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1.25rem' }}>
+                      {stat.label}
+                    </p>
+                    <p
+                      className="text-display-lg"
+                      style={{
+                        color: 'var(--mk-text-primary)',
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: 800,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {stat.value}
+                    </p>
+                  </div>
+                ))}
               </div>
             </FadeIn>
           </div>
         </section>
 
 
-        {/* ── WHO IT'S FOR ─────────────────────────────────────── */}
+        {/* ══════════════════════════════════════════════════════════
+            2. INTRO — centered headline, 3 images, twin columns
+            ══════════════════════════════════════════════════════════ */}
         <section className="section-spacing section-white">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="section-header" style={{ marginBottom: '3.5rem' }}>
+                <h2
+                  className="text-display-lg section-header__title"
+                  style={{ maxWidth: '22ch' }}
+                >
+                  Smart{' '}
+                  <span className="text-mk-muted">origin verification</span>
+                  {' '}for modern{' '}
+                  <span className="text-mk-muted">export chains</span>
+                </h2>
+                <p className="section-header__body" style={{ marginTop: '1.5rem' }}>
+                  At OriginTrace, we believe proof should travel with the product. Born from the
+                  compliance wave reshaping global trade — EUDR, FSMA 204, GACC — we set out
+                  to replace declarations with verified data, from the first GPS point to the
+                  final payment.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* 3-image staggered row */}
+          <div className="mk-container-lg" style={{ marginBottom: '3.5rem' }}>
+            {/* Desktop */}
+            <div
+              className="hidden md:grid"
+              style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center' }}
+            >
+              <FadeIn delay={0.1} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+              </FadeIn>
+              <FadeIn delay={0.2} direction="up">
+                <div style={{ height: '580px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.3} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+            </div>
+
+            {/* Mobile — 3-in-a-row staggered */}
+            <div className="block md:hidden">
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Twin text columns + asterisk divider */}
+          <div className="mk-container-lg">
+            <FadeIn delay={0.2}>
+              <div className="solutions-twin-cols">
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>
+                  Across West and East Africa, we've built a network of verified sources — every
+                  farm plot, forest concession, and extraction site GPS-mapped and
+                  identity-checked, before a single bag leaves the ground.
+                </p>
+
+                {/* Asterisk divider */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="36" height="36" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)' }}>
+                    <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>
+                  From offline field capture to escrow settlement, every feature closes one gap:
+                  the distance between what exporters claim and what buyers and regulators
+                  can independently verify.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+
+        {/* ══════════════════════════════════════════════════════════
+            3. WHO IT'S FOR — role cards
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
           <div className="mk-container-lg">
             <FadeIn>
               <div className="section-header">
@@ -155,8 +307,8 @@ export default function SolutionsPage() {
                   <span className="text-mk-muted">in the export chain</span>
                 </h2>
                 <p className="section-header__body">
-                  Whether you move the produce, aggregate it, clear it, or ship it —
-                  OriginTrace has a workflow built for your specific role.
+                  Whether you source it, aggregate it, clear it, or ship it — there is a
+                  workflow built for your seat at the table.
                 </p>
               </div>
             </FadeIn>
@@ -201,8 +353,10 @@ export default function SolutionsPage() {
         </section>
 
 
-        {/* ── HOW IT WORKS ─────────────────────────────────────── */}
-        <section id="how-it-works" className="section-spacing section-gray">
+        {/* ══════════════════════════════════════════════════════════
+            4. HOW IT WORKS — 5-step workflow
+            ══════════════════════════════════════════════════════════ */}
+        <section id="how-it-works" className="section-spacing section-white">
           <div className="mk-container-lg">
             <FadeIn>
               <div className="section-header section-header--left margin-bottom margin-xlarge">
@@ -213,23 +367,22 @@ export default function SolutionsPage() {
                   The Workflow
                 </span>
                 <h2 className="text-display-lg section-header__title">
-                  From farm to payment —{' '}
+                  From source to payment —{' '}
                   <span className="text-mk-muted">every step connected</span>
                 </h2>
                 <p className="section-header__body" style={{ textAlign: 'left', marginInline: 0 }}>
                   OriginTrace is the only platform that follows your produce all the way from
-                  the farm to the moment you get paid. No missing links. No compliance gaps.
+                  the source to the moment you get paid. No missing links. No compliance gaps.
                 </p>
               </div>
             </FadeIn>
 
             <div className="relative">
-              {/* Vertical connector line */}
+              {/* Vertical connector line — desktop only */}
               <div
                 className="hidden lg:block absolute"
                 style={{ left: '27px', top: '28px', bottom: '28px', width: '1px', background: 'var(--mk-border)' }}
               />
-
               <div className="flex flex-col gap-6">
                 {workflowSteps.map((step, i) => (
                   <FadeIn key={i} delay={i * 0.08}>
@@ -248,13 +401,9 @@ export default function SolutionsPage() {
                       >
                         {step.number}
                       </div>
-                      {/* Content */}
                       <div
                         className="mk-card flex-1"
-                        style={{
-                          padding: '1.5rem',
-                          borderLeft: i === 4 ? '3px solid var(--mk-green)' : undefined,
-                        }}
+                        style={{ padding: '1.5rem', borderLeft: i === 4 ? '3px solid var(--mk-green)' : undefined }}
                       >
                         <div className="flex items-center gap-3 margin-bottom margin-small">
                           <step.icon className="w-4 h-4" style={{ color: 'var(--mk-green)', flexShrink: 0 }} />
@@ -283,8 +432,10 @@ export default function SolutionsPage() {
         </section>
 
 
-        {/* ── OFFLINE SECTION ──────────────────────────────────── */}
-        <section className="section-spacing section-white">
+        {/* ══════════════════════════════════════════════════════════
+            5. FIELD OPERATIONS — offline split section
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
           <div className="mk-container-lg">
             <div className="mk-technology-grid">
               <FadeIn direction="right">
@@ -297,9 +448,9 @@ export default function SolutionsPage() {
                     <span className="text-mk-muted">the internet isn&apos;t reliable.</span>
                   </h2>
                   <p style={{ color: 'var(--mk-text-secondary)', lineHeight: 1.7, marginTop: '1.25rem', marginBottom: '2rem' }}>
-                    Field agents in rural collection points can log batches, register farmers,
+                    Field agents at rural collection points can log batches, register farmers,
                     and record GPS coordinates without a live connection. Data syncs automatically
-                    when connectivity is restored. No gaps in your traceability record because
+                    when connectivity is restored — no gaps in your traceability record because
                     of network coverage.
                   </p>
                   <div className="flex flex-col gap-3">
@@ -339,21 +490,30 @@ export default function SolutionsPage() {
         </section>
 
 
-        {/* ── FINAL CTA ────────────────────────────────────────── */}
+        {/* ══════════════════════════════════════════════════════════
+            6. FINAL CTA
+            ══════════════════════════════════════════════════════════ */}
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
             <FadeIn>
               <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
                 <span className="pre-title margin-bottom margin-large">Get Started</span>
-                <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">
+                <h2
+                  className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
+                  data-testid="text-solutions-cta-headline"
+                >
                   See it working against your actual export operation.
                 </h2>
-                <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>
+                <p
+                  className="margin-bottom margin-xlarge-2"
+                  style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
+                >
                   Request a 30-minute walkthrough. We will map your current workflow and show
-                  you exactly where OriginTrace fits — for your commodity, your markets, your team.
+                  you exactly where OriginTrace fits — for your commodity, your markets,
+                  your team.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                  <Link href="/demo" className="btn-mk-primary btn-mk-lg" data-testid="button-solutions-demo">
                     Request a Demo
                     <ChevronRight className="h-5 w-5" />
                   </Link>
