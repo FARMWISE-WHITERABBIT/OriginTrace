@@ -201,7 +201,7 @@ export default function HomePage() {
                 style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8" style={{ paddingTop: 'clamp(5rem, 20vw, 8rem)' }}>
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"

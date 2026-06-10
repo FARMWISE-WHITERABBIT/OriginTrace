@@ -1182,25 +1182,17 @@
   }
 
   @media screen and (max-width: 991px) {
-    .mk-hero { min-height: calc(100svh + 7rem); }
-  }
-  @media screen and (max-width: 991px) {
-    .mk-hero { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .mk-hero {
+      min-height: calc(100svh + 7rem);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
   }
   @media screen and (max-width: 767px) {
     .mk-hero { min-height: calc(180svh); border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
-  }
-
-  /* Hero left column — mobile: align to top so headline sits high on screen */
-  @media screen and (max-width: 767px) {
-    .hero-left-col {
-      justify-content: flex-start !important;
-      padding-top: 4.75rem !important;
-      padding-bottom: 1.5rem !important;
-    }
   }
 
   .mk-hero--inner {
@@ -1231,6 +1223,14 @@
     flex-direction: column;
     justify-content: flex-end;
     padding-bottom: 0;
+  }
+
+  /* On mobile: push content to top so headline is visible immediately on load */
+  @media screen and (max-width: 767px) {
+    .mk-hero__content {
+      justify-content: flex-start;
+      padding-top: 4.75rem; /* clears fixed mobile nav (~60-70px) */
+    }
   }
 
   /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
@@ -2439,8 +2439,8 @@
   z-index: 10;
 }
 .mk-footer__shape--mobile {
-  width: 57px;
-  height: 30px;
+  width: 72px;
+  height: 38px;
   transform: rotate(90deg);
   pointer-events: none;
 }
