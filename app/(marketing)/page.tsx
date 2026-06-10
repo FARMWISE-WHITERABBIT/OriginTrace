@@ -197,7 +197,7 @@ export default function HomePage() {
             <div className="mk-container-lg">
               {/* Two-col on desktop, stacked on mobile — both columns visible */}
               <div
-                className="grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
                 style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
@@ -232,7 +232,7 @@ export default function HomePage() {
                 </div>
 
                 {/* RIGHT — card, visible on all sizes */}
-                <div className="flex flex-col justify-end pb-0">
+                <div className="hero-right-col flex flex-col justify-end pb-0">
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"

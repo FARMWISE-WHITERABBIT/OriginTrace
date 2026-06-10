@@ -1213,6 +1213,9 @@
     opacity: 0.5;
     border-bottom-right-radius: var(--border-radius--md);
   }
+  @media screen and (max-width: 991px) {
+    .mk-hero__overlay { border-bottom-right-radius: 0; }
+  }
 
   /* Content fills section and pushes to bottom */
   .mk-hero__content {
@@ -1225,12 +1228,39 @@
     padding-bottom: 0;
   }
 
-  /* On mobile: push content to top so headline is visible immediately on load */
+  /* ── Mobile hero layout (≤767px)
+     Headline at top (below nav), card pinned to bottom of 180svh hero.
+     The background video fills the scrollable space between them.
+     ── */
   @media screen and (max-width: 767px) {
+    /* Anchor container to hero top */
     .mk-hero__content {
       justify-content: flex-start;
-      padding-top: 4.75rem; /* clears fixed mobile nav (~60-70px) */
+      padding-top: 0;
     }
+    /* Container grows to fill full hero height */
+    .mk-hero .mk-container-lg {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Grid becomes a flex column: headline at top, card at bottom */
+    .hero-content-grid {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0 !important;
+      min-height: unset !important;
+    }
+    /* Headline group — top with nav clearance + breathing room */
+    .hero-left-col {
+      flex-shrink: 0;
+      padding-top: 6rem; /* 96px: mobile nav ~74px + 22px gap */
+      padding-bottom: 2rem;
+    }
+    /* Card group — natural height, space-between pushes it to bottom */
+    .hero-right-col { flex-shrink: 0; }
   }
 
   /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
