@@ -386,23 +386,42 @@ export default function HomePage() {
                 <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
-            {/* Mobile: all 3 images — tall centre flanked by two shorter side cards */}
+
+            {/* Mobile: 3 images in a row — side images shorter, centre taller (staggered) */}
             <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
-              {/* Large centre image */}
-              <div style={{ height: '260px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '0.625rem' }} />
-              {/* Two side images side by side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
-                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
-                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </div>
             </div>
 
             {/* CTA — centered pill button */}
             <FadeIn delay={0.44}>
-              <div className="flex justify-center">
+              <div className="flex justify-center" style={{ marginBottom: '3rem' }}>
                 <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
                   See the platform
                 </Link>
+              </div>
+            </FadeIn>
+
+            {/* Feature items — 3-col grid below CTA */}
+            <FadeIn delay={0.55}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+                {[
+                  { label: 'GPS Verified Origin' },
+                  { label: 'Compliance Ready' },
+                  { label: 'Secured Payments' },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)', flexShrink: 0 }}>
+                      <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-secondary)', fontWeight: 500, lineHeight: 1.4 }}>{item.label}</span>
+                  </div>
+                ))}
               </div>
             </FadeIn>
           </div>
