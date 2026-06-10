@@ -179,31 +179,52 @@ export default function SolutionsPage() {
               </div>
             </div>
 
-            {/* Stats card — pinned bottom-right, same white-card treatment as Mivora */}
+            {/* Stats card — same hero-detail-wrap treatment as the homepage card:
+                420px max-width, white, top-rounded, quarter-circle corner fills */}
             <FadeIn delay={0.5} direction="up">
-              <div className="solutions-stats-card">
-                {stats.map((stat, i) => (
-                  <div
-                    key={i}
-                    className="solutions-stats-col"
-                    style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
-                  >
-                    <p style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1.25rem' }}>
-                      {stat.label}
-                    </p>
-                    <p
-                      className="text-display-lg"
-                      style={{
-                        color: 'var(--mk-text-primary)',
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: 800,
-                        lineHeight: 1,
-                      }}
+              <div className="hero-detail-wrap solutions-stats-card">
+                <div className="solutions-stats-row">
+                  {stats.map((stat, i) => (
+                    <div
+                      key={i}
+                      className="solutions-stats-col"
+                      style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
                     >
-                      {stat.value}
-                    </p>
-                  </div>
-                ))}
+                      <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
+                        {stat.label}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '1.75rem',
+                          color: 'var(--mk-text-primary)',
+                          fontFamily: 'var(--font-display)',
+                          fontWeight: 800,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Decorative corner elements — concave fills joining card base to hero edge */}
+                <img
+                  src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
+                  alt=""
+                  aria-hidden
+                  className="hero-left-decorative"
+                  width={25}
+                  height={25}
+                />
+                <img
+                  src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
+                  alt=""
+                  aria-hidden
+                  className="hero-right-decorative"
+                  width={25}
+                  height={25}
+                />
               </div>
             </FadeIn>
           </div>
