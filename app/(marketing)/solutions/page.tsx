@@ -260,30 +260,30 @@ export default function SolutionsPage() {
             </FadeIn>
           </div>
 
-          {/* 3-image staggered row */}
+          {/* 3-image row — equal heights, varying widths (per reference) */}
           <div className="mk-container-lg" style={{ marginBottom: '3.5rem' }}>
             {/* Desktop */}
             <div
               className="hidden md:grid"
-              style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center' }}
+              style={{ gridTemplateColumns: '1.5fr 1fr 1.8fr', gap: '1rem', alignItems: 'stretch' }}
             >
               <FadeIn delay={0.1} direction="up">
-                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
               <FadeIn delay={0.2} direction="up">
-                <div style={{ height: '580px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-1500mcoffee-28314458.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
               <FadeIn delay={0.3} direction="up">
-                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
 
-            {/* Mobile — 3-in-a-row staggered */}
+            {/* Mobile — same equal-height row, scaled down */}
             <div className="block md:hidden">
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
-                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+                <div style={{ flex: 1.5, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-1500mcoffee-28314458.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1.8, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </div>
             </div>
           </div>

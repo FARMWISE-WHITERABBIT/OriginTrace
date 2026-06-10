@@ -2864,13 +2864,15 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 /* Hero modifier — inner-page variant.
-   min-height: 66svh (4/6 of viewport). Content is position:relative so
-   the section height = content height (card bottom = section bottom).
-   Background/overlay remain position:absolute and fill the section. */
+   min-height: 66svh (4/6 of viewport). Flex column + flex:1 chain makes
+   the content stretch to fill the section, so the right column's
+   justify-end pins the card bottom exactly to the section bottom. */
 .mk-hero--solutions {
   min-height: 66svh;
   margin-top: 0;
   height: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Overlay — no bottom-right radius on solutions page */
@@ -2878,17 +2880,26 @@
   border-bottom-right-radius: 0 !important;
 }
 
-/* Content — in-flow (not absolute) so section height = content height.
+/* Content — in-flow (not absolute) and stretching to fill the hero.
    Reuses .hero-content-grid / .hero-left-col / .hero-right-col from
    the homepage so the card lands in exactly the same horizontal position. */
 .mk-hero__content--solutions {
   position: relative;
   inset: unset;
   z-index: 3;
+  flex: 1;
   display: flex;
   flex-direction: column;
   padding-top: 7rem;
   padding-bottom: 0;
+}
+.mk-hero__content--solutions .mk-container-lg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.mk-hero__content--solutions .hero-content-grid {
+  flex: 1;
 }
 
 .solutions-stats-row {
@@ -2917,8 +2928,12 @@
 @media (max-width: 767px) {
   /* On mobile the shared .hero-content-grid / .hero-left-col CSS takes over,
      same as the homepage. Only override what differs on solutions. */
+  /* Section shrinks to content on mobile — card bottom = section bottom */
+  .mk-hero--solutions { min-height: unset; }
+
+  /* No -7rem slide on solutions: just nav height (~74px) + gap */
   .mk-hero__content--solutions {
-    padding-top: calc(7rem + 5.5rem);
+    padding-top: 6.5rem;
   }
 
   .solutions-twin-cols {
