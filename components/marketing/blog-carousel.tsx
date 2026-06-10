@@ -110,7 +110,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
               display: 'grid',
               gridTemplateColumns: `repeat(${total}, calc((100% - ${PER_PAGE - 1}rem) / ${PER_PAGE}))`,
               gap: '1rem',
-              transform: `translateX(calc(-${page} * (100% / ${total}) * ${total / PER_PAGE}))`,
+              transform: `translateX(calc(-${page} * (100% + 1rem)))`,
               transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             }}
           >

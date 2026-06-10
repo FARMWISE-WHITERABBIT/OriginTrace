@@ -124,7 +124,7 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
             display: 'grid',
             gridTemplateColumns: `repeat(${total}, calc((100% - ${(VISIBLE - 1)}rem) / ${VISIBLE}))`,
             gap: '1rem',
-            transform: `translateX(calc(-${active} * (100% / ${total}) * ${total / VISIBLE}))`,
+            transform: `translateX(calc(-${active} * (100% + 1rem)))`,
             transition: 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
         >
