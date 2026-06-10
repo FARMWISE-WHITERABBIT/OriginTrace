@@ -1229,14 +1229,16 @@
   }
 
   /* ── Mobile hero layout (≤767px)
+     .mk-hero has margin-top: -7rem so hero content starts 112px ABOVE the
+     viewport top (slides behind the fixed nav). All padding-top values must
+     add that 7rem offset to appear correctly below the nav.
      Headline at top (below nav), card pinned to bottom of 180svh hero.
-     The background video fills the scrollable space between them.
      ── */
   @media screen and (max-width: 767px) {
-    /* Anchor container to hero top */
     .mk-hero__content {
       justify-content: flex-start;
-      padding-top: 0;
+      /* 7rem = hero margin offset + 5.5rem = nav height (~74px) + ~14px gap */
+      padding-top: calc(7rem + 5.5rem);
     }
     /* Container grows to fill full hero height */
     .mk-hero .mk-container-lg {
@@ -1253,10 +1255,10 @@
       gap: 0 !important;
       min-height: unset !important;
     }
-    /* Headline group — top with nav clearance + breathing room */
+    /* Headline group — minimal padding, content sits high on screen */
     .hero-left-col {
       flex-shrink: 0;
-      padding-top: 6rem; /* 96px: mobile nav ~74px + 22px gap */
+      padding-top: 0 !important;
       padding-bottom: 2rem;
     }
     /* Card group — natural height, space-between pushes it to bottom */
