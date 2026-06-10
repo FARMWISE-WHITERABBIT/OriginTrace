@@ -23,6 +23,9 @@ const industryLinks = [
   { href: '/industries/minerals',    label: 'Minerals' },
 ];
 
+// Mobile nav: 0.75rem top padding (12px) + pill height (0.5rem×2 padding + 34px logo = 50px) + 10px gap
+const MOBILE_DRAWER_TOP = '72px';
+
 const navLinks = [
   { href: '/',           label: 'Home' },
   { href: '/solutions',  label: 'Solutions' },
@@ -330,7 +333,7 @@ export function MarketingNav() {
             transition={{ duration: 0.2 }}
             className="fixed z-50 md:hidden rounded-2xl py-3"
             style={{
-              top: '72px',
+              top: MOBILE_DRAWER_TOP,
               left: '1rem',
               right: '1rem',
               background: '#fff',

@@ -2,10 +2,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
-import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getAllPosts } from '@/lib/blog';
 import { BlogCarousel } from '@/components/marketing/blog-carousel';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
@@ -17,7 +16,6 @@ import {
   ChevronRight,
   Check,
   MapPin,
-  ArrowRight,
   Mail,
   Phone,
   Wifi,
@@ -217,7 +215,7 @@ export default function HomePage() {
                       className="margin-bottom margin-xlarge"
                       style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, US, and China requirements, and gives buyers the proof they need to clear your shipment.
+                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, UK, US, China, and UAE requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
                   </FadeIn>
 
@@ -233,6 +231,7 @@ export default function HomePage() {
 
                 {/* RIGHT — card, visible on all sizes */}
                 <div className="hero-right-col flex flex-col justify-end pb-0">
+                  {featuredPost && (
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
@@ -311,6 +310,7 @@ export default function HomePage() {
                       />
                     </div>
                   </FadeIn>
+                  )}
                 </div>
 
               </div>
@@ -383,7 +383,7 @@ export default function HomePage() {
                 <div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
               <FadeIn delay={0.34} direction="up">
-                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
 
@@ -392,7 +392,7 @@ export default function HomePage() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
                 <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </div>
             </div>
 
