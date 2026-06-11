@@ -44,7 +44,7 @@ export function FaqSection() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="section-spacing section-white">
+    <section className="section-spacing mk-faq-section">
       <div className="mk-container-lg">
         <FadeIn>
           <div className="mk-faq-header">
