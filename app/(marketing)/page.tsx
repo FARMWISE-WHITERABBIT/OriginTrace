@@ -11,6 +11,7 @@ import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import { ComplianceStack } from '@/components/marketing/compliance-stack';
 import { ReadinessModal } from '@/components/marketing/readiness-modal';
+import { FaqSection } from '@/components/marketing/faq-section';
 import {
   Shield,
   ChevronRight,
@@ -473,7 +474,13 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12b. CERTIFICATION / COMPLIANCE MARQUEE (below blog)
+            12b. FAQ
+            ═══════════════════════════════════════════════════════ */}
+        <FaqSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12c. CERTIFICATION / COMPLIANCE MARQUEE (below FAQ)
             ═══════════════════════════════════════════════════════ */}
         <CertificationMarquee />
 
