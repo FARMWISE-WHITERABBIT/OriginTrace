@@ -34,7 +34,7 @@ export default function BlogListingPage() {
   const rest = allPosts.slice(1);
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
 
       <main className="pt-24 pb-20 md:pb-28">

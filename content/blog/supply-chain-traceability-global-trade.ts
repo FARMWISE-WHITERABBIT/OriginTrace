@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '9 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-mikhail-nilov-8332326.jpg',
+  coverImageAlt: 'Aerial top-down view of neatly divided green agricultural plots',
   coverGradient: 'from-blue-900/20 to-slate-800/50',
   tags: ['Traceability', 'Supply Chain', 'Global Trade', 'Risk Management', 'Compliance', 'Export'],
   content: [

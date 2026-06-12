@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '7 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-jose-carlos-alexandre-2433751-17797257.jpg',
+  coverImageAlt: 'African man with tablet inspects a mango in a modern orchard',
   coverGradient: 'from-slate-800/50 to-blue-900/20',
   tags: ['Offline', 'Traceability', 'Technology', 'Field Operations', 'Rural', 'PWA'],
   content: [

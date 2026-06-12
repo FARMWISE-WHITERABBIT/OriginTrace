@@ -81,15 +81,14 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com",
-      "script-src 'self' 'unsafe-inline' https://*.sentry.io",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com https://www.youtube.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
-      "frame-src 'self' https://js.paystack.co",
+      "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
-      "media-src 'self' blob:",
+      "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
     ].join('; '),
   },
 ];
@@ -101,6 +100,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    turbopackUseSystemTlsCerts: true,
   },
   images: {
     remotePatterns: [
@@ -121,6 +121,16 @@ const nextConfig = {
       {
         source: '/auth/buyer-register',
         destination: '/auth/login',
+        permanent: true,
+      },
+      {
+        source: '/insights',
+        destination: '/blog',
+        permanent: true,
+      },
+      {
+        source: '/insights/:slug*',
+        destination: '/blog/:slug*',
         permanent: true,
       },
     ];

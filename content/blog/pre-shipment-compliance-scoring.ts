@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '7 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-stephanefabricebass-10319259.jpg',
+  coverImageAlt: 'Two workers in safety gear examine crops in a field',
   coverGradient: 'from-violet-900/20 to-slate-800/50',
   tags: ['Pre-Shipment', 'Compliance Scoring', 'Cargo Rejection', 'Export Readiness', 'Risk Management'],
   content: [

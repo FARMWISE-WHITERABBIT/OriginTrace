@@ -1,533 +1,320 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FadeIn } from '@/components/marketing/motion';
+import { FaqSection } from '@/components/marketing/faq-section';
 import { FAQSchema } from '@/components/marketing/faq-schema';
-import {
-  Shield,
-  FileText,
-  MapPin,
-  AlertTriangle,
-  ChevronRight,
-  ChevronDown,
-  Building2,
-  Scale,
-  TreePine,
-  Globe,
-  Search,
-  ClipboardCheck,
-  BarChart3,
-  ShieldCheck,
-  Clock,
-  Users,
-  CheckCircle2,
-  ArrowRight,
-} from 'lucide-react';
-import { CardFAQList } from '@/components/marketing/faq-accordion';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { ChevronRight, Globe, Package, Banknote } from 'lucide-react';
 
-const coveredCommodities = [
-  { name: 'Cocoa', desc: 'Beans and derived products including butter, powder, and chocolate' },
-  { name: 'Palm Oil', desc: 'Crude and refined palm oil, kernel oil, and derivatives' },
-  { name: 'Soy', desc: 'Soybeans, soy meal, soy oil, and processed soy products' },
-  { name: 'Beef & Leather', desc: 'Cattle products including hides and processed leather goods' },
-  { name: 'Rubber', desc: 'Natural rubber and rubber-derived products' },
-  { name: 'Coffee', desc: 'Green and roasted coffee beans and extracts' },
-  { name: 'Wood & Paper', desc: 'Timber products, pulp, paper, and wood-based materials' },
-];
+export const metadata: Metadata = {
+  title: 'UK Due Diligence (UKDDS) Compliance',
+  description:
+    'The UK Environment Act 2021 requires due diligence on forest-risk commodities. OriginTrace gives you farm-level evidence from first collection to export declaration.',
+};
 
-const dueDiligenceRequirements = [
+const faqs = [
   {
-    icon: Search,
-    title: 'Risk Assessment',
-    desc: 'Businesses must assess the risk that forest risk commodities in their supply chain were produced on illegally occupied or deforested land.',
+    question: 'What is the UK Environment Act 2021 due diligence requirement?',
+    answer:
+      'The UK Environment Act 2021 introduced a forest risk commodity due diligence obligation that prohibits larger businesses from using certain commodities or derived products unless they have conducted due diligence to ensure those goods come from legally harvested land. Businesses must establish and implement a due diligence system and report on it annually.',
   },
   {
-    icon: ClipboardCheck,
-    title: 'Due Diligence System',
-    desc: 'Establish and maintain a due diligence system to identify, assess, and mitigate the risk of forest risk commodities linked to illegal deforestation.',
+    question: 'Which commodities are covered under the UK due diligence rules?',
+    answer:
+      'The UK regulations cover seven forest-risk commodity groups: cocoa, coffee, palm oil, soy, cattle, rubber, and timber — along with a range of derived products such as chocolate, leather, furniture, and printed paper.',
   },
   {
-    icon: FileText,
-    title: 'Annual Reporting',
-    desc: 'Regulated businesses must publish an annual report detailing their due diligence activities, risk findings, and mitigation steps taken.',
+    question: 'Which businesses must comply with the UK due diligence requirement?',
+    answer:
+      'Large businesses operating in the UK that use forest-risk commodities or derived products in their operations or supply chains must comply. A large business is generally defined as one with more than £36 million in annual turnover or more than 250 employees. Smaller businesses are encouraged to prepare voluntarily.',
   },
   {
-    icon: BarChart3,
-    title: 'Record Keeping',
-    desc: 'Maintain comprehensive records of supply chain mapping, risk assessments, and remediation actions for regulatory inspection.',
+    question: 'What does &apos;legally harvested&apos; mean under the UK rules?',
+    answer:
+      'Legally harvested means the commodity was produced in compliance with all applicable laws of the country of production — including laws governing land use, land tenure, labour rights, environmental protection, and taxation. Businesses must gather sufficient evidence to satisfy themselves that the commodity meets this standard.',
+  },
+  {
+    question: 'How does OriginTrace support UK due diligence?',
+    answer:
+      'OriginTrace captures GPS farm coordinates, verified farmer identity, collection event records, and legal land status data from first collection. This farm-level evidence chain is the foundation of your UK due diligence record — enabling you to demonstrate legally harvested origin across your supply base.',
+  },
+  {
+    question: 'What penalties apply for non-compliance with UK due diligence rules?',
+    answer:
+      'The UK regulations provide for financial penalties of up to £50,000 per offence for businesses that fail to comply with the due diligence requirements. Enforcement is carried out by the Office for Product Safety and Standards (OPSS).',
+  },
+  {
+    question: 'Do UK rules apply to exporters from African origins?',
+    answer:
+      'The obligation sits with the UK-based business, but in practice your UK buyer will require you — as the exporter — to provide the farm-level evidence they need to complete their due diligence. OriginTrace is built for African agricultural origins and makes this evidence generation practical for field-level operations.',
+  },
+  {
+    question: 'How often must businesses report on their due diligence?',
+    answer:
+      'Businesses must produce an annual due diligence report describing the steps taken to identify and address risk in their forest-risk commodity supply chains. OriginTrace&apos;s audit-ready data vault makes it straightforward to produce this report from your verified traceability records.',
   },
 ];
 
-const howOriginTraceHelps = [
+const stats = [
+  { label: 'UK regulated commodities', value: '7+' },
+  { label: 'Penalty for non-compliance', value: 'Up to £50k' },
+  { label: 'Farm-level evidence', value: '100%' },
+];
+
+const capabilities = [
   {
-    icon: MapPin,
-    title: 'GPS Farm-Level Mapping',
-    desc: 'Capture and verify GPS polygon boundaries for every farm in your supply chain, providing geospatial evidence of origin for all forest risk commodities.',
+    number: '01',
+    title: 'Map Legal Land Status',
+    description:
+      'Every farm plot is GPS-registered and cross-checked against legal land boundary data before collection begins. Illegal harvest land is flagged before you buy.',
+    iconName: 'MapPin',
   },
   {
-    icon: TreePine,
-    title: 'Deforestation Monitoring',
-    desc: 'Satellite-based deforestation alerts overlaid on farm polygons to detect land-use change and identify high-risk supply chain nodes before they become compliance issues.',
+    number: '02',
+    title: 'Register with KYC',
+    description:
+      'Every farmer and collector is registered with verified identity. No anonymous contributors. Your due diligence chain starts with people, not paper.',
+    iconName: 'Users',
   },
   {
-    icon: Shield,
-    title: 'Automated Risk Scoring',
-    desc: 'Real-time compliance scoring across traceability depth, documentation completeness, and deforestation risk for every batch and shipment.',
+    number: '03',
+    title: 'Capture at Source',
+    description:
+      'Field agents log every collection event in real time, linking each unit back to its farm of origin. Evidence is generated as collection happens — not reconstructed later.',
+    iconName: 'Factory',
   },
   {
-    icon: FileText,
-    title: 'Due Diligence Reporting',
-    desc: 'Generate audit-ready annual reports with full supply chain mapping, risk assessment summaries, and documented mitigation actions.',
+    number: '04',
+    title: 'Score Against UK Requirements',
+    description:
+      'Your shipment is automatically scored against UK Environment Act requirements before you book freight. Gaps are surfaced before they become border problems.',
+    iconName: 'ShieldCheck',
   },
   {
-    icon: Globe,
-    title: 'Full Chain Traceability',
-    desc: 'End-to-end traceability from farm to export, maintaining chain-of-custody through aggregation, processing, and transformation.',
-  },
-  {
-    icon: Building2,
-    title: 'Multi-Regulation Alignment',
-    desc: 'Single traceability infrastructure that satisfies UK Environment Act, EUDR, and buyer-driven sustainability standards simultaneously.',
+    number: '05',
+    title: 'Generate Your Due Diligence Record',
+    description:
+      'Produce your UK due diligence report, origin declaration, and supporting documentation from one verified record. Ready for submission or audit.',
+    iconName: 'FileText',
   },
 ];
 
-const timelineEvents = [
-  {
-    date: 'November 2021',
-    title: 'Environment Act Enacted',
-    desc: 'The UK Environment Act 2021 received Royal Assent, introducing Schedule 17 on forest risk commodities.',
-  },
-  {
-    date: '2022-2023',
-    title: 'Consultation Period',
-    desc: 'Defra consulted on secondary legislation to define regulated commodities, thresholds, and enforcement mechanisms.',
-  },
-  {
-    date: '2024-2025',
-    title: 'Secondary Legislation Development',
-    desc: 'Drafting of statutory instruments to set the scope, reporting requirements, and penalties for non-compliance.',
-  },
-  {
-    date: 'Expected 2025-2026',
-    title: 'Secondary Legislation Enacted',
-    desc: 'Final regulations expected to come into force, establishing mandatory due diligence obligations for businesses above the turnover threshold.',
-  },
-];
-
-const faqItems = [
-  {
-    question: 'What is the UK Environment Act and how does it relate to forest risk commodities?',
-    answer: 'The UK Environment Act 2021 (Schedule 17) introduces mandatory due diligence requirements for businesses using forest risk commodities. It aims to prevent the use of commodities linked to illegal deforestation in UK supply chains. Businesses above the turnover threshold must establish due diligence systems, conduct risk assessments, and publish annual compliance reports.',
-  },
-  {
-    question: 'Who must comply with the UK Environment Act forest risk commodity provisions?',
-    answer: 'Businesses operating in the UK with an annual turnover of £50 million or more that use forest risk commodities (including cocoa, palm oil, soy, beef, rubber, coffee, and wood products) in their commercial activities must comply. This applies to both UK-based businesses and overseas businesses operating in the UK market.',
-  },
-  {
-    question: 'What is the £50M turnover threshold?',
-    answer: 'The Environment Act sets a turnover threshold of £50 million per year. Businesses at or above this level that use regulated forest risk commodities are classified as "regulated persons" and must comply with due diligence, risk assessment, and annual reporting obligations. Smaller businesses are currently exempt but may be brought into scope in future.',
-  },
-  {
-    question: 'What commodities are covered?',
-    answer: 'The Act covers forest risk commodities most associated with deforestation: cocoa, palm oil, soy, beef and leather, rubber, coffee, and wood/paper products. The Secretary of State can add additional commodities through secondary legislation based on evidence of deforestation impact.',
-  },
-  {
-    question: 'When does the UK Environment Act come into effect for forest risk commodities?',
-    answer: 'While the Environment Act received Royal Assent in November 2021, the forest risk commodity provisions (Schedule 17) require secondary legislation to come into force. This secondary legislation is still being developed. Businesses should prepare now, as requirements are expected to take effect once the statutory instruments are finalized, potentially in 2025-2026.',
-  },
-  {
-    question: 'How is the UK Environment Act different from the EUDR?',
-    answer: 'While both regulations target deforestation-linked commodities, there are key differences. The UK Act focuses on "illegal" deforestation (per local laws), while the EUDR covers all deforestation after December 2020 regardless of legality. The UK Act also uses a turnover-based threshold (£50M+), while the EUDR applies to all operators placing regulated commodities on the EU market. OriginTrace helps businesses comply with both simultaneously.',
-  },
-  {
-    question: 'What are the penalties for non-compliance?',
-    answer: 'The Environment Act provides for civil penalties including fines for businesses that fail to establish due diligence systems, fail to report, or knowingly use commodities linked to illegal deforestation. Specific penalty amounts will be defined in secondary legislation, but enforcement powers are granted to a designated authority to investigate and penalize non-compliant businesses.',
-  },
-  {
-    question: 'How does OriginTrace help with UK Environment Act compliance?',
-    answer: 'OriginTrace provides GPS farm-level mapping, satellite deforestation monitoring, automated risk scoring, and audit-ready reporting tools. Our platform maps your entire supply chain to the farm level, monitors for deforestation risk, generates annual due diligence reports, and maintains a tamper-evident data vault for regulatory inspection — all from a single platform that also covers EUDR and other global regulations.',
-  },
+const timeline = [
+  { date: 'Nov 2021', event: 'UK Environment Act enacted', active: false },
+  { date: '2023', event: 'Secondary regulations consulted', active: false },
+  { date: '2024', event: 'Large business obligations take effect', active: true },
+  { date: '2025', event: 'Enforcement and penalty regime active', active: false },
+  { date: 'Ongoing', event: 'Annual due diligence reporting required', active: false },
 ];
 
 export default function UKCompliancePage() {
-
   return (
     <>
-      <MarketingNav />
+      <FAQSchema faqs={faqs} />
+      <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+        <MarketingNav />
 
-      <FAQSchema faqs={faqItems} />
-      <main className="min-h-screen">
-        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
-          <HeroBackground />
-          <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <FadeIn>
-              <div className="text-center max-w-4xl mx-auto">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4" data-testid="text-section-label-hero">
-                  [ UK Environment Act ]
-                </span>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6" data-testid="text-hero-title">
-                  UK Environment Act — Forest Risk Commodities
-                </h1>
-                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-3xl mx-auto" data-testid="text-hero-description">
-                  The UK Environment Act 2021 introduces mandatory due diligence for businesses using commodities linked to illegal deforestation. Businesses with £50M+ annual turnover must map supply chains, assess risk, and report annually.
-                </p>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <Link href="/demo">
-                    <Button className="bg-emerald-600 text-white" data-testid="button-hero-demo">
-                      Request Demo
-                      <ChevronRight className="ml-1 w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/compliance">
-                    <Button variant="outline" data-testid="button-hero-compliance">
-                      View All Regulations
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
+        <main>
 
-        <section className="py-8 md:py-10 border-t border-slate-200 dark:border-slate-800">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="flex items-start gap-4 p-6 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800" data-testid="banner-pending-status">
-                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-bold text-slate-900 dark:text-white">Status: Secondary Legislation Pending</h3>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                      <Clock className="w-3 h-3" />
-                      Pending
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                    The Environment Act received Royal Assent in November 2021, but Schedule 17 (forest risk commodities) requires secondary legislation to take effect. This is expected in 2025-2026. Smart businesses are building compliance infrastructure now to avoid last-minute scrambles.
-                  </p>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-who-must-comply">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ Who Must Comply ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  £50M+ Turnover Threshold
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                  The UK Environment Act applies to businesses with annual turnover of £50 million or more that use forest risk commodities in their UK commercial activities.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-3 gap-6">
-              <StaggerItem>
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    <div className="w-10 h-10 rounded-md bg-emerald-500/10 flex items-center justify-center mb-4">
-                      <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2" data-testid="text-comply-large-businesses">Large Businesses</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      UK-based companies with £50M+ annual turnover that use regulated forest risk commodities in their operations, manufacturing, or retail activities.
-                    </p>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-              <StaggerItem>
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    <div className="w-10 h-10 rounded-md bg-emerald-500/10 flex items-center justify-center mb-4">
-                      <Globe className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2" data-testid="text-comply-overseas">Overseas Businesses</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      International companies operating in the UK market that meet the turnover threshold and use forest risk commodities in products sold in the UK.
-                    </p>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-              <StaggerItem>
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    <div className="w-10 h-10 rounded-md bg-emerald-500/10 flex items-center justify-center mb-4">
-                      <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2" data-testid="text-comply-supply-chain">Supply Chain Partners</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Exporters, processors, and traders supplying forest risk commodities to regulated UK businesses will need to provide traceability evidence and documentation.
-                    </p>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-covered-commodities">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ Covered Commodities ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Forest Risk Commodities
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                  The Act targets commodities most associated with global deforestation. The Secretary of State can expand this list through secondary legislation.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {coveredCommodities.map((commodity) => (
-                <StaggerItem key={commodity.name}>
-                  <Card className="h-full">
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <TreePine className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-white mb-1" data-testid={`text-commodity-${commodity.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {commodity.name}
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            {commodity.desc}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-due-diligence">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="mb-12">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ Due Diligence Requirements ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  What Regulated Businesses Must Do
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
-                  Schedule 17 of the Environment Act establishes four core obligations for businesses using forest risk commodities.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="max-w-3xl space-y-0">
-              {dueDiligenceRequirements.map((req, index) => (
-                <StaggerItem key={req.title}>
-                  <div className="flex gap-5 pb-8 last:pb-0" data-testid={`text-requirement-${req.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                        {index + 1}
-                      </div>
-                      {index < dueDiligenceRequirements.length - 1 && (
-                        <div className="w-px flex-1 bg-emerald-200 dark:bg-emerald-800 mt-3" />
-                      )}
-                    </div>
-                    <div className="pt-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <req.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                          {req.title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {req.desc}
+          {/* ── HERO ─────────────────────────────────────────────── */}
+          <section className="mk-hero mk-hero--solutions">
+            <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+            <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+            <div className="mk-hero__content mk-hero__content--solutions">
+              <div className="mk-container-lg" style={{ width: '100%' }}>
+                <div
+                  className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                  style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}
+                >
+                  <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                    <FadeIn delay={0.1}>
+                      <span
+                        className="pre-title margin-bottom margin-medium"
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                      >
+                        UK Compliance
+                      </span>
+                    </FadeIn>
+                    <FadeIn delay={0.15}>
+                      <h1
+                        className="text-display-2xl margin-bottom margin-large"
+                        style={{ color: '#ffffff', fontFamily: 'var(--font-display)', maxWidth: '16ch' }}
+                      >
+                        UK due diligence requirements — built into every shipment.
+                      </h1>
+                    </FadeIn>
+                    <FadeIn delay={0.2}>
+                      <p
+                        className="margin-bottom margin-xlarge"
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      >
+                        The UK Environment Act 2021 prohibits large businesses from using forest-risk commodities unless they have conducted due diligence to ensure they come from legally harvested land. OriginTrace gives you the farm-level evidence trail the regulations require.
                       </p>
-                    </div>
+                    </FadeIn>
+                    <FadeIn delay={0.3}>
+                      <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                        See UK compliance in action <ChevronRight className="h-5 w-5" />
+                      </Link>
+                    </FadeIn>
                   </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ How OriginTrace Helps ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Compliance Infrastructure for the UK Environment Act
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                  OriginTrace provides the traceability, monitoring, and reporting tools needed to meet due diligence obligations under Schedule 17.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {howOriginTraceHelps.map((feature) => (
-                <StaggerItem key={feature.title}>
-                  <Card className="h-full">
-                    <CardContent className="p-6">
-                      <div className="w-10 h-10 rounded-md bg-emerald-500/10 flex items-center justify-center mb-4">
-                        <feature.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2" data-testid={`text-feature-${feature.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {feature.title}
-                      </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {feature.desc}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-
-            <FadeIn delay={0.3}>
-              <div className="text-center mt-12">
-                <Link href="/demo">
-                  <Button className="bg-emerald-600 text-white" data-testid="button-helps-demo">
-                    See How It Works
-                    <ArrowRight className="ml-1 w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-timeline">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ Current Status ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Legislative Timeline
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                  Secondary legislation is pending. Smart businesses are preparing now to avoid last-minute compliance scrambles.
-                </p>
-              </div>
-            </FadeIn>
-
-            <div className="max-w-3xl mx-auto">
-              <StaggerContainer className="space-y-0">
-                {timelineEvents.map((event, index) => (
-                  <StaggerItem key={event.date}>
-                    <div className="relative flex gap-6 pb-10 last:pb-0">
-                      <div className="flex flex-col items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          index === timelineEvents.length - 1
-                            ? 'bg-amber-500/20 border-2 border-amber-500'
-                            : 'bg-emerald-500/20 border-2 border-emerald-500'
-                        }`}>
-                          {index === timelineEvents.length - 1 ? (
-                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          )}
+                  <div className="hero-right-col flex flex-col justify-end pb-0">
+                    <FadeIn delay={0.5} direction="up">
+                      <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                        <div className="solutions-stats-row">
+                          {stats.map((stat, i) => (
+                            <div
+                              key={i}
+                              className="solutions-stats-col"
+                              style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
+                            >
+                              <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
+                                {stat.label}
+                              </p>
+                              <p style={{ fontSize: '1.75rem', color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1 }}>
+                                {stat.value}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                        {index < timelineEvents.length - 1 && (
-                          <div className="w-px flex-1 bg-slate-200 dark:bg-slate-700 mt-2" />
-                        )}
+                        <img src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg" alt="" aria-hidden className="hero-left-decorative" width={25} height={25} />
+                        <img src="/images/6836fc56293581224cd8c720_hero-right-shape.svg" alt="" aria-hidden className="hero-right-decorative" width={25} height={25} />
                       </div>
-                      <div className="pb-2">
-                        <span className={`text-xs font-semibold uppercase tracking-wide ${
-                          index === timelineEvents.length - 1
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                        }`} data-testid={`text-timeline-date-${index}`}>
-                          {event.date}
-                        </span>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-1 mb-2" data-testid={`text-timeline-title-${index}`}>
-                          {event.title}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                          {event.desc}
-                        </p>
-                      </div>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
+                    </FadeIn>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
-          <div className="max-w-4xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                  [ FAQ ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Frequently Asked Questions
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                  Everything you need to know about the UK Environment Act and forest risk commodity compliance.
-                </p>
-              </div>
-            </FadeIn>
 
-            <CardFAQList items={faqItems} />
-          </div>
-        </section>
+          {/* ── WHO MUST COMPLY ──────────────────────────────────── */}
+          <section className="section-spacing section-white">
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header">
+                  <span className="pre-title margin-bottom margin-medium">Who Must Comply</span>
+                  <h2 className="text-display-lg">Three types of organisation with UK due diligence obligations.</h2>
+                </div>
+              </FadeIn>
 
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-cta">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <Card>
-                <CardContent className="p-10 md:p-16 text-center">
-                  <span className="inline-block text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-400 uppercase mb-4">
-                    [ Get Started ]
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                    Prepare for the UK Environment Act Today
+              <FadeIn delay={0.1}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }} className="eudr-who-grid">
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Globe className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>UK Large Businesses</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Businesses with &gt;£36m turnover or &gt;250 employees that use forest-risk commodities in their UK operations or supply chains must conduct and report due diligence.
+                    </p>
+                  </div>
+
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Package className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>UK-Based Importers</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Companies importing cocoa, coffee, palm oil, soy, cattle, leather, rubber, or timber products into the UK must evidence that goods come from legally harvested land.
+                    </p>
+                  </div>
+
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Banknote className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>Financial Institutions</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Banks and investors with exposure to forest-risk commodity supply chains face increasing pressure to evidence supply chain due diligence from their portfolio companies.
+                    </p>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </section>
+
+
+          {/* ── HOW ORIGINTRACE HELPS (CapabilitySlider) ─────────── */}
+          <section className="section-spacing section-dark">
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header" style={{ marginBottom: '3rem' }}>
+                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>How OriginTrace Helps</span>
+                  <h2 className="text-display-lg" style={{ color: '#ffffff' }}>Built for every step of UK due diligence.</h2>
+                </div>
+              </FadeIn>
+            </div>
+            <CapabilitySlider capabilities={capabilities} />
+          </section>
+
+
+          {/* ── TIMELINE ─────────────────────────────────────────── */}
+          <section
+            className="section-spacing"
+            style={{ background: 'var(--color--gray-7)', borderRadius: '2rem 2rem 0 0', marginTop: '-2rem', position: 'relative', zIndex: 1 }}
+          >
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header">
+                  <span className="pre-title margin-bottom margin-medium">Key Dates</span>
+                  <h2 className="text-display-lg">The UK due diligence timeline.</h2>
+                </div>
+              </FadeIn>
+
+              <FadeIn delay={0.1}>
+                <div className="mk-timeline-strip">
+                  {timeline.map((item, i) => (
+                    <div
+                      key={i}
+                      className={`mk-timeline-item${item.active ? ' mk-timeline-item--active' : ''}`}
+                      style={{ borderLeft: item.active ? '2px solid var(--mk-green)' : '1px solid var(--mk-border)' }}
+                    >
+                      <p className="mk-timeline-year">{item.date}</p>
+                      <p className="mk-timeline-label">{item.event}</p>
+                    </div>
+                  ))}
+                </div>
+              </FadeIn>
+            </div>
+          </section>
+
+
+          {/* ── FAQ SECTION ──────────────────────────────────────── */}
+          <FaqSection />
+
+
+          {/* ── FINAL CTA ────────────────────────────────────────── */}
+          <section className="section-spacing section-dark">
+            <div className="mk-container-sm">
+              <FadeIn>
+                <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+                  <span className="pre-title margin-bottom margin-large">Get Started</span>
+                  <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">
+                    UK due diligence starts at the farm — not the border declaration.
                   </h2>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed mb-8">
-                    Secondary legislation is coming. Build your compliance infrastructure now with OriginTrace — the platform trusted by exporters across Africa, Asia, and Latin America.
+                  <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>
+                    We&apos;ll show you exactly what your UK buyers and regulators will ask for — and how OriginTrace builds the evidence record from first collection.
                   </p>
-                  <div className="flex flex-wrap justify-center gap-4">
-                    <Link href="/demo">
-                      <Button className="bg-emerald-600 text-white" data-testid="button-cta-demo">
-                        Request a Demo
-                        <ChevronRight className="ml-1 w-4 h-4" />
-                      </Button>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                      Book a walkthrough <ChevronRight className="h-5 w-5" />
                     </Link>
-                    <Link href="/solutions">
-                      <Button variant="outline" data-testid="button-cta-solutions">
-                        Explore Solutions
-                      </Button>
+                    <Link href="/compliance" className="btn-mk-ghost btn-mk-lg">
+                      See full compliance coverage
                     </Link>
                   </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-          </div>
-        </section>
-      </main>
+                </div>
+              </FadeIn>
+            </div>
+          </section>
 
-      <MarketingFooter />
+        </main>
+
+        <MarketingFooter />
+      </div>
     </>
   );
 }

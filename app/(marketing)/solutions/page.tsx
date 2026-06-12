@@ -1,507 +1,587 @@
+import React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
-import { 
-  MapPin, 
-  Users,
-  AlertTriangle,
+import { FadeIn } from '@/components/marketing/motion';
+import HeroBackground from '@/components/marketing/hero-background';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import {
+  Globe,
   FileText,
-  Scale,
-  Factory,
   Shield,
-  ChevronRight,
+  ClipboardCheck,
   Smartphone,
   Wifi,
-  ClipboardCheck,
-  BarChart3,
-  Globe,
-  Building2,
-  Landmark,
-  ShieldCheck,
-  Search,
-  TrendingDown,
-  Ban,
+  Users,
   ArrowRight,
-  CheckCircle2,
-  Quote
+  Check,
+  ChevronRight,
 } from 'lucide-react';
 
-const exporterFeatures = [
-  { icon: Search, title: 'Pre-Shipment Risk Detection', desc: 'Identify documentation gaps, contamination risks, and traceability holes before goods leave your warehouse' },
-  { icon: MapPin, title: 'Origin Verification', desc: 'GPS-verified farm boundaries with geospatial evidence for EU, UK, and US regulatory requirements' },
-  { icon: FileText, title: 'Export Dossier Generation', desc: 'One-click generation of audit-ready compliance documentation for multiple regulatory frameworks' },
-  { icon: ShieldCheck, title: 'Multi-Regulatory Alignment', desc: 'Single traceability foundation covers EUDR, FSMA 204, Environment Act, and buyer-driven standards' },
+/* ─── DATA ─────────────────────────────────────────────────────────── */
+
+const stats = [
+  { label: 'Compliance frameworks checked per shipment', value: '5' },
+  { label: 'Countries with active compliance requirements', value: '40+' },
+  { label: 'Traceability — from plot to payment', value: '100%' },
 ];
 
-const processorSteps = [
-  { number: '01', icon: Scale, title: 'Mass Balance Enforcement', desc: 'Input-output reconciliation with commodity-specific recovery rates and automatic discrepancy detection' },
-  { number: '02', icon: Factory, title: 'Transformation Audit Trail', desc: 'Complete processing run records linking input batches to output products with timestamped logs' },
-  { number: '03', icon: Shield, title: 'Identity Preservation', desc: 'Maintain source segregation through the entire processing chain with verifiable batch linkage' },
-  { number: '04', icon: AlertTriangle, title: 'Contamination Prevention', desc: 'Instant alerts when non-compliant or flagged batches are about to enter the production line' },
+const roleIconMap: Record<string, React.ElementType> = {
+  exporters: Globe,
+  cooperatives: Users,
+  compliance: ClipboardCheck,
+  logistics: FileText,
+};
+
+const roles = [
+  {
+    id: 'exporters',
+    label: 'Exporter',
+    headline: 'Know your compliance status before you book freight.',
+    body: 'You source agricultural commodities or mineral goods, arrange logistics, and manage buyers across multiple markets. OriginTrace gives you a compliance score before loading, documentation when you ship, and payment settlement when you deliver.',
+    features: [
+      'Pre-shipment compliance score across 5 markets simultaneously',
+      'One-click export documentation — no manual assembly',
+      'Milestone escrow: payment releases when shipment clears',
+      'Contributor disbursement direct from the platform',
+    ],
+  },
+  {
+    id: 'cooperatives',
+    label: 'Cooperative / Aggregator',
+    headline: 'Hundreds of contributors. One verified traceability record.',
+    body: 'You work with smallholder farmers, artisanal mining cooperatives, or community collectors across multiple sites. OriginTrace helps you register every plot or extraction site, log every collection, and generate a single verified batch record — even without internet.',
+    features: [
+      'GPS registration for every contributing farm plot or extraction site',
+      'Offline-first batch collection — syncs when connectivity returns',
+      'Unit-level traceability from source to export warehouse',
+      'Anti-fraud yield validation to protect your data integrity',
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance Officer',
+    headline: 'Stop assembling compliance packs the night before loading.',
+    body: 'You are responsible for ensuring every shipment meets destination market requirements. OriginTrace runs your shipment against all five major frameworks simultaneously and flags gaps before loading.',
+    features: [
+      'EUDR, FSMA 204, UK Environment Act, GACC, ESMA — one check',
+      'Automated gap detection with resolution guidance',
+      'Audit-ready dossiers generated on demand',
+      'Document vault with expiry tracking and alerts',
+    ],
+  },
+  {
+    id: 'logistics',
+    label: 'Logistics Coordinator',
+    headline: 'All your export documents from one source of truth.',
+    body: 'You manage dispatch, freight booking, and waybill documentation. OriginTrace generates every export document from the same traceability record — no duplicate data entry across five different systems.',
+    features: [
+      'Waybill, pedigree certificate, and mineralogy certificate generation',
+      'Shipment pipeline with 9-stage tracking',
+      'Container, bonded warehouse, and port manifest linkage',
+      'Shared document access for buyers and inspectors',
+    ],
+  },
 ];
 
-const complianceFeatures = [
-  { icon: FileText, title: 'Standardized Export Dossiers', desc: 'Generate regulatory-specific documentation packages for EU TRACES, FSMA, and buyer compliance programs' },
-  { icon: BarChart3, title: 'Shipment Readiness Scoring', desc: 'Real-time compliance scores across traceability, contamination risk, documentation, and regulatory alignment' },
-  { icon: Search, title: 'Gap Analysis & Remediation', desc: 'Automated identification of compliance gaps with prioritized action plans and remediation tracking' },
-  { icon: Shield, title: 'Audit-Ready Data Vault', desc: 'Centralized, tamper-evident storage of all compliance evidence with instant retrieval for inspectors' },
+const workflowSteps = [
+  {
+    number: '01',
+    title: 'Register Your Sources',
+    description: 'GPS-map every farm plot, forest concession, or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
+    iconName: 'MapPin',
+  },
+  {
+    number: '02',
+    title: 'Capture & Aggregate',
+    description: 'Field agents log collection in real time — even without internet. Every unit is traceable to the exact source it came from. Data syncs automatically when connectivity returns.',
+    iconName: 'Factory',
+  },
+  {
+    number: '03',
+    title: 'Run a Compliance Check',
+    description: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and resolve gaps before you book freight — not at the border.',
+    iconName: 'ShieldCheck',
+  },
+  {
+    number: '04',
+    title: 'Generate Your Documents',
+    description: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No more assembling files from multiple sources the night before loading.',
+    iconName: 'FileText',
+  },
+  {
+    number: '05',
+    title: 'Settle Payment',
+    description: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
+    iconName: 'Banknote',
+  },
 ];
 
-const associationStats = [
-  { value: '40%', label: 'Fewer Border Rejections', desc: 'Average reduction in shipment rejections for member exporters within 6 months' },
-  { value: '3x', label: 'Faster Audit Resolution', desc: 'Speed improvement in responding to regulatory inquiries with centralized data' },
-  { value: '95%', label: 'Traceability Coverage', desc: 'Of supply chain touchpoints captured from farm to port of export' },
-  { value: '12', label: 'Countries Served', desc: 'Active deployments across West Africa, East Africa, and Southeast Asia' },
+const roleImages = [
+  '/images/pexels-josiah-matthew-145486517-10697911.jpg',
+  '/images/pexels-zeal-creative-studios-58866141-31283913.jpg',
+  '/images/pexels-mikhail-nilov-8332326.jpg',
+  '/images/pexels-jan-van-der-wolf-11680885-15780139.jpg',
 ];
 
-const associationCapabilities = [
-  { icon: BarChart3, title: 'Sector-Wide Analytics', desc: 'Aggregated compliance metrics across member organizations to identify systemic weaknesses' },
-  { icon: TrendingDown, title: 'Rejection Rate Reduction', desc: 'Track and measure improvement in border inspection pass rates across commodity exports' },
-  { icon: Building2, title: 'Multi-Tenant Oversight', desc: 'Monitor compliance posture across multiple exporters and processors from a single dashboard' },
-  { icon: Ban, title: 'Contamination Early Warning', desc: 'Sector-level alerts for emerging contamination patterns, pesticide residue trends, and documentation gaps' },
-];
+const roleStats: Record<string, { label: string; value: string }[]> = {
+  exporters: [
+    { label: 'Markets checked simultaneously', value: '5' },
+    { label: 'Documents from one verified record', value: '6+' },
+    { label: 'Escrow settlement rate', value: '100%' },
+  ],
+  cooperatives: [
+    { label: 'Sources registered per org (avg)', value: '400+' },
+    { label: 'Offline sync success rate', value: '99.9%' },
+    { label: 'Unit-level traceability', value: '100%' },
+  ],
+  compliance: [
+    { label: 'Compliance frameworks covered', value: '5' },
+    { label: 'Gap detection before loading', value: 'Real-time' },
+    { label: 'Audit dossiers on demand', value: 'Yes' },
+  ],
+  logistics: [
+    { label: 'Shipment pipeline stages', value: '9' },
+    { label: 'Document types generated', value: '6+' },
+    { label: 'Manual data re-entry required', value: '0' },
+  ],
+};
+
+/* ─── PAGE ─────────────────────────────────────────────────────────── */
 
 export default function SolutionsPage() {
   return (
-    <>
-<div className="min-h-screen bg-background overflow-x-hidden">
-        <MarketingNav />
+    <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
+      <MarketingNav />
 
-        <main>
-          <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden bg-slate-50 dark:bg-slate-900/20">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNDgsIDE2MywgMTg0LCAwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
-            
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <FadeIn>
-                <div className="max-w-3xl">
-                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-hero">
-                    [ Solutions by Role ]
-                  </p>
-                  <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-slate-50" data-testid="text-hero-heading">
-                    Built for Every Role in the Export Chain
-                  </h1>
-                  <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl" data-testid="text-hero-description">
-                    Whether you are sourcing from smallholders, processing for export, managing compliance documentation, or overseeing national trade performance — OriginTrace provides the infrastructure you need to reduce rejection risk.
-                  </p>
-                </div>
-              </FadeIn>
-            </div>
-          </section>
+      <main>
 
-          <section 
-            id="exporters"
-            className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800 bg-background"
-            data-testid="section-exporters"
-          >
-            <div className="max-w-6xl mx-auto px-6">
-              <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-                <div className="lg:col-span-3">
-                  <FadeIn>
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-exporters">
-                      [ Exporters ]
-                    </p>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="h-9 w-9 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                        <Globe className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        Revenue Protection & Rejection Reduction
-                      </p>
-                    </div>
-                    <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-exporters">
-                      Protect Export Revenue Before Shipments Leave Port
-                    </h2>
-                    <p className="text-muted-foreground mb-10 max-w-2xl leading-relaxed text-base" data-testid="text-description-exporters">
-                      Border rejections destroy margins and reputation. OriginTrace provides pre-shipment compliance intelligence so your goods clear inspection the first time.
-                    </p>
+        {/* ══════════════════════════════════════════════════════════
+            1. HERO — full-bleed background, headline left, stats card
+            ══════════════════════════════════════════════════════════ */}
+        <section className="mk-hero mk-hero--solutions">
+          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+
+          <div className="mk-hero__content mk-hero__content--solutions">
+            <div className="mk-container-lg" style={{ width: '100%' }}>
+              {/* Same grid structure as homepage: 55fr left col, 45fr right col with card at bottom */}
+              <div
+                className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}
+              >
+
+                {/* LEFT — headline + subtitle + CTA, vertically centered */}
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                  <FadeIn delay={0.1}>
+                    <h1
+                      className="text-display-2xl margin-bottom margin-large"
+                      style={{
+                        color: '#ffffff',
+                        fontFamily: 'var(--font-display)',
+                        maxWidth: '12ch',
+                      }}
+                    >
+                      From field and mine to foreign market.
+                    </h1>
                   </FadeIn>
-
-                  <StaggerContainer className="grid sm:grid-cols-2 gap-6 mb-10">
-                    {exporterFeatures.map((feature, i) => (
-                      <StaggerItem key={i}>
-                        <Card className="h-full hover-elevate" data-testid={`card-feature-exporters-${i}`}>
-                          <CardContent className="p-6">
-                            <div className="flex gap-4">
-                              <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                                <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold mb-1 text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-exporters-${i}`}>{feature.title}</h3>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
-                                  {feature.desc}
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </StaggerItem>
-                    ))}
-                  </StaggerContainer>
-
-                  <FadeIn>
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <Link href="/demo">
-                        <Button className="gap-2 bg-emerald-600 text-white" data-testid="button-demo-exporters">
-                          See How It Works
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Link href="/compliance/eudr" className="text-sm text-emerald-600 dark:text-emerald-400 font-medium hover:underline" data-testid="link-compliance-exporters">
-                        View compliance coverage
-                      </Link>
-                    </div>
-                  </FadeIn>
-                </div>
-
-                <div className="lg:col-span-2">
                   <FadeIn delay={0.2}>
-                    <Card className="overflow-visible" data-testid="card-compliance-score-preview">
-                      <CardContent className="p-6">
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-5">Shipment Readiness Score</p>
-                        <div className="flex items-end gap-3 mb-6">
-                          <span className="text-5xl font-extrabold text-emerald-600 dark:text-emerald-400">87</span>
-                          <span className="text-lg text-slate-400 dark:text-slate-500 mb-1">/100</span>
-                        </div>
-                        <div className="space-y-4">
-                          {[
-                            { label: 'Traceability', pct: 95 },
-                            { label: 'Documentation', pct: 82 },
-                            { label: 'Contamination Risk', pct: 90 },
-                            { label: 'Regulatory Alignment', pct: 78 },
-                          ].map((item) => (
-                            <div key={item.label}>
-                              <div className="flex justify-between gap-2 text-sm mb-1.5">
-                                <span className="text-slate-600 dark:text-slate-300">{item.label}</span>
-                                <span className="font-medium text-slate-900 dark:text-slate-50">{item.pct}%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-                                <div 
-                                  className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-700"
-                                  style={{ width: `${item.pct}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            <span className="text-slate-600 dark:text-slate-300">EUDR compliant</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm mt-2">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            <span className="text-slate-600 dark:text-slate-300">FSMA 204 ready</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm mt-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            <span className="text-slate-600 dark:text-slate-300">UK Environment Act — 1 gap</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <p
+                      className="margin-bottom margin-xlarge"
+                      style={{
+                        fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)',
+                        lineHeight: 1.75,
+                        maxWidth: '40ch',
+                        color: 'rgba(255,255,255,0.62)',
+                      }}
+                    >
+                      OriginTrace is the traceability and compliance infrastructure for
+                      African agricultural and mineral exports — verified origin, multi-market
+                      compliance scoring, export documentation, and payment settlement
+                      in one system.
+                    </p>
+                  </FadeIn>
+                  <FadeIn delay={0.3}>
+                    <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                      Get your compliance score
+                      <ChevronRight className="h-5 w-5" />
+                    </Link>
                   </FadeIn>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          <section 
-            id="processors"
-            className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30"
-            data-testid="section-processors"
-          >
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-processors">
-                  [ Processors ]
-                </p>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <Factory className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Chain-of-Custody & Audit Readiness
-                  </p>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-processors">
-                  Maintain Traceability Through Every Transformation
-                </h2>
-                <p className="text-muted-foreground mb-14 max-w-2xl leading-relaxed text-base" data-testid="text-description-processors">
-                  Processing breaks traceability. OriginTrace maintains chain-of-custody through crushing, fermentation, and transformation — linking every finished good to its source farms.
-                </p>
-              </FadeIn>
-
-              <div className="relative mb-14">
-                <div className="hidden md:block absolute left-[27px] top-6 bottom-6 w-px bg-emerald-200 dark:bg-emerald-800" />
-                <StaggerContainer className="space-y-8 md:space-y-0 md:grid md:grid-cols-1 md:gap-0">
-                  {processorSteps.map((step, i) => (
-                    <StaggerItem key={i}>
-                      <div className="flex gap-6 md:gap-8 group relative" data-testid={`card-feature-processors-${i}`}>
-                        <div className="shrink-0 flex flex-col items-center">
-                          <div className="h-14 w-14 rounded-md bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white font-bold text-lg z-10">
-                            {step.number}
-                          </div>
-                          {i < processorSteps.length - 1 && (
-                            <div className="md:hidden w-px h-8 bg-emerald-200 dark:bg-emerald-800 my-1" />
-                          )}
-                        </div>
-                        <div className="pt-2 pb-8 md:pb-10">
-                          <div className="flex items-center gap-3 mb-2">
-                            <step.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                            <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-processors-${i}`}>{step.title}</h3>
-                          </div>
-                          <p className="text-muted-foreground leading-relaxed text-base max-w-lg">
-                            {step.desc}
-                          </p>
-                        </div>
-                      </div>
-                    </StaggerItem>
-                  ))}
-                </StaggerContainer>
-              </div>
-
-              <FadeIn>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Link href="/demo">
-                    <Button className="gap-2 bg-emerald-600 text-white" data-testid="button-demo-processors">
-                      See How It Works
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/compliance/eudr" className="text-sm text-emerald-600 dark:text-emerald-400 font-medium hover:underline" data-testid="link-compliance-processors">
-                    View compliance coverage
-                  </Link>
-                </div>
-              </FadeIn>
-            </div>
-          </section>
-
-          <section 
-            id="compliance"
-            className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800 bg-background"
-            data-testid="section-compliance"
-          >
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-compliance">
-                  [ Compliance Teams ]
-                </p>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <ClipboardCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Documentation Control & Reporting
-                  </p>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-compliance">
-                  Replace Spreadsheets with Standardized Compliance Infrastructure
-                </h2>
-                <p className="text-muted-foreground mb-14 max-w-2xl leading-relaxed text-base" data-testid="text-description-compliance">
-                  Stop scrambling before audits. OriginTrace centralizes compliance documentation, automates reporting, and provides real-time visibility into your supply chain risk posture.
-                </p>
-              </FadeIn>
-
-              <StaggerContainer className="grid sm:grid-cols-2 gap-6 mb-14">
-                {complianceFeatures.map((feature, i) => (
-                  <StaggerItem key={i}>
-                    <Card className="h-full hover-elevate" data-testid={`card-feature-compliance-${i}`}>
-                      <CardContent className="p-6">
-                        <div className="flex gap-4">
-                          <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                            <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold mb-1 text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-compliance-${i}`}>{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {feature.desc}
+                {/* RIGHT — stats card, pinned to bottom of column */}
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="up">
+                    <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                      <div className="solutions-stats-row">
+                        {stats.map((stat, i) => (
+                          <div
+                            key={i}
+                            className="solutions-stats-col"
+                            style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
+                          >
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
+                              {stat.label}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: '1.75rem',
+                                color: 'var(--mk-text-primary)',
+                                fontFamily: 'var(--font-display)',
+                                fontWeight: 800,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {stat.value}
                             </p>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
+                        ))}
+                      </div>
 
-              <FadeIn>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Link href="/demo">
-                    <Button className="gap-2 bg-emerald-600 text-white" data-testid="button-demo-compliance">
-                      See How It Works
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/compliance/eudr" className="text-sm text-emerald-600 dark:text-emerald-400 font-medium hover:underline" data-testid="link-compliance-compliance">
-                    View compliance coverage
-                  </Link>
+                      {/* Decorative corner elements — same as homepage */}
+                      <img
+                        src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-left-decorative"
+                        width={25}
+                        height={25}
+                      />
+                      <img
+                        src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-right-decorative"
+                        width={25}
+                        height={25}
+                      />
+                    </div>
+                  </FadeIn>
                 </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        {/* ══════════════════════════════════════════════════════════
+            2. INTRO — centered headline, 3 images, twin columns
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="section-header" style={{ marginBottom: '3.5rem' }}>
+                <h2
+                  className="text-display-lg section-header__title"
+                  style={{ maxWidth: '22ch' }}
+                >
+                  Proof should travel{' '}
+                  <span className="text-mk-muted">with the product.</span>
+                </h2>
+                <p className="section-header__body" style={{ marginTop: '1.5rem' }}>
+                  EUDR, FSMA 204, GACC, and the UK Environment Act are reshaping what it means
+                  to export from Africa. Declarations are no longer enough. OriginTrace replaces
+                  them with verified data — GPS-mapped sources, real-time collection records,
+                  and compliance evidence that travels with every shipment, from the first
+                  collection to the final payment.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* 3-image row — equal heights, varying widths (per reference) */}
+          <div className="mk-container-lg" style={{ marginBottom: '3.5rem' }}>
+            {/* Desktop */}
+            <div
+              className="hidden md:grid"
+              style={{ gridTemplateColumns: '1.5fr 1fr 1.8fr', gap: '1rem', alignItems: 'stretch' }}
+            >
+              <FadeIn delay={0.1} direction="up">
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.2} direction="up">
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-1500mcoffee-28314458.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.3} direction="up">
+                <div style={{ height: '400px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
-          </section>
 
-          <section 
-            id="associations"
-            className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30"
-            data-testid="section-associations"
-          >
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-associations">
-                  [ Associations & Regulators ]
+            {/* Mobile — same equal-height row, scaled down */}
+            <div className="block md:hidden">
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+                <div style={{ flex: 1.5, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-1500mcoffee-28314458.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1.8, height: '150px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Twin text columns + asterisk divider */}
+          <div className="mk-container-lg">
+            <FadeIn delay={0.2}>
+              <div className="solutions-twin-cols">
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>
+                  Across West and East Africa, we've built a network of verified sources — every
+                  farm plot, forest concession, and extraction site GPS-mapped and
+                  identity-checked before a single unit leaves the source.
                 </p>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <Landmark className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Reducing National Rejection Rates
-                  </p>
+
+                {/* Asterisk divider */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="36" height="36" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)' }}>
+                    <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-associations">
-                  Institutional Infrastructure for Trade Compliance
-                </h2>
-                <p className="text-muted-foreground mb-14 max-w-2xl leading-relaxed text-base" data-testid="text-description-associations">
-                  National rejection rates damage entire commodity sectors. OriginTrace provides institutional dashboards and aggregated compliance intelligence to improve sector-wide export readiness.
+
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>
+                  From offline field capture to escrow settlement, every feature closes one gap:
+                  the distance between what exporters claim and what buyers and regulators
+                  can independently verify.
                 </p>
-              </FadeIn>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
 
-              <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
-                {associationStats.map((stat, i) => (
-                  <StaggerItem key={i}>
-                    <div className="text-center py-8 px-4" data-testid={`stat-associations-${i}`}>
-                      <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 dark:text-emerald-400 mb-2">
-                        {stat.value}
-                      </p>
-                      <p className="font-semibold text-slate-900 dark:text-slate-50 mb-2">{stat.label}</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{stat.desc}</p>
+
+        {/* ══════════════════════════════════════════════════════════
+            3. WHO IT'S FOR — alternating dark case study panels
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing" style={{ background: 'var(--color--gray-1)', paddingBottom: 0 }}>
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header--left margin-bottom margin-xlarge">
+                <span
+                  className="pre-title margin-bottom margin-medium"
+                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}
+                >
+                  Who It&apos;s For
+                </span>
+                <h2 className="text-display-lg" style={{ color: '#ffffff', marginTop: '0.75rem' }}>
+                  Built for every role{' '}
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>in the export chain</span>
+                </h2>
+              </div>
+            </FadeIn>
+          </div>
+
+          {roles.map((role, i) => {
+            const imgSrc = roleImages[i];
+            const stats = roleStats[role.id];
+            const imageLeft = i % 2 === 0;
+            const RoleIcon = roleIconMap[role.id];
+            return (
+              <FadeIn key={role.id} delay={0.05}>
+                <div
+                  data-testid={`card-role-${role.id}`}
+                  style={{
+                    background: i % 2 === 0 ? 'var(--color--gray-1)' : 'rgba(255,255,255,0.04)',
+                    borderTop: '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  <div className="mk-container-lg mk-role-grid">
+                    {/* Image panel */}
+                    <div
+                      className="mk-role-image"
+                      style={{ order: imageLeft ? 0 : 1 }}
+                    >
+                      <Image
+                        src={imgSrc}
+                        alt={role.headline}
+                        fill
+                        className="object-cover"
+                        sizes="50vw"
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
                     </div>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
 
-              <FadeIn>
-                <div className="grid sm:grid-cols-2 gap-4 mb-14">
-                  {associationCapabilities.map((cap, i) => (
-                    <div key={i} className="flex items-start gap-3 py-3" data-testid={`card-feature-associations-${i}`}>
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    {/* Text panel */}
+                    <div
+                      className="mk-role-content"
+                      style={{ order: imageLeft ? 1 : 0 }}
+                    >
                       <div>
-                        <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-50" data-testid={`text-feature-title-associations-${i}`}>{cap.title}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{cap.desc}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                          <div style={{
+                            width: '2.25rem', height: '2.25rem', borderRadius: '0.5rem',
+                            background: 'rgba(46,125,107,0.2)', border: '1px solid rgba(46,125,107,0.4)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--mk-green-mid)', flexShrink: 0,
+                          }}>
+                            <RoleIcon className="w-4 h-4" />
+                          </div>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>
+                            {role.label}
+                          </span>
+                        </div>
+
+                        <h3 style={{ fontSize: 'clamp(1.125rem, 2vw, 1.375rem)', fontWeight: 700, color: '#ffffff', lineHeight: 1.35, marginBottom: '1rem', maxWidth: '28ch' }}>
+                          {role.headline}
+                        </h3>
+
+                        <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>
+                          {role.body}
+                        </p>
+
+                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
+                          {role.features.map((f, j) => (
+                            <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                              <span style={{
+                                marginTop: '0.2rem', width: '1rem', height: '1rem', borderRadius: '50%',
+                                background: 'rgba(46,125,107,0.2)', border: '1px solid var(--mk-green-mid)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                              }}>
+                                <Check className="w-2.5 h-2.5" style={{ color: 'var(--mk-green-mid)' }} />
+                              </span>
+                              <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Stat row */}
+                      <div className="mk-role-stats">
+                        {stats.map((s, j) => (
+                          <div key={j}>
+                            <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </FadeIn>
+            );
+          })}
+        </section>
 
-              <FadeIn delay={0.1}>
-                <Card className="overflow-visible" data-testid="card-testimonial-associations">
-                  <CardContent className="p-8 md:p-10">
-                    <Quote className="h-8 w-8 text-emerald-600/20 dark:text-emerald-400/20 mb-4" />
-                    <blockquote className="text-lg md:text-xl leading-relaxed text-slate-700 dark:text-slate-200 mb-6">
-                      With sector-wide visibility into compliance gaps, we reduced border rejections by 40% in a single season. The aggregated analytics transformed how our association supports member exporters.
-                    </blockquote>
-                    <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-50">Regional Trade Association</p>
-                      <p className="text-sm text-muted-foreground">West Africa Commodity Export Board</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </FadeIn>
 
-              <FadeIn delay={0.15}>
-                <div className="flex items-center gap-4 mt-10 flex-wrap">
-                  <Link href="/demo">
-                    <Button className="gap-2 bg-emerald-600 text-white" data-testid="button-demo-associations">
-                      See How It Works
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+        {/* ══════════════════════════════════════════════════════════
+            4. HOW IT WORKS — capability slider (reused from homepage)
+            ══════════════════════════════════════════════════════════ */}
+        <section id="how-it-works" className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <CapabilitySlider capabilities={workflowSteps} />
+          </div>
+        </section>
+
+
+        {/* ══════════════════════════════════════════════════════════
+            5. FIELD OPERATIONS — header strip + full-width image
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            {/* Two-column header strip */}
+            <FadeIn>
+              <div
+                className="solutions-field-header"
+                style={{ marginBottom: '2.5rem' }}
+              >
+                <div>
+                  <span className="pre-title margin-bottom margin-medium" style={{ display: 'inline-flex' }}>
+                    Field Operations
+                  </span>
+                  <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)', marginTop: '0.75rem' }}>
+                    Built for places where{' '}
+                    <span className="text-mk-muted">the internet isn&apos;t reliable.</span>
+                  </h2>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75, maxWidth: '44ch' }}>
+                    Field agents at rural collection points — whether at a farm gate or a
+                    mineral aggregation site — can log batches, register contributors, and
+                    record GPS coordinates without a live connection. Data syncs automatically
+                    when connectivity is restored. No gaps in your traceability record because
+                    of where the source is.
+                  </p>
+                </div>
+              </div>
+            </FadeIn>
+
+            {/* Full-width image */}
+            <FadeIn delay={0.15} direction="up">
+              <div style={{ borderRadius: '1.25rem', overflow: 'hidden', height: '480px', position: 'relative' }}>
+                <Image
+                  src="/images/farmer in field.jpg"
+                  alt="Field agent registering a farm plot using the OriginTrace mobile app"
+                  fill
+                  className="object-cover"
+                  sizes="100vw"
+                />
+              </div>
+            </FadeIn>
+
+            {/* Feature pills row below image */}
+            <FadeIn delay={0.25}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1.75rem' }}>
+                {[
+                  { icon: Smartphone, text: 'Works on any smartphone' },
+                  { icon: Wifi, text: 'Full offline capture, auto-sync' },
+                  { icon: Shield, text: 'GPS verification & anti-fraud' },
+                ].map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.5rem 1rem', borderRadius: '9999px',
+                    border: '1px solid var(--mk-border)',
+                    background: 'var(--mk-surface-white)',
+                    fontSize: '0.875rem', color: 'var(--mk-text-secondary)',
+                  }}>
+                    <item.icon className="w-3.5 h-3.5" style={{ color: 'var(--mk-green)', flexShrink: 0 }} />
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+
+        {/* ══════════════════════════════════════════════════════════
+            6. FINAL CTA
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+                <span className="pre-title margin-bottom margin-large">Get Started</span>
+                <h2
+                  className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
+                  data-testid="text-solutions-cta-headline"
+                >
+                  See it working against your actual export operation.
+                </h2>
+                <p
+                  className="margin-bottom margin-xlarge-2"
+                  style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
+                >
+                  Request a 30-minute walkthrough. We will map your current workflow and show
+                  you exactly where OriginTrace fits — for your commodity, your markets,
+                  your team.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/demo" className="btn-mk-primary btn-mk-lg" data-testid="button-solutions-demo">
+                    Request a Demo
+                    <ChevronRight className="h-5 w-5" />
                   </Link>
-                  <Link href="/compliance/eudr" className="text-sm text-emerald-600 dark:text-emerald-400 font-medium hover:underline" data-testid="link-compliance-associations">
-                    View compliance coverage
+                  <Link href="/demo" className="btn-mk-ghost btn-mk-lg">
+                    Book a 30-min walkthrough
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
-              </FadeIn>
-            </div>
-          </section>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
 
-          <section className="py-20 md:py-28 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-6xl mx-auto px-6">
-              <FadeIn className="text-center mb-14">
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-field-ops">
-                  [ Field Operations ]
-                </p>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-field-ops">
-                  Designed for Real-World Export Operations
-                </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto text-base">
-                  Your field agents work in remote areas with limited connectivity. 
-                  OriginTrace is built to capture reliable data in the most challenging conditions.
-                </p>
-              </FadeIn>
-              
-              <StaggerContainer className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                <StaggerItem className="text-center">
-                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <Smartphone className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-pwa">Mobile-First PWA</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Works on any smartphone without app store downloads
-                  </p>
-                </StaggerItem>
-                
-                <StaggerItem className="text-center">
-                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <Wifi className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-offline">Offline-First Design</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Collect data without connectivity. Auto-syncs when network returns
-                  </p>
-                </StaggerItem>
-                
-                <StaggerItem className="text-center">
-                  <div className="h-12 w-12 mx-auto mb-4 rounded-md bg-emerald-600/10 dark:bg-emerald-500/10 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h3 className="font-semibold mb-2 text-slate-900 dark:text-slate-50" data-testid="text-feature-hc-ui">High Contrast UI</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Large touch targets and readable text for outdoor use
-                  </p>
-                </StaggerItem>
-              </StaggerContainer>
-            </div>
-          </section>
+      </main>
 
-          <section className="py-20 md:py-28 border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-6xl mx-auto px-6 text-center">
-              <FadeIn>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-4 tracking-widest uppercase" data-testid="text-section-label-cta">
-                  [ Get Started ]
-                </p>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-slate-50" data-testid="text-heading-cta">
-                  Ready to reduce shipment rejection risk?
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto mb-8 text-base">
-                  Schedule a consultation to see how OriginTrace fits your export compliance workflow.
-                </p>
-                <Link href="/demo">
-                  <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-request-demo">
-                    Request Demo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </FadeIn>
-            </div>
-          </section>
-        </main>
-
-        <MarketingFooter />
-      </div>
-    </>
+      <MarketingFooter />
+    </div>
   );
 }

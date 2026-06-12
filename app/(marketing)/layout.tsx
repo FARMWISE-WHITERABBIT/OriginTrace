@@ -2,6 +2,7 @@ import { ThemeProvider } from '@/lib/contexts/theme-context';
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import { CookieBanner } from '@/components/marketing/cookie-banner';
+import '@/app/marketing.css';
 
 const organizationSchema = {
   '@context': 'https://schema.org',
