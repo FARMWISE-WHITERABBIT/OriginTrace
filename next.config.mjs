@@ -86,14 +86,14 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com https://www.youtube.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
-      "connect-src 'self' http://127.0.0.1:3000 http://localhost:3000 http://127.0.0.1:5000 http://localhost:5000 http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:5000 ws://localhost:5000 ws://127.0.0.1:54321 ws://localhost:54321 https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
-      "frame-src 'self' https://js.paystack.co",
+      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
+      "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
-      "media-src 'self' blob:",
+      "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
     ].join('; '),
   },
 ];
@@ -105,6 +105,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    turbopackUseSystemTlsCerts: true,
   },
   images: {
     remotePatterns: [
@@ -125,6 +126,16 @@ const nextConfig = {
       {
         source: '/auth/buyer-register',
         destination: '/auth/login',
+        permanent: true,
+      },
+      {
+        source: '/insights',
+        destination: '/blog',
+        permanent: true,
+      },
+      {
+        source: '/insights/:slug*',
+        destination: '/blog/:slug*',
         permanent: true,
       },
     ];

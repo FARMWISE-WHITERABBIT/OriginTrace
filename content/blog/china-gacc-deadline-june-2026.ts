@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '8 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-tomfisk-2231744.jpg',
+  coverImageAlt: 'Aerial view of a red cargo ship being loaded at port',
   coverGradient: 'from-red-900/20 to-slate-800/50',
   tags: ['GACC', 'China', 'Food Export', 'Registration', 'Compliance Deadline'],
   content: [

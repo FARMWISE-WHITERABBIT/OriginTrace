@@ -1,9 +1,31 @@
 import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans, JetBrains_Mono, Inter_Tight, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/lib/contexts/theme-context';
 import { OrgProvider } from '@/lib/contexts/org-context';
 import { Toaster } from '@/components/ui/toaster';
 import { LocaleProvider } from '@/lib/i18n/locale-provider';
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  weight: ['400', '500', '600', '700'],
+});
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  weight: ['400', '500', '600'],
+});
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['600', '700', '800'],
+});
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument',
+  weight: ['500', '600', '700'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://origintrace.trade'),
@@ -51,7 +73,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className="font-sans" suppressHydrationWarning>
+      <body className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${interTight.variable} ${instrumentSans.variable} font-sans`} suppressHydrationWarning>
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
