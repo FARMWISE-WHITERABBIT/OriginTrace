@@ -2,22 +2,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
-import { IndustryTicker } from '@/components/marketing/industry-ticker';
 import { getAllPosts } from '@/lib/blog';
 import { BlogCarousel } from '@/components/marketing/blog-carousel';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
+import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { WhyChooseSection } from '@/components/marketing/why-choose-section';
 import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
 import { ComplianceStack } from '@/components/marketing/compliance-stack';
 import { ReadinessModal } from '@/components/marketing/readiness-modal';
+import { FaqSection } from '@/components/marketing/faq-section';
 import {
   Shield,
   ChevronRight,
   Check,
   MapPin,
-  ArrowRight,
   Mail,
   Phone,
   Wifi,
@@ -197,11 +196,11 @@ export default function HomePage() {
             <div className="mk-container-lg">
               {/* Two-col on desktop, stacked on mobile — both columns visible */}
               <div
-                className="grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
                 style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
               >
                 {/* LEFT — headline, subtitle, CTA — vertically centered */}
-                <div className="flex flex-col justify-center py-16 lg:py-8" style={{ paddingTop: 'clamp(5rem, 20vw, 8rem)' }}>
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
                   <FadeIn delay={0.1}>
                     <h1
                       className="text-display-2xl margin-bottom margin-large"
@@ -217,7 +216,7 @@ export default function HomePage() {
                       className="margin-bottom margin-xlarge"
                       style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
                     >
-                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, US, and China requirements, and gives buyers the proof they need to clear your shipment.
+                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, UK, US, China, and UAE requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
                   </FadeIn>
 
@@ -232,13 +231,11 @@ export default function HomePage() {
                 </div>
 
                 {/* RIGHT — card, visible on all sizes */}
-                <div className="flex flex-col justify-end pb-0">
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  {featuredPost && (
                   <FadeIn delay={0.5} direction="up">
                     <div
                       className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
-                      style={{
-                        maxWidth: '480px',
-                      }}
                     >
                       {/* ── 1. IMAGE ── */}
                       <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
@@ -314,6 +311,7 @@ export default function HomePage() {
                       />
                     </div>
                   </FadeIn>
+                  )}
                 </div>
 
               </div>
@@ -386,26 +384,45 @@ export default function HomePage() {
                 <div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
               <FadeIn delay={0.34} direction="up">
-                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </FadeIn>
             </div>
-            {/* Mobile: all 3 images — tall centre flanked by two shorter side cards */}
+
+            {/* Mobile: 3 images in a row — side images shorter, centre taller (staggered) */}
             <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
-              {/* Large centre image */}
-              <div style={{ height: '260px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '0.625rem' }} />
-              {/* Two side images side by side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
-                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
-                <div style={{ height: '160px', borderRadius: '0.875rem', overflow: 'hidden', backgroundImage: "url('/images/lagos apapa port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </div>
             </div>
 
             {/* CTA — centered pill button */}
             <FadeIn delay={0.44}>
-              <div className="flex justify-center">
+              <div className="flex justify-center" style={{ marginBottom: '3rem' }}>
                 <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
                   See the platform
                 </Link>
+              </div>
+            </FadeIn>
+
+            {/* Feature items — 3-col grid below CTA */}
+            <FadeIn delay={0.55}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+                {[
+                  { label: 'GPS Verified Origin' },
+                  { label: 'Compliance Ready' },
+                  { label: 'Secured Payments' },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)', flexShrink: 0 }}>
+                      <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-secondary)', fontWeight: 500, lineHeight: 1.4 }}>{item.label}</span>
+                  </div>
+                ))}
               </div>
             </FadeIn>
           </div>
@@ -457,7 +474,13 @@ export default function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════════
-            12b. CERTIFICATION / COMPLIANCE MARQUEE (below blog)
+            12b. FAQ
+            ═══════════════════════════════════════════════════════ */}
+        <FaqSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12c. CERTIFICATION / COMPLIANCE MARQUEE (below FAQ)
             ═══════════════════════════════════════════════════════ */}
         <CertificationMarquee />
 

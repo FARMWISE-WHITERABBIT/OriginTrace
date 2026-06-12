@@ -1,103 +1,73 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
+import React from 'react';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
-import {
-  ChevronRight,
-  MapPin,
-  FileText,
-  Shield,
-  BarChart3,
-  TreePine,
-  Scale,
-  AlertTriangle,
-  Download,
-  ArrowRight,
-  Layers,
-  ScanLine,
-  Warehouse,
-} from 'lucide-react';
+import { FadeIn } from '@/components/marketing/motion';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
-const challenges = [
-  {
-    icon: TreePine,
-    title: 'Deforestation Verification',
-    description: 'Proving timber was harvested from land that was not deforested after regulatory cut-off dates requires precise geospatial evidence and satellite cross-referencing.',
-  },
-  {
-    icon: Layers,
-    title: 'Complex Chain of Custody',
-    description: 'Wood passes through multiple hands — harvesters, sawmills, processing plants, and distributors — each introducing the risk of traceability breaks.',
-  },
-  {
-    icon: Scale,
-    title: 'Legal Compliance Across Jurisdictions',
-    description: 'Timber exports must comply with the laws of the country of origin and the importing market — covering land use rights, harvesting permits, and environmental protections.',
-  },
-  {
-    icon: FileText,
-    title: 'Due Diligence Documentation',
-    description: 'EUDR requires operators to submit due diligence statements with geolocation data, species identification, and supply chain records before placing products on the EU market.',
-  },
+export const metadata: Metadata = {
+  title: 'Timber & Wood Traceability',
+  description: 'Deforestation-free proof for every timber shipment. EUDR and UK Timber Regulation compliance from concession to export.',
+};
+
+const heroStats = [
+  { label: 'Major regulations covered (EUDR + UK)', value: '2' },
+  { label: 'EUDR large operator deadline', value: 'Dec 2025' },
+  { label: 'Concession-to-shipment traceability', value: '100%' },
 ];
 
-const features = [
-  {
-    icon: MapPin,
-    title: 'Concession & Plot Mapping',
-    description: 'Capture GPS polygon boundaries for forestry concessions and individual harvest plots. Overlay with satellite deforestation data to verify compliance with cut-off dates.',
-  },
-  {
-    icon: ScanLine,
-    title: 'Log-Level Tracking',
-    description: 'Assign unique identifiers to individual logs and track them through every stage — from felling to sawmill to finished product. Full chain-of-custody at the unit level.',
-  },
-  {
-    icon: Warehouse,
-    title: 'Sawmill & Processing Records',
-    description: 'Document every transformation step with input-output reconciliation. Link sawn timber, veneer, and finished products back to their source concessions.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Compliance Scoring',
-    description: 'Real-time readiness scores covering geolocation coverage, documentation completeness, species verification, and regulatory alignment for every shipment.',
-  },
-  {
-    icon: Download,
-    title: 'DDS & Export Documentation',
-    description: 'Automatically generate Due Diligence Statements and export dossiers formatted for the EU Information System, FLEGT licensing, and destination-market requirements.',
-  },
-  {
-    icon: Shield,
-    title: 'Risk Assessment Engine',
-    description: 'Automated risk classification based on country risk levels, concession history, species vulnerability, and documentation gaps with actionable remediation guidance.',
-  },
+const capabilities = [
+  { number: '01', title: 'Register Every Concession', description: 'GPS-map every forest concession with legal boundary verification. Link each concession to its harvesting permits and land tenure documentation.', iconName: 'MapPin' },
+  { number: '02', title: 'Log Every Harvest Event', description: 'Field teams record every felling or extraction event against the registered concession. Species, volume, and GPS coordinates are captured and linked to the harvest record.', iconName: 'Package' },
+  { number: '03', title: 'Verify Legal Compliance', description: 'Cross-reference harvest records against legal harvesting permits and post-2020 deforestation satellite data. Flag any gap before the timber enters the transport chain.', iconName: 'ShieldCheck' },
+  { number: '04', title: 'Generate Your Due Diligence Statement', description: 'Produce EUDR-compliant and UK-compliant due diligence statements from one verified record. No separate documentation processes.', iconName: 'FileText' },
 ];
 
-const timeline = [
-  { step: 'Source', desc: 'Map concession boundaries, verify harvesting permits, capture species data at the forest level' },
-  { step: 'Harvest', desc: 'Tag individual logs with unique identifiers, record GPS coordinates of felling locations' },
-  { step: 'Process', desc: 'Track logs through sawmills and processing facilities with input-output mass balance' },
-  { step: 'Export', desc: 'Generate compliance documentation, verify regulatory alignment, submit DDS to EU system' },
-  { step: 'Verify', desc: 'Buyers and regulators verify origin, legality, and deforestation-free status via digital passport' },
-];
-
-const complianceFrameworks = [
-  { regulation: 'EUDR', desc: 'Deforestation-free verification, GPS polygon mapping, due diligence statement generation', href: '/compliance/eudr' },
-  { regulation: 'UK Environment Act', desc: 'Forest-risk commodity due diligence, legal compliance verification', href: '/compliance/uk' },
-  { regulation: 'FSMA 204', desc: 'Key data elements and critical tracking events for wood-derived food contact materials', href: '/compliance/usa' },
-  { regulation: 'China GACC', desc: 'Facility registration, product safety documentation for wood product imports', href: '/compliance/china' },
-  { regulation: 'UAE ESMA', desc: 'Product quality and origin certification for timber imports', href: '/compliance/uae' },
-];
-
-const stats = [
-  { value: '100%', label: 'Plot Coverage', desc: 'Every harvest plot GPS-mapped with polygon boundaries' },
-  { value: '3x', label: 'Faster Audits', desc: 'Speed improvement in regulatory audit resolution' },
-  { value: '0', label: 'Traceability Gaps', desc: 'Full chain-of-custody from forest to finished product' },
-  { value: 'Dec 2020', label: 'Cut-Off Verified', desc: 'Deforestation cut-off date compliance verified via satellite' },
+const roles = [
+  {
+    id: 'timber-exporter',
+    label: 'Timber Exporter',
+    image: '/images/pexels-seunadeniyi-14371700.jpg',
+    imageLeft: true,
+    headline: 'Give your EU buyers the due diligence documentation they&apos;re legally required to hold.',
+    headline_plain: "Give your EU buyers the due diligence documentation they're legally required to hold.",
+    body: 'You operate or source from forest concessions and export timber or wood products to EU or UK buyers. OriginTrace registers your concessions, records your harvest events, and generates the DDS your buyers need to clear the shipment.',
+    features: [
+      'GPS concession registration with legal boundary mapping',
+      'Harvest event logging with permit linkage',
+      'EUDR + UK Timber Regulation DDS generation',
+      'Species and volume traceability to concession level',
+    ],
+    stats: [
+      { label: 'Regulations covered', value: '2' },
+      { label: 'Concession-to-shipment traceability', value: '100%' },
+      { label: 'DDS generation', value: 'On demand' },
+    ],
+  },
+  {
+    id: 'eu-importer',
+    label: 'EU / UK Importer',
+    image: '/images/pexels-andromeda99-36192545.jpg',
+    imageLeft: false,
+    headline: 'Verify your supplier&apos;s due diligence before the shipment arrives.',
+    headline_plain: "Verify your supplier's due diligence before the shipment arrives.",
+    body: 'You place timber or wood products on the EU or UK market and are legally required to conduct due diligence and hold records. OriginTrace gives you direct access to your supplier\'s verified concession and harvest records before the shipment arrives.',
+    features: [
+      'Supplier concession verification via QR',
+      'Deforestation risk status per concession',
+      'Harvest permit and legal compliance records',
+      'DDS documentation ready for EU customs submission',
+    ],
+    stats: [
+      { label: 'Supplier record access', value: '24hr' },
+      { label: 'GPS-verified concessions', value: '100%' },
+      { label: 'Compliance frameworks covered', value: '5' },
+    ],
+  },
 ];
 
 export default function TimberPage() {
@@ -106,226 +76,160 @@ export default function TimberPage() {
       <MarketingNav />
 
       <main>
-        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
-          <HeroBackground />
-          <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <FadeIn>
-              <div className="text-center max-w-3xl mx-auto">
-                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4 tracking-wide uppercase">
-                  [ Timber & Forestry ]
-                </p>
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-white" data-testid="heading-timber-title">
-                  Chain-of-Custody Traceability for Timber & Wood Products
-                </h1>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8" data-testid="text-timber-subtitle">
-                  Prove deforestation-free sourcing, maintain log-level traceability, and generate export-ready compliance documentation — from forest concession to finished product.
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <Link href="/demo">
-                    <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-timber-demo">
-                      Request Demo
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="#features">
-                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-timber-learn">
-                      Explore Features
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
+        {/* ══════════════════════════════════════════════════════════
+            1. HERO
+            ══════════════════════════════════════════════════════════ */}
+        <section className="mk-hero mk-hero--solutions">
+          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+          <div className="mk-hero__content mk-hero__content--solutions">
+            <div className="mk-container-lg" style={{ width: '100%' }}>
+              <div className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                   style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}>
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                  <FadeIn delay={0.1}><span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}>Timber &amp; Wood</span></FadeIn>
+                  <FadeIn delay={0.15}><h1 className="text-display-2xl margin-bottom margin-large" style={{ color: '#ffffff', fontFamily: 'var(--font-display)', maxWidth: '16ch' }}>Deforestation-free proof for every timber shipment.</h1></FadeIn>
+                  <FadeIn delay={0.2}><p className="margin-bottom margin-xlarge" style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}>EUDR covers timber alongside agricultural commodities, and the UK Timber Regulation runs in parallel. OriginTrace registers every forest concession, validates harvesting against legal boundaries, and produces the due diligence statement your EU and UK importers are legally required to hold.</p></FadeIn>
+                  <FadeIn delay={0.3}><Link href="/demo" className="btn-mk-primary btn-mk-lg">See how it works for timber <ChevronRight className="h-5 w-5" /></Link></FadeIn>
+                </div>
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="up">
+                    <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                      <div className="solutions-stats-row">
+                        {heroStats.map((stat, i) => (
+                          <div key={i} className="solutions-stats-col" style={i < heroStats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>{stat.label}</p>
+                            <p style={{ fontSize: '1.75rem', color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1 }}>{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <img src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg" alt="" aria-hidden className="hero-left-decorative" width={25} height={25} />
+                      <img src="/images/6836fc56293581224cd8c720_hero-right-shape.svg" alt="" aria-hidden className="hero-right-decorative" width={25} height={25} />
+                    </div>
+                  </FadeIn>
                 </div>
               </div>
-            </FadeIn>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-challenges">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              <FadeIn direction="left">
-                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                  [ Industry Challenges ]
-                </p>
-                <h2 className="text-2xl md:text-3xl font-extrabold mb-3 text-slate-900 dark:text-white" data-testid="heading-challenges">
-                  Why Timber Traceability Demands More
-                </h2>
-                <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-                  Timber supply chains face unique regulatory scrutiny. Proving deforestation-free sourcing requires geospatial evidence, species verification, and unbroken chain-of-custody from forest to market.
-                </p>
-              </FadeIn>
-
-              <FadeIn direction="right">
-                <div className="space-y-4">
-                  {challenges.map((challenge, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-4 p-4 rounded-md bg-slate-50 dark:bg-slate-900/30"
-                      data-testid={`card-challenge-${i}`}
-                    >
-                      <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                        <challenge.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-slate-900 dark:text-white mb-1" data-testid={`text-challenge-title-${i}`}>{challenge.title}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{challenge.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </FadeIn>
             </div>
           </div>
         </section>
 
-        <section id="features" className="py-16 md:py-24 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-features">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Platform Features ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-features">
-                Purpose-Built for Timber & Forestry
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-                From concession mapping to export documentation — every tool you need to maintain compliant timber supply chains.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full" data-testid={`card-feature-${i}`}>
-                    <CardContent className="p-6">
-                      <div className="h-10 w-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                        <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <h3 className="font-semibold mb-2 text-slate-900 dark:text-white" data-testid={`text-feature-title-${i}`}>{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-journey">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Traceability Journey ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-journey">
-                From Forest to Market — Every Step Verified
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-                OriginTrace captures and verifies data at every critical point in the timber supply chain.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="relative">
-              <div className="hidden lg:block absolute top-6 left-0 right-0 h-px bg-emerald-200 dark:bg-emerald-800" />
-              <div className="grid lg:grid-cols-5 gap-6">
-                {timeline.map((item, i) => (
-                  <StaggerItem key={i}>
-                    <div className="relative" data-testid={`card-journey-${i}`}>
-                      <div className="hidden lg:flex items-center justify-center w-12 h-12 rounded-full bg-emerald-600 text-white font-bold text-sm mb-4 relative z-10">
-                        {i + 1}
-                      </div>
-                      <div className="lg:hidden flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">{i + 1}</div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">{item.step}</h3>
-                      </div>
-                      <h3 className="hidden lg:block font-semibold text-slate-900 dark:text-white mb-2">{item.step}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  </StaggerItem>
-                ))}
-              </div>
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-stats">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Results ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white" data-testid="heading-stats">
-                Timber Compliance, Quantified
-              </h2>
-            </FadeIn>
-
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, i) => (
-                <StaggerItem key={i}>
-                  <div className="text-center py-8 px-4" data-testid={`stat-timber-${i}`}>
-                    <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 dark:text-emerald-400 mb-2">{stat.value}</p>
-                    <p className="font-semibold text-slate-900 dark:text-white mb-2">{stat.label}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{stat.desc}</p>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-compliance">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Regulatory Coverage ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-compliance">
-                Compliance Coverage for Timber Exports
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-                A single traceability foundation satisfies the regulatory requirements of every major destination market.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {complianceFrameworks.map((fw, i) => (
-                <StaggerItem key={i}>
-                  <Link href={fw.href}>
-                    <Card className="h-full hover-elevate" data-testid={`card-compliance-${i}`}>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          <h3 className="font-semibold text-slate-900 dark:text-white">{fw.regulation}</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{fw.desc}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 bg-emerald-600 dark:bg-emerald-700" data-testid="section-cta">
-          <div className="max-w-4xl mx-auto px-6 text-center">
+        {/* ══════════════════════════════════════════════════════════
+            2. THE CHALLENGE
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-lg">
             <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-white" data-testid="heading-cta">
-                Prove Deforestation-Free Sourcing with Confidence
-              </h2>
-              <p className="text-emerald-100 mb-8 max-w-xl mx-auto leading-relaxed">
-                Build the traceability infrastructure your timber supply chain needs to satisfy EUDR, UK Environment Act, and buyer sustainability requirements.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link href="/demo">
-                  <Button size="lg" className="gap-2 bg-white text-emerald-700" data-testid="button-cta-demo">
-                    Request a Demo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/solutions">
-                  <Button size="lg" variant="outline" className="gap-2 border-emerald-400 text-white" data-testid="button-cta-solutions">
-                    View Solutions
-                  </Button>
-                </Link>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">The Challenge</span>
+                <h2 className="text-display-lg section-header__title">The problem isn&apos;t the timber. It&apos;s proving it&apos;s legal and deforestation-free.</h2>
+                <p className="section-header__body">EU and UK importers face legal liability if they cannot prove the timber they place on the market was legally harvested and not linked to deforestation. The burden of proof sits with the importer — but the evidence has to come from you.</p>
+              </div>
+            </FadeIn>
+
+            <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center', marginBottom: '3rem' }}>
+              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-seunadeniyi-14371700.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-mikhail-nilov-8332326.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-josiah-matthew-145486517-10697911.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+            </div>
+
+            <FadeIn>
+              <div className="solutions-twin-cols">
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>Forest concessions vary enormously in size, legal status, and documentation quality. OriginTrace registers every concession by GPS boundary, links each harvest event to its legal harvesting permit, and maintains a chain of custody from felling site to export port.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="36" height="36" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)' }}>
+                    <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>EUDR and the UK Timber Regulation both require due diligence — but with different submission processes and legal bases. OriginTrace generates documentation that satisfies both simultaneously from one source record, so you don&apos;t maintain two separate compliance processes.</p>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            3. HOW IT WORKS — capability slider
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <CapabilitySlider capabilities={capabilities} />
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            4. WHO USES IT — role panels
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing" style={{ background: 'var(--color--gray-1)', paddingBottom: 0 }}>
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header--left margin-bottom margin-xlarge">
+                <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>Who It&apos;s For</span>
+                <h2 className="text-display-lg" style={{ color: '#ffffff', marginTop: '0.75rem' }}>Built for timber exporters and their EU buyers.</h2>
+              </div>
+            </FadeIn>
+          </div>
+
+          {roles.map((role, i) => (
+            <FadeIn key={role.id} delay={0.05}>
+              <div
+                style={{
+                  background: i % 2 === 0 ? 'var(--color--gray-1)' : 'rgba(255,255,255,0.04)',
+                  borderTop: '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                <div className="mk-container-lg mk-role-grid">
+                  <div className="mk-role-image" style={{ order: role.imageLeft ? 0 : 1 }}>
+                    <Image src={role.image} alt={role.headline_plain} fill className="object-cover" sizes="50vw" />
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+                  </div>
+                  <div className="mk-role-content" style={{ order: role.imageLeft ? 1 : 0 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>{role.label}</span>
+                      </div>
+                      <h3 style={{ fontSize: 'clamp(1.125rem, 2vw, 1.375rem)', fontWeight: 700, color: '#ffffff', lineHeight: 1.35, marginBottom: '1rem', maxWidth: '28ch' }}>{role.headline_plain}</h3>
+                      <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>{role.body}</p>
+                      <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
+                        {role.features.map((f, j) => (
+                          <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                            <span style={{ marginTop: '0.2rem', width: '1rem', height: '1rem', borderRadius: '50%', background: 'rgba(46,125,107,0.2)', border: '1px solid var(--mk-green-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Check className="w-2.5 h-2.5" style={{ color: 'var(--mk-green-mid)' }} />
+                            </span>
+                            <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="mk-role-stats">
+                      {role.stats.map((s, j) => (
+                        <div key={j}>
+                          <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
+                          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            5. FINAL CTA
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+                <span className="pre-title margin-bottom margin-large">Get Started</span>
+                <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">Timber compliance that starts at the concession.</h2>
+                <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>The due diligence statement your EU or UK buyer needs to submit starts with verified origin evidence from you. Let us show you how to build it in time for your next shipment.</p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/demo" className="btn-mk-primary btn-mk-lg">Book a walkthrough <ChevronRight className="h-5 w-5" /></Link>
+                  <Link href="/solutions" className="btn-mk-ghost btn-mk-lg">See the platform <ArrowRight className="h-4 w-4" /></Link>
+                </div>
               </div>
             </FadeIn>
           </div>

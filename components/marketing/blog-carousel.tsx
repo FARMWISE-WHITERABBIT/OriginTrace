@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -11,20 +11,28 @@ interface BlogCarouselProps {
   posts: BlogPost[];
 }
 
+const MOBILE_QUERY = '(max-width: 767px)';
+
+function subscribeToMediaQuery(callback: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY);
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+
 export function BlogCarousel({ posts }: BlogCarouselProps) {
   const [page, setPage] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useSyncExternalStore(
+    subscribeToMediaQuery,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false
+  );
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => { setIsMobile(e.matches); setPage(0); };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+    setPage(0);
+  }, [isMobile]);
 
   const PER_PAGE = isMobile ? 1 : 2;
-  const totalPages = Math.ceil(posts.length / PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(posts.length / PER_PAGE));
   const total = posts.length;
 
   function prev() {
@@ -33,6 +41,8 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
   function next() {
     setPage((p) => (p + 1) % totalPages);
   }
+
+  if (total === 0) return null;
 
   return (
     <div className="mk-blog-layout">
@@ -100,7 +110,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
               display: 'grid',
               gridTemplateColumns: `repeat(${total}, calc((100% - ${PER_PAGE - 1}rem) / ${PER_PAGE}))`,
               gap: '1rem',
-              transform: `translateX(calc(-${page} * (100% / ${total}) * ${total / PER_PAGE}))`,
+              transform: `translateX(calc(-${page} * (100% + 1rem)))`,
               transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             }}
           >
@@ -114,6 +124,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
                       fill
                       className="mk-blog-image object-cover"
                       sizes="(max-width: 768px) 100vw, 40vw"
+                      loading="eager"
                     />
                   ) : (
                     <div
@@ -128,7 +139,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
                   </div>
                 </div>
                 <div className="mk-blog-info">
-                  <h2 className="mk-blog-title">{post.title}</h2>
+                  <h3 className="mk-blog-title">{post.title}</h3>
                 </div>
               </Link>
             ))}

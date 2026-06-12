@@ -1,103 +1,71 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
+import React from 'react';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
-import {
-  ChevronRight,
-  MapPin,
-  FileText,
-  Shield,
-  BarChart3,
-  Globe,
-  Scale,
-  AlertTriangle,
-  Search,
-  Download,
-  ArrowRight,
-  Layers,
-  ScanLine,
-  Factory,
-  Scissors,
-  Eye,
-} from 'lucide-react';
+import { FadeIn } from '@/components/marketing/motion';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
-const challenges = [
-  {
-    icon: Layers,
-    title: 'Multi-Tier Supply Chains',
-    description: 'Textiles pass through farms, ginning mills, spinning facilities, weaving plants, dye houses, and garment factories — each tier adding complexity to traceability.',
-  },
-  {
-    icon: Globe,
-    title: 'Cross-Border Sourcing',
-    description: 'Raw fibers are often grown in one country, processed in another, and assembled in a third — making origin verification exceptionally challenging.',
-  },
-  {
-    icon: AlertTriangle,
-    title: 'Forced Labor & Ethical Sourcing',
-    description: 'Regulatory frameworks like the Uyghur Forced Labor Prevention Act (UFLPA) require proof that raw materials were not produced with forced labor in specific regions.',
-  },
-  {
-    icon: Eye,
-    title: 'Consumer Transparency Demands',
-    description: 'Brands face growing pressure from consumers and regulators to provide verifiable sustainability claims about the origin and production of their products.',
-  },
+export const metadata: Metadata = {
+  title: 'Textiles Traceability & Compliance',
+  description: 'Fibre origin traceability for forced labour compliance. UFLPA, EU CSRD, and UK Modern Slavery Act documentation for cotton and natural fibre exporters.',
+};
+
+const heroStats = [
+  { label: 'Forced labour frameworks covered', value: '3' },
+  { label: 'Field-to-fibre traceability', value: '100%' },
+  { label: 'Markets supported', value: 'US + EU + UK' },
 ];
 
-const supplyChainSteps = [
-  {
-    step: 'Raw Material',
-    title: 'Fiber Sourcing & Farm Mapping',
-    description: 'GPS-verified farm boundaries for cotton, rubber, and other natural fiber origins. Capture farmer data, plot coordinates, and harvesting records at the source.',
-    icon: MapPin,
-  },
-  {
-    step: 'Processing',
-    title: 'Ginning, Spinning & Weaving',
-    description: 'Track fiber through every processing stage with input-output reconciliation. Maintain identity preservation or mass balance through transformation.',
-    icon: Factory,
-  },
-  {
-    step: 'Manufacturing',
-    title: 'Cut, Make & Trim',
-    description: 'Link finished garments to source materials with batch-level traceability. Document manufacturing facilities, labor standards, and quality certifications.',
-    icon: Scissors,
-  },
-  {
-    step: 'Verification',
-    title: 'Compliance & Export',
-    description: 'Generate regulatory documentation, verify compliance with destination market requirements, and produce Digital Product Passports for end-consumer verification.',
-    icon: Shield,
-  },
+const capabilities = [
+  { number: '01', title: 'Register Every Growing Area', description: 'GPS-map every cotton field or natural fibre growing area with farmer identity verification. Prove the growing region before the fibre moves to the gin.', iconName: 'MapPin' },
+  { number: '02', title: 'Track Through Ginning and Processing', description: 'Log every transformation from raw fibre through ginning, spinning, and processing. Mass balance is maintained at each stage. The origin chain is never broken.', iconName: 'Factory' },
+  { number: '03', title: 'Verify Against Forced Labour Requirements', description: 'Cross-reference growing region data against UFLPA-flagged regions and forced labour risk databases. Surface issues before the bale ships.', iconName: 'ShieldCheck' },
+  { number: '04', title: 'Generate Your Origin Documentation', description: 'Verified growing region records, chain-of-custody documentation, and forced labour due diligence evidence — from one verified record for all three markets.', iconName: 'FileText' },
 ];
 
-const features = [
-  { icon: MapPin, title: 'Origin Mapping', desc: 'GPS polygon boundaries for every farm plot and facility in the supply chain' },
-  { icon: ScanLine, title: 'Batch Tracking', desc: 'Unique identifiers for every lot from raw fiber through finished goods' },
-  { icon: Scale, title: 'Mass Balance', desc: 'Input-output reconciliation at every processing stage with automatic discrepancy detection' },
-  { icon: FileText, title: 'Digital Product Passports', desc: 'QR-verifiable provenance records for every finished product' },
-  { icon: BarChart3, title: 'Compliance Scoring', desc: 'Real-time readiness scores across traceability, documentation, and regulatory alignment' },
-  { icon: Download, title: 'Export Documentation', desc: 'Auto-generated compliance dossiers for EU, US, UK, and other destination markets' },
-  { icon: Search, title: 'Risk Assessment', desc: 'Automated risk classification based on sourcing regions, supplier history, and documentation gaps' },
-  { icon: Shield, title: 'Audit-Ready Vault', desc: 'Centralized, tamper-evident storage of all compliance evidence with instant retrieval' },
-];
-
-const complianceFrameworks = [
-  { regulation: 'EUDR', desc: 'Deforestation-free verification for rubber and other covered commodities used in textiles', href: '/compliance/eudr' },
-  { regulation: 'FSMA 204', desc: 'Traceability for food-contact textile materials and packaging', href: '/compliance/usa' },
-  { regulation: 'UK Environment Act', desc: 'Due diligence for forest-risk commodities in textile supply chains', href: '/compliance/uk' },
-  { regulation: 'China GACC', desc: 'Product registration and safety documentation for textile imports', href: '/compliance/china' },
-  { regulation: 'UAE ESMA', desc: 'Quality standards and origin certification for textile products', href: '/compliance/uae' },
-];
-
-const stats = [
-  { value: '6+', label: 'Supply Chain Tiers', desc: 'Full traceability from farm through every processing stage' },
-  { value: '95%', label: 'Fiber Traceability', desc: 'Of raw materials traced to verified origin points' },
-  { value: '50%', label: 'Audit Time Reduction', desc: 'Faster regulatory audit resolution with centralized data' },
-  { value: '100%', label: 'DPP Coverage', desc: 'Digital Product Passports for every finished product' },
+const roles = [
+  {
+    id: 'textile-exporter',
+    label: 'Textile Exporter',
+    image: '/images/pexels-seunadeniyi-14371700.jpg',
+    imageLeft: true,
+    headline: "Give your US and EU buyers the verified origin evidence they need to clear imports.",
+    body: 'You source raw fibre, process it through ginning or spinning, and export to brands or manufacturers in the US, EU, or UK. OriginTrace builds the verified origin record your buyers need to rebut the UFLPA presumption and satisfy EU CSRD requirements.',
+    features: [
+      'GPS growing region registration with farmer KYC',
+      'Field-to-fibre tracking through ginning and processing',
+      'UFLPA rebuttal evidence package',
+      'EU CSRD and UK Modern Slavery Act documentation',
+    ],
+    stats: [
+      { label: 'Frameworks covered', value: '3' },
+      { label: 'Field-to-fibre traceability', value: '100%' },
+      { label: 'Evidence package', value: 'On demand' },
+    ],
+  },
+  {
+    id: 'brand-importer',
+    label: 'Brand / Importer',
+    image: '/images/pexels-stephanefabricebass-10319259.jpg',
+    imageLeft: false,
+    headline: "Verify your supplier's growing region before the shipment reaches customs.",
+    body: "You source textile inputs from Africa and are required to demonstrate that your supply chain is free from forced labour. OriginTrace gives you access to your supplier's verified growing region records before the goods arrive — so customs clearance isn't a surprise.",
+    features: [
+      'Supplier growing region verification via QR',
+      'Forced labour risk status per region',
+      'Chain-of-custody from field to finished bale',
+      'Evidence package ready for US CBP submission',
+    ],
+    stats: [
+      { label: 'Supplier record access', value: '24hr' },
+      { label: 'GPS-verified growing areas', value: '100%' },
+      { label: 'Rebuttal evidence ready', value: 'UFLPA' },
+    ],
+  },
 ];
 
 export default function TextilesPage() {
@@ -106,218 +74,160 @@ export default function TextilesPage() {
       <MarketingNav />
 
       <main>
-        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
-          <HeroBackground />
-          <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <FadeIn>
-              <div className="text-center max-w-3xl mx-auto">
-                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4 tracking-wide uppercase">
-                  [ Textiles & Apparel ]
-                </p>
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-slate-900 dark:text-white" data-testid="heading-textiles-title">
-                  Fiber-to-Garment Traceability for Textiles & Apparel
-                </h1>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8" data-testid="text-textiles-subtitle">
-                  Trace raw fibers through spinning, weaving, dyeing, and manufacturing. Generate Digital Product Passports and prove ethical sourcing across every tier of your textile supply chain.
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <Link href="/demo">
-                    <Button size="lg" className="gap-2 bg-emerald-600 text-white" data-testid="button-textiles-demo">
-                      Request Demo
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="#supply-chain">
-                    <Button size="lg" variant="outline" className="gap-2" data-testid="button-textiles-learn">
-                      See the Journey
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
+        {/* ══════════════════════════════════════════════════════════
+            1. HERO
+            ══════════════════════════════════════════════════════════ */}
+        <section className="mk-hero mk-hero--solutions">
+          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+          <div className="mk-hero__content mk-hero__content--solutions">
+            <div className="mk-container-lg" style={{ width: '100%' }}>
+              <div className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                   style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}>
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                  <FadeIn delay={0.1}><span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}>Textiles</span></FadeIn>
+                  <FadeIn delay={0.15}><h1 className="text-display-2xl margin-bottom margin-large" style={{ color: '#ffffff', fontFamily: 'var(--font-display)', maxWidth: '16ch' }}>Fibre origin traceability for forced labour compliance.</h1></FadeIn>
+                  <FadeIn delay={0.2}><p className="margin-bottom margin-xlarge" style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}>Cotton and natural fibres face growing forced labour due diligence requirements — US UFLPA, EU CSRD, UK Modern Slavery Act. OriginTrace traces fibre origin from the growing region through ginning and processing, giving buyers the verified sourcing data they need to clear imports.</p></FadeIn>
+                  <FadeIn delay={0.3}><Link href="/demo" className="btn-mk-primary btn-mk-lg">See how it works for textiles <ChevronRight className="h-5 w-5" /></Link></FadeIn>
                 </div>
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  <FadeIn delay={0.5} direction="up">
+                    <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                      <div className="solutions-stats-row">
+                        {heroStats.map((stat, i) => (
+                          <div key={i} className="solutions-stats-col" style={i < heroStats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>{stat.label}</p>
+                            <p style={{ fontSize: '1.75rem', color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1 }}>{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <img src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg" alt="" aria-hidden className="hero-left-decorative" width={25} height={25} />
+                      <img src="/images/6836fc56293581224cd8c720_hero-right-shape.svg" alt="" aria-hidden className="hero-right-decorative" width={25} height={25} />
+                    </div>
+                  </FadeIn>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            2. THE CHALLENGE
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-lg">
+            <FadeIn>
+              <div className="section-header">
+                <span className="pre-title margin-bottom margin-medium">The Challenge</span>
+                <h2 className="text-display-lg section-header__title">The problem isn&apos;t the fabric. It&apos;s proving where the fibre came from.</h2>
+                <p className="section-header__body">The US Uyghur Forced Labor Prevention Act creates a rebuttable presumption that goods from certain regions were made with forced labour. Proving otherwise requires verified origin traceability back to the growing region — not a supplier declaration.</p>
+              </div>
+            </FadeIn>
+
+            <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center', marginBottom: '3rem' }}>
+              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-stephanefabricebass-10319259.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-seunadeniyi-14371700.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+            </div>
+
+            <FadeIn>
+              <div className="solutions-twin-cols">
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>Cotton growing regions are concentrated in areas flagged under forced labour due diligence requirements. Without GPS-verified growing region data and verified farmer identity records, your buyers cannot clear the shipment under UFLPA — regardless of what the certificate says.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="36" height="36" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)' }}>
+                    <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>EU CSRD and the UK Modern Slavery Act add layers of supply chain transparency requirements beyond UFLPA. OriginTrace builds the verified origin record that satisfies all three from a single data collection process — so your buyers have what they need for every market.</p>
               </div>
             </FadeIn>
           </div>
         </section>
 
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-challenges">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Industry Challenges ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-challenges">
-                The Textile Transparency Gap
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-                Fashion and textile supply chains are among the most complex and opaque in global trade. Regulators and consumers demand more.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
-              {challenges.map((challenge, i) => (
-                <StaggerItem key={i}>
-                  <Card className="h-full" data-testid={`card-challenge-${i}`}>
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        <div className="h-10 w-10 shrink-0 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                          <challenge.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-1 text-slate-900 dark:text-white" data-testid={`text-challenge-title-${i}`}>{challenge.title}</h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{challenge.description}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
+        {/* ══════════════════════════════════════════════════════════
+            3. HOW IT WORKS — capability slider
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <CapabilitySlider capabilities={capabilities} />
           </div>
         </section>
 
-        <section id="supply-chain" className="py-16 md:py-24 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-supply-chain">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Supply Chain Coverage ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-supply-chain">
-                Every Tier. Every Transformation. Every Record.
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-                OriginTrace captures traceability data at every critical stage of the textile supply chain.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="space-y-0">
-              {supplyChainSteps.map((item, i) => (
-                <StaggerItem key={i}>
-                  <div
-                    className={`flex flex-col md:flex-row gap-6 md:gap-10 items-start py-8 ${i > 0 ? 'border-t border-slate-200 dark:border-slate-700' : ''} ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}
-                    data-testid={`card-supply-chain-${i}`}
-                  >
-                    <div className="shrink-0">
-                      <div className="h-16 w-16 rounded-md bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white">
-                        <item.icon className="h-8 w-8" />
-                      </div>
-                    </div>
-                    <div className={`flex-1 ${i % 2 === 1 ? 'md:text-right' : ''}`}>
-                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1 tracking-wide uppercase">{item.step}</p>
-                      <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-white">{item.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed text-base max-w-lg">{item.description}</p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-features">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Platform Capabilities ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-features">
-                Everything You Need for Textile Traceability
-              </h2>
-            </FadeIn>
-
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {features.map((feature, i) => (
-                <StaggerItem key={i}>
-                  <div className="p-5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 h-full" data-testid={`card-feature-${i}`}>
-                    <feature.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mb-3" />
-                    <h3 className="font-semibold text-sm mb-1 text-slate-900 dark:text-white" data-testid={`text-feature-title-${i}`}>{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-stats">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Impact ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white" data-testid="heading-stats">
-                Measurable Textile Traceability
-              </h2>
-            </FadeIn>
-
-            <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, i) => (
-                <StaggerItem key={i}>
-                  <div className="text-center py-8 px-4" data-testid={`stat-textiles-${i}`}>
-                    <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 dark:text-emerald-400 mb-2">{stat.value}</p>
-                    <p className="font-semibold text-slate-900 dark:text-white mb-2">{stat.label}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{stat.desc}</p>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 border-t border-slate-200 dark:border-slate-800" data-testid="section-compliance">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn className="text-center mb-12">
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3 tracking-wide uppercase">
-                [ Compliance Coverage ]
-              </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-slate-900 dark:text-white" data-testid="heading-compliance">
-                Regulatory Alignment for Textile Exports
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-                One traceability foundation covers every major regulatory framework affecting textile and apparel exports.
-              </p>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-              {complianceFrameworks.map((fw, i) => (
-                <StaggerItem key={i}>
-                  <Link href={fw.href}>
-                    <Card className="h-full hover-elevate" data-testid={`card-compliance-${i}`}>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          <h3 className="font-semibold text-slate-900 dark:text-white">{fw.regulation}</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{fw.desc}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 bg-emerald-600 dark:bg-emerald-700" data-testid="section-cta">
-          <div className="max-w-4xl mx-auto px-6 text-center">
+        {/* ══════════════════════════════════════════════════════════
+            4. WHO USES IT — role panels
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing" style={{ background: 'var(--color--gray-1)', paddingBottom: 0 }}>
+          <div className="mk-container-lg">
             <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4 text-white" data-testid="heading-cta">
-                Build Transparency Into Every Garment
-              </h2>
-              <p className="text-emerald-100 mb-8 max-w-xl mx-auto leading-relaxed">
-                From raw fiber to finished product — give your buyers and regulators the verifiable traceability data they demand.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link href="/demo">
-                  <Button size="lg" className="gap-2 bg-white text-emerald-700" data-testid="button-cta-demo">
-                    Request a Demo
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/solutions">
-                  <Button size="lg" variant="outline" className="gap-2 border-emerald-400 text-white" data-testid="button-cta-solutions">
-                    View Solutions
-                  </Button>
-                </Link>
+              <div className="section-header--left margin-bottom margin-xlarge">
+                <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>Who It&apos;s For</span>
+                <h2 className="text-display-lg" style={{ color: '#ffffff', marginTop: '0.75rem' }}>Built for textile exporters and their compliance-sensitive buyers.</h2>
+              </div>
+            </FadeIn>
+          </div>
+
+          {roles.map((role, i) => (
+            <FadeIn key={role.id} delay={0.05}>
+              <div
+                style={{
+                  background: i % 2 === 0 ? 'var(--color--gray-1)' : 'rgba(255,255,255,0.04)',
+                  borderTop: '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                <div className="mk-container-lg mk-role-grid">
+                  <div className="mk-role-image" style={{ order: role.imageLeft ? 0 : 1 }}>
+                    <Image src={role.image} alt={role.headline} fill className="object-cover" sizes="50vw" />
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+                  </div>
+                  <div className="mk-role-content" style={{ order: role.imageLeft ? 1 : 0 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>{role.label}</span>
+                      </div>
+                      <h3 style={{ fontSize: 'clamp(1.125rem, 2vw, 1.375rem)', fontWeight: 700, color: '#ffffff', lineHeight: 1.35, marginBottom: '1rem', maxWidth: '28ch' }}>{role.headline}</h3>
+                      <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>{role.body}</p>
+                      <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
+                        {role.features.map((f, j) => (
+                          <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                            <span style={{ marginTop: '0.2rem', width: '1rem', height: '1rem', borderRadius: '50%', background: 'rgba(46,125,107,0.2)', border: '1px solid var(--mk-green-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Check className="w-2.5 h-2.5" style={{ color: 'var(--mk-green-mid)' }} />
+                            </span>
+                            <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="mk-role-stats">
+                      {role.stats.map((s, j) => (
+                        <div key={j}>
+                          <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
+                          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            5. FINAL CTA
+            ══════════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+                <span className="pre-title margin-bottom margin-large">Get Started</span>
+                <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">Fibre origin traceability that satisfies US customs.</h2>
+                <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>UFLPA compliance requires verified origin data that no supplier declaration can provide. Let us show you how OriginTrace builds the evidence package your buyers need — for your fibre, your suppliers, your markets.</p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/demo" className="btn-mk-primary btn-mk-lg">Book a walkthrough <ChevronRight className="h-5 w-5" /></Link>
+                  <Link href="/solutions" className="btn-mk-ghost btn-mk-lg">See the platform <ArrowRight className="h-4 w-4" /></Link>
+                </div>
               </div>
             </FadeIn>
           </div>

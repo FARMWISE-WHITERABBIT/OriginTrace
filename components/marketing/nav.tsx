@@ -8,10 +8,9 @@ import { Menu, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const complianceLinks = [
-  { href: '/compliance',        label: 'Compliance Hub' },
   { href: '/compliance/eudr',   label: 'EU EUDR' },
-  { href: '/compliance/usa',    label: 'US FSMA 204' },
   { href: '/compliance/uk',     label: 'UK Environment Act' },
+  { href: '/compliance/usa',    label: 'US Lacey Act & NOP' },
   { href: '/compliance/china',  label: 'China GACC' },
   { href: '/compliance/uae',    label: 'UAE ESMA' },
 ];
@@ -23,10 +22,13 @@ const industryLinks = [
   { href: '/industries/minerals',    label: 'Minerals' },
 ];
 
+// Mobile nav: 0.75rem top padding (12px) + pill height (0.5rem×2 padding + 34px logo = 50px) + 10px gap
+const MOBILE_DRAWER_TOP = '72px';
+
 const navLinks = [
   { href: '/',           label: 'Home' },
   { href: '/solutions',  label: 'Solutions' },
-  { href: '/compliance', label: 'Compliance', dropdown: complianceLinks },
+  { href: '/compliance/eudr', label: 'Compliance', dropdown: complianceLinks },
   { href: '/industries', label: 'Industries', dropdown: industryLinks },
   { href: '/blog',       label: 'Insights' },
 ];
@@ -273,14 +275,14 @@ export function MarketingNav() {
                 />
               </Link>
 
-              {/* Shape connector — right edge of left pill, nests into both pills */}
+              {/* Shape connector — centred in gap between pills, 7px overlap each side */}
               <img
                 src="/images/6835561dd6d805810e0f5ed2_b66967c74a5d313b1ff8ca2989cd1a26_shape.svg"
                 alt=""
                 aria-hidden
                 style={{
                   position: 'absolute',
-                  right: '-14px',
+                  right: '-11px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   height: '36px',
@@ -330,7 +332,7 @@ export function MarketingNav() {
             transition={{ duration: 0.2 }}
             className="fixed z-50 md:hidden rounded-2xl py-3"
             style={{
-              top: '72px',
+              top: MOBILE_DRAWER_TOP,
               left: '1rem',
               right: '1rem',
               background: '#fff',

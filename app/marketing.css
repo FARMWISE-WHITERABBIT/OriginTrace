@@ -1182,10 +1182,14 @@
   }
 
   @media screen and (max-width: 991px) {
-    .mk-hero { min-height: calc(100svh + 7rem); }
+    .mk-hero {
+      min-height: calc(100svh + 7rem);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
   }
   @media screen and (max-width: 767px) {
-    .mk-hero { min-height: calc(180svh); border-radius: 0; }
+    .mk-hero { min-height: unset; height: auto; border-radius: 0; }
   }
   @media screen and (max-width: 479px) {
     .mk-hero { border-radius: 0; }
@@ -1209,6 +1213,9 @@
     opacity: 0.5;
     border-bottom-right-radius: var(--border-radius--md);
   }
+  @media screen and (max-width: 991px) {
+    .mk-hero__overlay { border-bottom-right-radius: 0; }
+  }
 
   /* Content fills section and pushes to bottom */
   .mk-hero__content {
@@ -1219,6 +1226,47 @@
     flex-direction: column;
     justify-content: flex-end;
     padding-bottom: 0;
+  }
+
+  /* ── Mobile hero layout (≤767px)
+     .mk-hero has margin-top: -7rem so hero content starts 112px ABOVE the
+     viewport top (slides behind the fixed nav). All padding-top values must
+     add that 7rem offset to appear correctly below the nav.
+     Headline at top (below nav), card directly below — hero shrinks to content.
+     ── */
+  @media screen and (max-width: 767px) {
+    /* Switch from absolute to in-flow so hero height = content height */
+    .mk-hero__content {
+      position: relative;
+      inset: unset;
+      justify-content: flex-start;
+      /* 7rem = hero margin offset + 5.5rem = nav height (~74px) + ~14px gap */
+      padding-top: calc(7rem + 5.5rem);
+      padding-bottom: 0;
+    }
+    /* Container — natural flow */
+    .mk-hero .mk-container-lg {
+      flex: unset;
+      display: block;
+    }
+    /* Grid — natural column stack, no forced height */
+    .hero-content-grid {
+      flex: unset !important;
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 2rem !important;
+      min-height: unset !important;
+      height: auto !important;
+    }
+    /* Headline group */
+    .hero-left-col {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    .hero-right-col { padding-bottom: 0; }
+    /* Card fills full mobile width — no desktop max-width constraint */
+    .hero-detail-wrap { max-width: none; margin-left: 0; margin-right: 0; }
   }
 
   /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
@@ -1236,6 +1284,10 @@
     border-top-left-radius: var(--border-radius--sm);
     border-top-right-radius: var(--border-radius--sm);
     background-color: var(--color--white);
+    /* Desktop: cap card width so it doesn't stretch across the full 45fr column */
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: 0;
     text-decoration: none;
   }
 
@@ -2427,8 +2479,8 @@
   z-index: 10;
 }
 .mk-footer__shape--mobile {
-  width: 57px;
-  height: 30px;
+  width: 72px;
+  height: 38px;
   transform: rotate(90deg);
   pointer-events: none;
 }
@@ -2597,6 +2649,8 @@
     position: absolute;
     top: 50%;
     left: 50%;
+    width: 72px;   /* larger than base 57px — more overlap into each panel */
+    height: 38px;
     transform: translate(-50%, -50%) rotate(90deg);
   }
 }
@@ -2802,4 +2856,481 @@
 }
 @media (max-width: 640px) {
   .mk-blog-cards { grid-template-columns: 1fr; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SOLUTIONS PAGE — hero, stats card, intro twin-columns
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Hero modifier — inner-page variant.
+   min-height: 66svh (4/6 of viewport). Flex column + flex:1 chain makes
+   the content stretch to fill the section, so the right column's
+   justify-end pins the card bottom exactly to the section bottom. */
+.mk-hero--solutions {
+  min-height: 66svh;
+  margin-top: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Overlay — no bottom-right radius on solutions page */
+.mk-hero__overlay--solutions {
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Content — in-flow (not absolute) and stretching to fill the hero.
+   Reuses .hero-content-grid / .hero-left-col / .hero-right-col from
+   the homepage so the card lands in exactly the same horizontal position. */
+.mk-hero__content--solutions {
+  position: relative;
+  inset: unset;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 7rem;
+  padding-bottom: 0;
+}
+.mk-hero__content--solutions .mk-container-lg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.mk-hero__content--solutions .hero-content-grid {
+  flex: 1;
+}
+
+.solutions-stats-row {
+  display: flex;
+}
+
+.solutions-stats-col {
+  flex: 1;
+  padding: 0 1rem;
+}
+.solutions-stats-col:first-child { padding-left: 0; }
+.solutions-stats-col:last-child  { padding-right: 0; }
+
+/* Field operations header strip */
+.solutions-field-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+/* Intro section — twin text columns flanking asterisk */
+.solutions-twin-cols {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 3rem;
+  align-items: center;
+  max-width: 900px;
+  margin-inline: auto;
+  margin-top: 3rem;
+}
+
+/* ── Mobile ────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* On mobile the shared .hero-content-grid / .hero-left-col CSS takes over,
+     same as the homepage. Only override what differs on solutions. */
+  /* Section shrinks to content on mobile — card bottom = section bottom */
+  .mk-hero--solutions { min-height: unset; }
+
+  /* No -7rem slide on solutions: just nav height (~74px) + gap */
+  .mk-hero__content--solutions {
+    padding-top: 6.5rem;
+  }
+
+  .solutions-twin-cols {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .solutions-field-header {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  /* Who It's For panels — stack image above text on mobile */
+  [data-testid^="card-role-"] > .mk-container-lg {
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div:first-child {
+    min-height: 240px !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div[style*="order: 1"],
+  [data-testid^="card-role-"] > .mk-container-lg > div[style*="order: 0"] {
+    order: unset !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div:last-child {
+    padding: 1.75rem 1.25rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .solutions-stats-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .solutions-stats-col {
+    padding: 0;
+    border-right: none !important;
+    border-bottom: 1px solid var(--mk-border);
+    padding-bottom: 1.25rem;
+  }
+  .solutions-stats-col:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FAQ SECTION
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-faq-section {
+  background: var(--color--gray-7);
+  border-radius: 2rem 2rem 0 0;
+  margin-top: -2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.mk-faq-header {
+  margin-bottom: 3rem;
+}
+
+.mk-faq-body {
+  display: grid;
+  grid-template-columns: 45fr 55fr;
+  gap: 3.5rem;
+  align-items: start;
+}
+
+.mk-faq-image-wrap {
+  position: relative;
+  height: 600px;
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.mk-faq-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mk-faq-item {
+  border: 1px dashed var(--mk-border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.625rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.mk-faq-item--open {
+  border-color: var(--mk-green);
+  border-style: solid;
+}
+
+.mk-faq-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--mk-text-primary);
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.mk-faq-item--open .mk-faq-trigger {
+  color: var(--mk-green-dark);
+}
+
+.mk-faq-icon {
+  flex-shrink: 0;
+  color: var(--mk-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mk-faq-item--open .mk-faq-icon {
+  color: var(--mk-green);
+}
+
+.mk-faq-answer {
+  padding: 0 1.25rem 1.25rem;
+  font-size: 0.875rem;
+  color: var(--mk-text-secondary);
+  line-height: 1.75;
+}
+
+@media (max-width: 767px) {
+  .mk-faq-body {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .mk-faq-image-wrap {
+    height: 260px;
+  }
+}
+
+/* ── Compliance framework panels ── */
+.compliance-framework-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 320px;
+}
+
+@media (max-width: 767px) {
+  .compliance-framework-grid {
+    grid-template-columns: 1fr;
+  }
+  .compliance-framework-grid > div:first-child {
+    min-height: 200px !important;
+  }
+  .eudr-who-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   30. ROLE / WHO-IT'S-FOR PANELS (industry + solutions pages)
+   Split: image left|right + content. Alternates per panel.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* The inner grid inside each panel's .mk-container-lg */
+.mk-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 480px;
+}
+
+/* Image side */
+.mk-role-image {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+/* Content side */
+.mk-role-content {
+  padding: 3rem 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Stats row at the bottom of each panel */
+.mk-role-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 1.5rem;
+  gap: 1rem;
+}
+
+/* ── Tablet (768–1023px) ── */
+@media (max-width: 1023px) {
+  .mk-role-content {
+    padding: 2rem 2rem 1.75rem;
+  }
+}
+
+/* ── Mobile (≤767px) ── */
+@media (max-width: 767px) {
+  .mk-role-grid {
+    grid-template-columns: 1fr !important;
+    min-height: unset !important;
+  }
+
+  /* Image always on top — reset any inline order */
+  .mk-role-image {
+    min-height: 260px !important;
+    order: 0 !important;
+  }
+
+  /* Content below image */
+  .mk-role-content {
+    padding: 1.75rem 1.25rem 1.5rem !important;
+    order: 1 !important;
+  }
+
+  /* Stat row: 3 → 2 columns */
+  .mk-role-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Hero left col: reduce the Tailwind py-16 (4rem) down to 2rem on mobile */
+  .hero-left-col {
+    padding-top: 2rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+@media (max-width: 479px) {
+  /* Stat row: 2 → 1 column on very small screens */
+  .mk-role-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   31. COMPLIANCE TIMELINE STRIP
+   Horizontal row of milestone items — scrollable on mobile.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+.mk-timeline-strip {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 3rem;
+  padding-top: 2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mk-timeline-strip::-webkit-scrollbar { display: none; }
+
+.mk-timeline-item {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1.25rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.mk-timeline-item:last-child { border-right: none; }
+
+.mk-timeline-item--active {
+  background: rgba(46, 125, 107, 0.15);
+  border-radius: 0.5rem;
+}
+
+.mk-timeline-year {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mk-timeline-item--active .mk-timeline-year {
+  color: var(--mk-green-mid);
+}
+
+.mk-timeline-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .mk-timeline-strip {
+    margin-top: 2rem;
+    padding-top: 0;
+    border-top: none;
+    gap: 0;
+  }
+  .mk-timeline-item {
+    min-width: 100px;
+    padding: 0.625rem 0.875rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .mk-timeline-item {
+    min-width: 88px;
+    padding: 0.5rem 0.75rem;
+  }
+  .mk-timeline-label {
+    font-size: 0.75rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   32. MISC MOBILE TIGHTENING
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* Section header: reduce bottom margin on mobile */
+@media (max-width: 767px) {
+  .section-header {
+    margin-bottom: 2rem;
+  }
+
+  /* solutions-field-header: tablet gap already in place, mobile stack */
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+
+  /* Who It's For header inside industry pages */
+  .section-header--left.margin-bottom.margin-xlarge {
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* Tablet: solutions-field-header narrower gap */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   33. DEMO PAGE RESPONSIVE GRIDS
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* 3-card feature grid — collapses to 1 column on mobile */
+.mk-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+/* 2-col form layout — stacks on mobile */
+.mk-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .mk-feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mk-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mk-feature-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }

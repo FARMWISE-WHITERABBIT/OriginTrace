@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, MapPin, Package, ShieldCheck, FileText, Banknote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MapPin, Package, ShieldCheck, FileText, Banknote, Factory, type LucideIcon } from 'lucide-react';
 
-interface Capability {
+const ICON_MAP: Record<string, LucideIcon> = {
+  MapPin,
+  Package,
+  ShieldCheck,
+  FileText,
+  Banknote,
+  Factory,
+};
+
+export interface Capability {
   number: string;
   title: string;
   description: string;
-  icon: React.ElementType;
+  iconName: string;
 }
 
 const journeySteps: Capability[] = [
@@ -16,31 +25,31 @@ const journeySteps: Capability[] = [
     number: '01',
     title: 'Register Your Sources',
     description: 'GPS-map every farm plot or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
-    icon: MapPin,
+    iconName: 'MapPin',
   },
   {
     number: '02',
     title: 'Capture & Aggregate',
     description: 'Field agents log collection in real time, even without internet. Every unit — bag, batch, or consignment — is traceable back to its exact source. Syncs automatically when connectivity returns.',
-    icon: Package,
+    iconName: 'Package',
   },
   {
     number: '03',
     title: 'Run a Compliance Check',
     description: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously before you book freight. Know your clearance status and resolve gaps before loading.',
-    icon: ShieldCheck,
+    iconName: 'ShieldCheck',
   },
   {
     number: '04',
     title: 'Generate Your Documents',
     description: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No manual assembly across multiple systems.',
-    icon: FileText,
+    iconName: 'FileText',
   },
   {
     number: '05',
     title: 'Settle Payment',
     description: 'Your buyer pays into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
-    icon: Banknote,
+    iconName: 'Banknote',
   },
 ];
 
@@ -124,12 +133,12 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
             display: 'grid',
             gridTemplateColumns: `repeat(${total}, calc((100% - ${(VISIBLE - 1)}rem) / ${VISIBLE}))`,
             gap: '1rem',
-            transform: `translateX(calc(-${active} * (100% / ${total}) * ${total / VISIBLE}))`,
+            transform: `translateX(calc(-${active} * (100% + 1rem)))`,
             transition: 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
         >
           {steps.map((step, i) => {
-            const Icon = step.icon;
+            const Icon = ICON_MAP[step.iconName] ?? MapPin;
             const isLast = i === steps.length - 1;
             return (
               <div
