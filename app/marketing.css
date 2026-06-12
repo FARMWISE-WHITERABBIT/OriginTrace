@@ -3092,3 +3092,22 @@
     height: 260px;
   }
 }
+
+/* ── Compliance framework panels ── */
+.compliance-framework-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 320px;
+}
+
+@media (max-width: 767px) {
+  .compliance-framework-grid {
+    grid-template-columns: 1fr;
+  }
+  .compliance-framework-grid > div:first-child {
+    min-height: 200px !important;
+  }
+  .eudr-who-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
