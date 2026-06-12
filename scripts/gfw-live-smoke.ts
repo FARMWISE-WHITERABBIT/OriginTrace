@@ -3,9 +3,14 @@ import {
   GFW_TREE_COVER_LOSS_VERSION,
   getGfwFieldsUrl,
   queryGfwTreeCoverLoss,
+  resolveGfwApiKey,
 } from '../lib/services/gfw-deforestation';
+import nextEnv from '@next/env';
 
-const apiKey = process.env.GFW_API_KEY;
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
+
+const apiKey = resolveGfwApiKey();
 const origin = process.env.GFW_API_ORIGIN ?? 'http://localhost:5000';
 
 function fail(message: string): never {
@@ -15,7 +20,7 @@ function fail(message: string): never {
 
 async function main() {
   if (!apiKey) {
-    fail('GFW_API_KEY is required. Create a Global Forest Watch API key, allowlist localhost, then rerun this command.');
+    fail('GFW_COMPANY_API_KEY or GFW_API_KEY is required. Create a Global Forest Watch API key, allowlist localhost, then rerun this command.');
   }
 
   const headers = {

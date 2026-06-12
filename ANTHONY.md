@@ -684,3 +684,25 @@ This phase focuses on the signed-in `/app` experience and the deforestation chec
 ## 39. Project Status: Phase 23 Complete
 
 - [X] **Phase 23: Authenticated App Performance and GFW Integration** - Reduced authenticated startup work, added a performance smoke lane, wired the stable GFW tree-cover-loss API path with safe fallback metadata, and documented the remaining live-key requirement.
+
+---
+
+## 40. Phase 24: GFW Credential Precedence and Risk Badge Cleanup
+
+### What's New
+
+- **Company GFW credential slot:** The GFW helper now prefers `GFW_COMPANY_API_KEY` when present and falls back to `GFW_API_KEY` for local or transitional deployments.
+- **Safer local fallback:** The current working GFW key stays in local environment configuration only; no key value is committed to source.
+- **Clearer farm-map risk badges:** Low-risk live GFW results now render as `Low Risk` instead of using the medium-risk badge when any small forest-loss value is present.
+
+### Verification
+
+- `npm run check` passed.
+- `npx vitest run tests/gfw-deforestation.test.ts --reporter=verbose` passed 7/7.
+- `npm run test:gfw:live` passed using the fallback `GFW_API_KEY` when no company key was configured.
+
+---
+
+## 41. Project Status: Phase 24 Complete
+
+- [X] **Phase 24: GFW Credential Precedence and Risk Badge Cleanup** - Added company-first GFW env resolution, kept the current key as a local fallback, and fixed the low-risk deforestation badge path.

@@ -4,6 +4,7 @@ import {
   getGfwQueryUrl,
   normalizeGfwTreeCoverLossResponse,
   queryGfwTreeCoverLoss,
+  resolveGfwApiKey,
   type GfwPolygon,
 } from '@/lib/services/gfw-deforestation';
 
@@ -19,6 +20,8 @@ const polygon: GfwPolygon = {
 };
 
 afterEach(() => {
+  delete process.env.GFW_COMPANY_API_KEY;
+  delete process.env.GFW_API_KEY;
   vi.restoreAllMocks();
 });
 
@@ -106,5 +109,14 @@ describe('GFW tree cover loss helper', () => {
 
     await expect(queryGfwTreeCoverLoss(polygon, { fetchImpl })).resolves.toBeNull();
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('prefers the company key and falls back to the local key when company key is blank', () => {
+    process.env.GFW_COMPANY_API_KEY = 'company-key';
+    process.env.GFW_API_KEY = 'fallback-key';
+    expect(resolveGfwApiKey()).toBe('company-key');
+
+    process.env.GFW_COMPANY_API_KEY = '   ';
+    expect(resolveGfwApiKey()).toBe('fallback-key');
   });
 });

@@ -33,6 +33,22 @@ interface GfwQueryOptions {
   timeoutMs?: number;
 }
 
+function firstNonEmpty(...values: Array<string | undefined>): string | null {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
+}
+
+export function resolveGfwApiKey(explicitApiKey?: string): string | null {
+  return firstNonEmpty(
+    explicitApiKey,
+    process.env.GFW_COMPANY_API_KEY,
+    process.env.GFW_API_KEY,
+  );
+}
+
 export function getGfwQueryUrl() {
   return `${GFW_DATA_API_BASE_URL}/dataset/${GFW_TREE_COVER_LOSS_DATASET}/${GFW_TREE_COVER_LOSS_VERSION}/query/json`;
 }
@@ -124,7 +140,7 @@ export async function queryGfwTreeCoverLoss(
   polygon: GfwPolygon,
   options: GfwQueryOptions = {},
 ): Promise<DeforestationResult | null> {
-  const apiKey = options.apiKey ?? process.env.GFW_API_KEY;
+  const apiKey = resolveGfwApiKey(options.apiKey);
   if (!apiKey) return null;
 
   const controller = new AbortController();

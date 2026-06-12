@@ -857,10 +857,15 @@ function HybridFarmMappingContent() {
                           <ShieldAlert className="h-3 w-3 mr-1" />
                           Risk Detected
                         </Badge>
-                      ) : (
+                      ) : deforestationResult.risk_level === 'medium' ? (
                         <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-medium">
                           <AlertTriangle className="h-3 w-3 mr-1" />
                           Medium Risk
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-blue-500 text-white" data-testid="badge-deforestation-low">
+                          <Info className="h-3 w-3 mr-1" />
+                          Low Risk
                         </Badge>
                       )}
                       <span className="text-xs text-muted-foreground">
