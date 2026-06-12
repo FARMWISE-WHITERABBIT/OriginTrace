@@ -178,15 +178,12 @@ export default function TimberPage() {
                   borderTop: '1px solid rgba(255,255,255,0.07)',
                 }}
               >
-                <div
-                  className="mk-container-lg"
-                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '480px' }}
-                >
-                  <div style={{ order: role.imageLeft ? 0 : 1, position: 'relative', minHeight: '420px', overflow: 'hidden' }}>
+                <div className="mk-container-lg mk-role-grid">
+                  <div className="mk-role-image" style={{ order: role.imageLeft ? 0 : 1 }}>
                     <Image src={role.image} alt={role.headline_plain} fill className="object-cover" sizes="50vw" />
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
                   </div>
-                  <div style={{ order: role.imageLeft ? 1 : 0, padding: '3rem 3rem 2.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div className="mk-role-content" style={{ order: role.imageLeft ? 1 : 0 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                         <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>{role.label}</span>
@@ -204,7 +201,7 @@ export default function TimberPage() {
                         ))}
                       </ul>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px dashed rgba(255,255,255,0.12)', paddingTop: '1.5rem', gap: '1rem' }}>
+                    <div className="mk-role-stats">
                       {role.stats.map((s, j) => (
                         <div key={j}>
                           <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>

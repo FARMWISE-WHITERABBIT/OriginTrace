@@ -384,22 +384,11 @@ export default function SolutionsPage() {
                     borderTop: '1px solid rgba(255,255,255,0.07)',
                   }}
                 >
-                  <div
-                    className="mk-container-lg"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      minHeight: '480px',
-                    }}
-                  >
+                  <div className="mk-container-lg mk-role-grid">
                     {/* Image panel */}
                     <div
-                      style={{
-                        order: imageLeft ? 0 : 1,
-                        position: 'relative',
-                        minHeight: '420px',
-                        overflow: 'hidden',
-                      }}
+                      className="mk-role-image"
+                      style={{ order: imageLeft ? 0 : 1 }}
                     >
                       <Image
                         src={imgSrc}
@@ -413,13 +402,8 @@ export default function SolutionsPage() {
 
                     {/* Text panel */}
                     <div
-                      style={{
-                        order: imageLeft ? 1 : 0,
-                        padding: '3rem 3rem 2.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                      }}
+                      className="mk-role-content"
+                      style={{ order: imageLeft ? 1 : 0 }}
                     >
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -461,7 +445,7 @@ export default function SolutionsPage() {
                       </div>
 
                       {/* Stat row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px dashed rgba(255,255,255,0.12)', paddingTop: '1.5rem', gap: '1rem' }}>
+                      <div className="mk-role-stats">
                         {stats.map((s, j) => (
                           <div key={j}>
                             <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>

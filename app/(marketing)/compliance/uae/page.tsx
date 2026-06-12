@@ -220,24 +220,15 @@ export default function UAECompliancePage() {
               </FadeIn>
 
               <FadeIn delay={0.1}>
-                <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: '1rem' }}>
+                <div className="mk-timeline-strip">
                   {timeline.map((item, i) => (
                     <div
                       key={i}
-                      style={{
-                        flexShrink: 0,
-                        minWidth: 200,
-                        padding: '1.5rem',
-                        borderLeft: item.active ? '2px solid var(--mk-green)' : '1px solid var(--mk-border)',
-                        position: 'relative',
-                      }}
+                      className={`mk-timeline-item${item.active ? ' mk-timeline-item--active' : ''}`}
+                      style={{ borderLeft: item.active ? '2px solid var(--mk-green)' : '1px solid var(--mk-border)' }}
                     >
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--mk-green)', marginBottom: '0.5rem' }}>
-                        {item.date}
-                      </p>
-                      <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--mk-text-primary)', lineHeight: 1.4 }}>
-                        {item.event}
-                      </p>
+                      <p className="mk-timeline-year">{item.date}</p>
+                      <p className="mk-timeline-label">{item.event}</p>
                     </div>
                   ))}
                 </div>
