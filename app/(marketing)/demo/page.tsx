@@ -130,14 +130,7 @@ export default function DemoPage() {
             </FadeIn>
 
             <FadeIn delay={0.15} direction="up">
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '1.5rem',
-                  marginTop: '3rem',
-                }}
-              >
+              <div className="mk-feature-grid">
                 {demoFeatures.map((f, i) => (
                   <div key={i} className="mk-card" style={{ padding: '2rem' }}>
                     <div className="mk-card__icon" style={{ marginBottom: '1.25rem' }}>
@@ -166,14 +159,7 @@ export default function DemoPage() {
           }}
         >
           <div className="mk-container-lg">
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '4rem',
-                alignItems: 'start',
-              }}
-            >
+            <div className="mk-form-grid">
               {/* LEFT: headline + bullets + indicator */}
               <FadeIn direction="right">
                 <div className="section-header--left">

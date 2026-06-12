@@ -3297,3 +3297,40 @@
     gap: 1.5rem;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   33. DEMO PAGE RESPONSIVE GRIDS
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* 3-card feature grid — collapses to 1 column on mobile */
+.mk-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+/* 2-col form layout — stacks on mobile */
+.mk-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .mk-feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mk-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mk-feature-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
