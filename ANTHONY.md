@@ -706,3 +706,24 @@ This phase focuses on the signed-in `/app` experience and the deforestation chec
 ## 41. Project Status: Phase 24 Complete
 
 - [X] **Phase 24: GFW Credential Precedence and Risk Badge Cleanup** - Added company-first GFW env resolution, kept the current key as a local fallback, and fixed the low-risk deforestation badge path.
+
+---
+
+## 42. Phase 25: Added Release Notes Agent Skill
+
+### What's New
+
+- **Release Notes Skill:** Added `.agents/skills/release-notes/SKILL.md` to the agent skill registry.
+- **DevOps Integration:** This new skill is part of the DevOps layer and translates technical commit logs (generated via `conventional-commits`) into user-facing "What's New" / "Fixes" / "Improvements" release notes.
+- **Registry Updated:** The `AGENTS.md` centralized catalogue now fully documents the `release-notes` skill, its trigger keywords (`release notes`, `changelog`, `summarize my work`), and its dependency on `conventional-commits`.
+
+### Verification
+
+- `AGENTS.md` reflects the skill profile.
+- Agent routing now correctly triggers this skill when changelogs or README updates are requested.
+
+---
+
+## 43. Project Status: Phase 25 Complete
+
+- [X] **Phase 25: Added Release Notes Agent Skill** - Successfully integrated the release-notes agent skill into the DevOps workflow.
