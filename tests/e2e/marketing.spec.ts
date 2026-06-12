@@ -51,8 +51,6 @@ test.describe('Marketing — Compliance Pages', () => {
     await gotoPublic(page, '/compliance');
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
-    await expect(page.locator('h1, h2').first()).toBeVisible();
-  });
 
   test('/compliance/eudr loads with EUDR content', async ({ page }) => {
     await gotoPublic(page, '/compliance/eudr');
