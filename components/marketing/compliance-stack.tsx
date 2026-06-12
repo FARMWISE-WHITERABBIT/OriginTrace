@@ -147,7 +147,7 @@ function DesktopStack() {
             </h2>
           </div>
           <Link href="/compliance" className="btn-mk-outline" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-            Compliance Hub <ArrowRight className="h-4 w-4" />
+            Compliance Coverage <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -252,7 +252,7 @@ function MobileStack() {
 
       <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingInline: '1.25rem' }}>
         <Link href="/compliance" className="btn-mk-outline">
-          Compliance Hub <ArrowRight className="h-4 w-4" />
+          Compliance Coverage <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </div>
