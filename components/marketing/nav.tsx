@@ -8,10 +8,9 @@ import { Menu, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const complianceLinks = [
-  { href: '/compliance',        label: 'Compliance Hub' },
   { href: '/compliance/eudr',   label: 'EU EUDR' },
-  { href: '/compliance/usa',    label: 'US FSMA 204' },
   { href: '/compliance/uk',     label: 'UK Environment Act' },
+  { href: '/compliance/usa',    label: 'US Lacey Act & NOP' },
   { href: '/compliance/china',  label: 'China GACC' },
   { href: '/compliance/uae',    label: 'UAE ESMA' },
 ];
@@ -29,7 +28,7 @@ const MOBILE_DRAWER_TOP = '72px';
 const navLinks = [
   { href: '/',           label: 'Home' },
   { href: '/solutions',  label: 'Solutions' },
-  { href: '/compliance', label: 'Compliance', dropdown: complianceLinks },
+  { href: '/compliance/eudr', label: 'Compliance', dropdown: complianceLinks },
   { href: '/industries', label: 'Industries', dropdown: industryLinks },
   { href: '/blog',       label: 'Insights' },
 ];
