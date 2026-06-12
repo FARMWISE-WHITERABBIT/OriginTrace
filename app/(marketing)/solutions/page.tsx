@@ -36,12 +36,12 @@ const roles = [
     label: 'Exporter',
     icon: Globe,
     headline: 'Know your compliance status before you book freight.',
-    body: 'You source produce, arrange logistics, and manage buyers across multiple markets. OriginTrace gives you a compliance score before loading, documentation when you ship, and payment settlement when you deliver.',
+    body: 'You source agricultural commodities or mineral goods, arrange logistics, and manage buyers across multiple markets. OriginTrace gives you a compliance score before loading, documentation when you ship, and payment settlement when you deliver.',
     features: [
       'Pre-shipment compliance score across 5 markets simultaneously',
       'One-click export documentation — no manual assembly',
       'Milestone escrow: payment releases when shipment clears',
-      'Farmer disbursement direct from the platform',
+      'Contributor disbursement direct from the platform',
     ],
   },
   {
@@ -49,11 +49,11 @@ const roles = [
     label: 'Cooperative / Aggregator',
     icon: Users,
     headline: 'Hundreds of contributors. One verified traceability record.',
-    body: 'You work with smallholder farmers or community collectors across multiple sites. OriginTrace helps you register every plot or site, log every collection, and generate a single verified batch record — even without internet.',
+    body: 'You work with smallholder farmers, artisanal mining cooperatives, or community collectors across multiple sites. OriginTrace helps you register every plot or extraction site, log every collection, and generate a single verified batch record — even without internet.',
     features: [
       'GPS registration for every contributing farm plot or extraction site',
       'Offline-first batch collection — syncs when connectivity returns',
-      'Bag-level traceability from source to export warehouse',
+      'Unit-level traceability from source to export warehouse',
       'Anti-fraud yield validation to protect your data integrity',
     ],
   },
@@ -77,9 +77,9 @@ const roles = [
     headline: 'All your export documents from one source of truth.',
     body: 'You manage dispatch, freight booking, and waybill documentation. OriginTrace generates every export document from the same traceability record — no duplicate data entry across five different systems.',
     features: [
-      'Waybill and pedigree certificate generation',
+      'Waybill, pedigree certificate, and mineralogy certificate generation',
       'Shipment pipeline with 9-stage tracking',
-      'Container and port manifest linkage',
+      'Container, bonded warehouse, and port manifest linkage',
       'Shared document access for buyers and inspectors',
     ],
   },
@@ -128,13 +128,13 @@ const roleImages = [
 const roleStats: Record<string, { label: string; value: string }[]> = {
   exporters: [
     { label: 'Markets checked simultaneously', value: '5' },
-    { label: 'Avg. doc assembly time saved', value: '8 hrs' },
+    { label: 'Documents from one verified record', value: '6+' },
     { label: 'Escrow settlement rate', value: '100%' },
   ],
   cooperatives: [
-    { label: 'Plots registered per org (avg)', value: '400+' },
+    { label: 'Sources registered per org (avg)', value: '400+' },
     { label: 'Offline sync success rate', value: '99.9%' },
-    { label: 'Bag-level traceability', value: '100%' },
+    { label: 'Unit-level traceability', value: '100%' },
   ],
   compliance: [
     { label: 'Compliance frameworks covered', value: '5' },
@@ -183,7 +183,7 @@ export default function SolutionsPage() {
                         maxWidth: '12ch',
                       }}
                     >
-                      The Platform
+                      From field and mine to foreign market.
                     </h1>
                   </FadeIn>
                   <FadeIn delay={0.2}>
@@ -196,9 +196,10 @@ export default function SolutionsPage() {
                         color: 'rgba(255,255,255,0.62)',
                       }}
                     >
-                      We are the trust infrastructure for origin-sensitive exports —
-                      connecting verified sources, compliance scoring, export documentation,
-                      and payment settlement in one system built for African supply chains.
+                      OriginTrace is the traceability and compliance infrastructure for
+                      African agricultural and mineral exports — verified origin, multi-market
+                      compliance scoring, export documentation, and payment settlement
+                      in one system.
                     </p>
                   </FadeIn>
                   <FadeIn delay={0.3}>
@@ -276,16 +277,15 @@ export default function SolutionsPage() {
                   className="text-display-lg section-header__title"
                   style={{ maxWidth: '22ch' }}
                 >
-                  Smart{' '}
-                  <span className="text-mk-muted">origin verification</span>
-                  {' '}for modern{' '}
-                  <span className="text-mk-muted">export chains</span>
+                  Proof should travel{' '}
+                  <span className="text-mk-muted">with the product.</span>
                 </h2>
                 <p className="section-header__body" style={{ marginTop: '1.5rem' }}>
-                  At OriginTrace, we believe proof should travel with the product. Born from the
-                  compliance wave reshaping global trade — EUDR, FSMA 204, GACC — we set out
-                  to replace declarations with verified data, from the first GPS point to the
-                  final payment.
+                  EUDR, FSMA 204, GACC, and the UK Environment Act are reshaping what it means
+                  to export from Africa. Declarations are no longer enough. OriginTrace replaces
+                  them with verified data — GPS-mapped sources, real-time collection records,
+                  and compliance evidence that travels with every shipment, from the first
+                  collection to the final payment.
                 </p>
               </div>
             </FadeIn>
@@ -326,7 +326,7 @@ export default function SolutionsPage() {
                 <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.8, textAlign: 'center' }}>
                   Across West and East Africa, we've built a network of verified sources — every
                   farm plot, forest concession, and extraction site GPS-mapped and
-                  identity-checked, before a single bag leaves the ground.
+                  identity-checked before a single unit leaves the source.
                 </p>
 
                 {/* Asterisk divider */}
@@ -509,10 +509,11 @@ export default function SolutionsPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75, maxWidth: '44ch' }}>
-                    Field agents at rural collection points can log batches, register farmers,
-                    and record GPS coordinates without a live connection. Data syncs automatically
-                    when connectivity is restored — no gaps in your traceability record because
-                    of network coverage.
+                    Field agents at rural collection points — whether at a farm gate or a
+                    mineral aggregation site — can log batches, register contributors, and
+                    record GPS coordinates without a live connection. Data syncs automatically
+                    when connectivity is restored. No gaps in your traceability record because
+                    of where the source is.
                   </p>
                 </div>
               </div>
@@ -583,8 +584,8 @@ export default function SolutionsPage() {
                     Request a Demo
                     <ChevronRight className="h-5 w-5" />
                   </Link>
-                  <Link href="/compliance" className="btn-mk-ghost btn-mk-lg">
-                    View compliance coverage
+                  <Link href="/demo" className="btn-mk-ghost btn-mk-lg">
+                    Book a 30-min walkthrough
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
