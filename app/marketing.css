@@ -3111,3 +3111,189 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   30. ROLE / WHO-IT'S-FOR PANELS (industry + solutions pages)
+   Split: image left|right + content. Alternates per panel.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* The inner grid inside each panel's .mk-container-lg */
+.mk-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 480px;
+}
+
+/* Image side */
+.mk-role-image {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+/* Content side */
+.mk-role-content {
+  padding: 3rem 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Stats row at the bottom of each panel */
+.mk-role-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 1.5rem;
+  gap: 1rem;
+}
+
+/* ── Tablet (768–1023px) ── */
+@media (max-width: 1023px) {
+  .mk-role-content {
+    padding: 2rem 2rem 1.75rem;
+  }
+}
+
+/* ── Mobile (≤767px) ── */
+@media (max-width: 767px) {
+  .mk-role-grid {
+    grid-template-columns: 1fr !important;
+    min-height: unset !important;
+  }
+
+  /* Image always on top — reset any inline order */
+  .mk-role-image {
+    min-height: 260px !important;
+    order: 0 !important;
+  }
+
+  /* Content below image */
+  .mk-role-content {
+    padding: 1.75rem 1.25rem 1.5rem !important;
+    order: 1 !important;
+  }
+
+  /* Stat row: 3 → 2 columns */
+  .mk-role-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Hero left col: reduce the Tailwind py-16 (4rem) down to 2rem on mobile */
+  .hero-left-col {
+    padding-top: 2rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+@media (max-width: 479px) {
+  /* Stat row: 2 → 1 column on very small screens */
+  .mk-role-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   31. COMPLIANCE TIMELINE STRIP
+   Horizontal row of milestone items — scrollable on mobile.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+.mk-timeline-strip {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 3rem;
+  padding-top: 2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mk-timeline-strip::-webkit-scrollbar { display: none; }
+
+.mk-timeline-item {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1.25rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.mk-timeline-item:last-child { border-right: none; }
+
+.mk-timeline-item--active {
+  background: rgba(46, 125, 107, 0.15);
+  border-radius: 0.5rem;
+}
+
+.mk-timeline-year {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mk-timeline-item--active .mk-timeline-year {
+  color: var(--mk-green-mid);
+}
+
+.mk-timeline-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .mk-timeline-strip {
+    margin-top: 2rem;
+    padding-top: 0;
+    border-top: none;
+    gap: 0;
+  }
+  .mk-timeline-item {
+    min-width: 100px;
+    padding: 0.625rem 0.875rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .mk-timeline-item {
+    min-width: 88px;
+    padding: 0.5rem 0.75rem;
+  }
+  .mk-timeline-label {
+    font-size: 0.75rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   32. MISC MOBILE TIGHTENING
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* Section header: reduce bottom margin on mobile */
+@media (max-width: 767px) {
+  .section-header {
+    margin-bottom: 2rem;
+  }
+
+  /* solutions-field-header: tablet gap already in place, mobile stack */
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+
+  /* Who It's For header inside industry pages */
+  .section-header--left.margin-bottom.margin-xlarge {
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* Tablet: solutions-field-header narrower gap */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+}
