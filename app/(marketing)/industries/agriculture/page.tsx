@@ -32,7 +32,7 @@ const roles = [
   {
     id: 'exporter',
     label: 'Exporter',
-    image: '/images/pexels-josiah-matthew-145486517-10697911.jpg',
+    image: '/images/pexels-pedrofurtadoo-28903100.jpg',
     imageLeft: true,
     headline: 'Know your compliance status before you book freight.',
     body: 'You coordinate the collection, aggregation, and export of agricultural commodities from multiple cooperatives or buying agents. OriginTrace gives you a compliance score before loading, a full documentation pack when you ship, and escrow settlement when you deliver.',
@@ -51,7 +51,7 @@ const roles = [
   {
     id: 'cooperative',
     label: 'Cooperative / Aggregator',
-    image: '/images/pexels-zeal-creative-studios-58866141-31283913.jpg',
+    image: '/images/pexels-jose-carlos-alexandre-2433751-17797257.jpg',
     imageLeft: false,
     headline: 'Hundreds of contributors. One verified traceability record.',
     body: 'You register smallholder farmers, run collection routes, and manage the flow of produce from hundreds of plots into a consolidated batch. OriginTrace handles farmer registration, GPS plot mapping, and unit-level collection tracking — even where there is no internet.',
@@ -145,9 +145,9 @@ export default function AgriculturePage() {
             </FadeIn>
 
             <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center', marginBottom: '3rem' }}>
-              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-josiah-matthew-145486517-10697911.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-mikhail-nilov-8332326.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
             </div>
 
             <FadeIn>

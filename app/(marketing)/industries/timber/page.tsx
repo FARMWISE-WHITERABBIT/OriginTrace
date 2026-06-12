@@ -31,7 +31,7 @@ const roles = [
   {
     id: 'timber-exporter',
     label: 'Timber Exporter',
-    image: '/images/pexels-pixabay-50707.jpg',
+    image: '/images/pexels-seunadeniyi-14371700.jpg',
     imageLeft: true,
     headline: 'Give your EU buyers the due diligence documentation they&apos;re legally required to hold.',
     headline_plain: "Give your EU buyers the due diligence documentation they're legally required to hold.",
@@ -127,9 +127,9 @@ export default function TimberPage() {
             </FadeIn>
 
             <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center', marginBottom: '3rem' }}>
-              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-andromeda99-36192545.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-traveliving-4663476.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-seunadeniyi-14371700.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-mikhail-nilov-8332326.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-josiah-matthew-145486517-10697911.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
             </div>
 
             <FadeIn>

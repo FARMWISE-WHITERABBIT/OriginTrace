@@ -126,9 +126,9 @@ export default function MineralsPage() {
             </FadeIn>
 
             <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem', alignItems: 'center', marginBottom: '3rem' }}>
-              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-traveliving-4663476.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-masudar-37218946.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
-              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.1} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2101135.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.22} direction="up"><div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-safi-erneste-165511538-35082155.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
+              <FadeIn delay={0.34} direction="up"><div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-castorlystock-5139206.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} /></FadeIn>
             </div>
 
             <FadeIn>
