@@ -1,3 +1,4 @@
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MarketingNav } from '@/components/marketing/nav';
@@ -7,10 +8,7 @@ import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import {
   Globe,
-  MapPin,
   FileText,
-  ShieldCheck,
-  Factory,
   Shield,
   ClipboardCheck,
   Smartphone,
@@ -19,7 +17,6 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  Banknote,
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────── */
@@ -30,11 +27,17 @@ const stats = [
   { label: 'Traceability — from plot to payment', value: '100%' },
 ];
 
+const roleIconMap: Record<string, React.ElementType> = {
+  exporters: Globe,
+  cooperatives: Users,
+  compliance: ClipboardCheck,
+  logistics: FileText,
+};
+
 const roles = [
   {
     id: 'exporters',
     label: 'Exporter',
-    icon: Globe,
     headline: 'Know your compliance status before you book freight.',
     body: 'You source agricultural commodities or mineral goods, arrange logistics, and manage buyers across multiple markets. OriginTrace gives you a compliance score before loading, documentation when you ship, and payment settlement when you deliver.',
     features: [
@@ -47,7 +50,6 @@ const roles = [
   {
     id: 'cooperatives',
     label: 'Cooperative / Aggregator',
-    icon: Users,
     headline: 'Hundreds of contributors. One verified traceability record.',
     body: 'You work with smallholder farmers, artisanal mining cooperatives, or community collectors across multiple sites. OriginTrace helps you register every plot or extraction site, log every collection, and generate a single verified batch record — even without internet.',
     features: [
@@ -60,7 +62,6 @@ const roles = [
   {
     id: 'compliance',
     label: 'Compliance Officer',
-    icon: ClipboardCheck,
     headline: 'Stop assembling compliance packs the night before loading.',
     body: 'You are responsible for ensuring every shipment meets destination market requirements. OriginTrace runs your shipment against all five major frameworks simultaneously and flags gaps before loading.',
     features: [
@@ -73,7 +74,6 @@ const roles = [
   {
     id: 'logistics',
     label: 'Logistics Coordinator',
-    icon: FileText,
     headline: 'All your export documents from one source of truth.',
     body: 'You manage dispatch, freight booking, and waybill documentation. OriginTrace generates every export document from the same traceability record — no duplicate data entry across five different systems.',
     features: [
@@ -90,31 +90,31 @@ const workflowSteps = [
     number: '01',
     title: 'Register Your Sources',
     description: 'GPS-map every farm plot, forest concession, or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
-    icon: MapPin,
+    iconName: 'MapPin',
   },
   {
     number: '02',
     title: 'Capture & Aggregate',
     description: 'Field agents log collection in real time — even without internet. Every unit is traceable to the exact source it came from. Data syncs automatically when connectivity returns.',
-    icon: Factory,
+    iconName: 'Factory',
   },
   {
     number: '03',
     title: 'Run a Compliance Check',
     description: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and resolve gaps before you book freight — not at the border.',
-    icon: ShieldCheck,
+    iconName: 'ShieldCheck',
   },
   {
     number: '04',
     title: 'Generate Your Documents',
     description: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No more assembling files from multiple sources the night before loading.',
-    icon: FileText,
+    iconName: 'FileText',
   },
   {
     number: '05',
     title: 'Settle Payment',
     description: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
-    icon: Banknote,
+    iconName: 'Banknote',
   },
 ];
 
@@ -374,6 +374,7 @@ export default function SolutionsPage() {
             const imgSrc = roleImages[i];
             const stats = roleStats[role.id];
             const imageLeft = i % 2 === 0;
+            const RoleIcon = roleIconMap[role.id];
             return (
               <FadeIn key={role.id} delay={0.05}>
                 <div
@@ -428,7 +429,7 @@ export default function SolutionsPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             color: 'var(--mk-green-mid)', flexShrink: 0,
                           }}>
-                            <role.icon className="w-4 h-4" />
+                            <RoleIcon className="w-4 h-4" />
                           </div>
                           <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>
                             {role.label}
