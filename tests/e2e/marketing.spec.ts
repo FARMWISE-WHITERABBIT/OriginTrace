@@ -51,13 +51,15 @@ test.describe('Marketing — Compliance Pages', () => {
     await gotoPublic(page, '/compliance');
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
+    await expect(page.locator('h1, h2').first()).toBeVisible();
+  });
 
   test('/compliance/eudr loads with EUDR content', async ({ page }) => {
     await gotoPublic(page, '/compliance/eudr');
     const heading = page.locator('h1, h2').first();
     await expect(heading).toBeVisible();
     const text = await heading.textContent();
-    expect(text?.toLowerCase()).toContain('deforestation');
+    expect(text?.toLowerCase()).toContain('eudr compliance');
   });
 
   test('/compliance/uk loads', async ({ page }) => {
