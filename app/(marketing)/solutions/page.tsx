@@ -4,6 +4,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import {
   Globe,
   MapPin,
@@ -88,34 +89,64 @@ const workflowSteps = [
   {
     number: '01',
     title: 'Register Your Sources',
-    body: 'GPS-map every farm plot, forest concession, or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
+    description: 'GPS-map every farm plot, forest concession, or extraction site and register every contributor with verified identity. Your supply chain starts with verified origin — not declarations.',
     icon: MapPin,
   },
   {
     number: '02',
     title: 'Capture & Aggregate',
-    body: 'Field agents log collection in real time — even without internet. Every unit is traceable to the exact source it came from. Data syncs automatically when connectivity returns.',
+    description: 'Field agents log collection in real time — even without internet. Every unit is traceable to the exact source it came from. Data syncs automatically when connectivity returns.',
     icon: Factory,
   },
   {
     number: '03',
     title: 'Run a Compliance Check',
-    body: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and resolve gaps before you book freight — not at the border.',
+    description: 'Score your shipment against EU, UK, US, China, and UAE requirements simultaneously. Know your clearance status and resolve gaps before you book freight — not at the border.',
     icon: ShieldCheck,
   },
   {
     number: '04',
     title: 'Generate Your Documents',
-    body: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No more assembling files from multiple sources the night before loading.',
+    description: 'Produce your pedigree certificate, waybill, and full compliance pack from a single verified record. No more assembling files from multiple sources the night before loading.',
     icon: FileText,
   },
   {
     number: '05',
     title: 'Settle Payment',
-    body: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
+    description: 'Your buyers pay into escrow. Funds release when the shipment is confirmed and compliance is verified. No chasing. No trust-based risk.',
     icon: Banknote,
   },
 ];
+
+const roleImages = [
+  '/images/pexels-josiah-matthew-145486517-10697911.jpg',
+  '/images/pexels-zeal-creative-studios-58866141-31283913.jpg',
+  '/images/pexels-mikhail-nilov-8332326.jpg',
+  '/images/pexels-jan-van-der-wolf-11680885-15780139.jpg',
+];
+
+const roleStats: Record<string, { label: string; value: string }[]> = {
+  exporters: [
+    { label: 'Markets checked simultaneously', value: '5' },
+    { label: 'Avg. doc assembly time saved', value: '8 hrs' },
+    { label: 'Escrow settlement rate', value: '100%' },
+  ],
+  cooperatives: [
+    { label: 'Plots registered per org (avg)', value: '400+' },
+    { label: 'Offline sync success rate', value: '99.9%' },
+    { label: 'Bag-level traceability', value: '100%' },
+  ],
+  compliance: [
+    { label: 'Compliance frameworks covered', value: '5' },
+    { label: 'Gap detection before loading', value: 'Real-time' },
+    { label: 'Audit dossiers on demand', value: 'Yes' },
+  ],
+  logistics: [
+    { label: 'Shipment pipeline stages', value: '9' },
+    { label: 'Document types generated', value: '6+' },
+    { label: 'Manual data re-entry required', value: '0' },
+  ],
+};
 
 /* ─── PAGE ─────────────────────────────────────────────────────────── */
 
@@ -319,197 +350,208 @@ export default function SolutionsPage() {
 
 
         {/* ══════════════════════════════════════════════════════════
-            3. WHO IT'S FOR — role cards
+            3. WHO IT'S FOR — alternating dark case study panels
             ══════════════════════════════════════════════════════════ */}
-        <section className="section-spacing section-gray">
+        <section className="section-spacing" style={{ background: 'var(--color--gray-1)', paddingBottom: 0 }}>
           <div className="mk-container-lg">
             <FadeIn>
-              <div className="section-header">
-                <span className="pre-title margin-bottom margin-medium">Who It&apos;s For</span>
-                <h2 className="text-display-lg section-header__title">
-                  Built for every role{' '}
-                  <span className="text-mk-muted">in the export chain</span>
-                </h2>
-                <p className="section-header__body">
-                  Whether you source it, aggregate it, clear it, or ship it — there is a
-                  workflow built for your seat at the table.
-                </p>
-              </div>
-            </FadeIn>
-
-            <div className="mk-grid-2" style={{ gap: '1.5rem' }}>
-              {roles.map((role, i) => (
-                <FadeIn key={role.id} delay={i * 0.07}>
-                  <div
-                    className="mk-card h-full flex flex-col"
-                    data-testid={`card-role-${role.id}`}
-                    style={{ padding: '2rem' }}
-                  >
-                    <div className="flex items-center gap-3 margin-bottom margin-large">
-                      <div className="mk-card__icon" style={{ marginBottom: 0, flexShrink: 0 }}>
-                        <role.icon className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--mk-green)' }}>
-                        {role.label}
-                      </span>
-                    </div>
-                    <h3 className="font-bold margin-bottom margin-small" style={{ fontSize: '1.125rem', color: 'var(--mk-text-primary)', lineHeight: 1.35 }}>
-                      {role.headline}
-                    </h3>
-                    <p className="margin-bottom margin-large" style={{ color: 'var(--mk-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.7, flex: 1 }}>
-                      {role.body}
-                    </p>
-                    <ul className="flex flex-col gap-2.5">
-                      {role.features.map((f, j) => (
-                        <li key={j} className="mk-list-item">
-                          <span className="mk-list-item__icon">
-                            <Check className="w-3 h-3" />
-                          </span>
-                          <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-secondary)' }}>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        </section>
-
-
-        {/* ══════════════════════════════════════════════════════════
-            4. HOW IT WORKS — 5-step workflow
-            ══════════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className="section-spacing section-white">
-          <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header section-header--left margin-bottom margin-xlarge">
+              <div className="section-header--left margin-bottom margin-xlarge">
                 <span
                   className="pre-title margin-bottom margin-medium"
-                  style={{ background: 'transparent', border: '1px solid var(--mk-green)', color: 'var(--mk-green)' }}
+                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}
                 >
-                  The Workflow
+                  Who It&apos;s For
                 </span>
-                <h2 className="text-display-lg section-header__title">
-                  From source to payment —{' '}
-                  <span className="text-mk-muted">every step connected</span>
+                <h2 className="text-display-lg" style={{ color: '#ffffff', marginTop: '0.75rem' }}>
+                  Built for every role{' '}
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>in the export chain</span>
                 </h2>
-                <p className="section-header__body" style={{ textAlign: 'left', marginInline: 0 }}>
-                  OriginTrace is the only platform that follows your produce all the way from
-                  the source to the moment you get paid. No missing links. No compliance gaps.
-                </p>
               </div>
             </FadeIn>
+          </div>
 
-            <div className="relative">
-              {/* Vertical connector line — desktop only */}
-              <div
-                className="hidden lg:block absolute"
-                style={{ left: '27px', top: '28px', bottom: '28px', width: '1px', background: 'var(--mk-border)' }}
-              />
-              <div className="flex flex-col gap-6">
-                {workflowSteps.map((step, i) => (
-                  <FadeIn key={i} delay={i * 0.08}>
-                    <div className="flex gap-6 lg:gap-8 items-start">
-                      {/* Step number circle */}
-                      <div
-                        className="flex-shrink-0 flex items-center justify-center rounded-full font-bold text-sm z-10"
-                        style={{
-                          width: '56px',
-                          height: '56px',
-                          background: i === 4 ? 'var(--mk-green)' : 'var(--mk-surface-white)',
-                          border: `2px solid ${i === 4 ? 'var(--mk-green)' : 'var(--mk-border)'}`,
-                          color: i === 4 ? '#fff' : 'var(--mk-text-primary)',
-                          fontFamily: 'var(--font-display)',
-                        }}
-                      >
-                        {step.number}
-                      </div>
-                      <div
-                        className="mk-card flex-1"
-                        style={{ padding: '1.5rem', borderLeft: i === 4 ? '3px solid var(--mk-green)' : undefined }}
-                      >
-                        <div className="flex items-center gap-3 margin-bottom margin-small">
-                          <step.icon className="w-4 h-4" style={{ color: 'var(--mk-green)', flexShrink: 0 }} />
-                          <h3 className="font-bold" style={{ fontSize: '1rem', color: 'var(--mk-text-primary)' }}>
-                            {step.title}
-                            {i === 4 && (
-                              <span
-                                className="ml-2 text-xs font-semibold"
-                                style={{ background: 'var(--mk-green-light)', color: 'var(--mk-green)', padding: '0.15rem 0.5rem', borderRadius: '9999px' }}
-                              >
-                                Only on OriginTrace
-                              </span>
-                            )}
-                          </h3>
+          {roles.map((role, i) => {
+            const imgSrc = roleImages[i];
+            const stats = roleStats[role.id];
+            const imageLeft = i % 2 === 0;
+            return (
+              <FadeIn key={role.id} delay={0.05}>
+                <div
+                  data-testid={`card-role-${role.id}`}
+                  style={{
+                    background: i % 2 === 0 ? 'var(--color--gray-1)' : 'rgba(255,255,255,0.04)',
+                    borderTop: '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  <div
+                    className="mk-container-lg"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      minHeight: '480px',
+                    }}
+                  >
+                    {/* Image panel */}
+                    <div
+                      style={{
+                        order: imageLeft ? 0 : 1,
+                        position: 'relative',
+                        minHeight: '420px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Image
+                        src={imgSrc}
+                        alt={role.headline}
+                        fill
+                        className="object-cover"
+                        sizes="50vw"
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+                    </div>
+
+                    {/* Text panel */}
+                    <div
+                      style={{
+                        order: imageLeft ? 1 : 0,
+                        padding: '3rem 3rem 2.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                          <div style={{
+                            width: '2.25rem', height: '2.25rem', borderRadius: '0.5rem',
+                            background: 'rgba(46,125,107,0.2)', border: '1px solid rgba(46,125,107,0.4)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--mk-green-mid)', flexShrink: 0,
+                          }}>
+                            <role.icon className="w-4 h-4" />
+                          </div>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>
+                            {role.label}
+                          </span>
                         </div>
-                        <p style={{ color: 'var(--mk-text-secondary)', fontSize: '0.9375rem', lineHeight: 1.7 }}>
-                          {step.body}
+
+                        <h3 style={{ fontSize: 'clamp(1.125rem, 2vw, 1.375rem)', fontWeight: 700, color: '#ffffff', lineHeight: 1.35, marginBottom: '1rem', maxWidth: '28ch' }}>
+                          {role.headline}
+                        </h3>
+
+                        <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>
+                          {role.body}
                         </p>
+
+                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
+                          {role.features.map((f, j) => (
+                            <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                              <span style={{
+                                marginTop: '0.2rem', width: '1rem', height: '1rem', borderRadius: '50%',
+                                background: 'rgba(46,125,107,0.2)', border: '1px solid var(--mk-green-mid)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                              }}>
+                                <Check className="w-2.5 h-2.5" style={{ color: 'var(--mk-green-mid)' }} />
+                              </span>
+                              <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Stat row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px dashed rgba(255,255,255,0.12)', paddingTop: '1.5rem', gap: '1rem' }}>
+                        {stats.map((s, j) => (
+                          <div key={j}>
+                            <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
+                  </div>
+                </div>
+              </FadeIn>
+            );
+          })}
+        </section>
+
+
+        {/* ══════════════════════════════════════════════════════════
+            4. HOW IT WORKS — capability slider (reused from homepage)
+            ══════════════════════════════════════════════════════════ */}
+        <section id="how-it-works" className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <CapabilitySlider capabilities={workflowSteps} />
           </div>
         </section>
 
 
         {/* ══════════════════════════════════════════════════════════
-            5. FIELD OPERATIONS — offline split section
+            5. FIELD OPERATIONS — header strip + full-width image
             ══════════════════════════════════════════════════════════ */}
         <section className="section-spacing section-gray">
           <div className="mk-container-lg">
-            <div className="mk-technology-grid">
-              <FadeIn direction="right">
-                <div className="mk-technology-title-wrap">
-                  <span className="pre-title margin-bottom margin-large" style={{ display: 'inline-flex' }}>
+            {/* Two-column header strip */}
+            <FadeIn>
+              <div
+                className="solutions-field-header"
+                style={{ marginBottom: '2.5rem' }}
+              >
+                <div>
+                  <span className="pre-title margin-bottom margin-medium" style={{ display: 'inline-flex' }}>
                     Field Operations
                   </span>
-                  <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)' }}>
+                  <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)', marginTop: '0.75rem' }}>
                     Built for places where{' '}
                     <span className="text-mk-muted">the internet isn&apos;t reliable.</span>
                   </h2>
-                  <p style={{ color: 'var(--mk-text-secondary)', lineHeight: 1.7, marginTop: '1.25rem', marginBottom: '2rem' }}>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75, maxWidth: '44ch' }}>
                     Field agents at rural collection points can log batches, register farmers,
                     and record GPS coordinates without a live connection. Data syncs automatically
                     when connectivity is restored — no gaps in your traceability record because
                     of network coverage.
                   </p>
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { icon: Smartphone, text: 'Works on any smartphone — no app store download required' },
-                      { icon: Wifi, text: 'Full offline data capture via PWA with automatic background sync' },
-                      { icon: Shield, text: 'Anti-fraud protections: GPS verification and yield validation' },
-                    ].map((item, i) => (
-                      <div key={i} className="mk-list-item">
-                        <span className="mk-list-item__icon">
-                          <item.icon className="w-3.5 h-3.5" />
-                        </span>
-                        <span style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)' }}>{item.text}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              </FadeIn>
+              </div>
+            </FadeIn>
 
-              <FadeIn direction="left" delay={0.1}>
-                <div className="mk-technology-info-wrap">
-                  <div
-                    className="mk-technology-image-wrap"
-                    style={{
-                      borderRadius: '1.25rem',
-                      overflow: 'hidden',
-                      aspectRatio: '4/3',
-                      backgroundImage: "url('/images/farmer in field.jpg')",
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  />
-                </div>
-              </FadeIn>
-            </div>
+            {/* Full-width image */}
+            <FadeIn delay={0.15} direction="up">
+              <div style={{ borderRadius: '1.25rem', overflow: 'hidden', height: '480px', position: 'relative' }}>
+                <Image
+                  src="/images/farmer in field.jpg"
+                  alt="Field agent registering a farm plot using the OriginTrace mobile app"
+                  fill
+                  className="object-cover"
+                  sizes="100vw"
+                />
+              </div>
+            </FadeIn>
+
+            {/* Feature pills row below image */}
+            <FadeIn delay={0.25}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1.75rem' }}>
+                {[
+                  { icon: Smartphone, text: 'Works on any smartphone' },
+                  { icon: Wifi, text: 'Full offline capture, auto-sync' },
+                  { icon: Shield, text: 'GPS verification & anti-fraud' },
+                ].map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.5rem 1rem', borderRadius: '9999px',
+                    border: '1px solid var(--mk-border)',
+                    background: 'var(--mk-surface-white)',
+                    fontSize: '0.875rem', color: 'var(--mk-text-secondary)',
+                  }}>
+                    <item.icon className="w-3.5 h-3.5" style={{ color: 'var(--mk-green)', flexShrink: 0 }} />
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
           </div>
         </section>
 
