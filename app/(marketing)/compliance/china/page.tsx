@@ -9,7 +9,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Factory, Package } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'China GACC Compliance | OriginTrace',
+  title: 'China GACC Compliance',
   description:
     'China GACC registration requires farm-level origin traceability before your vessel departs. OriginTrace builds the record GACC requires for overseas food and agricultural exporters.',
 };

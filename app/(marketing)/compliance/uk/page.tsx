@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Package, Banknote } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'UK Due Diligence (UKDDS) Compliance | OriginTrace',
+  title: 'UK Due Diligence (UKDDS) Compliance',
   description:
     'The UK Environment Act 2021 requires due diligence on forest-risk commodities. OriginTrace gives you farm-level evidence from first collection to export declaration.',
 };

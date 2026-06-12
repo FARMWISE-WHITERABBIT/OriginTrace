@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Package, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Lacey Act & USDA NOP Compliance | OriginTrace',
+  title: 'Lacey Act & USDA NOP Compliance',
   description:
     'The Lacey Act prohibits trade in illegally harvested agricultural commodities. USDA NOP certification requires documented chain-of-custody. OriginTrace provides the farm-level evidence both frameworks require.',
 };

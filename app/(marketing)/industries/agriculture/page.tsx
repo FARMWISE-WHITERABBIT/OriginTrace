@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Agriculture | OriginTrace',
+  title: 'Agriculture Traceability & Compliance',
   description: 'GPS-verified farm origin, offline field collection, and multi-market compliance scoring for agricultural commodity exporters.',
 };
 

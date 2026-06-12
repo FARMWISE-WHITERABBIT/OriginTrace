@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Timber & Wood | OriginTrace',
+  title: 'Timber & Wood Traceability',
   description: 'Deforestation-free proof for every timber shipment. EUDR and UK Timber Regulation compliance from concession to export.',
 };
 

@@ -9,7 +9,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Package, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'UAE Import Compliance | OriginTrace',
+  title: 'UAE Import Compliance',
   description:
     'UAE ESMA standards and origin-of-goods requirements apply to all agricultural imports. OriginTrace builds the verified origin record UAE authorities require before Jebel Ali arrival.',
 };

@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Textiles | OriginTrace',
+  title: 'Textiles Traceability & Compliance',
   description: 'Fibre origin traceability for forced labour compliance. UFLPA, EU CSRD, and UK Modern Slavery Act documentation for cotton and natural fibre exporters.',
 };
 

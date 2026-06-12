@@ -10,7 +10,7 @@ import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, ArrowRight, Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Minerals | OriginTrace',
+  title: 'Minerals Traceability & Compliance',
   description: 'Chain-of-custody documentation for mineral exporters. OECD Due Diligence, LBMA, RMI, and EU CSRD alignment from mine to smelter.',
 };
 
