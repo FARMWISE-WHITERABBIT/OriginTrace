@@ -1,467 +1,284 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/marketing/motion';
-import { FAQSchema } from '@/components/marketing/faq-schema';
-import { ChinaRegulatoryTabs, ChinaFAQList } from '@/components/marketing/china-interactive';
-import {
-  Shield,
-  FileText,
-  Building2,
-  ClipboardCheck,
-  Search,
-  Globe,
-  ChevronRight,
-  Tag,
-  Microscope,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
-  Lock,
-  Truck,
-  BookOpen,
-} from 'lucide-react';
+import { FadeIn } from '@/components/marketing/motion';
+import { FaqSection } from '@/components/marketing/faq-section';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { ChevronRight, Globe, Factory, Package } from 'lucide-react';
 
-const registrationRequirements = [
+export const metadata: Metadata = {
+  title: 'China GACC Compliance | OriginTrace',
+  description:
+    'China GACC registration requires farm-level origin traceability before your vessel departs. OriginTrace builds the record GACC requires for overseas food and agricultural exporters.',
+};
+
+const stats = [
+  { label: 'GACC-registered commodity categories', value: '18+' },
+  { label: 'Clearance without registration', value: 'Impossible' },
+  { label: 'Farm-to-port traceability', value: '100%' },
+];
+
+const capabilities = [
   {
-    title: 'Overseas Facility Registration',
-    icon: Building2,
-    description: 'All overseas food production, processing, and storage facilities must register with GACC before exporting to China. Decree 248 (effective Jan 2022) expanded this to cover all food categories.',
-    details: [
-      'Applies to all 18 categories of food products',
-      'Valid for 5 years, renewable 3-6 months before expiry',
-      'Facilities must meet Chinese food safety standards',
-      'Some categories require competent authority recommendation',
-    ],
+    number: '01',
+    title: 'Register Every Source Farm',
+    description:
+      'Every contributing farm plot is GPS-mapped and every farmer registered with verified identity. Your GACC traceability record starts at the point of harvest — not at the processing gate.',
+    iconName: 'MapPin',
   },
   {
-    title: 'Exporter & Importer Registration',
-    icon: FileText,
-    description: 'Both overseas exporters and Chinese importers must be registered in the GACC system. Exporters need to be recorded in the exporting country\'s competent authority registry.',
-    details: [
-      'Exporters must register with home country authorities',
-      'Chinese importers must hold valid import licenses',
-      'Record-keeping requirements for both parties',
-      'Annual compliance verification',
-    ],
+    number: '02',
+    title: 'Track Every Collection Event',
+    description:
+      'Field agents log every collection in real time, linking each batch back to its registered farm of origin. Offline capture ensures no gap in the traceability chain.',
+    iconName: 'Package',
   },
   {
-    title: 'Product Category Approvals',
-    icon: ClipboardCheck,
-    description: 'Certain product categories require bilateral agreements and protocols between China and the exporting country before trade can begin.',
-    details: [
-      'Market access protocols for meat, dairy, and aquatic products',
-      'Phytosanitary certificates for plant-based products',
-      'Bilateral veterinary agreements required for animal products',
-      'Country-specific risk assessments may apply',
-    ],
+    number: '03',
+    title: 'Log Processing and Transformation',
+    description:
+      'Every processing step — drying, sorting, grading — is logged with input weights and output records. Your farm-to-export traceability chain is unbroken.',
+    iconName: 'Factory',
+  },
+  {
+    number: '04',
+    title: 'Score Against GACC Requirements',
+    description:
+      'OriginTrace checks your shipment against GACC registration traceability requirements before you book freight. Gaps are identified and resolved before loading.',
+    iconName: 'ShieldCheck',
+  },
+  {
+    number: '05',
+    title: 'Generate GACC-Ready Documentation',
+    description:
+      'Produce your traceability report, origin declaration, and farm-level support documentation in the format GACC-registered exporters require for submission.',
+    iconName: 'FileText',
   },
 ];
 
-const labelingStandards = [
-  {
-    title: 'Chinese Language Labels',
-    icon: Tag,
-    description: 'All pre-packaged foods must display Chinese-language labels compliant with GB 7718 (general foods) and GB 28050 (nutrition labeling).',
-  },
-  {
-    title: 'Mandatory Information',
-    icon: BookOpen,
-    description: 'Labels must include: product name, ingredient list, net content, production date, shelf life, storage conditions, origin country, manufacturer/importer details.',
-  },
-  {
-    title: 'Nutrition Facts Panel',
-    icon: FileText,
-    description: 'Required nutrition facts panel showing energy, protein, fat, carbohydrates, and sodium per 100g/100ml, compliant with GB 28050 standards.',
-  },
-  {
-    title: 'Import-Specific Markings',
-    icon: Globe,
-    description: 'Imported products must display the country of origin, overseas manufacturer name, Chinese importer name, address, and contact information.',
-  },
-];
-
-const inspectionProtocols = [
-  {
-    title: 'Pre-Arrival Documentation',
-    icon: FileText,
-    description: 'Submit health certificates, phytosanitary certificates, and origin certificates through the Single Window system before goods arrive at Chinese ports.',
-  },
-  {
-    title: 'Port Inspection & Sampling',
-    icon: Microscope,
-    description: 'GACC conducts visual inspection, document verification, and may take samples for laboratory testing including pesticide residues, heavy metals, and microbiological analysis.',
-  },
-  {
-    title: 'Quarantine Procedures',
-    icon: AlertTriangle,
-    description: 'Products from new origins or flagged shipments undergo enhanced quarantine inspection, which can include isolation storage and extended testing protocols.',
-  },
-  {
-    title: 'Release & Clearance',
-    icon: CheckCircle2,
-    description: 'Upon passing inspection, goods receive a clearance certificate. Failed inspections result in treatment, re-export, or destruction at the importer\'s expense.',
-  },
-];
-
-const howOriginTraceHelps = [
-  {
-    title: 'Documentation Vault',
-    icon: Lock,
-    description: 'Centralized, tamper-evident storage of all export documentation — health certificates, facility registrations, lab reports, and compliance records ready for GACC review.',
-  },
-  {
-    title: 'Traceability Infrastructure',
-    icon: Search,
-    description: 'Complete chain-of-custody from farm to port, with GPS-verified origin data and batch-level tracking that satisfies Chinese traceability requirements.',
-  },
-  {
-    title: 'Origin Verification',
-    icon: Globe,
-    description: 'Geospatial verification of production origins with polygon mapping, ensuring accurate origin declarations and preventing mislabeling compliance violations.',
-  },
-  {
-    title: 'Compliance Profiles',
-    icon: Shield,
-    description: 'Pre-configured compliance profiles for China-bound shipments that validate documentation completeness, labeling requirements, and regulatory alignment before dispatch.',
-  },
-  {
-    title: 'Pre-Shipment Scoring',
-    icon: ClipboardCheck,
-    description: 'Real-time readiness scores for China-bound shipments, identifying documentation gaps and compliance risks before goods leave your warehouse.',
-  },
-  {
-    title: 'Shipment Tracking',
-    icon: Truck,
-    description: 'End-to-end shipment visibility with cold chain monitoring, transit documentation, and automated alerts for inspection scheduling at destination ports.',
-  },
-];
-
-const faqItems = [
-  {
-    question: 'What is GACC Decree 248 and how does it affect food exporters?',
-    answer: 'GACC Decree 248, effective January 1, 2022, requires all overseas food production, processing, and storage facilities to register with China\'s General Administration of Customs before exporting food products to China. This expanded previous requirements to cover all 18 categories of food products, not just high-risk categories. Registration is valid for 5 years and must be renewed 3-6 months before expiry.',
-  },
-  {
-    question: 'Which food products require facility registration with GACC?',
-    answer: 'All 18 categories of food products now require GACC facility registration, including meat and meat products, aquatic products, dairy products, bird\'s nest and related products, bee products, eggs, edible oils and fats, cereals, flour products, fresh and dried fruits and vegetables, seasonings, nuts and seeds, dried beans, spices, beverages, and alcoholic beverages. Some categories require recommendation from the exporting country\'s competent authority.',
-  },
-  {
-    question: 'What labeling requirements apply to food imported into China?',
-    answer: 'Imported foods must comply with GB 7718 (general pre-packaged food labeling) and GB 28050 (nutrition labeling). Labels must be in Chinese and include product name, ingredient list, net content, production date, shelf life, storage conditions, country of origin, and Chinese importer details. A nutrition facts panel showing energy, protein, fat, carbohydrates, and sodium is mandatory.',
-  },
-  {
-    question: 'How long does the GACC registration process take?',
-    answer: 'The timeline varies by product category. For products requiring competent authority recommendation, the process typically takes 3-6 months including review periods. For self-registered categories (e.g., grains, oils, dried fruits), registration can be completed in 1-3 months. It is advisable to begin the process well in advance of planned shipments.',
-  },
-  {
-    question: 'What happens if a shipment fails inspection at a Chinese port?',
-    answer: 'Failed inspections can result in several outcomes: the goods may be treated or reprocessed to meet standards, returned to the country of origin at the importer\'s expense, or destroyed. Repeated failures can trigger enhanced inspection rates for future shipments from the same facility or exporter, and in severe cases, the facility\'s GACC registration may be suspended or revoked.',
-  },
-  {
-    question: 'Does China require traceability documentation for imported food?',
-    answer: 'Yes. China\'s Food Safety Law requires importers to maintain records of the origin, inspection and quarantine certificates, purchase and sale records, and delivery records for imported foods. These records must be retained for at least 6 months beyond the shelf life of the product, or at least 2 years for products without a specified shelf life. OriginTrace automates this traceability documentation.',
-  },
-  {
-    question: 'How does OriginTrace help with China food import compliance?',
-    answer: 'OriginTrace provides a comprehensive compliance platform that centralizes documentation management, automates traceability from farm to port, verifies product origins with GPS data, and scores shipment readiness before dispatch. The platform maintains audit-ready documentation vaults, generates compliance reports aligned with GACC requirements, and provides real-time alerts for documentation gaps or regulatory changes.',
-  },
-  {
-    question: 'Are there specific requirements for agricultural commodities like cocoa or coffee?',
-    answer: 'Yes. Agricultural commodities are subject to phytosanitary requirements, pesticide residue limits (per GB 2763), and may require specific bilateral protocols between China and the exporting country. Products must meet maximum residue limits (MRLs) for pesticides and contaminants as defined by Chinese national standards. OriginTrace tracks these commodity-specific requirements and validates compliance before shipment.',
-  },
+const timeline = [
+  { date: '2021', event: 'GACC Decree 248/249 enacted', active: false },
+  { date: 'Jan 2022', event: 'Decree 248/249 took effect', active: false },
+  { date: '2022–23', event: 'Enforcement tightening, rejected shipments increase', active: false },
+  { date: '2024+', event: 'Full traceability documentation expected', active: true },
+  { date: 'Ongoing', event: 'Annual registration renewal required', active: false },
 ];
 
 export default function ChinaCompliancePage() {
   return (
     <>
-      <MarketingNav />
+      <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+        <MarketingNav />
 
-      <FAQSchema faqs={faqItems} />
-      <main className="min-h-screen">
-        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden" data-testid="section-hero">
-          <HeroBackground />
-          <div className="max-w-6xl mx-auto px-6 relative z-10">
-            <FadeIn>
-              <div className="text-center max-w-4xl mx-auto">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-6" data-testid="text-section-label-hero">
-                  [ China Import Compliance ]
-                </span>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6" data-testid="text-hero-heading">
-                  China Food Safety Import Requirements
-                </h1>
-                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto mb-8" data-testid="text-hero-description">
-                  China maintains one of the world&apos;s most rigorous food import regulatory frameworks. GACC, SAMR, and NHC collectively enforce facility registration, labeling standards, and inspection protocols that every exporter must navigate.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Link href="/demo">
-                    <Button className="bg-emerald-600 text-white" data-testid="button-hero-demo">
-                      Get Compliance Support
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/solutions">
-                    <Button variant="outline" data-testid="button-hero-solutions">
-                      Explore Platform
-                      <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </Link>
+        <main>
+
+          {/* ── HERO ─────────────────────────────────────────────── */}
+          <section className="mk-hero mk-hero--solutions">
+            <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+            <div className="mk-hero__overlay mk-hero__overlay--solutions" />
+            <div className="mk-hero__content mk-hero__content--solutions">
+              <div className="mk-container-lg" style={{ width: '100%' }}>
+                <div
+                  className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                  style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}
+                >
+                  <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                    <FadeIn delay={0.1}>
+                      <span
+                        className="pre-title margin-bottom margin-medium"
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                      >
+                        China Compliance
+                      </span>
+                    </FadeIn>
+                    <FadeIn delay={0.15}>
+                      <h1
+                        className="text-display-2xl margin-bottom margin-large"
+                        style={{ color: '#ffffff', fontFamily: 'var(--font-display)', maxWidth: '16ch' }}
+                      >
+                        GACC registration and origin compliance — before your vessel departs.
+                      </h1>
+                    </FadeIn>
+                    <FadeIn delay={0.2}>
+                      <p
+                        className="margin-bottom margin-xlarge"
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      >
+                        China&apos;s General Administration of Customs requires overseas food and agricultural exporters to be registered on the GACC system before their goods can clear Chinese customs. Origin traceability is a registration prerequisite. OriginTrace builds the farm-level record GACC requires.
+                      </p>
+                    </FadeIn>
+                    <FadeIn delay={0.3}>
+                      <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                        See China compliance in action <ChevronRight className="h-5 w-5" />
+                      </Link>
+                    </FadeIn>
+                  </div>
+                  <div className="hero-right-col flex flex-col justify-end pb-0">
+                    <FadeIn delay={0.5} direction="up">
+                      <div className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0">
+                        <div className="solutions-stats-row">
+                          {stats.map((stat, i) => (
+                            <div
+                              key={i}
+                              className="solutions-stats-col"
+                              style={i < stats.length - 1 ? { borderRight: '1px solid var(--mk-border)' } : {}}
+                            >
+                              <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-muted)', lineHeight: 1.45, marginBottom: '1rem' }}>
+                                {stat.label}
+                              </p>
+                              <p style={{ fontSize: '1.75rem', color: 'var(--mk-text-primary)', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1 }}>
+                                {stat.value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <img src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg" alt="" aria-hidden className="hero-left-decorative" width={25} height={25} />
+                        <img src="/images/6836fc56293581224cd8c720_hero-right-shape.svg" alt="" aria-hidden className="hero-right-decorative" width={25} height={25} />
+                      </div>
+                    </FadeIn>
+                  </div>
                 </div>
               </div>
-            </FadeIn>
-          </div>
-        </section>
+            </div>
+          </section>
 
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-regulatory-bodies">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-10">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ Regulatory Bodies ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Three Agencies Governing Food Imports
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  China&apos;s food import regime is overseen by GACC, SAMR, and NHC — each responsible for different aspects of food safety and market access.
-                </p>
-              </div>
-            </FadeIn>
 
-            <FadeIn delay={0.1}>
-              <ChinaRegulatoryTabs />
-            </FadeIn>
-          </div>
-        </section>
+          {/* ── WHO MUST COMPLY ──────────────────────────────────── */}
+          <section className="section-spacing section-white">
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header">
+                  <span className="pre-title margin-bottom margin-medium">Who Must Comply</span>
+                  <h2 className="text-display-lg">Three types of operator with GACC obligations.</h2>
+                </div>
+              </FadeIn>
 
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-registration">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ Registration Requirements ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Facility & Exporter Registration with GACC
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  GACC Decree 248 requires all overseas food facilities to register before exporting to China — covering all 18 food product categories.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-3 gap-6">
-              {registrationRequirements.map((req) => (
-                <StaggerItem key={req.title}>
-                  <Card className="h-full" data-testid={`card-registration-${req.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <CardContent className="p-6">
-                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                        <req.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{req.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                        {req.description}
-                      </p>
-                      <ul className="space-y-2">
-                        {req.details.map((detail, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                            <span>{detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-labeling">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ Labeling & Packaging ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Labeling and Packaging Standards
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  China enforces strict Chinese-language labeling requirements under GB 7718 and GB 28050 — non-compliant labels are the leading cause of import rejections.
-                </p>
-              </div>
-            </FadeIn>
-
-            <StaggerContainer className="grid md:grid-cols-2 gap-6">
-              {labelingStandards.map((standard) => (
-                <StaggerItem key={standard.title}>
-                  <Card className="h-full" data-testid={`card-labeling-${standard.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <CardContent className="p-6 flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                        <standard.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{standard.title}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                          {standard.description}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-inspection">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="mb-12">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ Inspection & Quarantine ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Port Inspection and Quarantine Protocols
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
-                  Every food shipment entering China undergoes GACC inspection. Understanding the process helps you prepare documentation and reduce clearance delays.
-                </p>
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={0.1}>
-              <div className="max-w-3xl">
-                {inspectionProtocols.map((protocol, index) => (
-                  <div key={protocol.title} className="flex gap-5 pb-8 last:pb-0" data-testid={`card-inspection-${index}`}>
-                    <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                        {index + 1}
-                      </div>
-                      {index < inspectionProtocols.length - 1 && (
-                        <div className="w-px flex-1 bg-emerald-200 dark:bg-emerald-800 mt-3" />
-                      )}
+              <FadeIn delay={0.1}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }} className="eudr-who-grid">
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Globe className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
                     </div>
-                    <div className="pt-1 pb-2">
-                      <div className="flex items-center gap-2 mb-2">
-                        <protocol.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white">{protocol.title}</h3>
-                      </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {protocol.description}
-                      </p>
-                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>Agricultural Exporters to China</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Any exporter shipping food or agricultural commodities to China — including cocoa, coffee, sesame, cashew, and other processed agricultural goods — must hold valid GACC registration.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </FadeIn>
-          </div>
-        </section>
 
-        <section className="py-16 md:py-20 border-t border-slate-200 dark:border-slate-800" data-testid="section-how-origintrace-helps">
-          <div className="max-w-6xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ How OriginTrace Helps ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Streamline China Import Compliance
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  OriginTrace provides the documentation, traceability, and origin verification infrastructure you need to meet GACC requirements and clear Chinese port inspections.
-                </p>
-              </div>
-            </FadeIn>
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Factory className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>Processing Facilities</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Processing and packaging facilities handling goods destined for the Chinese market must maintain documented traceability from raw material receipt to finished goods dispatch.
+                    </p>
+                  </div>
 
-            <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {howOriginTraceHelps.map((item) => (
-                <StaggerItem key={item.title}>
-                  <Card className="h-full" data-testid={`card-help-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <CardContent className="p-6">
-                      <div className="w-10 h-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                        <item.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {item.description}
+                  <div className="mk-card" style={{ padding: '2rem' }}>
+                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
+                      <Package className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>Cooperatives and Aggregators</h3>
+                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                      Cooperatives and aggregation intermediaries that supply to GACC-registered exporters need origin traceability documentation that satisfies the upstream registration requirement.
+                    </p>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </section>
+
+
+          {/* ── HOW ORIGINTRACE HELPS (CapabilitySlider) ─────────── */}
+          <section className="section-spacing section-dark">
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header" style={{ marginBottom: '3rem' }}>
+                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>How OriginTrace Helps</span>
+                  <h2 className="text-display-lg" style={{ color: '#ffffff' }}>Built for every step of GACC compliance.</h2>
+                </div>
+              </FadeIn>
+            </div>
+            <CapabilitySlider capabilities={capabilities} />
+          </section>
+
+
+          {/* ── TIMELINE ─────────────────────────────────────────── */}
+          <section
+            className="section-spacing"
+            style={{ background: 'var(--color--gray-7)', borderRadius: '2rem 2rem 0 0', marginTop: '-2rem', position: 'relative', zIndex: 1 }}
+          >
+            <div className="mk-container-lg">
+              <FadeIn>
+                <div className="section-header">
+                  <span className="pre-title margin-bottom margin-medium">Key Dates</span>
+                  <h2 className="text-display-lg">The GACC compliance timeline.</h2>
+                </div>
+              </FadeIn>
+
+              <FadeIn delay={0.1}>
+                <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: '1rem' }}>
+                  {timeline.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        flexShrink: 0,
+                        minWidth: 200,
+                        padding: '1.5rem',
+                        borderLeft: item.active ? '2px solid var(--mk-green)' : '1px solid var(--mk-border)',
+                        position: 'relative',
+                      }}
+                    >
+                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--mk-green)', marginBottom: '0.5rem' }}>
+                        {item.date}
                       </p>
-                    </CardContent>
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
+                      <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--mk-text-primary)', lineHeight: 1.4 }}>
+                        {item.event}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </FadeIn>
+            </div>
+          </section>
 
-            <FadeIn delay={0.3}>
-              <div className="text-center mt-12">
-                <Link href="/demo">
-                  <Button className="bg-emerald-600 text-white" data-testid="button-help-demo">
-                    See How It Works
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
 
-        <section className="py-16 md:py-20 bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-800" data-testid="section-faq">
-          <div className="max-w-4xl mx-auto px-6">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-600 dark:text-emerald-400 mb-4">
-                  [ FAQ ]
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-                  Frequently Asked Questions
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                  Common questions about exporting food products to China and navigating GACC, SAMR, and NHC requirements.
-                </p>
-              </div>
-            </FadeIn>
+          {/* ── FAQ SECTION ──────────────────────────────────────── */}
+          <FaqSection />
 
-            <ChinaFAQList items={faqItems} />
-          </div>
-        </section>
 
-        <section className="py-16 md:py-20 bg-slate-900 dark:bg-slate-950 border-t border-slate-800" data-testid="section-cta">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <FadeIn>
-              <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-emerald-400 mb-6">
-                [ Get Started ]
-              </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-6">
-                Ready to Export to China with Confidence?
-              </h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-                OriginTrace helps exporters navigate China&apos;s complex food import regulations with automated documentation, traceability infrastructure, and pre-shipment compliance scoring.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/demo">
-                  <Button className="bg-emerald-600 text-white" data-testid="button-cta-demo">
-                    Request a Demo
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/compliance">
-                  <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-cta-compliance">
-                    View All Regulations
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </FadeIn>
-          </div>
-        </section>
-      </main>
+          {/* ── FINAL CTA ────────────────────────────────────────── */}
+          <section className="section-spacing section-dark">
+            <div className="mk-container-sm">
+              <FadeIn>
+                <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+                  <span className="pre-title margin-bottom margin-large">Get Started</span>
+                  <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">
+                    GACC compliance starts with the farmer, not the freight forwarder.
+                  </h2>
+                  <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>
+                    We&apos;ll show you how OriginTrace builds the farm-level traceability record that GACC registration requires — before your vessel is booked.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                      Book a walkthrough <ChevronRight className="h-5 w-5" />
+                    </Link>
+                    <Link href="/compliance" className="btn-mk-ghost btn-mk-lg">
+                      See full compliance coverage
+                    </Link>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </section>
 
-      <MarketingFooter />
+        </main>
+
+        <MarketingFooter />
+      </div>
     </>
   );
 }
