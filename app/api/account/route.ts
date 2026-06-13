@@ -46,7 +46,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Log the deletion request before wiping
-    void supabaseAdmin.from('audit_logs').insert({
+    await supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'account.delete_requested',
       resource_type: 'user',

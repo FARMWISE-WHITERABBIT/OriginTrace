@@ -5,13 +5,13 @@
  * Cached for 24 h — bank lists change rarely.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 
 export const revalidate = 86400; // 24 hours
 
-export async function GET() {
-  const { user } = await getAuthenticatedProfile();
+export async function GET(request: NextRequest) {
+  const { user } = await getAuthenticatedProfile(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
