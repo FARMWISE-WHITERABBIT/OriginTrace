@@ -3,17 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { keyCreateSchema, parseBody } from '@/lib/api/validation';
 
-async function getAuthProfile(supabaseAdmin: ReturnType<typeof createServiceClient>) {
-  const { profile } = await getAuthenticatedProfile();
+async function getAuthProfile(request: NextRequest) {
+  const { profile } = await getAuthenticatedProfile(request);
   if (!profile || profile.role !== 'admin') return null;
   if (!profile.org_id) return null;
   return profile;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = createServiceClient();
-    const profile = await getAuthProfile(supabaseAdmin);
+    const profile = await getAuthProfile(request);
     if (!profile) {
       return NextResponse.json({ error: 'Unauthorized or admin access required' }, { status: 401 });
     }
@@ -38,7 +38,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabaseAdmin = createServiceClient();
-    const profile = await getAuthProfile(supabaseAdmin);
+    const profile = await getAuthProfile(request);
     if (!profile) {
       return NextResponse.json({ error: 'Unauthorized or admin access required' }, { status: 401 });
     }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabaseAdmin = createServiceClient();
-    const profile = await getAuthProfile(supabaseAdmin);
+    const profile = await getAuthProfile(request);
     if (!profile) {
       return NextResponse.json({ error: 'Unauthorized or admin access required' }, { status: 401 });
     }
