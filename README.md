@@ -202,6 +202,9 @@ CRON_SECRET=                    # for /api/cron/webhook-retry
 GFW_COMPANY_API_KEY=            # preferred server-only company Global Forest Watch Data API key
 GFW_API_KEY=                    # fallback/local Global Forest Watch Data API key
 GFW_API_ORIGIN=http://localhost:5000
+GFW_KEY_ALERT_WEBHOOK_URL=      # optional: receives JSON when a GFW key is exhausted/unusable
+GFW_KEY_ALERT_EMAIL=            # optional: receives email alerts when RESEND_API_KEY is configured
+GFW_KEY_ALERT_COOLDOWN_MS=3600000
 NEXT_PUBLIC_APP_URL=
 ```
 
@@ -209,6 +212,16 @@ NEXT_PUBLIC_APP_URL=
 fallback/local key and both keys must be created in Global Forest Watch and
 allowlisted for the request origin. Use `GFW_API_ORIGIN=http://localhost:5000`
 locally; set it to the deployed app domain in production.
+
+The GFW OpenAPI contract states default API keys are valid for one year and
+that an empty domain allowlist is placed on the lowest rate-limiting tier, but
+it does not publish a numeric request quota or reset window. OriginTrace
+therefore detects exhaustion from live responses (`429`, quota/rate-limit
+messages, or unusable `401/403` key/domain responses), rotates from company key
+to fallback key, logs non-secret key health telemetry, and sends optional
+webhook/email alerts. Admin/compliance users can inspect process-local telemetry
+at `GET /api/deforestation-check/gfw-health`; only key labels and short
+fingerprints are returned, never raw key values.
 
 ### Installation
 

@@ -727,3 +727,92 @@ This phase focuses on the signed-in `/app` experience and the deforestation chec
 ## 43. Project Status: Phase 25 Complete
 
 - [X] **Phase 25: Added Release Notes Agent Skill** - Successfully integrated the release-notes agent skill into the DevOps workflow.
+
+---
+
+## 44. Phase 26: GFW Key Resilience and Company-Key Handoff
+
+This phase makes the Global Forest Watch integration safer for production by keeping the company credential first, preserving the current working key as a fallback, and adding non-secret health telemetry for exhaustion or unusable-key events.
+
+### What's New
+
+- **Company-first GFW key resolution:** Live deforestation checks now prefer `GFW_COMPANY_API_KEY` and rotate to `GFW_API_KEY` only when the company key is missing, exhausted, or unusable.
+- **Key health monitoring without secret exposure:** The GFW helper records process-local status, fingerprints, request counts, failure counts, exhaustion timing, retry/reset hints, and recovery events without returning raw API keys.
+- **Protected GFW health endpoint:** Compliance roles can inspect `GET /api/deforestation-check/gfw-health` for configured key labels/fingerprints and runtime health snapshots.
+- **Optional operations alerts:** `GFW_KEY_ALERT_WEBHOOK_URL`, `GFW_KEY_ALERT_EMAIL`, and `GFW_KEY_ALERT_COOLDOWN_MS` can be configured to notify the team when a GFW key is rate-limited, exhausted, forbidden, or otherwise unusable.
+- **Documented GFW limits posture:** The README now records the known GFW OpenAPI behavior: default keys are valid for one year, empty domain allowlists use the lowest rate-limiting tier, and no fixed public numeric quota/reset window is published.
+
+### What You Need To Do
+
+Log into the [Global Forest Watch API Developer Portal](https://data-api.globalforestwatch.org/) where key `b6782...` was generated and confirm the key settings include these allowed origins:
+
+- `http://localhost:5000`
+- `https://origintrace.trade`
+
+If the portal/API only accepts domains instead of full origins, use:
+
+- `localhost`
+- `origintrace.trade`
+
+### Coworker Claude Prompt
+
+```text
+Set up OriginTrace's company Global Forest Watch Data API key.
+
+I will provide:
+- GFW login email: <PUT_EMAIL_HERE>
+- GFW login password: <PUT_PASSWORD_HERE>
+
+Use https://data-api.globalforestwatch.org/
+
+Create a new API key:
+- Alias: OriginTrace company production
+- Organization: OriginTrace
+- Env var name for our app: GFW_COMPANY_API_KEY
+- never_expires: false unless the portal requires admin-only privileges
+
+Allowed origins required by OriginTrace:
+- http://localhost:5000
+- https://origintrace.trade
+
+If the GFW key form/API only accepts domains, use:
+- localhost
+- origintrace.trade
+
+Then validate/test the key with both origins if possible.
+
+API flow if using OpenAPI directly:
+1. POST /auth/token with username/password.
+2. POST /auth/apikey with bearer token:
+{
+  "alias": "OriginTrace company production",
+  "organization": "OriginTrace",
+  "email": "<email>",
+  "domains": ["localhost", "origintrace.trade"],
+  "never_expires": false
+}
+3. Test the dataset endpoint with header `x-api-key` and `Origin`.
+
+Return:
+- GFW_COMPANY_API_KEY value
+- allowed origins/domains configured
+- expiry date/key metadata if visible
+- any visible rate-limit/quota/reset info
+
+Security:
+- Do not commit or write the key into source files.
+- Do not repeat the password after use.
+- The key belongs only in `.env.local`, deployment secrets, or company secret manager.
+```
+
+### Verification
+
+- `npx vitest run tests/gfw-deforestation.test.ts --reporter=verbose` passed 9/9.
+- `npm run check` passed.
+- Live company-key verification remains pending until `GFW_COMPANY_API_KEY` is created and allowlisted.
+
+---
+
+## 45. Project Status: Phase 26 Complete
+
+- [X] **Phase 26: GFW Key Resilience and Company-Key Handoff** - Added company-first key rotation, fallback-key health telemetry, protected non-secret monitoring, alert configuration, and a Claude-ready setup prompt for the production GFW company key.
