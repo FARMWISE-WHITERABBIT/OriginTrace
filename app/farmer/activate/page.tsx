@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, Shield, Leaf } from 'lucide-react';
+import { LogoIcon } from '@/components/logo';
+import { CheckCircle2, Shield } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 function FarmerActivateContent() {
@@ -81,8 +82,8 @@ function FarmerActivateContent() {
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAF9] to-[#E8F0ED] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#2E7D6B] rounded-full mb-3">
-            <Leaf className="h-8 w-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <LogoIcon size={64} className="drop-shadow-sm" />
           </div>
           <h1 className="text-xl font-bold text-[#1F5F52]">OriginTrace</h1>
           <p className="text-sm text-muted-foreground mt-1">Farmer Portal</p>

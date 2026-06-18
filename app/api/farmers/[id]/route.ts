@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 export async function GET(
   request: NextRequest,
@@ -136,6 +137,18 @@ export async function GET(
       bankAccounts = baData ?? [];
     } catch { /* table not yet migrated */ }
 
+    // Price agreements for this farmer
+    let priceAgreements: any[] = [];
+    try {
+      const { data: paData } = await supabase
+        .from('farmer_price_agreements')
+        .select('id, commodity, price_per_kg, currency, effective_from, effective_to, notes, created_at')
+        .eq('farm_id', farmId)
+        .eq('org_id', profile.org_id)
+        .order('effective_from', { ascending: false });
+      priceAgreements = paData ?? [];
+    } catch { /* table not yet migrated */ }
+
     return NextResponse.json({
       farm,
       ledger: ledger ?? null,
@@ -147,6 +160,7 @@ export async function GET(
       disbursements: disbursements ?? [],
       payments: payments ?? [],
       bankAccounts,
+      priceAgreements,
     });
 
   } catch (err: any) {
@@ -166,12 +180,15 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    const editRoles = ['admin', 'aggregator'];
-    if (!editRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
     const body = await request.json();
+    const roleError = requireRole(profile, ROLES.FIELD_ROLES);
+    if (roleError) return roleError;
+
+    const complianceFields = ['compliance_status', 'compliance_notes'];
+    const touchesCompliance = complianceFields.some((key) => key in body);
+    const adminRoleError = touchesCompliance ? requireRole(profile, ROLES.ADMIN_AGGREGATOR) : null;
+    if (adminRoleError) return adminRoleError;
+
     const allowed = ['farmer_name', 'phone', 'farmer_id', 'community', 'area_hectares', 'compliance_status', 'compliance_notes', 'commodity', 'consent_timestamp', 'consent_signature', 'boundary'];
     const updates: Record<string, any> = {};
     for (const key of allowed) {

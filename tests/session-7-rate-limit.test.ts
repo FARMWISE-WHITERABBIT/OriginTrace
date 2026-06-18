@@ -222,7 +222,7 @@ describe('Session 7 — legacy callers still work via @/lib/rate-limit shim', ()
 describe('Session 7 — DB migration for rate limit RPC', () => {
   it('migration file exists', () => {
     const src = readFileSync(
-      join(__dirname, '..', 'migrations/20260311_rate_limit_rpc.sql'),
+      join(__dirname, '..', 'supabase/migrations/20260311_rate_limit_rpc.sql'),
       'utf8'
     );
     expect(src.length).toBeGreaterThan(100);
@@ -230,7 +230,7 @@ describe('Session 7 — DB migration for rate limit RPC', () => {
 
   it('migration defines increment_rate_limit function', () => {
     const src = readFileSync(
-      join(__dirname, '..', 'migrations/20260311_rate_limit_rpc.sql'),
+      join(__dirname, '..', 'supabase/migrations/20260311_rate_limit_rpc.sql'),
       'utf8'
     );
     expect(src).toContain('CREATE OR REPLACE FUNCTION increment_rate_limit');
@@ -238,7 +238,7 @@ describe('Session 7 — DB migration for rate limit RPC', () => {
 
   it('migration uses ON CONFLICT for atomic upsert', () => {
     const src = readFileSync(
-      join(__dirname, '..', 'migrations/20260311_rate_limit_rpc.sql'),
+      join(__dirname, '..', 'supabase/migrations/20260311_rate_limit_rpc.sql'),
       'utf8'
     );
     expect(src).toContain('ON CONFLICT');
@@ -247,7 +247,7 @@ describe('Session 7 — DB migration for rate limit RPC', () => {
 
   it('migration grants execute to service_role only', () => {
     const src = readFileSync(
-      join(__dirname, '..', 'migrations/20260311_rate_limit_rpc.sql'),
+      join(__dirname, '..', 'supabase/migrations/20260311_rate_limit_rpc.sql'),
       'utf8'
     );
     expect(src).toContain('GRANT EXECUTE');

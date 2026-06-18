@@ -6,6 +6,7 @@ import { getPaymentProvider, SUPPORTED_PROVIDERS } from '@/lib/payments';
 import { createTransferRecipient, initiateTransfer } from '@/lib/payments/paystack';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { requireRole } from '@/lib/rbac';
 
 const disburseSchema = z.object({
   phone: z.string().min(8, 'Valid phone number required').optional(),
@@ -30,6 +31,8 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const roleError = requireRole(profile, ['admin', 'aggregator']);
+    if (roleError) return roleError;
     const supabase = createAdminClient();
 
     const body = await request.json();

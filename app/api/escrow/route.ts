@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: escrow, error } = await supabase
       .from('escrow_accounts')
-      .select('id, amount_usd, status, milestone_config, created_at')
+      .select('id, total_amount, status, milestone_config, created_at')
       .eq('org_id', profile.org_id)
       .eq('shipment_id', shipmentId)
       .in('status', ['active', 'disputed'])
@@ -59,7 +59,7 @@ const createEscrowSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
     if (!ALLOWED_ROLES.includes(profile.role)) {

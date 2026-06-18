@@ -136,6 +136,7 @@ describe('hasAccess — compliance_officer access', () => {
     '/app/dpp',
     '/app/audit',
     '/app/conflicts',
+    '/app/data-vault',
     '/app/processing',
     '/app/shipments',
     '/app/traceability',
@@ -152,7 +153,6 @@ describe('hasAccess — compliance_officer access', () => {
     '/app/agents',
     '/app/payments',
     '/app/settings',
-    '/app/data-vault',
     '/app/delegations',
     '/app/contracts',
   ];

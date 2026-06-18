@@ -137,8 +137,7 @@ export async function releaseMilestone(params: ReleaseMilestoneParams): Promise<
   const { data: escrow } = await supabase
     .from('escrow_accounts')
     .select('*')
-    .eq('id', params.escrowId)
-    .single();
+    .eq('id', params.escrowId).eq('org_id', params.orgId).single();
 
   if (!escrow) throw new Error('Escrow account not found');
   if (escrow.status === 'disputed') throw new Error('Release blocked: escrow has an active dispute');
@@ -169,7 +168,7 @@ export async function releaseMilestone(params: ReleaseMilestoneParams): Promise<
       status: allReleased ? 'completed' : 'active',
       milestone_config: updatedMilestones,
     })
-    .eq('id', params.escrowId);
+    .eq('id', params.escrowId).eq('org_id', params.orgId);
 
   await supabase.from('escrow_transactions').insert({
     escrow_id: params.escrowId,
@@ -217,8 +216,9 @@ export async function openDispute(params: OpenDisputeParams): Promise<EscrowDisp
 
   const { data: escrow } = await supabase
     .from('escrow_accounts')
-    .select('id, status, org_id, shipment_id')
+    .select('id, status, org_id, shipment_id, buyer_org_id')
     .eq('id', params.escrowId)
+    .or(`org_id.eq.${params.orgId},buyer_org_id.eq.${params.orgId}`)
     .single();
 
   if (!escrow) throw new Error('Escrow account not found');

@@ -52,12 +52,15 @@ interface BoundaryAnalysisResult {
 
 interface Farm {
   id: string;
+  local_id?: string;
   farmer_name: string;
   community: string;
   boundary?: any;
   area_hectares?: number;
   deforestation_check?: DeforestationResult | null;
   boundary_analysis?: BoundaryAnalysisResult | null;
+  is_local?: boolean;
+  sync_status?: string;
 }
 
 interface DeforestationResult {
@@ -67,6 +70,16 @@ interface DeforestationResult {
   analysis_date: string;
   data_source: string;
   risk_level: 'low' | 'medium' | 'high';
+  verification_status?: 'verified' | 'manual_review_required';
+  manual_review_required?: boolean;
+}
+
+function requiresDeforestationManualReview(result: DeforestationResult | null | undefined) {
+  return !!result && (
+    result.manual_review_required ||
+    result.verification_status === 'manual_review_required' ||
+    /gfw unavailable|manual review/i.test(result.data_source || '')
+  );
 }
 
 const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, loading: () => (
@@ -106,6 +119,7 @@ function HybridFarmMappingContent() {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
@@ -125,23 +139,46 @@ function HybridFarmMappingContent() {
   useEffect(() => {
     async function loadFarms() {
       setFarmsLoading(true);
+      setFarmsLoadError(false);
       try {
-        const res = await fetch('/api/farms?limit=1000');
-        if (!res.ok) throw new Error('Failed to load farms');
-        const json = await res.json();
-        const sorted: Farm[] = (json.farms || []).sort((a: Farm, b: Farm) =>
-          (a.farmer_name || '').localeCompare(b.farmer_name || '')
-        );
-        setFarms(sorted);
-        if (farmIdParam) {
-          const found = sorted.find(f => String(f.id) === farmIdParam);
-          if (found) {
-            setSelectedFarm(found);
-            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
-            if (ring && ring.length > 1) {
-              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+        const { getCachedFarmsFull, cacheFarmsFull } = await import('@/lib/offline/offline-cache');
+        const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
+        const localFarms = await getLocalFarmsForOrg(organization?.id) as Farm[];
+        const cached = organization?.id ? await getCachedFarmsFull(organization.id) : null;
+
+        const applyFarms = (serverFarms: Farm[]) => {
+          const merged = [...localFarms, ...serverFarms.filter((farm) => !localFarms.some((local) => local.id === farm.id))];
+          const sorted: Farm[] = merged.sort((a: Farm, b: Farm) =>
+            (a.farmer_name || '').localeCompare(b.farmer_name || '')
+          );
+          setFarms(sorted);
+          if (farmIdParam) {
+            const found = sorted.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+            if (found) {
+              setSelectedFarm(found);
+              const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+              if (ring && ring.length > 1) {
+                setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+              }
             }
           }
+        };
+
+        if (cached?.length || localFarms.length) {
+          applyFarms((cached || []) as Farm[]);
+        }
+
+        if (isOnline) {
+          const res = await fetch('/api/farms?limit=1000');
+          if (!res.ok) throw new Error('Failed to load farms');
+          const json = await res.json();
+          const serverFarms = json.farms || [];
+          if (organization?.id) {
+            await cacheFarmsFull(organization.id, serverFarms);
+          }
+          applyFarms(serverFarms);
+        } else if (!cached?.length && localFarms.length === 0) {
+          throw new Error('No cached farms available');
         }
       } catch {
         setFarmsLoadError(true);
@@ -149,8 +186,21 @@ function HybridFarmMappingContent() {
         setFarmsLoading(false);
       }
     }
-    loadFarms();
-  }, [farmIdParam]);
+    if (!orgLoading) loadFarms();
+  }, [farmIdParam, isOnline, organization?.id, orgLoading]);
+
+  useEffect(() => {
+    if (farmIdParam && farms.length > 0 && !selectedFarm) {
+      const found = farms.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+          if (found) {
+            setSelectedFarm(found);
+            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+            if (ring && ring.length > 1) {
+              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+            }
+          }
+    }
+  }, [farmIdParam, farms, selectedFarm]);
 
   // Silently acquire GPS on mount so the satellite map centers on the user's actual location
   useEffect(() => {
@@ -191,7 +241,15 @@ function HybridFarmMappingContent() {
       if (res.ok && data.result) {
         setDeforestationResult(data.result);
         setSelectedFarm(prev => prev ? { ...prev, deforestation_check: data.result } : prev);
-        toast({ title: 'Deforestation Check Complete', description: data.result.deforestation_free ? 'Farm is deforestation-free.' : 'Risk detected — review the results.' });
+        const manualReviewRequired = requiresDeforestationManualReview(data.result);
+        toast({
+          title: 'Deforestation Check Complete',
+          description: data.result.deforestation_free
+            ? 'Farm is deforestation-free.'
+            : manualReviewRequired
+              ? 'Satellite data unavailable - manual review is required.'
+              : 'Risk detected - review the results.',
+        });
       } else {
         toast({ title: 'Check Failed', description: data.error || 'Could not complete deforestation check.', variant: 'destructive' });
       }
@@ -329,8 +387,8 @@ function HybridFarmMappingContent() {
     };
 
     try {
-      if (isOnline) {
-        const res = await fetch(`/api/farmers/${selectedFarm.id}`, {
+      if (isOnline && !selectedFarm.is_local) {
+        const res = await fetch(`/api/farms/${selectedFarm.id}/boundary`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ boundary, area_hectares: areaHectares }),
@@ -340,9 +398,21 @@ function HybridFarmMappingContent() {
           throw new Error(json.error || 'Failed to save boundary');
         }
         toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
-        await runBoundaryAnalysis(selectedFarm.id, boundary);
+        const json = await res.json().catch(() => ({}));
+        if (json.result) setBoundaryAnalysis(json.result);
+        else await runBoundaryAnalysis(selectedFarm.id, boundary);
+        setSavedOffline(false);
       } else {
+        const { saveBoundaryOffline } = await import('@/lib/offline/sync-store');
+        await saveBoundaryOffline({
+          farm_id: selectedFarm.id,
+          local_farm_id: selectedFarm.is_local ? (selectedFarm.local_id || selectedFarm.id) : undefined,
+          boundary,
+          area_hectares: areaHectares,
+        });
+        setSelectedFarm(prev => prev ? { ...prev, boundary, area_hectares: areaHectares, has_boundary: true } as any : prev);
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
+        setSavedOffline(true);
       }
       setIsSuccess(true);
     } catch (error: any) {
@@ -365,9 +435,11 @@ function HybridFarmMappingContent() {
     return (
       <div className="max-w-md mx-auto py-12 text-center space-y-6">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold">Boundary Saved</h2>
+        <h2 className="text-2xl font-bold">{savedOffline ? 'Boundary Queued Offline' : 'Boundary Saved'}</h2>
         <p className="text-muted-foreground">
-          {selectedFarm?.farmer_name}'s farm has been mapped ({areaHectares} hectares).
+          {savedOffline
+            ? `${selectedFarm?.farmer_name}'s boundary is saved on this device and will sync when online.`
+            : `${selectedFarm?.farmer_name}'s farm has been mapped (${areaHectares} hectares).`}
         </p>
         <div className="space-y-3">
           <Button onClick={() => { setIsSuccess(false); setCoordinates([]); setSelectedFarm(null); setCurrentLocation(null); }} className="w-full" data-testid="button-map-another">
@@ -401,6 +473,9 @@ function HybridFarmMappingContent() {
               <div>
                 <div className="font-medium text-sm">{selectedFarm.farmer_name}</div>
                 <div className="text-xs text-muted-foreground">{selectedFarm.community}</div>
+                {selectedFarm.is_local && (
+                  <Badge variant="secondary" className="text-xs mt-1">Queued offline</Badge>
+                )}
                 {selectedFarm.boundary && (
                   <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
                 )}
@@ -454,7 +529,10 @@ function HybridFarmMappingContent() {
                           <div className="font-medium text-sm truncate">{f.farmer_name}</div>
                           <div className="text-xs text-muted-foreground">{f.community}</div>
                         </div>
-                        {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                        <div className="flex items-center gap-1">
+                          {f.is_local && <Badge variant="secondary" className="text-xs">Offline</Badge>}
+                          {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                        </div>
                       </button>
                     ))
                   )}
@@ -769,31 +847,56 @@ function HybridFarmMappingContent() {
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Deforestation-Free
                         </Badge>
+                      ) : requiresDeforestationManualReview(deforestationResult) ? (
+                        <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-manual-review">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Manual Review Required
+                        </Badge>
                       ) : deforestationResult.risk_level === 'high' ? (
                         <Badge className="bg-red-600 text-white" data-testid="badge-deforestation-risk">
                           <ShieldAlert className="h-3 w-3 mr-1" />
                           Risk Detected
                         </Badge>
-                      ) : (
+                      ) : deforestationResult.risk_level === 'medium' ? (
                         <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-medium">
                           <AlertTriangle className="h-3 w-3 mr-1" />
                           Medium Risk
                         </Badge>
+                      ) : (
+                        <Badge className="bg-blue-500 text-white" data-testid="badge-deforestation-low">
+                          <Info className="h-3 w-3 mr-1" />
+                          Low Risk
+                        </Badge>
                       )}
                       <span className="text-xs text-muted-foreground">
-                        {deforestationResult.risk_level} risk
+                        {requiresDeforestationManualReview(deforestationResult)
+                          ? `${deforestationResult.risk_level} country risk`
+                          : `${deforestationResult.risk_level} risk`}
                       </span>
                     </div>
 
+                    {requiresDeforestationManualReview(deforestationResult) && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                        <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                        <span data-testid="text-deforestation-manual-review">
+                          Global Forest Watch data was unavailable for this check. The farm is flagged from country risk only, not confirmed forest loss. Review supporting evidence before clearance.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-2 bg-muted/50 rounded-md">
-                        <div className="text-xs text-muted-foreground">Forest Loss</div>
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Forest Loss' : 'Forest Loss'}
+                        </div>
                         <div className="text-sm font-medium" data-testid="text-forest-loss-hectares">
                           {deforestationResult.forest_loss_hectares} ha
                         </div>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-md">
-                        <div className="text-xs text-muted-foreground">Loss Percentage</div>
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Loss Percentage' : 'Loss Percentage'}
+                        </div>
                         <div className="text-sm font-medium" data-testid="text-forest-loss-percentage">
                           {deforestationResult.forest_loss_percentage}%
                         </div>

@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { requireRole, ROLES } from '@/lib/rbac';
 import crypto from 'crypto';
 
 
@@ -67,6 +69,12 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const tierBlock = await enforceTier(profile.org_id, 'digital_product_passport');
+    if (tierBlock) return tierBlock;
+
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
+
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);
 
@@ -107,6 +115,12 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const tierBlock = await enforceTier(profile.org_id, 'digital_product_passport');
+    if (tierBlock) return tierBlock;
+
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
 
     const body = await request.json();
     const { finished_good_id, sustainability_claims, carbon_footprint_kg, certifications } = body;

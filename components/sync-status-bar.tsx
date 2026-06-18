@@ -10,6 +10,7 @@ interface SyncStats {
   syncing: number;
   synced: number;
   error: number;
+  conflict?: number;
 }
 
 interface SyncStatusBarProps {
@@ -68,8 +69,8 @@ export function SyncStatusBar({ onSync }: SyncStatusBarProps) {
 
     setIsSyncing(true);
     try {
-      const { syncPendingBatches } = await import('@/lib/offline/sync-service');
-      await syncPendingBatches();
+      const { syncFieldWorkQueue } = await import('@/lib/offline/sync-service');
+      await syncFieldWorkQueue();
 
       const { getSyncStats } = await import('@/lib/offline/sync-store');
       const stats = await getSyncStats();
@@ -90,7 +91,7 @@ export function SyncStatusBar({ onSync }: SyncStatusBarProps) {
       {totalPending > 0 && (
         <Badge variant="secondary" className="gap-1" data-testid="badge-pending-count">
           <Package className="h-3 w-3 text-orange-500" />
-          {totalPending} {totalPending === 1 ? 'Batch' : 'Batches'} Pending
+          {totalPending} {totalPending === 1 ? 'Item' : 'Items'} Pending
         </Badge>
       )}
 

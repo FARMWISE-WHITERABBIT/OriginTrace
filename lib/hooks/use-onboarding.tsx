@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { driver, DriveStep, Driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
+import type { DriveStep, Driver } from 'driver.js';
 import { useOrg } from '@/lib/contexts/org-context';
 
 // ─── Tour storage keys ────────────────────────────────────────────────────────
@@ -602,6 +601,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     const steps = TOUR_STEPS[role];
     if (!steps) return;
 
+    void (async () => {
+      const [{ driver }] = await Promise.all([
+        import('driver.js'),
+        import('driver.js/dist/driver.css'),
+      ]);
+
     if (driverRef.current) {
       driverRef.current.destroy();
       driverRef.current = null;
@@ -631,6 +636,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       instance.setSteps(steps);
       instance.drive();
     }, 400);
+    })();
   }, [markSeenForRole]);
 
   const hasSeenTourForRole = useCallback((role: string): boolean => {

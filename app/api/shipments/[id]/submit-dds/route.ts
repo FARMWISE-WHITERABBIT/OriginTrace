@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
@@ -52,10 +53,13 @@ export async function POST(
     const supabase = createServiceClient();
     const adminClient = createAdminClient();
 
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const tierBlock = await enforceTier(profile.org_id, 'dds_export');
+    if (tierBlock) return tierBlock;
 
     if (!ALLOWED_ROLES.includes(profile.role)) {
       return NextResponse.json(

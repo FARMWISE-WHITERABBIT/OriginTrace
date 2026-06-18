@@ -6,9 +6,11 @@ import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { dispatchIntegrationEvent } from '@/lib/integrations/dispatcher';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { parsePagination } from '@/lib/api/validation';
+import { requireRole, ROLES } from '@/lib/rbac';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
+  local_id: z.string().min(1).optional(),
   farmer_name: z.string().min(1, 'Farmer name is required'),
   farmer_id: z.string().optional(),
   phone: z.string().optional(),
@@ -110,7 +112,10 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
-    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    const roleError = requireRole(profile, ROLES.FIELD_ROLES);
+    if (roleError) return roleError;
+
+    const tierBlock = await enforceTier(profile.org_id, 'farmer_registration');
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
@@ -123,7 +128,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+    const { local_id, farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+
+    if (local_id) {
+      const { data: existingFarm, error: existingError } = await supabaseAdmin
+        .from('farms')
+        .select('*')
+        .eq('org_id', profile.org_id)
+        .eq('local_id', local_id)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Farm idempotency lookup error:', existingError);
+        return NextResponse.json(
+          { error: 'Failed to check offline farm sync status' },
+          { status: 500 }
+        );
+      }
+
+      if (existingFarm) {
+        return NextResponse.json({ farm: existingFarm, success: true, status: 'already_synced' });
+      }
+    }
 
     // Auto-generate a farmer ID if not explicitly provided
     let farmer_id = parsed.data.farmer_id;
@@ -172,6 +198,7 @@ export async function POST(request: NextRequest) {
         farmer_id: farmer_id,
         phone: phone || null,
         community,
+        local_id: local_id || null,
         commodity: commodity || null,
         boundary: boundary || null,
         area_hectares: area_hectares || null,
@@ -185,6 +212,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
+      if (local_id && insertError.code === '23505') {
+        const { data: existingFarm } = await supabaseAdmin
+          .from('farms')
+          .select('*')
+          .eq('org_id', profile.org_id)
+          .eq('local_id', local_id)
+          .maybeSingle();
+
+        if (existingFarm) {
+          return NextResponse.json({ farm: existingFarm, success: true, status: 'already_synced' });
+        }
+      }
+
       console.error('Farm creation error:', insertError);
       return NextResponse.json(
         { error: 'Failed to create farm', details: insertError.message },

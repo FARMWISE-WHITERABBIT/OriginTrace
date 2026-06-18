@@ -15,7 +15,7 @@ import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 import { extractDocumentOcr, OcrParseError } from '@/lib/services/ocr-extractor';
 
-const OCR_ALLOWED_ROLES = ['admin', 'compliance_officer', 'quality_manager'] as const;
+const OCR_ALLOWED_ROLES = ['admin', 'aggregator', 'agent', 'compliance_officer', 'quality_manager'] as const;
 
 const bodySchema = z.object({
   image: z.string().min(1, 'Image data is required'),

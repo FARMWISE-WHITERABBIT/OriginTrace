@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Shield, KeyRound, AlertTriangle } from 'lucide-react';
+import { LogoIcon } from '@/components/logo';
+import { Loader2, KeyRound, AlertTriangle } from 'lucide-react';
 
 type Step = 'credentials' | 'totp';
 
@@ -121,8 +122,14 @@ export default function SuperadminLoginPage() {
       <Card className="w-full max-w-md relative z-10 bg-slate-900 border-slate-700 text-slate-100">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              {step === 'totp' ? <KeyRound className="h-8 w-8 text-white" /> : <Shield className="h-8 w-8 text-white" />}
+            <div className="h-14 w-14 flex items-center justify-center">
+              {step === 'totp' ? (
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                  <KeyRound className="h-8 w-8 text-white" />
+                </div>
+              ) : (
+                <LogoIcon size={56} />
+              )}
             </div>
           </div>
           <CardTitle className="text-2xl text-white">

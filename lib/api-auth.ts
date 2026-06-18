@@ -34,10 +34,30 @@ export async function getAuthenticatedProfile(request?: NextRequest) {
     .from('profiles')
     .select('id, org_id, role, user_id, full_name')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !profile) return { user, profile: null };
-  return { user, profile };
+  if (error) return { user, profile: null };
+  if (profile) return { user, profile };
+
+  const { data: buyerProfile, error: buyerError } = await supabase
+    .from('buyer_profiles')
+    .select('id, buyer_org_id, role, user_id, full_name')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (buyerError || !buyerProfile) return { user, profile: null };
+
+  return {
+    user,
+    profile: {
+      id: buyerProfile.id,
+      org_id: buyerProfile.buyer_org_id,
+      role: 'buyer',
+      user_id: buyerProfile.user_id,
+      full_name: buyerProfile.full_name,
+      buyer_role: buyerProfile.role,
+    },
+  };
 }
 
 /**

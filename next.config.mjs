@@ -1,5 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import withPWAInit from 'next-pwa';
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -15,28 +19,29 @@ const withPWA = withPWAInit({
       options: {
         cacheName: 'supabase-api-cache',
         expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
-        networkTimeoutSeconds: 10,
+        networkTimeoutSeconds: 5,
       },
     },
     // ── Supabase Storage (images, docs) — CacheFirst for performance ────────
+    // ── App-specific API routes — NetworkFirst, fall back to cache ──────────
+    // Supabase storage is intentionally not cached here because the documents bucket can contain sensitive files.
+    // Covers read-only lookup endpoints useful while offline:
+    // locations, commodities, and tenant field farmer lists
     {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
-      handler: 'CacheFirst',
+      urlPattern: /^\/api\/(locations|commodities)\b.*/i,
+      handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'supabase-storage-cache',
-        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+        cacheName: 'app-reference-cache',
+        expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 }, // 24h
       },
     },
-    // ── App-specific API routes — NetworkFirst, fall back to cache ──────────
-    // Covers read-only lookup endpoints useful while offline:
-    // locations, commodities, farmers list, batches list
     {
-      urlPattern: /^\/api\/(locations|commodities|collect\/farmers|farmers)\b.*/i,
+      urlPattern: /^\/api\/(collect\/farmers|farmers)\b.*/i,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'app-api-cache',
-        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 }, // 24h
-        networkTimeoutSeconds: 8,
+        cacheName: 'app-field-data-cache',
+        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 4 }, // 4h
+        networkTimeoutSeconds: 4,
       },
     },
     // ── Next.js static assets — CacheFirst, long TTL ────────────────────────
@@ -83,7 +88,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com https://www.youtube.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
+      "img-src 'self' data: blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
       "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
@@ -95,7 +100,7 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},
+  turbopack: { root: rootDir },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

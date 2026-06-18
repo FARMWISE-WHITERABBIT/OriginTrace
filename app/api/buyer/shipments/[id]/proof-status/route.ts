@@ -11,12 +11,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createServiceClient();
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });

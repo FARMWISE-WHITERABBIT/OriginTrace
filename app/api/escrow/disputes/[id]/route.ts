@@ -13,11 +13,11 @@ import { confirmDisputeResolution } from '@/lib/services/escrow';
 const ALLOWED_ROLES = ['admin', 'aggregator', 'buyer'];
 
 export async function PATCH(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
     if (!ALLOWED_ROLES.includes(profile.role)) {

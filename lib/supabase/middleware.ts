@@ -40,7 +40,7 @@ import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 interface AppClaims {
   app_role:      string | null;
-  org_id:        number | null;
+  org_id:        number | string | null;
   org_tier:      string | null;
   is_superadmin: boolean;
 }
@@ -82,16 +82,16 @@ async function fetchClaimsFromDb(userId: string): Promise<AppClaims> {
       .from('profiles')
       .select('role, org_id')
       .eq('user_id', userId)
-      .single(),
+      .maybeSingle(),
     admin
       .from('system_admins')
       .select('id')
       .eq('user_id', userId)
-      .single(),
+      .maybeSingle(),
   ]);
 
-  const role   = profileResult.data?.role   ?? null;
-  const org_id = profileResult.data?.org_id ?? null;
+  let role   = profileResult.data?.role   ?? null;
+  let org_id = profileResult.data?.org_id ?? null;
   const is_superadmin = !!superadminResult.data;
 
   let org_tier = 'starter';
@@ -106,6 +106,21 @@ async function fetchClaimsFromDb(userId: string): Promise<AppClaims> {
     const col  = org?.subscription_tier as string | undefined;
     const stg  = (org?.settings as any)?.subscription_tier as string | undefined;
     org_tier   = VALID.includes(col ?? '') ? col! : VALID.includes(stg ?? '') ? stg! : 'starter';
+  }
+
+  if (!role && !is_superadmin) {
+    const { data: buyerProfile } = await admin
+      .from('buyer_profiles')
+      .select('buyer_org_id, buyer_organization:buyer_organizations!buyer_profiles_buyer_org_id_fkey(settings)')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (buyerProfile) {
+      const settings = (buyerProfile as any).buyer_organization?.settings || {};
+      role = 'buyer';
+      org_id = buyerProfile.buyer_org_id;
+      org_tier = settings.subscription_tier || 'pro';
+    }
   }
 
   return { app_role: role, org_id, org_tier, is_superadmin };
@@ -159,7 +174,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/compliance') ||
     pathname.startsWith('/industries') ||
     pathname.startsWith('/legal') ||
-    pathname.startsWith('/pedigree');
+    pathname.startsWith('/pedigree') ||
+    pathname.startsWith('/farmer/activate');
 
   // API routes do their own auth
   if (isApiRoute) return supabaseResponse;
@@ -232,6 +248,11 @@ export async function updateSession(request: NextRequest) {
 
   // Role + tier gates on /app
   if (pathname.startsWith('/app') && !is_superadmin) {
+    if (role === 'buyer' && !pathname.startsWith('/app/buyer')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/app/buyer';
+      return NextResponse.redirect(url);
+    }
     if (role === 'farmer' && !pathname.startsWith('/app/farmer')) {
       const url = request.nextUrl.clone();
       url.pathname = '/app/farmer';

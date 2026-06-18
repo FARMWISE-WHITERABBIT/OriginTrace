@@ -580,7 +580,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 interface EscrowAccount {
   id: string;
-  amount_usd: number;
+  total_amount: number;
   status: string;
   milestone_config: Array<{ milestone_id: string; stage: string; amount: number; description: string; released_at?: string }>;
   created_at: string;
@@ -616,7 +616,7 @@ function ShipmentPaymentCard({
   const releasedMilestones  = (escrow?.milestone_config ?? []).filter((m) => m.released_at);
   const pendingMilestones   = (escrow?.milestone_config ?? []).filter((m) => !m.released_at);
   const releasedAmount      = releasedMilestones.reduce((s, m) => s + m.amount, 0);
-  const escrowTotal         = escrow?.amount_usd ?? 0;
+  const escrowTotal         = escrow?.total_amount ?? 0;
 
   return (
     <Card className="card-accent-emerald">
@@ -1038,9 +1038,27 @@ export default function ShipmentDetailPage() {
             {[shipment.destination_country, shipment.commodity, shipment.buyer_company].filter(Boolean).join(' · ')}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5 shrink-0">
-          <FileDown className="h-3.5 w-3.5" />Export PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={shipment.status} onValueChange={(v) => updateField('status', v)}>
+            <SelectTrigger className="w-[140px] h-9 text-xs" data-testid="select-shipment-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="ready">Ready to Ship</SelectItem>
+              <SelectItem value="in_transit">In Transit</SelectItem>
+              <SelectItem value="arrived">Arrived</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5 shrink-0">
+            <FileDown className="h-3.5 w-3.5" />Export PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(`/api/shipments/${shipmentId}/waybill-pdf`, '_blank')} className="gap-1.5 shrink-0" data-testid="button-download-waybill">
+            <FileText className="h-3.5 w-3.5" />Generate Waybill
+          </Button>
+        </div>
       </div>
 
       <Card className={`${decision.bgColor} border-l-4 ${
@@ -1065,7 +1083,7 @@ export default function ShipmentDetailPage() {
               </div>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-bold" data-testid="text-overall-score">{score}</p>
+              <p className="text-4xl font-bold" data-testid="text-readiness-score">{score}</p>
               <p className="text-xs text-muted-foreground">Overall Score</p>
               <Progress value={score} className="w-32 mt-2 h-2" />
               <Button
@@ -1303,6 +1321,44 @@ export default function ShipmentDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Logistics & Service Providers */}
+        <Card className="card-accent-emerald">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                <Truck className="h-3.5 w-3.5" />
+              </div>
+              Logistics & Service Providers
+            </CardTitle>
+            <CardDescription>Partners managing the freight and customs clearance.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Freight Forwarder</p>
+                  <p className="text-sm font-medium">{shipment.freight_forwarder_name || '—'}</p>
+                  {shipment.freight_forwarder_contact && <p className="text-xs text-muted-foreground">{shipment.freight_forwarder_contact}</p>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Clearing Agent</p>
+                  <p className="text-sm font-medium">{shipment.clearing_agent_name || '—'}</p>
+                  {shipment.clearing_agent_contact && <p className="text-xs text-muted-foreground">{shipment.clearing_agent_contact}</p>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Inspection Body</p>
+                  <p className="text-sm font-medium">{shipment.inspection_body || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Shipping Line</p>
+                  <p className="text-sm font-medium">{shipment.shipping_line || '—'}</p>
+                  {shipment.vessel_name && <p className="text-xs text-muted-foreground">{shipment.vessel_name} {shipment.voyage_number ? `(Voyage: ${shipment.voyage_number})` : ''}</p>}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="card-accent-violet">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -2208,7 +2264,7 @@ function EscrowReleaseModal({
           <div className="rounded-lg border p-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Escrow Balance</span>
-              <span className="font-bold">${Number(escrow.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              <span className="font-bold">${Number(escrow.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
           <div className="space-y-2">

@@ -64,6 +64,7 @@ export function QualityManagerDashboard() {
     recentFlaggedBatches: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('30d');
   const [isChartLoading, setIsChartLoading] = useState(true);
   const [gradeChartData, setGradeChartData] = useState<Array<{ grade: string; count: number }>>([]);
@@ -113,6 +114,7 @@ export function QualityManagerDashboard() {
         });
       } catch (error) {
         console.error('Failed to fetch quality stats:', error);
+        setError('Failed to load dashboard data. Please check your connection or database permissions.');
       } finally {
         setIsLoading(false);
       }
@@ -201,6 +203,25 @@ export function QualityManagerDashboard() {
           ))}
         </div>
       </div>
+
+      {error && (
+        <Card className="bg-destructive/10 border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <p className="font-medium">{error}</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4" 
+              onClick={() => { setError(null); setIsLoading(true); window.location.reload(); }}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {complianceCards.map((stat) => (

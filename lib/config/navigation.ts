@@ -126,7 +126,7 @@ const appNavigation: NavigationConfig = {
       items: [
         { title: 'Farmers', url: '/app/farmers', icon: Users, tourId: 'nav-farmers', allowedRoles: ['admin', 'aggregator', 'quality_manager'], requiredTier: 'starter', tierFeature: 'farmers_list' },
         { title: 'Register Farmer', url: '/app/farmers/new', icon: UserPlus, tourId: 'nav-register', allowedRoles: ['admin', 'aggregator', 'agent'], requiredTier: 'starter', tierFeature: 'farmer_registration' },
-        { title: 'Farm Polygons', url: '/app/farms', icon: Layers, tourId: 'nav-farm-polygons', allowedRoles: ['admin', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'farm_polygons' },
+        { title: 'Farm Polygons', url: '/app/farms', icon: Layers, tourId: 'nav-farm-polygons', allowedRoles: ['admin', 'aggregator', 'quality_manager', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'farm_polygons' },
         { title: 'Boundary Conflicts', url: '/app/conflicts', icon: AlertTriangle, badge: 'alert', tourId: 'nav-conflicts', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'boundary_conflicts' },
       ],
     },
@@ -158,7 +158,7 @@ const appNavigation: NavigationConfig = {
       label: 'PROCESSING & EXPORT',
       allowedRoles: ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'],
       items: [
-        { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'processing' },
+        { title: 'Processing Runs', url: '/app/processing', icon: Factory, tourId: 'nav-processing', allowedRoles: ['admin', 'quality_manager', 'compliance_officer', 'warehouse_supervisor'], requiredTier: 'pro', tierFeature: 'processing' },
         { title: 'Pedigree', url: '/app/pedigree', icon: QrCode, tourId: 'nav-pedigree', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'pedigree' },
         { title: 'Product Passport', url: '/app/dpp', icon: Fingerprint, tourId: 'nav-dpp', allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'digital_product_passport' },
         { title: 'Shipments', url: '/app/shipments', icon: Ship, tourId: 'nav-shipments', allowedRoles: ['admin', 'logistics_coordinator', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'shipment_readiness' },
@@ -177,6 +177,7 @@ const appNavigation: NavigationConfig = {
         { title: 'Scan & Verify', url: '/app/verify', icon: ScanLine, tourId: 'nav-verify', allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'scan_verify' },
         { title: 'Lab Results', url: '/app/lab-results', icon: FlaskConical, tourId: 'nav-lab-results', allowedRoles: ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
         { title: 'Compliance Profiles', url: '/app/settings?tab=compliance', icon: ShieldCheck, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'pro', tierFeature: 'compliance_profiles' },
+        { title: 'Evidence', url: '/app/evidence', icon: Upload, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'starter', tierFeature: 'documents' },
         { title: 'Audit Log', url: '/app/audit', icon: ScrollText, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'basic', tierFeature: 'payments' },
       ],
     },
@@ -216,10 +217,10 @@ const appNavigation: NavigationConfig = {
     // ── 9. CONFIGURATION ─────────────────────────────────────────────────────
     {
       label: 'CONFIGURATION',
-      allowedRoles: ['admin', 'aggregator'],
+      allowedRoles: ['admin', 'aggregator', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'],
       items: [
         { title: 'Settings', url: '/app/settings', icon: Settings, allowedRoles: ['admin', 'aggregator'] },
-        { title: 'Data Vault', url: '/app/data-vault', icon: Download, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'data_vault' },
+        { title: 'Data Vault', url: '/app/data-vault', icon: Download, allowedRoles: ['admin', 'compliance_officer'], requiredTier: 'enterprise', tierFeature: 'data_vault' },
         { title: 'Document Vault', url: '/app/documents', icon: FolderOpen, tourId: 'nav-documents', allowedRoles: ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'], requiredTier: 'starter', tierFeature: 'documents' },
         { title: 'API Keys', url: '/app/settings?tab=api-keys', icon: Key, allowedRoles: ['admin'], requiredTier: 'enterprise', tierFeature: 'enterprise_api' },
         { title: 'Guide', url: '/app/guide', icon: BookOpen, allowedRoles: ['admin', 'aggregator', 'agent', 'quality_manager', 'compliance_officer', 'logistics_coordinator', 'warehouse_supervisor'] },
@@ -264,9 +265,33 @@ const buyerNavigation: NavigationConfig = {
   ],
 };
 
+const farmerNavigation: NavigationConfig = {
+  groups: [
+    {
+      label: 'OVERVIEW',
+      allowedRoles: ['farmer'],
+      items: [
+        { title: 'Dashboard', url: '/app/farmer', icon: PieChart, tourId: 'nav-farmer-dashboard', allowedRoles: ['farmer'] },
+      ],
+    },
+    {
+      label: 'FARMER PORTAL',
+      allowedRoles: ['farmer'],
+      items: [
+        { title: 'Deliveries', url: '/app/farmer/deliveries', icon: Package, allowedRoles: ['farmer'] },
+        { title: 'Payments', url: '/app/farmer/payments', icon: Wallet, allowedRoles: ['farmer'] },
+        { title: 'Training', url: '/app/farmer/training', icon: BookOpen, allowedRoles: ['farmer'] },
+        { title: 'Inputs', url: '/app/farmer/inputs', icon: Wheat, allowedRoles: ['farmer'] },
+        { title: 'Profile', url: '/app/farmer/profile', icon: Settings, allowedRoles: ['farmer'] },
+      ],
+    },
+  ],
+};
+
 export function getNavigationConfig(role: UserRole): NavigationConfig {
   if (role === 'superadmin') return superadminNavigation;
   if (role === 'buyer') return buyerNavigation;
+  if (role === 'farmer') return farmerNavigation;
   return {
     groups: appNavigation.groups
       .filter(group => group.allowedRoles.includes(role as AppRole))
