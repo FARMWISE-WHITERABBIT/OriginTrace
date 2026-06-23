@@ -7,6 +7,12 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
+export const emptyAsUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((val) => (val === '' ? undefined : val), schema);
+
+export const emptyAsNull = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((val) => (val === '' ? null : val), schema);
+
 export const uuidSchema = z.string().uuid('Invalid UUID');
 export const orgIdSchema = uuidSchema;
 export const phoneSchema = z.string().min(7).max(20).regex(/^\+?[\d\s\-().]+$/, 'Invalid phone number');
@@ -67,8 +73,8 @@ export const farmCreateSchema = z.object({
     type:        z.string().optional(),
     coordinates: z.array(z.unknown()).optional(),
   }).nullable().optional(),
-  area_hectares:    z.number().positive().nullable().optional(),
-  legality_doc_url: z.string().url().nullable().optional(),
+  area_hectares:    emptyAsUndefined(z.number().positive().nullable().optional()),
+  legality_doc_url: emptyAsUndefined(z.string().url().nullable().optional()),
 });
 
 export const farmPatchSchema = z.object({
@@ -84,7 +90,7 @@ export const batchCreateSchema = z.object({
   farm_id:      z.union([z.string(), z.number()]).transform(v => String(v)),
   bags: z.array(z.object({
     serial:       z.string().optional(),
-    weight:       z.number().optional(),
+    weight:       emptyAsUndefined(z.number().optional()),
     grade:        z.string().optional(),
     is_compliant: z.boolean().optional(),
   })).optional(),
@@ -174,9 +180,9 @@ const VALID_DOC_TYPES = [
 export const documentCreateSchema = z.object({
   title:              z.string().min(1).max(200),
   document_type:      z.enum(VALID_DOC_TYPES),
-  file_url:           z.string().url().optional().nullable(),
-  file_name:          z.string().max(500).optional().nullable(),
-  file_size:          z.number().int().optional().nullable(),
+  file_url:           emptyAsUndefined(z.string().url().optional().nullable()),
+  file_name:          emptyAsUndefined(z.string().max(500).optional().nullable()),
+  file_size:          emptyAsUndefined(z.number().int().optional().nullable()),
   issued_date:        dateSchema.optional().nullable(),
   expiry_date:        dateSchema.optional().nullable(),
   linked_entity_type: z.string().max(100).optional().nullable(),
@@ -276,7 +282,7 @@ export const shipmentOutcomeSchema = z.object({
   port_of_entry:        z.string().max(200).optional(),
   customs_reference:    z.string().max(200).optional(),
   inspector_notes:      z.string().max(2000).optional(),
-  financial_impact_usd: z.number().optional(),
+  financial_impact_usd: emptyAsUndefined(z.number().optional()),
 });
 
 // ---------------------------------------------------------------------------

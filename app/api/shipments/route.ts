@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
-import { parsePagination } from '@/lib/api/validation';
+import { parsePagination, emptyAsNull } from '@/lib/api/validation';
 
 const shipmentCreateSchema = z.object({
   destination_country: z.string().min(1, 'Destination country is required'),
@@ -14,8 +14,8 @@ const shipmentCreateSchema = z.object({
   destination_port: z.string().optional(),
   notes: z.string().optional(),
   estimated_ship_date: z.string().optional(),
-  compliance_profile_id: z.number().optional(),
-  contract_id: z.number().optional(),
+  compliance_profile_id: emptyAsNull(z.number().nullable().optional()),
+  contract_id: emptyAsNull(z.number().nullable().optional()),
   document_ids: z.array(z.number()).optional(),
 });
 

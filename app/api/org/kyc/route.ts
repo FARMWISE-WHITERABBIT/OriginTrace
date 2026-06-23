@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 
@@ -15,7 +16,7 @@ const kycSubmitSchema = z.object({
   director_name:           z.string().optional(),
   director_id_type:        z.enum(['nin', 'passport', 'drivers_license']).optional(),
   director_id_number:      z.string().optional(),
-  director_id_url:         z.string().url().optional(),
+  director_id_url:         emptyAsNull(z.string().url().nullable().optional()),
   bank_account_number:     z.string().optional(),
   bank_code:               z.string().optional(),
   bank_name:               z.string().optional(),

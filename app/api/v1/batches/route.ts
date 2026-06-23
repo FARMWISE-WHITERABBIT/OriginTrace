@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey } from '@/lib/api-auth';
 import { checkRateLimit } from '@/lib/api/rate-limit';
+import { emptyAsNull } from '@/lib/api/validation';
 import { z } from 'zod';
 import { enforceTier } from '@/lib/api/tier-guard';
 
@@ -70,10 +71,11 @@ const createBatchSchema = z.object({
   notes: z.string().optional(),
   commodity: z.string().optional(),
   batch_id: z.string().optional(),
-  gps_lat: z.number().optional(),
-  gps_lng: z.number().optional(),
+  gps_lat: emptyAsNull(z.number().nullable().optional()),
+  gps_lng: emptyAsNull(z.number().nullable().optional()),
+  gps_accuracy: z.number().optional(),
   estimated_bags: z.number().int().optional(),
-  estimated_weight: z.number().optional(),
+  estimated_weight: emptyAsNull(z.number().nullable().optional()),
 });
 
 export async function POST(request: NextRequest) {

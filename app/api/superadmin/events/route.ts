@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 
 async function assertSuperadmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -38,14 +39,14 @@ const eventSchema = z.object({
   theme:                   z.string().max(300).optional(),
   partner:                 z.string().max(200).optional(),
   date:                    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  start_time:              z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  start_time:              emptyAsNull(z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).nullable().optional()),
   location:                z.string().min(2).max(300),
   location_address:        z.string().max(500).optional(),
   tags:                    z.array(z.string()).optional(),
   is_free:                 z.boolean().optional(),
   registration_open:       z.boolean().optional(),
   registration_closes_at:  z.string().nullable().optional(),
-  image_url:               z.string().url().nullable().optional(),
+  image_url:               emptyAsNull(z.string().url().nullable().optional()),
 });
 
 // GET — list all events with registration counts

@@ -2,6 +2,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 
 const patchSchema = z.object({
   module_name: z.string().min(1).optional(),
@@ -9,7 +10,7 @@ const patchSchema = z.object({
   status: z.enum(['not_started', 'in_progress', 'completed']).optional(),
   score: z.number().min(0).max(100).optional().nullable(),
   completed_at: z.string().optional().nullable(),
-  certificate_url: z.string().url().optional().nullable(),
+  certificate_url: emptyAsNull(z.string().url().nullable().optional()),
   notes: z.string().optional().nullable(),
 });
 

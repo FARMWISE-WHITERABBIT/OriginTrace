@@ -835,3 +835,45 @@ Security:
 ## 47. Project Status: Phase 27 Complete
 
 - [X] **Phase 27: Organization Settings API Validation Fix** - Fixed the settings save payload to strip empty strings, resolving a strict regex validation failure for organizations with partial brand colors.
+
+---
+
+## 48. Phase 28: System-Wide API Empty String Validation Audit
+
+### What's New
+
+- **Robust Zod Preprocessing:** We conducted a codebase-wide audit to eliminate all "silly bugs" caused by the frontend sending empty strings (`""`) to optional backend API fields that expect strict types (like URLs, Emails, Regex, and Numbers). Zod's `.optional()` modifier ignores `undefined`, but fails on `""`.
+- **`emptyAsUndefined` Helper:** Introduced a generic `z.preprocess` helper in `lib/api/validation.ts` that safely intercepts `""` and converts it to `undefined` before validation.
+- **Widespread Safety:** This helper has been applied across 10+ critical API route schemas, including Shipments, Sync, Superadmin Events, Org KYC, Farmer Training, Batches, and Settings. 
+
+### Verification
+
+- The backend schemas for sensitive domains like `freight_cost_usd`, `director_id_url`, `start_time`, and `certificate_url` are now resilient to form-clearing edge cases.
+- `npm run check` passed flawlessly.
+
+---
+
+## 49. Project Status: Phase 28 Complete
+
+- [X] **Phase 28: System-Wide API Empty String Validation Audit** - Resolved all strict Zod validation bugs where empty UI forms caused 400 Bad Request errors across the platform by enforcing a unified `emptyAsUndefined` preprocessor.
+
+---
+
+## 50. Phase 29: Business Logic Correction (emptyAsNull)
+
+### What's New
+
+- **Business Logic Correction:** While Phase 28 fixed the 400 Bad Request errors using `emptyAsUndefined`, it introduced a silent business logic flaw: if a user intentionally cleared an optional field in the UI (like deleting a freight cost or removing an uploaded logo), sending `""` resulted in `undefined`. This caused the backend to completely ignore the field during a `PATCH` operation, leaving the old value alive in the database.
+- **`emptyAsNull` Helper:** Introduced `emptyAsNull` in `lib/api/validation.ts`, which maps `""` to `null`.
+- **Schema Updates:** Switched all relevant clearable fields across Shipments, Settings, KYC, Lab Results, Sync, Events, and Training routes to use `emptyAsNull(z.something().nullable().optional())`. This guarantees that explicit deletions in the UI correctly set the corresponding database columns to `null`.
+
+### Verification
+
+- Verified the PostgreSQL schema to confirm none of the affected columns have `NOT NULL` constraints.
+- 691 tests passed successfully with Vitest.
+
+---
+
+## 51. Project Status: Phase 29 Complete
+
+- [X] **Phase 29: Business Logic Correction (emptyAsNull)** - Migrated all UI-clearable fields to use `emptyAsNull`, ensuring that deleting data in the frontend correctly zeroes out the database records without violating strict Zod type safety.

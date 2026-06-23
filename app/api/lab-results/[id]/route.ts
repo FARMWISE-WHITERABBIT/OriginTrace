@@ -6,17 +6,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 
 const labResultPatchSchema = z.object({
   result:           z.enum(['pass', 'fail', 'conditional']).optional(),
-  result_value:     z.number().optional(),
+  result_value:     emptyAsNull(z.number().nullable().optional()),
   result_unit:      z.string().optional(),
   result_notes:     z.string().optional(),
   certificate_number: z.string().optional(),
   certificate_validity_days: z.number().int().positive().optional(),
-  file_url:         z.string().url().optional(),
+  file_url:         emptyAsNull(z.string().url().nullable().optional()),
   file_name:        z.string().optional(),
   target_markets:   z.array(z.string()).optional(),
 });

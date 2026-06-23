@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 
 const MODULE_TYPES = ['gap', 'safety', 'sustainability', 'organic', 'child_labor', 'eudr_awareness'] as const;
 const STATUSES = ['not_started', 'in_progress', 'completed'] as const;
@@ -13,7 +14,7 @@ const trainingCreateSchema = z.object({
   status: z.enum(STATUSES).default('not_started'),
   score: z.number().min(0).max(100).optional().nullable(),
   completed_at: z.string().optional().nullable(),
-  certificate_url: z.string().url().optional().nullable(),
+  certificate_url: emptyAsNull(z.string().url().nullable().optional()),
 });
 
 const trainingPatchSchema = z.object({

@@ -1,22 +1,23 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { cookies } from 'next/headers';
-import { z } from 'zod';
 import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 const settingsPatchSchema = z.object({
   name: z.string().min(2).optional(),
-  logo_url: z.string().url().nullable().optional(),
+  logo_url: emptyAsNull(z.string().url().nullable().optional()),
   settings: z.record(z.any()).optional(),
   active_lgas: z.array(z.string()).optional(),
   commodity_types: z.array(z.string()).optional(),
   commodities: z.array(z.string()).optional(),
   brand_colors: z.object({
-    primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    accent: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    primary: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
+    secondary: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
+    accent: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
   }).nullable().optional(),
 });
 

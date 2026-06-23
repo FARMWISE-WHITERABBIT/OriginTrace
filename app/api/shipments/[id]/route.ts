@@ -4,6 +4,7 @@ import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipm
 import type { FarmBoundaryAnalysis } from '@/lib/services/scoring/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
 
 const shipmentPatchSchema = z.object({
@@ -58,18 +59,19 @@ const shipmentPatchSchema = z.object({
   // ── Commercial (Stage 1) ───────────────────────────────────────────────────
   purchase_order_number: z.string().optional(),
   purchase_order_date: z.string().optional(),
-  contract_price_per_mt: z.number().optional(),
-  total_shipment_value_usd: z.number().optional(),
+  contract_price_per_mt: emptyAsNull(z.number().nullable().optional()),
+  total_shipment_value_usd: emptyAsNull(z.number().nullable().optional()),
 
   // ── Costs (entered at respective stages) ──────────────────────────────────
-  freight_cost_usd: z.number().optional(),
-  customs_fees_ngn: z.number().optional(),
-  inspection_fees_ngn: z.number().optional(),
-  phyto_lab_costs_ngn: z.number().optional(),
-  certification_costs_ngn: z.number().optional(),
-  port_handling_charges_ngn: z.number().optional(),
-  freight_insurance_usd: z.number().optional(),
-  usd_ngn_rate: z.number().positive().optional(),
+  freight_cost_usd: emptyAsNull(z.number().nullable().optional()),
+  customs_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  inspection_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  phyto_lab_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  certification_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  port_handling_charges_ngn: emptyAsNull(z.number().nullable().optional()),
+  freight_insurance_usd: emptyAsNull(z.number().nullable().optional()),
+  usd_ngn_rate: emptyAsNull(z.number().positive().nullable().optional()),
+  gross_weight_kg: emptyAsNull(z.number().nullable().optional()),
 
   // ── Outcome (Stage 9 close) ────────────────────────────────────────────────
   shipment_outcome: z.enum(['accepted', 'rejected', 'conditional']).optional(),
@@ -91,8 +93,8 @@ const shipmentPatchSchema = z.object({
   // ── Item management ────────────────────────────────────────────────────────
   add_items: z.array(z.object({
     item_type: z.enum(['batch', 'finished_good']),
-    batch_id: z.number().optional(),
-    finished_good_id: z.number().optional(),
+    batch_id: emptyAsNull(z.number().nullable().optional()),
+    finished_good_id: emptyAsNull(z.number().nullable().optional()),
   })).optional(),
   remove_items: z.array(z.number()).optional(),
 });

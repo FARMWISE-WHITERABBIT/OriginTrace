@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator', 'compliance_officer'];
@@ -29,15 +30,15 @@ const templateSchema = z.object({
   clearing_agent_name: z.string().max(255).optional(),
   clearing_agent_contact: z.string().max(255).optional(),
   container_type: z.enum(['20FT', '40FT', '40HC', 'Reefer']).optional(),
-  contract_price_per_mt: z.number().optional(),
-  usd_ngn_rate: z.number().positive().optional(),
-  customs_fees_ngn: z.number().optional(),
-  inspection_fees_ngn: z.number().optional(),
-  phyto_lab_costs_ngn: z.number().optional(),
-  certification_costs_ngn: z.number().optional(),
-  port_handling_charges_ngn: z.number().optional(),
-  freight_cost_usd: z.number().optional(),
-  freight_insurance_usd: z.number().optional(),
+  contract_price_per_mt: emptyAsNull(z.number().nullable().optional()),
+  usd_ngn_rate: emptyAsNull(z.number().positive().nullable().optional()),
+  customs_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  inspection_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  phyto_lab_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  certification_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  port_handling_charges_ngn: emptyAsNull(z.number().nullable().optional()),
+  freight_cost_usd: emptyAsNull(z.number().nullable().optional()),
+  freight_insurance_usd: emptyAsNull(z.number().nullable().optional()),
 });
 
 export async function GET(request: NextRequest) {

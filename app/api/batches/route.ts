@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
@@ -13,7 +14,7 @@ const batchCreateSchema = z.object({
   farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
   bags: z.array(z.object({
     serial: z.string().optional(),
-    weight: z.number().optional(),
+    weight: emptyAsNull(z.number().nullable().optional()),
     grade: z.string().optional(),
     is_compliant: z.boolean().optional(),
   })).optional(),
