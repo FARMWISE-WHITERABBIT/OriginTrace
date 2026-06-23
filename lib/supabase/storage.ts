@@ -1,7 +1,7 @@
 import { createAdminClient } from './admin';
 
 const BUCKET_NAME = 'documents';
-const SIGNED_URL_EXPIRES_IN = 10 * 365 * 24 * 60 * 60;
+const SIGNED_URL_EXPIRES_IN = 30 * 24 * 60 * 60; // 30 days in seconds
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/tiff',

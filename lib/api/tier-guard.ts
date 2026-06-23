@@ -18,9 +18,9 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
       .eq('id', orgId)
       .single();
 
-    // Org not found → fail-closed (ADR-002: genuine auth error, return 403)
+    // Org not found → return 404 (resource does not exist)
     if (!canAccessOrg(org ?? null)) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 403 });
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
     // null / undefined tier → fail-open (ADR-002: ops error, grant access)

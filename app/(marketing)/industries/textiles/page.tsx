@@ -220,7 +220,7 @@ export default function TextilesPage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
             <FadeIn>
-              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+              <div className="flex flex-col items-center text-center mk-cta-block">
                 <span className="pre-title margin-bottom margin-large">Get Started</span>
                 <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">Fibre origin traceability that satisfies US customs.</h2>
                 <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>UFLPA compliance requires verified origin data that no supplier declaration can provide. Let us show you how OriginTrace builds the evidence package your buyers need — for your fibre, your suppliers, your markets.</p>

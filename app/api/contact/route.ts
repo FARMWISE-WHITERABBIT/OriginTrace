@@ -3,6 +3,15 @@ import { sendEmail } from '@/lib/email/resend-client';
 import { upsertHubSpotContact } from '@/lib/hubspot';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -25,20 +34,32 @@ export async function POST(request: NextRequest) {
     const calcomLink = process.env.CALCOM_LINK || 'https://cal.com/origintrace/discovery';
 
     // ── Notify internal team ──────────────────────────────────────────────────
+    const safeFullName = escapeHtml(full_name);
+    const safeEmail = escapeHtml(email);
+    const safeCompany = company ? escapeHtml(company) : '';
+    const safePhone = phone ? escapeHtml(phone) : '';
+    const safeRole = role ? escapeHtml(role) : '';
+    const safeOrgType = organization_type ? escapeHtml(organization_type) : '';
+    const safeCommodity = commodity ? escapeHtml(commodity) : '';
+    const safeMonthlyTonnage = monthly_tonnage ? escapeHtml(String(monthly_tonnage)) : '';
+    const safeFarmerCount = farmer_count ? escapeHtml(String(farmer_count)) : '';
+    const safeBiggestConcern = biggest_concern ? escapeHtml(biggest_concern) : '';
+    const safeMessage = message ? escapeHtml(message) : '';
+
     const internalHtml = `
       <h2 style="margin:0 0 16px">New ${source === 'calculator' ? 'Calculator Lead' : 'Demo Request'} — OriginTrace</h2>
       <table style="border-collapse:collapse;width:100%;font-size:14px">
-        <tr><td style="padding:8px;background:#f4f4f4;font-weight:600;width:160px">Name</td><td style="padding:8px;border-bottom:1px solid #eee">${full_name}</td></tr>
-        <tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Email</td><td style="padding:8px;border-bottom:1px solid #eee"><a href="mailto:${email}">${email}</a></td></tr>
-        ${company ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Company</td><td style="padding:8px;border-bottom:1px solid #eee">${company}</td></tr>` : ''}
-        ${phone ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Phone</td><td style="padding:8px;border-bottom:1px solid #eee">${phone}</td></tr>` : ''}
-        ${role ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Role</td><td style="padding:8px;border-bottom:1px solid #eee">${role}</td></tr>` : ''}
-        ${organization_type ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Org Type</td><td style="padding:8px;border-bottom:1px solid #eee">${organization_type}</td></tr>` : ''}
-        ${commodity ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Commodity</td><td style="padding:8px;border-bottom:1px solid #eee">${commodity}</td></tr>` : ''}
-        ${monthly_tonnage ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Monthly Volume</td><td style="padding:8px;border-bottom:1px solid #eee">${monthly_tonnage} MT</td></tr>` : ''}
-        ${farmer_count ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Farmer Count</td><td style="padding:8px;border-bottom:1px solid #eee">${farmer_count}</td></tr>` : ''}
-        ${biggest_concern ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Top Challenge</td><td style="padding:8px;border-bottom:1px solid #eee">${biggest_concern}</td></tr>` : ''}
-        ${message ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Message</td><td style="padding:8px;border-bottom:1px solid #eee">${message}</td></tr>` : ''}
+        <tr><td style="padding:8px;background:#f4f4f4;font-weight:600;width:160px">Name</td><td style="padding:8px;border-bottom:1px solid #eee">${safeFullName}</td></tr>
+        <tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Email</td><td style="padding:8px;border-bottom:1px solid #eee"><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
+        ${safeCompany ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Company</td><td style="padding:8px;border-bottom:1px solid #eee">${safeCompany}</td></tr>` : ''}
+        ${safePhone ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Phone</td><td style="padding:8px;border-bottom:1px solid #eee">${safePhone}</td></tr>` : ''}
+        ${safeRole ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Role</td><td style="padding:8px;border-bottom:1px solid #eee">${safeRole}</td></tr>` : ''}
+        ${safeOrgType ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Org Type</td><td style="padding:8px;border-bottom:1px solid #eee">${safeOrgType}</td></tr>` : ''}
+        ${safeCommodity ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Commodity</td><td style="padding:8px;border-bottom:1px solid #eee">${safeCommodity}</td></tr>` : ''}
+        ${safeMonthlyTonnage ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Monthly Volume</td><td style="padding:8px;border-bottom:1px solid #eee">${safeMonthlyTonnage} MT</td></tr>` : ''}
+        ${safeFarmerCount ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Farmer Count</td><td style="padding:8px;border-bottom:1px solid #eee">${safeFarmerCount}</td></tr>` : ''}
+        ${safeBiggestConcern ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Top Challenge</td><td style="padding:8px;border-bottom:1px solid #eee">${safeBiggestConcern}</td></tr>` : ''}
+        ${safeMessage ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Message</td><td style="padding:8px;border-bottom:1px solid #eee">${safeMessage}</td></tr>` : ''}
       </table>
       <p style="margin-top:24px;font-size:12px;color:#888">Submitted via origintrace.trade/${source === 'calculator' ? 'compliance calculator' : 'demo'}</p>
     `;
@@ -51,7 +72,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ── Auto-reply with Cal.com booking CTA ───────────────────────────────────
-    const firstName = full_name.split(' ')[0];
+    const firstName = escapeHtml(full_name.split(' ')[0]);
     const autoReplyHtml = `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
         <h2 style="margin:0 0 8px">Your pilot slot is secured, ${firstName}.</h2>

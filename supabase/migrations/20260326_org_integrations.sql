@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS org_integrations (
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   last_synced_at TIMESTAMPTZ,
   last_error    TEXT,
-  created_by    UUID REFERENCES profiles(user_id),
+  created_by    UUID REFERENCES auth.users(id),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

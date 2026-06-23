@@ -300,6 +300,17 @@
   .mk-container-lg  { max-width: var(--container-lg); }  /* 1390px — Mivora .container */
   .mk-container-full { max-width: none; }
 
+  /* ── CTA block centering utility ──────────────────────────────────── */
+  .mk-cta-block {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
+  /* ── Text width cap utility ────────────────────────────────────────── */
+  .mk-text-cap {
+    max-width: 26ch;
+  }
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    4. SECTION SPACING

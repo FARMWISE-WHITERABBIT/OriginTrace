@@ -450,11 +450,9 @@ X-RateLimit-Reset: 1700000000`}</CodeBlock>
               Contact our team to enable API access for your organization and start building integrations today.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link href="/demo">
-                <Button className="bg-emerald-600 text-white" data-testid="button-cta-demo">
-                  Request Demo
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+              <Link href="/demo" className="btn-mk-primary" data-testid="button-cta-demo">
+                Request Demo
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
               <Link href="/auth/login">
                 <Button variant="outline" data-testid="button-cta-signin">

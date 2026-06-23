@@ -155,6 +155,7 @@ export default function InventoryPage() {
       // Optimistically update batch statuses in the local state
       setBatches(prev => prev.map(b => ids.includes(b.id) ? { ...b, status: 'dispatched' } : b));
       toast({ title: 'Dispatched', description: `${ids.length} batch${ids.length !== 1 ? 'es' : ''} dispatched to ${dispatchDest}` });
+      setSelected(new Set());
       setDispatchComplete(true);
       setConfirmDispatch(false);
     } catch (err: any) {

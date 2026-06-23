@@ -352,7 +352,7 @@ export default function HomePage() {
 
                 <span className="pre-title margin-bottom margin-medium">The Problem We Solve</span>
 
-                <h2 className="text-display-lg section-header__title" style={{ maxWidth: '26ch' }}>
+                <h2 className="text-display-lg section-header__title mk-text-cap">
                   The problem is not{' '}
                   <span className="text-mk-muted">production.</span>{' '}
                   It is{' '}
@@ -492,8 +492,7 @@ export default function HomePage() {
           <div className="mk-container-sm">
             <FadeIn>
               <div
-                className="flex flex-col items-center text-center"
-                style={{ maxWidth: '40rem', marginInline: 'auto' }}
+                className="flex flex-col items-center text-center mk-cta-block"
               >
                 <span className="pre-title margin-bottom margin-large">
                   Get Started

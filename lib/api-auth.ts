@@ -91,6 +91,8 @@ interface ApiKeyValidation {
   scopes?: string[];
   keyPrefix?: string;
   rateLimitPerHour?: number;
+  error?: string;
+  status?: number;
 }
 
 function getServiceSupabase(): SupabaseClient | null {
@@ -136,6 +138,17 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
   if (apiKey.expires_at && new Date(apiKey.expires_at) < new Date()) {
     return { valid: false };
+  }
+
+  // Check that the owning organization is not suspended
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('subscription_status')
+    .eq('id', apiKey.org_id)
+    .single();
+
+  if (org?.subscription_status === 'suspended') {
+    return { valid: false, error: 'Organization suspended', status: 403 };
   }
 
   await supabase

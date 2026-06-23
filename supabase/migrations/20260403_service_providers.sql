@@ -37,7 +37,7 @@ CREATE POLICY "service_providers_org_access"
   ON service_providers
   FOR ALL
   USING (org_id = (
-    SELECT org_id FROM profiles WHERE id = auth.uid()
+    SELECT org_id FROM profiles WHERE user_id = auth.uid()
   ));
 
 -- Indexes

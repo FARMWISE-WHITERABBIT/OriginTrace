@@ -4,7 +4,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | OriginTrace',
+  title: 'Terms of Service',
   description: 'OriginTrace platform terms of service and user agreement.',
 };
 

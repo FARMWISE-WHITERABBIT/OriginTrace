@@ -221,7 +221,7 @@ export default function MineralsPage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
             <FadeIn>
-              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+              <div className="flex flex-col items-center text-center mk-cta-block">
                 <span className="pre-title margin-bottom margin-large">Get Started</span>
                 <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">Responsible sourcing documentation starts at the mine, not the desk.</h2>
                 <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>We&apos;ll show you how OriginTrace builds the chain-of-custody record from first extraction to final export — for your mineral, your buyers, and your markets.</p>

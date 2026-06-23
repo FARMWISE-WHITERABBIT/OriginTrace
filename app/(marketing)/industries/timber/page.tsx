@@ -222,7 +222,7 @@ export default function TimberPage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
             <FadeIn>
-              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+              <div className="flex flex-col items-center text-center mk-cta-block">
                 <span className="pre-title margin-bottom margin-large">Get Started</span>
                 <h2 className="text-display-lg text-mk-on-dark margin-bottom margin-medium">Timber compliance that starts at the concession.</h2>
                 <p className="margin-bottom margin-xlarge-2" style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}>The due diligence statement your EU or UK buyer needs to submit starts with verified origin evidence from you. Let us show you how to build it in time for your next shipment.</p>

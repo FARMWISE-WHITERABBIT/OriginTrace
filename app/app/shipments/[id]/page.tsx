@@ -258,6 +258,7 @@ const REGULATION_OPTIONS = [
 ];
 
 function OutcomeDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open: boolean; onOpenChange: (v: boolean) => void; onSubmit: (d: any) => void; isSubmitting: boolean }) {
+  const { toast } = useToast();
   const [form, setForm] = useState({ outcome: 'approved', outcome_date: new Date().toISOString().split('T')[0], rejection_reason: '', rejection_category: '', port_of_entry: '', financial_impact_usd: 0, inspector_notes: '' });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -319,7 +320,13 @@ function OutcomeDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open: b
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => onSubmit(form)} disabled={isSubmitting} data-testid="button-submit-outcome">
+          <Button onClick={() => {
+            if (form.outcome === 'rejected' && !form.rejection_reason.trim()) {
+              toast({ title: 'Rejection reason required', description: 'Please provide a reason for rejecting this shipment.', variant: 'destructive' });
+              return;
+            }
+            onSubmit(form);
+          }} disabled={isSubmitting} data-testid="button-submit-outcome">
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Record
           </Button>
         </DialogFooter>
@@ -329,6 +336,7 @@ function OutcomeDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open: b
 }
 
 function ColdChainDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open: boolean; onOpenChange: (v: boolean) => void; onSubmit: (d: any) => void; isSubmitting: boolean }) {
+  const { toast } = useToast();
   const [form, setForm] = useState({ log_type: 'temperature', value: 0, location: '', threshold_min: 15, threshold_max: 25 });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -357,7 +365,7 @@ function ColdChainDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open:
           </div>
           <div className="space-y-2">
             <Label>Value ({form.log_type === 'temperature' ? '\u00B0C' : form.log_type === 'humidity' ? '%' : 'score'})</Label>
-            <Input type="number" step="0.1" value={form.value || ''} onChange={e => setForm(f => ({ ...f, value: parseFloat(e.target.value) || 0 }))} data-testid="input-cold-chain-value" />
+            <Input type="number" step="0.1" min="-30" max="60" value={form.value || ''} onChange={e => setForm(f => ({ ...f, value: parseFloat(e.target.value) || 0 }))} data-testid="input-cold-chain-value" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -376,7 +384,13 @@ function ColdChainDialog({ open, onOpenChange, onSubmit, isSubmitting }: { open:
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => onSubmit(form)} disabled={isSubmitting} data-testid="button-submit-cold-chain">
+          <Button onClick={() => {
+            if (form.log_type === 'temperature' && (form.value < -30 || form.value > 60)) {
+              toast({ title: 'Invalid temperature', description: 'Temperature must be between -30°C and 60°C.', variant: 'destructive' });
+              return;
+            }
+            onSubmit(form);
+          }} disabled={isSubmitting} data-testid="button-submit-cold-chain">
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Record
           </Button>
         </DialogFooter>
@@ -2103,6 +2117,15 @@ function PaymentSetupModal({
             .filter((m) => m.description && m.amount)
             .map((m) => ({ stage: m.stage, amount: parseFloat(m.amount), description: m.description }))
         : undefined;
+
+      if (method === 'escrow_usdc' && milestoneParsed) {
+        const milestoneTotal = milestoneParsed.reduce((sum, m) => sum + m.amount, 0);
+        if (Math.abs(milestoneTotal - amountNum) > 0.01) {
+          toast({ title: 'Milestone total mismatch', description: `Milestone amounts (${milestoneTotal}) must equal the shipment value (${amountNum})`, variant: 'destructive' });
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       const res = await fetch(`/api/shipments/${shipmentId}/payment-setup`, {
         method: 'POST',

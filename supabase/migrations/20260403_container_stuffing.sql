@@ -34,7 +34,7 @@ CREATE POLICY "stuffing_records_org_access"
   ON container_stuffing_records
   FOR ALL
   USING (org_id = (
-    SELECT org_id FROM profiles WHERE id = auth.uid()
+    SELECT org_id FROM profiles WHERE user_id = auth.uid()
   ));
 
 -- Index

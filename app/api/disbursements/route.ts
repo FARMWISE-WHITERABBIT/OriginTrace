@@ -9,6 +9,11 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
+    const allowedRoles = ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer']
+    if (!allowedRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
     const batchId = searchParams.get('batch_id');

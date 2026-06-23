@@ -548,7 +548,7 @@ export default function SolutionsPage() {
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
             <FadeIn>
-              <div className="flex flex-col items-center text-center" style={{ maxWidth: '40rem', marginInline: 'auto' }}>
+              <div className="flex flex-col items-center text-center mk-cta-block">
                 <span className="pre-title margin-bottom margin-large">Get Started</span>
                 <h2
                   className="text-display-lg text-mk-on-dark margin-bottom margin-medium"

@@ -356,6 +356,11 @@ function CalculateDialog({
   );
 }
 
+function isValidNigerianPhone(phone: string): boolean {
+  const cleaned = phone.replace(/\s+/g, '');
+  return /^(\+234|0)[789]\d{9}$/.test(cleaned);
+}
+
 // ── Pay Single Farmer Dialog ──────────────────────────────────────────────────
 function PayDialog({
   open,
@@ -379,6 +384,17 @@ function PayDialog({
   const isMoMo = ['mtn_momo', 'opay', 'palmpay'].includes(provider);
 
   const handlePay = async () => {
+    if (isMoMo) {
+      const cleanedPhone = phone.replace(/\s+/g, '');
+      if (!isValidNigerianPhone(cleanedPhone)) {
+        toast({
+          title: 'Invalid phone number',
+          description: 'Enter a valid Nigerian phone number (e.g. +2348012345678 or 08012345678)',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     setIsPaying(true);
     try {
       const res = await fetch(`/api/disbursements/${disbursement.id}/pay`, {
@@ -490,6 +506,8 @@ function BulkPayDialog({
   const [provider, setProvider] = useState('bank_transfer');
   const [isPaying, setIsPaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  // Track IDs paid in this session to prevent double-paying on re-run
+  const [localPaidIds, setLocalPaidIds] = useState<Set<string>>(new Set());
 
   const total = approvedRows.reduce((s, r) => s + Number(r.net_amount), 0);
 
@@ -501,14 +519,25 @@ function BulkPayDialog({
 
     for (let i = 0; i < approvedRows.length; i++) {
       const row = approvedRows[i];
+      // Skip rows already marked paid in this session (idempotency guard)
+      if (localPaidIds.has(row.id)) {
+        succeeded++;
+        setProgress(i + 1);
+        continue;
+      }
       try {
         const res = await fetch(`/api/disbursements/${row.id}/pay`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ provider }),
         });
-        if (res.ok) succeeded++;
-        else failed++;
+        if (res.ok) {
+          succeeded++;
+          // Mark as paid locally so re-runs skip this row
+          setLocalPaidIds((prev) => new Set(prev).add(row.id));
+        } else {
+          failed++;
+        }
       } catch {
         failed++;
       }
@@ -521,8 +550,9 @@ function BulkPayDialog({
       description: `${succeeded} succeeded, ${failed} failed out of ${approvedRows.length} disbursements`,
       variant: failed > 0 ? 'destructive' : 'default',
     });
-    onOpenChange(false);
+    // Always refresh from server so UI reflects actual state, even on partial failure
     onDone();
+    onOpenChange(false);
   };
 
   return (
@@ -666,6 +696,14 @@ function PriceAgreementDialog({
   const handleSave = async () => {
     if (!commodity.trim() || !pricePerKg || Number(pricePerKg) <= 0) return;
     if (scope === 'farm' && !selectedFarm) return;
+    if (effectiveFrom && effectiveTo && new Date(effectiveTo) < new Date(effectiveFrom)) {
+      toast({
+        title: 'Invalid date range',
+        description: '"Effective To" date cannot be before "Effective From" date',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       const body: Record<string, unknown> = {

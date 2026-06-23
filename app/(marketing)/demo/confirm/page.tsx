@@ -5,7 +5,7 @@ import { CalcomEmbed } from './calcom-embed';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Book Your Discovery Call | OriginTrace',
+  title: 'Book Your Discovery Call',
   description: 'Pick a time for your OriginTrace discovery call. 30 minutes to see exactly how we handle traceability and EUDR compliance for your operation.',
 };
 

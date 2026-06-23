@@ -122,7 +122,7 @@ export default function FarmerRegistrationPage() {
     : [];
 
   const computeKycStatus = () => {
-    if (!fullName.trim() || !selectedState || !selectedLGA || !community.trim() || !hasConsent) return 'incomplete';
+    if (!fullName.trim() || !selectedState || !selectedLGA || !community.trim() || !hasConsent || !commodity) return 'incomplete';
     if (farmerPhoto && idDocument && phone) return 'verified';
     if (!phone) return 'basic';
     return 'basic';
