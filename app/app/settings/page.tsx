@@ -557,7 +557,11 @@ function SettingsContent() {
           settings,
           commodity_types: selectedCommodities,
           active_lgas: activeLgas,
-          brand_colors: (brandColors.primary || brandColors.secondary || brandColors.accent) ? brandColors : null,
+          brand_colors: (brandColors.primary || brandColors.secondary || brandColors.accent) ? {
+            primary: brandColors.primary || undefined,
+            secondary: brandColors.secondary || undefined,
+            accent: brandColors.accent || undefined,
+          } : null,
         }),
       });
 
