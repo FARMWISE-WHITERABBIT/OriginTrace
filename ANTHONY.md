@@ -816,3 +816,22 @@ Security:
 ## 45. Project Status: Phase 26 Complete
 
 - [X] **Phase 26: GFW Key Resilience and Company-Key Handoff** - Added company-first key rotation, fallback-key health telemetry, protected non-secret monitoring, alert configuration, and a Claude-ready setup prompt for the production GFW company key.
+
+---
+
+## 46. Phase 27: Organization Settings API Validation Fix
+
+### What's New
+
+- **Strict Validation Compliance:** Addressed a subtle Zod validation bug in the `/api/settings` route. When organizations had partial brand colors configured (e.g., a primary color but no secondary/accent colors), the UI was previously sending empty strings (`""`) to the backend. The strict regex validation (`^#[0-9a-fA-F]{6}$`) correctly rejected these empty strings, causing updates to fail with a 400 Bad Request.
+- **Payload Sanitization:** The frontend `app/app/settings/page.tsx` now explicitly strips empty string values and replaces them with `undefined` before sending the PATCH request payload. This satisfies Zod's `.optional()` schema behavior while preserving any actually configured brand colors.
+
+### Verification
+
+- Saving settings (like toggling `require_national_id`) now works seamlessly even for organizations with partially configured brand assets.
+
+---
+
+## 47. Project Status: Phase 27 Complete
+
+- [X] **Phase 27: Organization Settings API Validation Fix** - Fixed the settings save payload to strip empty strings, resolving a strict regex validation failure for organizations with partial brand colors.
