@@ -89,7 +89,7 @@ export default function YexdepRegistrationPage() {
       const res = await fetch('/api/events/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, slug: 'yexdep-2026' }),
       });
 
       const json = await res.json();

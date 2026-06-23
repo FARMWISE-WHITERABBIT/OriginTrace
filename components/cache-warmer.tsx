@@ -1,23 +1,37 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useOnlineStatus } from '@/components/online-status';
 import { useOrg } from '@/lib/contexts/org-context';
+import { useSyncStatus } from '@/components/sync-status-provider';
+import { runWhenIdle } from '@/lib/utils/idle';
 import {
   warmCaches,
   isLocationsCacheValid,
   isCommoditiesCacheValid,
   isFarmsCacheValid,
+  purgeExpiredCaches,
 } from '@/lib/offline/offline-cache';
 
 export function CacheWarmer() {
-  const isOnline = useOnlineStatus();
-  const { organization } = useOrg();
+  const { isOnline } = useSyncStatus();
+  const { organization, profile, isLoading } = useOrg();
   const warmedRefDataRef = useRef(false);
   const warmedFarmsOrgRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isOnline) return;
+    // Purge stale cached entries after first paint; this is not needed for initial UI.
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      return runWhenIdle(() => {
+        purgeExpiredCaches();
+        import('@/lib/offline/sync-store')
+          .then(({ purgeExpiredOfflineData }) => purgeExpiredOfflineData())
+          .catch(() => undefined);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOnline || isLoading || !profile) return;
 
     async function doWarm() {
       const orgId = organization?.id;
@@ -41,9 +55,8 @@ export function CacheWarmer() {
       }
     }
 
-    const timer = setTimeout(doWarm, 2000);
-    return () => clearTimeout(timer);
-  }, [isOnline, organization]);
+    return runWhenIdle(() => void doWarm());
+  }, [isLoading, isOnline, organization, profile]);
 
   return null;
 }

@@ -20,7 +20,7 @@ export function useCollectionLogic() {
   const router = useRouter();
   const { organization, profile } = useOrg();
   const { toast } = useToast();
-  const supabase = createClient();
+  const supabase = createClient(); // used for offline quickAddFarmer
   const isOnline = useOnlineStatus();
 
   const [step, setStep] = useState(1);
@@ -136,23 +136,26 @@ export function useCollectionLogic() {
   useEffect(() => {
     async function loadFarms() {
       if (!organization) { setFarmsLoading(false); return; }
+      const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
+      const localFarms = await getLocalFarmsForOrg(organization.id);
       const cached = await getCachedFarmsFull(organization.id);
       if (cached && cached.length > 0) {
-        setAllFarms(cached);
+        setAllFarms([...localFarms, ...cached.filter((farm: any) => !localFarms.some((local: any) => local.id === farm.id))]);
+        setFarmsLoading(false);
+      } else if (localFarms.length > 0) {
+        setAllFarms(localFarms);
         setFarmsLoading(false);
       }
-      if (isOnline && supabase) {
+      if (isOnline) {
         try {
-          const { data, error } = await supabase
-            .from('farms')
-            .select('id, farmer_name, community, commodity, area_hectares, compliance_status, boundary')
-            .eq('org_id', organization.id)
-            .neq('compliance_status', 'rejected')
-            .order('farmer_name');
-          if (error) throw error;
-          if (data) {
-            setAllFarms(data);
-            await cacheFarmsFull(organization.id, data);
+          // Use the admin-backed API endpoint to avoid RLS issues with the browser client
+          const res = await fetch('/api/collect/farmers');
+          if (res.ok) {
+            const { farms: farmsData } = await res.json();
+            if (farmsData?.length > 0) {
+              setAllFarms([...localFarms, ...farmsData.filter((farm: any) => !localFarms.some((local: any) => local.id === farm.id))]);
+              await cacheFarmsFull(organization.id, farmsData);
+            }
           }
         } catch (err) {
           console.error('Failed to load farms for collection:', err);
@@ -161,7 +164,7 @@ export function useCollectionLogic() {
       setFarmsLoading(false);
     }
     loadFarms();
-  }, [organization, supabase, isOnline]);
+  }, [organization, isOnline]);
 
   const filteredLGAs = useMemo(() => {
     if (!selectedState) return [];
@@ -228,8 +231,29 @@ export function useCollectionLogic() {
           addContributor(newFarmer);
         }
       } else {
-        const tempId = `temp-${Date.now()}`;
+        const { generateLocalId, saveFarmOffline } = await import('@/lib/offline/sync-store');
+        const tempId = generateLocalId('farm');
+        await saveFarmOffline({
+          local_id: tempId,
+          org_id: organization?.id,
+          farmer_name: quickName.trim(),
+          phone: quickPhone || null,
+          community: quickCommunity || community || 'Unknown',
+          commodity: commodity || null,
+          consent_timestamp: null,
+          consent_signature: null,
+        });
         const newFarmer: Farmer = { id: tempId, farmer_name: quickName.trim(), community: quickCommunity || community || 'Unknown' };
+        const newFarm: Farm = {
+          id: tempId,
+          farmer_name: newFarmer.farmer_name,
+          community: newFarmer.community,
+          compliance_status: 'pending',
+          boundary: null,
+          has_boundary: false,
+          is_local: true,
+        } as any;
+        setAllFarms(prev => [...prev, newFarm]);
         addContributor(newFarmer);
       }
       setQuickName('');

@@ -1,18 +1,24 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import dynamic from 'next/dynamic';
+import { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle, MapPin, User, Calendar, CheckCircle2, XCircle, Merge, Eye, Layers, Crosshair, RefreshCw } from 'lucide-react';
+import {
+  AlertTriangle, CheckCircle2, Loader2, ScanSearch, RefreshCw,
+  MapPin, User, Calendar, Layers, ChevronRight, Map,
+} from 'lucide-react';
 import { TierGate } from '@/components/tier-gate';
+
+// Leaflet must not run server-side
+const ConflictMap = dynamic(() => import('@/components/conflict-map'), { ssr: false });
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface Farm {
   id: number;
@@ -31,583 +37,482 @@ interface Farm {
 interface Conflict {
   id: number;
   overlap_ratio: number;
+  severity?: 'critical' | 'high' | 'low';
   status: string;
   created_at: string;
   farm_a: Farm;
   farm_b: Farm;
 }
 
-function buildPolygonPath(ctx: CanvasRenderingContext2D, coords: number[][], toPixel: (lng: number, lat: number) => { x: number; y: number }) {
-  if (coords.length < 3) return;
-  ctx.beginPath();
-  const first = toPixel(coords[0][0], coords[0][1]);
-  ctx.moveTo(first.x, first.y);
-  for (let i = 1; i < coords.length; i++) {
-    const pt = toPixel(coords[i][0], coords[i][1]);
-    ctx.lineTo(pt.x, pt.y);
-  }
-  ctx.closePath();
+interface ScanResult {
+  scanned: number;
+  new_conflicts: number;
+  skipped_existing: number;
 }
 
-function drawConflictCanvas(
-  canvas: HTMLCanvasElement,
-  farmA: Farm,
-  farmB: Farm,
-  overlayMode: boolean,
-  compact: boolean = false
-) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+// ─── Severity helpers ──────────────────────────────────────────────────────────
 
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
+type Severity = 'critical' | 'high' | 'low';
 
-  ctx.fillStyle = 'hsl(120, 5%, 95%)';
-  ctx.fillRect(0, 0, w, h);
-
-  const coordsA = farmA.boundary?.coordinates?.[0] || [];
-  const coordsB = farmB.boundary?.coordinates?.[0] || [];
-
-  if (coordsA.length === 0 && coordsB.length === 0) {
-    ctx.fillStyle = 'hsl(150, 10%, 40%)';
-    ctx.font = compact ? '10px var(--font-mono, monospace)' : '13px var(--font-mono, monospace)';
-    ctx.textAlign = 'center';
-    ctx.fillText('No boundary data', w / 2, h / 2);
-    return;
-  }
-
-  const allCoords = [...coordsA, ...coordsB];
-  const lngs = allCoords.map(c => c[0]);
-  const lats = allCoords.map(c => c[1]);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-
-  const padding = compact ? 8 : 30;
-  const legendHeight = compact ? 0 : 50;
-  const drawW = w - padding * 2;
-  const drawH = h - padding * 2 - legendHeight;
-  const rangeLng = maxLng - minLng || 0.001;
-  const rangeLat = maxLat - minLat || 0.001;
-  const scale = Math.min(drawW / rangeLng, drawH / rangeLat);
-
-  const toPixel = (lng: number, lat: number) => ({
-    x: padding + (lng - minLng) * scale + (drawW - rangeLng * scale) / 2,
-    y: padding + (maxLat - lat) * scale + (drawH - rangeLat * scale) / 2,
-  });
-
-  const fillAlpha = overlayMode ? 0.25 : 0.15;
-  const strokeAlpha = overlayMode ? 0.8 : 0.6;
-  const lineW = compact ? 1.5 : 2;
-
-  if (coordsA.length >= 3) {
-    buildPolygonPath(ctx, coordsA, toPixel);
-    ctx.fillStyle = `rgba(239, 68, 68, ${fillAlpha})`;
-    ctx.fill();
-    ctx.strokeStyle = `rgba(239, 68, 68, ${strokeAlpha})`;
-    ctx.lineWidth = lineW;
-    ctx.stroke();
-  }
-
-  if (coordsB.length >= 3) {
-    buildPolygonPath(ctx, coordsB, toPixel);
-    ctx.fillStyle = `rgba(59, 130, 246, ${fillAlpha})`;
-    ctx.fill();
-    ctx.strokeStyle = `rgba(59, 130, 246, ${strokeAlpha})`;
-    ctx.lineWidth = lineW;
-    ctx.stroke();
-  }
-
-  if (coordsA.length >= 3 && coordsB.length >= 3) {
-    ctx.save();
-    buildPolygonPath(ctx, coordsA, toPixel);
-    ctx.clip();
-    buildPolygonPath(ctx, coordsB, toPixel);
-    ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
-    ctx.fill();
-    ctx.restore();
-
-    if (!compact) {
-      ctx.save();
-      buildPolygonPath(ctx, coordsA, toPixel);
-      ctx.clip();
-      buildPolygonPath(ctx, coordsB, toPixel);
-      ctx.setLineDash([4, 3]);
-      ctx.strokeStyle = 'rgba(168, 85, 247, 0.9)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  if (!compact) {
-    const dotR = 4;
-    coordsA.slice(0, -1).forEach((c) => {
-      const pt = toPixel(c[0], c[1]);
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-
-    coordsB.slice(0, -1).forEach((c) => {
-      const pt = toPixel(c[0], c[1]);
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-
-    const legendY = h - legendHeight + 8;
-    ctx.font = '11px var(--font-mono, monospace)';
-    ctx.textAlign = 'left';
-
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
-    ctx.fillRect(8, legendY, 10, 10);
-    ctx.fillStyle = 'hsl(150, 10%, 15%)';
-    ctx.fillText(`Farm A: ${farmA.farmer_name}`, 22, legendY + 9);
-
-    ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
-    ctx.fillRect(8, legendY + 16, 10, 10);
-    ctx.fillStyle = 'hsl(150, 10%, 15%)';
-    ctx.fillText(`Farm B: ${farmB.farmer_name}`, 22, legendY + 25);
-
-    ctx.fillStyle = 'rgba(168, 85, 247, 0.6)';
-    ctx.fillRect(8, legendY + 32, 10, 10);
-    ctx.fillStyle = 'hsl(150, 10%, 15%)';
-    ctx.fillText('Overlap Zone', 22, legendY + 41);
-  }
+function getSeverity(overlapRatio: number): Severity {
+  if (overlapRatio > 0.50) return 'critical';
+  if (overlapRatio > 0.25) return 'high';
+  return 'low';
 }
 
-function OverlapCanvas({ farmA, farmB, overlayMode }: { farmA: Farm; farmB: Farm; overlayMode: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+const SEVERITY_CONFIG: Record<Severity, { label: string; className: string; dotClass: string }> = {
+  critical: {
+    label: 'Critical',
+    className: 'bg-red-100 text-red-700 border-red-200',
+    dotClass: 'bg-red-500',
+  },
+  high: {
+    label: 'High',
+    className: 'bg-amber-100 text-amber-700 border-amber-200',
+    dotClass: 'bg-amber-500',
+  },
+  low: {
+    label: 'Low',
+    className: 'bg-blue-100 text-blue-700 border-blue-200',
+    dotClass: 'bg-blue-400',
+  },
+};
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    drawConflictCanvas(canvas, farmA, farmB, overlayMode, false);
-  }, [farmA, farmB, overlayMode]);
+// ─── Resolution actions ────────────────────────────────────────────────────────
+
+const RESOLUTION_ACTIONS = [
+  {
+    value: 'keep_a',
+    label: 'Keep Farm A — reject Farm B',
+    description: 'Farm A boundary is correct. Farm B registration is rejected.',
+  },
+  {
+    value: 'keep_b',
+    label: 'Keep Farm B — reject Farm A',
+    description: 'Farm B boundary is correct. Farm A registration is rejected.',
+  },
+  {
+    value: 'deactivated',
+    label: 'Deactivate newer registration',
+    description: 'The more recent registration (Farm B) is a duplicate. It is deactivated and Farm A retained.',
+  },
+  {
+    value: 'confirmed_correct',
+    label: 'Confirm overlap is acceptable',
+    description: 'After reviewing satellite imagery, the overlap is acceptable (shared path, boundary wall, etc.). Both farms remain active.',
+  },
+  {
+    value: 'merged',
+    label: 'Merge farms',
+    description: 'Both farms represent the same plot. Batches will be reattributed manually. Both records are cleared.',
+  },
+  {
+    value: 'escalated_survey',
+    label: 'Escalate — field re-survey required',
+    description: 'Conflict cannot be resolved from the platform. A field agent must physically resurvey the boundary.',
+  },
+  {
+    value: 'dismissed',
+    label: 'Dismiss — false positive',
+    description: 'The overlap is a detection artefact and not a genuine conflict. Both farms cleared.',
+  },
+] as const;
+
+// ─── Farm detail card ──────────────────────────────────────────────────────────
+
+function FarmCard({ farm, label, color }: { farm: Farm; label: string; color: 'blue' | 'red' }) {
+  const borderClass = color === 'blue' ? 'border-blue-200 bg-blue-50/40' : 'border-red-200 bg-red-50/40';
+  const labelClass = color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={480}
-      height={360}
-      className="w-full rounded-lg border"
-      style={{ height: '280px' }}
-      data-testid="canvas-conflict-overlay"
-    />
+    <div className={`rounded-lg border p-4 space-y-2 ${borderClass}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${labelClass}`}>{label}</span>
+        <span className="font-semibold text-sm truncate">{farm.farmer_name}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {farm.community && (
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{farm.community}</span>
+          </div>
+        )}
+        {farm.commodity && (
+          <div className="flex items-center gap-1">
+            <Layers className="h-3 w-3 shrink-0" />
+            <span className="truncate capitalize">{farm.commodity}</span>
+          </div>
+        )}
+        {farm.area_hectares != null && (
+          <div className="flex items-center gap-1">
+            <Map className="h-3 w-3 shrink-0" />
+            <span>{Number(farm.area_hectares).toFixed(2)} ha</span>
+          </div>
+        )}
+        {farm.gps_accuracy != null && (
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span>{Number(farm.gps_accuracy).toFixed(0)} m accuracy</span>
+          </div>
+        )}
+        {farm.agent?.full_name && (
+          <div className="flex items-center gap-1 col-span-2">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate">Agent: {farm.agent.full_name}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1 col-span-2">
+          <Calendar className="h-3 w-3 shrink-0" />
+          <span>Registered {new Date(farm.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 text-xs mt-1">
+        <span className={`h-1.5 w-1.5 rounded-full ${farm.compliance_status === 'approved' ? 'bg-green-500' : farm.compliance_status === 'rejected' ? 'bg-red-500' : 'bg-amber-400'}`} />
+        <span className="capitalize text-muted-foreground">{farm.compliance_status}</span>
+      </div>
+    </div>
   );
 }
 
-function MiniOverlapCanvas({ farmA, farmB }: { farmA: Farm; farmB: Farm }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+// ─── Main page ─────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    drawConflictCanvas(canvas, farmA, farmB, true, true);
-  }, [farmA, farmB]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={80}
-      height={60}
-      className="rounded border"
-      style={{ width: '60px', height: '44px' }}
-      data-testid={`canvas-mini-overlap-${farmA.id}-${farmB.id}`}
-    />
-  );
-}
-
-export default function ConflictsPage() {
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
-  const [resolutionNotes, setResolutionNotes] = useState('');
-  const [overlayMode, setOverlayMode] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+export default function BoundaryConflictsPage() {
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchConflicts();
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [selected, setSelected] = useState<Conflict | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<'all' | Severity>('all');
+
+  // Resolution state
+  const [action, setAction] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
+
+  const fetchConflicts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/conflicts');
+      if (res.ok) {
+        const d = await res.json();
+        const enriched = (d.conflicts ?? []).map((c: Conflict) => ({
+          ...c,
+          severity: c.severity ?? getSeverity(c.overlap_ratio),
+        }));
+        // Sort: critical first, then high, then low
+        const order = { critical: 0, high: 1, low: 2 };
+        enriched.sort((a: Conflict, b: Conflict) =>
+          (order[a.severity as Severity] ?? 2) - (order[b.severity as Severity] ?? 2)
+        );
+        setConflicts(enriched);
+      }
+    } catch {}
+    setIsLoading(false);
   }, []);
 
-  const fetchConflicts = async () => {
+  useEffect(() => { fetchConflicts(); }, [fetchConflicts]);
+
+  const handleScan = async () => {
+    setIsScanning(true);
+    setScanResult(null);
     try {
-      const response = await fetch('/api/conflicts');
-      if (response.ok) {
-        const data = await response.json();
-        setConflicts(data.conflicts || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch conflicts:', error);
+      const res = await fetch('/api/conflicts/scan', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Scan failed');
+      setScanResult(data);
+      toast({ title: 'Scan complete', description: `${data.new_conflicts} new conflict${data.new_conflicts !== 1 ? 's' : ''} detected across ${data.scanned} farms` });
+      fetchConflicts();
+    } catch (err: any) {
+      toast({ title: 'Scan failed', description: err.message, variant: 'destructive' });
     } finally {
-      setIsLoading(false);
+      setIsScanning(false);
     }
   };
 
-  const resolveConflict = async (action: 'keep_a' | 'keep_b' | 'merge' | 'dismiss') => {
-    if (!selectedConflict) return;
-
-    setIsProcessing(true);
+  const handleResolve = async () => {
+    if (!selected || !action || notes.length < 20) return;
+    setIsResolving(true);
     try {
-      const response = await fetch('/api/conflicts', {
+      const res = await fetch('/api/conflicts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conflict_id: selectedConflict.id,
-          action,
-          notes: resolutionNotes
-        })
+        body: JSON.stringify({ conflict_id: selected.id, action, notes }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Resolution failed');
 
-      if (response.ok) {
-        const actionLabels = {
-          keep_a: `Accepted ${selectedConflict.farm_a.farmer_name}'s farm`,
-          keep_b: `Accepted ${selectedConflict.farm_b.farmer_name}'s farm`,
-          merge: 'Marked as neighboring farms',
-          dismiss: 'Flagged for re-mapping'
-        };
-        toast({ title: 'Conflict Resolved', description: actionLabels[action] });
-        fetchConflicts();
-        setSelectedConflict(null);
-        setResolutionNotes('');
-      } else {
-        throw new Error('Failed to resolve');
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to resolve conflict', variant: 'destructive' });
+      const actionLabel = RESOLUTION_ACTIONS.find((a) => a.value === action)?.label ?? action;
+      toast({ title: 'Conflict resolved', description: actionLabel });
+      setSelected(null);
+      setAction('');
+      setNotes('');
+      fetchConflicts();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
-      setIsProcessing(false);
+      setIsResolving(false);
     }
   };
 
-  const formatOverlap = (ratio: number) => {
-    return `${Math.round(ratio * 100)}%`;
-  };
+  const displayed = conflicts.filter(
+    (c) => severityFilter === 'all' || (c.severity ?? getSeverity(c.overlap_ratio)) === severityFilter
+  );
 
-  const FarmCard = ({ farm, label, color }: { farm: Farm; label: string; color: string }) => (
-    <Card className={`border-2 ${color === 'red' ? 'border-red-500' : 'border-blue-500'}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{farm.farmer_name}</CardTitle>
-          <Badge variant={color === 'red' ? 'destructive' : 'default'}>{label}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span>{farm.community || 'Unknown community'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <span>Agent: {farm.agent?.full_name || 'Unknown'}</span>
-            {farm.agent?.user_id && (
-              <p className="font-mono text-xs text-muted-foreground" data-testid={`text-agent-id-${farm.id}`}>
-                ID: {farm.agent.user_id.slice(0, 8)}...
+  const criticalCount = conflicts.filter((c) => (c.severity ?? getSeverity(c.overlap_ratio)) === 'critical').length;
+  const highCount = conflicts.filter((c) => (c.severity ?? getSeverity(c.overlap_ratio)) === 'high').length;
+
+  return (
+    <TierGate feature="boundary_conflicts" requiredTier="pro">
+      <div className="flex flex-col h-full">
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold leading-tight">Boundary Conflicts</h1>
+              <p className="text-sm text-muted-foreground">
+                {conflicts.length} open conflict{conflicts.length !== 1 ? 's' : ''}
+                {criticalCount > 0 && (
+                  <span className="ml-2 text-red-600 font-medium">· {criticalCount} critical</span>
+                )}
               </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchConflicts} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />Refresh
+            </Button>
+            <Button size="sm" onClick={handleScan} disabled={isScanning}>
+              {isScanning ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Scanning…</>
+              ) : (
+                <><ScanSearch className="h-4 w-4 mr-1.5" />Run Scan</>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Scan result banner */}
+        {scanResult && (
+          <div className="mx-6 mb-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 flex items-center gap-3 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>
+              Scanned <strong>{scanResult.scanned}</strong> farms — found{' '}
+              <strong>{scanResult.new_conflicts}</strong> new conflict{scanResult.new_conflicts !== 1 ? 's' : ''}
+              {scanResult.skipped_existing > 0 && `, skipped ${scanResult.skipped_existing} existing`}
+            </span>
+            <button className="ml-auto text-emerald-600 text-xs hover:underline" onClick={() => setScanResult(null)}>dismiss</button>
+          </div>
+        )}
+
+        {/* ── Body: split panel ───────────────────────────────────────────────── */}
+        <div className="flex flex-1 min-h-0 gap-0 border-t">
+
+          {/* Left: conflict list */}
+          <div className="w-80 shrink-0 flex flex-col border-r overflow-hidden">
+            {/* Severity filter tabs */}
+            <div className="flex border-b">
+              {(['all', 'critical', 'high', 'low'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setSeverityFilter(f)}
+                  className={`flex-1 py-2 text-xs font-medium capitalize transition-colors
+                    ${severityFilter === f
+                      ? 'border-b-2 border-primary text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  {f === 'all' ? `All (${conflicts.length})` :
+                   f === 'critical' ? `Critical (${criticalCount})` :
+                   f === 'high' ? `High (${highCount})` :
+                   `Low (${conflicts.length - criticalCount - highCount})`}
+                </button>
+              ))}
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : displayed.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                  <p className="text-sm font-medium">No conflicts</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {severityFilter !== 'all' ? 'No conflicts at this severity level.' : 'Run a scan to check for boundary overlaps.'}
+                  </p>
+                </div>
+              ) : (
+                displayed.map((c) => {
+                  const sev = (c.severity ?? getSeverity(c.overlap_ratio)) as Severity;
+                  const cfg = SEVERITY_CONFIG[sev];
+                  const isSelected = selected?.id === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelected(c); setAction(''); setNotes(''); }}
+                      className={`w-full text-left px-4 py-3 border-b transition-colors hover:bg-muted/40
+                        ${isSelected ? 'bg-muted/60 border-l-2 border-l-primary' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`h-2 w-2 rounded-full shrink-0 mt-0.5 ${cfg.dotClass}`} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{c.farm_a.farmer_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">vs {c.farm_b.farmer_name}</p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <Badge variant="outline" className={`text-xs h-5 ${cfg.className}`}>{cfg.label}</Badge>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {Math.round(c.overlap_ratio * 100)}% overlap
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <ChevronRight className="h-3 w-3 ml-auto" />
+                      </p>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right: map + resolution */}
+          <div className="flex-1 overflow-y-auto">
+            {!selected ? (
+              <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                  <MapPin className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <p className="font-medium text-muted-foreground">Select a conflict to view the map</p>
+                <p className="text-sm text-muted-foreground/70 mt-1 max-w-xs">
+                  Click any conflict in the list to see the boundary overlap and resolve it.
+                </p>
+              </div>
+            ) : (
+              <div className="p-6 space-y-5">
+                {/* Conflict header */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h2 className="font-semibold">
+                      {selected.farm_a.farmer_name} <span className="text-muted-foreground">vs</span> {selected.farm_b.farmer_name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {Math.round(selected.overlap_ratio * 100)}% boundary overlap ·{' '}
+                      detected {new Date(selected.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  {(() => {
+                    const sev = (selected.severity ?? getSeverity(selected.overlap_ratio)) as Severity;
+                    const cfg = SEVERITY_CONFIG[sev];
+                    return (
+                      <Badge variant="outline" className={`text-sm px-3 py-1 ${cfg.className}`}>
+                        <span className={`h-2 w-2 rounded-full mr-2 ${cfg.dotClass}`} />
+                        {cfg.label} severity
+                      </Badge>
+                    );
+                  })()}
+                </div>
+
+                {/* Leaflet map */}
+                {(selected.farm_a.boundary || selected.farm_b.boundary) ? (
+                  <div className="h-72 rounded-lg border overflow-hidden shadow-sm">
+                    <ConflictMap farmA={selected.farm_a} farmB={selected.farm_b} className="h-full" />
+                  </div>
+                ) : (
+                  <div className="h-32 rounded-lg border flex items-center justify-center text-sm text-muted-foreground bg-muted/30">
+                    No GPS boundary data available for these farms
+                  </div>
+                )}
+
+                {/* Farm comparison cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FarmCard farm={selected.farm_a} label="Farm A" color="blue" />
+                  <FarmCard farm={selected.farm_b} label="Farm B" color="red" />
+                </div>
+
+                {/* Resolution form */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Resolve Conflict</CardTitle>
+                    <CardDescription className="text-xs">
+                      All resolutions are permanently logged with your name and timestamp.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium uppercase tracking-wide">Resolution Action *</Label>
+                      <Select value={action} onValueChange={setAction}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choose an action…" /></SelectTrigger>
+                        <SelectContent>
+                          {RESOLUTION_ACTIONS.map((a) => (
+                            <SelectItem key={a.value} value={a.value}>
+                              {a.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {action && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {RESOLUTION_ACTIONS.find((a) => a.value === action)?.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium uppercase tracking-wide">Resolution Note *</Label>
+                        <span className={`text-xs tabular-nums ${notes.length >= 20 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {notes.length}/20 min
+                        </span>
+                      </div>
+                      <Textarea
+                        placeholder="Describe the basis for this resolution — what was reviewed, what evidence was considered…"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="text-sm resize-none h-24"
+                      />
+                    </div>
+
+                    {action === 'confirmed_correct' && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-xs text-amber-800">
+                        <strong>Reminder:</strong> Before confirming, verify the overlap against satellite imagery to confirm it is a shared boundary feature (access path, wall, or survey imprecision), not a duplicate registration.
+                      </div>
+                    )}
+
+                    {action === 'escalated_survey' && (
+                      <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2.5 text-xs text-blue-800">
+                        The conflict will be marked as <strong>Escalated</strong>. Both farms remain blocked from EUDR-bound batches until the field resurvey is completed and the conflict is resolved.
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleResolve}
+                      disabled={isResolving || !action || notes.length < 20}
+                      className="w-full"
+                    >
+                      {isResolving ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Resolving…</>
+                      ) : (
+                        <><CheckCircle2 className="h-4 w-4 mr-2" />Submit Resolution</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="font-mono text-xs">{new Date(farm.created_at).toLocaleDateString()}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-          <div>
-            <span className="text-muted-foreground">Commodity</span>
-            <p className="font-medium capitalize">{farm.commodity || '-'}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Area</span>
-            <p className="font-mono font-medium">{farm.area_hectares?.toFixed(2) || '-'} ha</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-          <div className="flex items-center gap-1.5">
-            <Crosshair className="h-3.5 w-3.5 text-muted-foreground" />
-            <div>
-              <span className="text-muted-foreground text-xs">GPS Accuracy</span>
-              <p className="font-mono text-xs font-medium">
-                {farm.gps_accuracy ? `${farm.gps_accuracy.toFixed(1)}m` : 'N/A'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-            <div>
-              <span className="text-muted-foreground text-xs">Synced</span>
-              <p className="font-mono text-xs font-medium">
-                {farm.synced_at ? new Date(farm.synced_at).toLocaleDateString() : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Vertices</span>
-          <p className="font-mono text-xs">{farm.boundary?.coordinates?.[0]?.length ? farm.boundary.coordinates[0].length - 1 : 0} pts</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  return (
-    <TierGate feature="boundary_conflicts" requiredTier="pro" featureLabel="Boundary Conflicts">
-    {isLoading ? (
-      <div className="rounded-md border border-border overflow-hidden"><table className="w-full"><thead className="border-b border-border bg-muted/30"><tr>{Array.from({length:4}).map((_,i)=><th key={i} className="px-4 py-3"><div className="h-3 w-16 bg-muted animate-pulse rounded"/></th>)}</tr></thead><tbody>{Array.from({length:5}).map((_,i)=><tr key={i} className="border-b border-border">{Array.from({length:4}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-muted animate-pulse rounded" style={{width:`${60+j*15}%`}}/></td>)}</tr>)}</tbody></table></div>
-    ) : (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-page-title">
-          <Layers className="h-6 w-6 text-amber-500" />
-          Conflict Judge
-        </h1>
-        <p className="text-muted-foreground">Visualize and resolve spatial overlaps between farm boundaries</p>
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Pending Conflicts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono" data-testid="text-pending-count">{conflicts.length}</div>
-            <p className="text-xs text-muted-foreground">Require admin resolution</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Detection Rule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Farms flagged when boundaries overlap by more than <span className="font-mono font-semibold">10%</span> of combined area.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Resolution Options</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>Accept A/B - Keep one boundary</li>
-              <li>Neighbors - Both boundaries valid</li>
-              <li>Re-map - Flag for field visit</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Conflict Queue</CardTitle>
-          <CardDescription>Click on a conflict to review and resolve</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Preview</TableHead>
-                <TableHead>Farm A</TableHead>
-                <TableHead>Farm B</TableHead>
-                <TableHead>Community</TableHead>
-                <TableHead className="text-center">Overlap</TableHead>
-                <TableHead>Detected</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {conflicts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 text-green-500" />
-                      <span>No pending conflicts - all boundaries are clear</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                conflicts.map((conflict) => (
-                  <TableRow key={conflict.id} data-testid={`conflict-row-${conflict.id}`}>
-                    <TableCell>
-                      <MiniOverlapCanvas farmA={conflict.farm_a} farmB={conflict.farm_b} />
-                    </TableCell>
-                    <TableCell className="font-medium">{conflict.farm_a.farmer_name}</TableCell>
-                    <TableCell className="font-medium">{conflict.farm_b.farmer_name}</TableCell>
-                    <TableCell>{conflict.farm_a.community || conflict.farm_b.community || '-'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="destructive" className="font-mono">{formatOverlap(conflict.overlap_ratio)}</Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{new Date(conflict.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="View conflict"
-                        onClick={() => {
-                          setSelectedConflict(conflict);
-                          setResolutionNotes('');
-                          setOverlayMode(true);
-                        }}
-                        data-testid={`button-review-conflict-${conflict.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Sheet open={!!selectedConflict} onOpenChange={(open) => !open && setSelectedConflict(null)}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Layers className="h-5 w-5" />
-              Resolve Boundary Conflict
-            </SheetTitle>
-            <SheetDescription>
-              Compare both farm polygons and decide which boundary to keep
-            </SheetDescription>
-          </SheetHeader>
-
-          {selectedConflict && (
-            <div className="space-y-6 py-6">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <p className="text-sm text-muted-foreground">Overlap Ratio</p>
-                  <p className="text-2xl font-bold font-mono text-amber-600" data-testid="text-overlap-ratio">
-                    {formatOverlap(selectedConflict.overlap_ratio)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="overlay-mode"
-                    checked={overlayMode}
-                    onCheckedChange={setOverlayMode}
-                    data-testid="switch-overlay-mode"
-                  />
-                  <Label htmlFor="overlay-mode">Overlay</Label>
-                </div>
-              </div>
-
-              <OverlapCanvas
-                farmA={selectedConflict.farm_a}
-                farmB={selectedConflict.farm_b}
-                overlayMode={overlayMode}
-              />
-
-              <Tabs defaultValue="compare" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="compare" data-testid="tab-compare">Side by Side</TabsTrigger>
-                  <TabsTrigger value="details" data-testid="tab-geojson">GeoJSON Data</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="compare" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FarmCard farm={selectedConflict.farm_a} label="Farm A" color="red" />
-                    <FarmCard farm={selectedConflict.farm_b} label="Farm B" color="blue" />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="details">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm">Farm A - {selectedConflict.farm_a.farmer_name}</h4>
-                      <pre className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-32" data-testid="text-geojson-a">
-                        {JSON.stringify(selectedConflict.farm_a.boundary, null, 2)}
-                      </pre>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm">Farm B - {selectedConflict.farm_b.farmer_name}</h4>
-                      <pre className="text-xs font-mono bg-muted p-3 rounded-lg overflow-auto max-h-32" data-testid="text-geojson-b">
-                        {JSON.stringify(selectedConflict.farm_b.boundary, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <div className="space-y-2">
-                <Label htmlFor="resolution-notes">Resolution Notes</Label>
-                <Textarea
-                  id="resolution-notes"
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Add notes about your decision..."
-                  rows={2}
-                  data-testid="textarea-resolution-notes"
-                />
-              </div>
-            </div>
-          )}
-
-          <SheetFooter className="flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <Button
-                variant="outline"
-                onClick={() => resolveConflict('keep_a')}
-                disabled={isProcessing}
-                className="border-red-500 text-red-600"
-                data-testid="button-keep-a"
-              >
-                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Accept A
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => resolveConflict('keep_b')}
-                disabled={isProcessing}
-                className="border-blue-500 text-blue-600"
-                data-testid="button-keep-b"
-              >
-                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Accept B
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <Button
-                variant="secondary"
-                onClick={() => resolveConflict('merge')}
-                disabled={isProcessing}
-                data-testid="button-merge"
-              >
-                <Merge className="h-4 w-4 mr-2" />
-                Mark as Neighbors
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => resolveConflict('dismiss')}
-                disabled={isProcessing}
-                data-testid="button-dismiss"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Flag for Re-mapping
-              </Button>
-            </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
-    )}
     </TierGate>
   );
 }

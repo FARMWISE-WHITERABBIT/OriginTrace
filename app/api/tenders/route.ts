@@ -56,6 +56,12 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
+    if (exporterProfile) {
+      const { enforceTier } = await import('@/lib/api/tier-guard');
+      const tierBlock = await enforceTier(exporterProfile.org_id, 'spot_market');
+      if (tierBlock) return tierBlock;
+    }
+
     let tenders: any[] = [];
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);

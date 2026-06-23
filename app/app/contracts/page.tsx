@@ -207,14 +207,14 @@ export default function ExporterContractsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {filteredContracts.map(contract => (
-              <Card key={contract.id} data-testid={`card-contract-${contract.id}`}>
+              <Card key={contract.id} className="card-accent-blue transition-shadow hover:shadow-md" data-testid={`card-contract-${contract.id}`}>
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                        <FileCheck className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg flex items-center justify-center icon-bg-blue shrink-0">
+                        <FileCheck className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

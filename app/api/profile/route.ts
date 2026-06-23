@@ -1,8 +1,54 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { profileUpdateSchema, parseBody } from '@/lib/api/validation';
+import { cookies } from 'next/headers';
+import { verifyCookiePayload } from '@/lib/security/signed-cookie';
+
+const IMPERSONATION_COOKIE = 'origintrace_impersonation';
+
+async function readImpersonationState() {
+  try {
+    const cookieStore = await cookies();
+    const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
+    if (!impersonationCookie) return { isImpersonating: false };
+
+    const payload = await verifyCookiePayload<{
+      org_id?: number;
+      org_name?: string;
+      original_admin_id?: string;
+      expires_at?: string;
+    }>(impersonationCookie.value);
+
+    if (!payload?.org_id || !payload.expires_at || new Date(payload.expires_at) <= new Date()) {
+      return { isImpersonating: false };
+    }
+
+    return {
+      isImpersonating: true,
+      orgId: payload.org_id,
+      orgName: payload.org_name,
+      originalAdminId: payload.original_admin_id,
+      expiresAt: payload.expires_at,
+    };
+  } catch {
+    return { isImpersonating: false };
+  }
+}
+
+function normalizeBuyerProfile(buyerProfile: any, buyerOrganization: any, userEmail?: string | null) {
+  return {
+    id: buyerProfile.id,
+    user_id: buyerProfile.user_id,
+    full_name: buyerProfile.full_name || userEmail || 'Buyer',
+    email: userEmail,
+    role: 'buyer',
+    org_id: buyerProfile.buyer_org_id,
+    buyer_org_id: buyerProfile.buyer_org_id,
+    buyer_role: buyerProfile.role,
+    organizations: buyerOrganization || null,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,47 +74,92 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
 
-    let profileResult: { data: any; error: any };
-    let systemAdminResult: { data: any; error: any };
+    const [profileResult, systemAdminResult] = await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('*, organizations(*)')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('system_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+    ]);
 
-    try {
-      [profileResult, systemAdminResult] = await Promise.all([
-        supabaseAdmin
-          .from('profiles')
-          .select('*, organizations(*)')
-          .eq('user_id', user.id)
-          .single(),
-        supabaseAdmin
-          .from('system_admins')
-          .select('id')
-          .eq('user_id', user.id)
-          .single()
-      ]);
-    } catch (fetchError) {
-      console.error('Profile fetch error (Supabase may be temporarily unavailable):', fetchError);
+    if (profileResult.error) {
+      console.error('Profile fetch error:', profileResult.error);
       return NextResponse.json(
         { error: 'Service temporarily unavailable, please try again' },
         { status: 503 }
       );
     }
 
-    if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-      if (profileResult.error.message?.includes('503') || profileResult.error.message?.includes('unavailable')) {
+    if (systemAdminResult.error) {
+      console.error('System admin fetch error:', systemAdminResult.error);
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable, please try again' },
+        { status: 503 }
+      );
+    }
+
+    const isSystemAdmin = !!systemAdminResult.data;
+    const impersonation = await readImpersonationState();
+    let profile = profileResult.data;
+    let organization = profile?.organizations || null;
+
+    if (!profile && !isSystemAdmin) {
+      const { data: buyerProfile, error: buyerProfileError } = await supabaseAdmin
+        .from('buyer_profiles')
+        .select('id, buyer_org_id, role, user_id, full_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (buyerProfileError) {
+        console.error('Buyer profile fetch error:', buyerProfileError);
         return NextResponse.json(
           { error: 'Service temporarily unavailable, please try again' },
           { status: 503 }
         );
       }
-    }
 
-    const isSystemAdmin = !!systemAdminResult.data;
-    const profile = profileResult.data;
+      if (buyerProfile) {
+        const { data: buyerOrganization } = await supabaseAdmin
+          .from('buyer_organizations')
+          .select('*')
+          .eq('id', buyerProfile.buyer_org_id)
+          .maybeSingle();
+
+        profile = normalizeBuyerProfile(buyerProfile, buyerOrganization, user.email);
+        organization = buyerOrganization || null;
+      }
+    }
 
     if (!profile && !isSystemAdmin) {
       return NextResponse.json(
-        { error: 'No profile found', details: profileResult.error?.message },
+        { error: 'No profile found' },
         { status: 404 }
       );
+    }
+
+    if (isSystemAdmin && impersonation.isImpersonating && impersonation.orgId) {
+      const { data: impersonatedOrg, error: impersonatedOrgError } = await supabaseAdmin
+        .from('organizations')
+        .select('*')
+        .eq('id', impersonation.orgId)
+        .maybeSingle();
+
+      if (impersonatedOrgError) {
+        console.error('Impersonated organization fetch error:', impersonatedOrgError);
+        return NextResponse.json(
+          { error: 'Service temporarily unavailable, please try again' },
+          { status: 503 }
+        );
+      }
+
+      if (impersonatedOrg) {
+        organization = impersonatedOrg;
+      }
     }
 
     if (!profile && isSystemAdmin) {
@@ -79,15 +170,17 @@ export async function GET(request: NextRequest) {
           email: user.email,
           role: 'superadmin',
         },
-        organization: null,
-        isSystemAdmin: true
+        organization,
+        isSystemAdmin: true,
+        impersonation
       });
     }
 
     return NextResponse.json({
       profile,
-      organization: profile?.organizations || null,
-      isSystemAdmin
+      organization,
+      isSystemAdmin,
+      impersonation
     });
 
   } catch (error) {
@@ -155,13 +248,13 @@ export async function PATCH(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
 
-    // Only update the validated full_name field
+    // Only update the validated full_name field.
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({ full_name: full_name.trim() })
       .eq('user_id', user.id)
       .select('*, organizations(*)')
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Profile update error:', profileError);
@@ -171,9 +264,46 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    if (profile) {
+      return NextResponse.json({
+        profile,
+        organization: profile?.organizations || null
+      });
+    }
+
+    const { data: buyerProfile, error: buyerProfileError } = await supabaseAdmin
+      .from('buyer_profiles')
+      .update({ full_name: full_name.trim() })
+      .eq('user_id', user.id)
+      .select('id, buyer_org_id, role, user_id, full_name')
+      .maybeSingle();
+
+    if (buyerProfileError) {
+      console.error('Buyer profile update error:', buyerProfileError);
+      return NextResponse.json(
+        { error: 'Failed to update buyer profile', details: buyerProfileError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!buyerProfile) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      );
+    }
+
+    const { data: buyerOrganization } = await supabaseAdmin
+      .from('buyer_organizations')
+      .select('*')
+      .eq('id', buyerProfile.buyer_org_id)
+      .maybeSingle();
+
+    const normalizedBuyerProfile = normalizeBuyerProfile(buyerProfile, buyerOrganization, user.email);
+
     return NextResponse.json({
-      profile,
-      organization: profile?.organizations || null
+      profile: normalizedBuyerProfile,
+      organization: buyerOrganization || null
     });
 
   } catch (error) {

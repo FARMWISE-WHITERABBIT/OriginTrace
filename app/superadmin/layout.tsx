@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { LogoIcon } from '@/components/logo';
 import {
   Building2,
   Users,
@@ -15,13 +16,16 @@ import {
   X,
   Shield,
   Zap,
-  Activity,
-  AlertCircle,
-  Wheat,
   Handshake,
   CreditCard,
   CalendarDays,
   ChevronRight,
+  BookOpen,
+  FileText,
+  Server,
+  DollarSign,
+  ShieldCheck,
+  Satellite,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -40,33 +44,48 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Overview',
     items: [
-      { href: '/superadmin', label: 'Command Tower', icon: BarChart3 },
+      { href: '/superadmin', label: 'Platform Dashboard', icon: BarChart3 },
     ],
   },
   {
-    title: 'Tenants & Users',
+    title: 'Tenants',
     items: [
-      { href: '/superadmin/organizations', label: 'Tenants', icon: Building2 },
-      { href: '/superadmin/users', label: 'Users', icon: Users },
-      { href: '/superadmin/tenant-health', label: 'Tenant Health', icon: Activity },
+      { href: '/superadmin/tenants', label: 'All Tenants', icon: Building2 },
+      { href: '/superadmin/billing', label: 'Subscriptions', icon: CreditCard },
+      { href: '/superadmin/users', label: 'User Management', icon: Users },
+      { href: '/superadmin/buyer-orgs', label: 'Buyer Organizations', icon: Handshake },
     ],
   },
   {
-    title: 'Platform',
+    title: 'Compliance',
     items: [
-      { href: '/superadmin/commodities', label: 'Commodity Master', icon: Wheat },
+      { href: '/superadmin/compliance', label: 'Market Rulesets', icon: ShieldCheck },
+      { href: '/superadmin/reference-data', label: 'Reference Data', icon: BookOpen },
+      { href: '/superadmin/traces', label: 'TRACES Monitor', icon: Satellite },
+    ],
+  },
+  {
+    title: 'Platform Config',
+    items: [
       { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
-      { href: '/superadmin/billing', label: 'Billing', icon: CreditCard },
       { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
+      { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
     ],
   },
   {
-    title: 'System',
+    title: 'Platform Ops',
     items: [
-      { href: '/superadmin/sync', label: 'First-Mile Pulse', icon: RefreshCw },
-      { href: '/superadmin/buyer-orgs', label: 'Buyer Orgs', icon: Handshake },
-      { href: '/superadmin/health', label: 'War Room', icon: AlertCircle },
-      { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
+      { href: '/superadmin/revenue', label: 'Revenue Dashboard', icon: DollarSign },
+      { href: '/superadmin/payment-ops', label: 'Payment Operations', icon: CreditCard },
+      { href: '/superadmin/sync', label: 'Sync Status', icon: RefreshCw },
+      { href: '/superadmin/health', label: 'System Health', icon: Server },
+    ],
+  },
+  {
+    title: 'Security',
+    items: [
+      { href: '/superadmin/admin-users', label: 'Admin Users', icon: Shield },
+      { href: '/superadmin/audit', label: 'Audit Log', icon: FileText },
     ],
   },
 ];
@@ -74,14 +93,38 @@ const NAV_SECTIONS: NavSection[] = [
 // Flat list for mobile header label lookup
 const ALL_NAV_ITEMS = NAV_SECTIONS.flatMap(s => s.items);
 
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export default function SuperadminLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const inactivityTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoginPage = pathname === '/superadmin/login';
+
+  // ── Inactivity timeout ────────────────────────────────────────────────────
+  const resetInactivityTimer = React.useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(async () => {
+      const client = createClient();
+      if (client) await client.auth.signOut();
+      router.push('/superadmin/login?reason=timeout');
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthorized || isLoginPage) return;
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetInactivityTimer, { passive: true }));
+    resetInactivityTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetInactivityTimer));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [isAuthorized, isLoginPage, resetInactivityTimer]);
 
   useEffect(() => {
     if (isLoginPage) {
@@ -122,9 +165,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-            <Shield className="h-6 w-6 text-white" />
-          </div>
+          <LogoIcon size={48} className="drop-shadow-sm" />
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400" />
         </div>
       </div>
@@ -157,7 +198,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
         <div className="flex items-center gap-2 text-sm">
-          <Shield className="h-4 w-4 text-cyan-400" />
+          <LogoIcon size={20} />
           <span className="font-medium text-slate-200">{currentPage?.label || 'Command Tower'}</span>
         </div>
         <div className="w-9" />
@@ -173,9 +214,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
         {/* Brand */}
         <div className="p-5 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
+            <LogoIcon size={36} />
             <div>
               <div className="text-sm font-bold text-white leading-tight">OriginTrace</div>
               <div className="text-[10px] font-semibold text-cyan-400 tracking-widest uppercase">Command Tower</div>

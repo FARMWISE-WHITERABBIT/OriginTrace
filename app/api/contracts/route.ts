@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
 
     const { exporter_org_id, commodity, quantity_mt, delivery_deadline, destination_port, quality_requirements, notes } = parsed.data;
 
+    const tierBlock = await enforceTier(exporter_org_id, 'contracts');
+    if (tierBlock) return tierBlock;
+
     const { data: link } = await supabaseAdmin
       .from('supply_chain_links')
       .select('id, status')
@@ -201,6 +204,9 @@ export async function PATCH(request: NextRequest) {
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
+
+    const tierBlock = await enforceTier(contract.exporter_org_id, 'contracts');
+    if (tierBlock) return tierBlock;
 
     const { data: buyerProfile } = await supabaseAdmin
       .from('buyer_profiles')

@@ -10,6 +10,8 @@ export const post: BlogPost = {
   readingTime: '8 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-rafael-de-campos-2705062-4256976.jpg',
+  coverImageAlt: 'Aerial view of a busy cargo port with shipping containers',
   coverGradient: 'from-emerald-900/20 to-slate-800/50',
   tags: ['EUDR', 'Deadline', 'Exporters', 'Compliance', 'EU Regulations', '2026'],
   content: [

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -67,28 +67,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const isConfigured = supabase !== null;
   const pathname = usePathname();
   const isSuperadminRoute = pathname?.startsWith('/superadmin');
-
-  const checkImpersonation = async () => {
-    try {
-      const response = await fetch('/api/impersonate');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.impersonating) {
-          setImpersonation({
-            isImpersonating: true,
-            orgId: data.org_id,
-            orgName: data.org_name,
-            expiresAt: data.expires_at
-          });
-          return data.org_id;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check impersonation:', error);
-    }
-    setImpersonation({ isImpersonating: false });
-    return null;
-  };
+  const didRequestInitialProfileRef = useRef(false);
 
   const refreshProfile = async () => {
     if (!supabase) {
@@ -107,8 +86,6 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const impersonatedOrgId = await checkImpersonation();
-      
       let response = await fetch('/api/profile');
       if (response.status === 503) {
         await new Promise(r => setTimeout(r, 2000));
@@ -131,6 +108,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
+      setImpersonation(data.impersonation || { isImpersonating: false });
       
       if (data.profile) {
         setProfile(data.profile as Profile);
@@ -143,7 +121,9 @@ export function OrgProvider({ children }: { children: ReactNode }) {
           // VALID tiers only — reject legacy values like 'trial', 'free', 'growth'
           const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
           const rawTier = org.subscription_tier || s.subscription_tier;
-          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : 'starter';
+          // null/unset means billing not yet configured — pass through as undefined
+          // so hasTierAccess() grants full access rather than capping at 'starter'
+          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : undefined;
           return {
             ...org,
             subscription_tier: resolvedTier,
@@ -157,21 +137,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
           } as Organization;
         };
 
-        if (impersonatedOrgId && data.isSystemAdmin) {
-          const orgResponse = await fetch(`/api/settings`);
-          if (orgResponse.ok) {
-            const orgData = await orgResponse.json();
-            if (orgData.organization) {
-              setOrganization(hydrateOrgTier(orgData.organization));
-            } else {
-              setOrganization(hydrateOrgTier(data.organization));
-            }
-          } else {
-            setOrganization(hydrateOrgTier(data.organization));
-          }
-        } else {
-          setOrganization(hydrateOrgTier(data.organization));
-        }
+        setOrganization(hydrateOrgTier(data.organization));
       } else {
         console.warn('No profile found for user:', user.id);
         setProfile(null);
@@ -233,11 +199,13 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    didRequestInitialProfileRef.current = true;
     refreshProfile();
 
     if (!supabase) return;
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION' && didRequestInitialProfileRef.current) return;
       if (!isSuperadminRoute) {
         refreshProfile();
       }

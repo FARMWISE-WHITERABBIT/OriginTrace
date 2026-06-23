@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useOrg } from '@/lib/contexts/org-context';
+import { useOnboarding } from '@/lib/hooks/use-onboarding';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { Progress } from '@/components/ui/progress';
 import {
   CheckCircle2, Circle, ArrowRight, UserPlus, Map, Package,
   Factory, Ship, FileText, Users, BarChart3, Shield,
-  Fingerprint, ChevronDown, ChevronRight, Info, AlertTriangle,
+  Fingerprint, ChevronDown, ChevronRight, Info,
+  PlayCircle, RotateCcw, ScanLine, Truck, DollarSign, FlaskConical,
 } from 'lucide-react';
 
 const CHECKLIST = [
@@ -93,6 +95,46 @@ const CHECKLIST = [
     cta: 'Generate DPP',
     icon: Fingerprint,
     roles: ['admin','compliance_officer'],
+  },
+  {
+    id: 'scan_verify',
+    title: 'Scan & verify incoming bags',
+    description: 'Go to Compliance → Scan & Verify. Scan the QR code on any bag to instantly see its origin farm, farmer, collection date, batch, weight, and grade. Use this during warehouse intake to verify incoming trucks against expected collection records and catch any unregistered or mismatched bags before they enter stock.',
+    tip: 'Scan & Verify works offline too — results are cached so you can verify bags in areas with poor connectivity.',
+    href: '/app/verify',
+    cta: 'Open Scanner',
+    icon: ScanLine,
+    roles: ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'],
+  },
+  {
+    id: 'dispatch_batch',
+    title: 'Dispatch a batch to processing',
+    description: 'Go to Collection → Dispatch Batches. Select one or more approved inventory batches, enter the truck number, driver name, and destination facility. A dispatch record is created linking the batch to its physical movement. The batch status updates to "Dispatched" and can no longer be modified in inventory.',
+    tip: 'Only batches with status "Approved" or "Aggregated" can be dispatched. Ensure grading is complete before dispatching.',
+    href: '/app/dispatch',
+    cta: 'Create Dispatch',
+    icon: Truck,
+    roles: ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'],
+  },
+  {
+    id: 'farmer_payments',
+    title: 'Record farmer payments',
+    description: 'Go to Collection → Payments. Create a payment record for each collection batch — enter the agreed price per kg, the weight paid for, and the payment method (cash, bank transfer, mobile money). Payments are linked to the farmer\'s profile and batch record. Use the Disbursements tab to record bulk payouts and track wallet balance.',
+    tip: 'Set a default contract price per commodity in Settings so payment amounts are pre-calculated automatically.',
+    href: '/app/payments',
+    cta: 'View Payments',
+    icon: DollarSign,
+    roles: ['admin', 'aggregator'],
+  },
+  {
+    id: 'upload_lab_results',
+    title: 'Upload lab test results',
+    description: 'Go to Compliance → Lab Results. Upload MRL (Maximum Residue Limits) pesticide residue test results and quality certificates from your accredited laboratory. Link each result to the relevant processing run or shipment. Lab results are automatically checked during shipment readiness scoring — missing or failed results will trigger a NO-GO decision.',
+    tip: 'For China GACC compliance, MRL results must meet GB 2763-2021 limits. Upload the lab certificate PDF and enter the key values manually for searchability.',
+    href: '/app/lab-results',
+    cta: 'Upload Lab Result',
+    icon: FlaskConical,
+    roles: ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'],
   },
   {
     id: 'create_shipment',
@@ -181,22 +223,82 @@ const COMPLIANCE_TIPS = [
   },
 ];
 
-const ROLE_QUICKSTART: Record<string, { label: string; steps: string[] }> = {
+const ROLE_QUICKSTART: Record<string, { label: string; color: string; steps: string[] }> = {
   agent: {
     label: 'Field Agent Quick Start',
-    steps: ['Register farmers using the Register Farmer button', 'Record their consent and upload ID documents', 'Start a collection via Smart Collect after each harvest'],
+    color: 'border-blue-200 dark:border-blue-900 bg-blue-500/5',
+    steps: [
+      'Register each farmer with their name, phone number, and community — capture consent with a digital signature',
+      'Open the farmer profile and draw their GPS farm boundary on the satellite map',
+      'After each harvest, record a collection batch via Smart Collect — works fully offline',
+      'Check the Sync Dashboard to confirm all your data has uploaded to the server',
+    ],
   },
   aggregator: {
     label: 'Aggregator Quick Start',
-    steps: ['Register all farmers in your catchment area', 'Map GPS boundaries for each farm', 'Log agricultural inputs and training per farmer', 'Record collection batches after buying sessions'],
+    color: 'border-emerald-200 dark:border-emerald-900 bg-emerald-500/5',
+    steps: [
+      'Register all farmers in your catchment area with consent signatures and ID documents',
+      'Map GPS boundaries for every farm — mandatory for EUDR compliance',
+      'Log agricultural inputs (fertilisers, pesticides) and training sessions per farmer',
+      'Record collection batches after each buying session and verify incoming trucks via Scan & Verify',
+      'Approve batches in Inventory, then dispatch to the processing facility',
+      'Record farmer payments in the Payments module',
+    ],
+  },
+  admin: {
+    label: 'Admin Quick Start',
+    color: 'border-violet-200 dark:border-violet-900 bg-violet-500/5',
+    steps: [
+      'Invite your field agents and assign them to communities via Team → Invite Member',
+      'Set up compliance profiles for your target markets in Settings → Compliance',
+      'Review and approve GPS farm boundaries submitted by agents in Farm Polygons',
+      'Monitor collection volumes and compliance rates in Analytics',
+      'Create shipments, run readiness checks, and generate DDS exports before shipping',
+    ],
+  },
+  quality_manager: {
+    label: 'Quality Manager Quick Start',
+    color: 'border-amber-200 dark:border-amber-900 bg-amber-500/5',
+    steps: [
+      'Review farmer compliance records — consent, GPS coverage, and training completion',
+      'Check Yield Alerts for batches flagged outside tolerance; investigate before approving',
+      'Use Scan & Verify to spot-check bags during warehouse intake',
+      'Track grade distributions and quality trends in the Analytics dashboard',
+    ],
   },
   compliance_officer: {
     label: 'Compliance Officer Quick Start',
-    steps: ['Review farm compliance status in Analytics', 'Log processing runs and create pedigree records', 'Generate Digital Product Passports before shipment', 'Upload and maintain all export certificates in Documents'],
+    color: 'border-green-200 dark:border-green-900 bg-green-500/5',
+    steps: [
+      'Approve GPS farm boundaries submitted by field agents in Farm Polygons',
+      'Log processing runs and track mass balance in Processing Runs',
+      'Create pedigree records linking processing runs to finished export lots',
+      'Generate Digital Product Passports (DPP) before each shipment',
+      'Generate and submit EU Due Diligence Statements via DDS Export',
+      'Upload and maintain all compliance certificates in the Document Vault',
+    ],
   },
   logistics_coordinator: {
-    label: 'Logistics Quick Start',
-    steps: ['Create shipment records and link DPPs', 'Run the 5-dimension readiness check', 'Ensure all export documents are uploaded and unexpired'],
+    label: 'Logistics Coordinator Quick Start',
+    color: 'border-sky-200 dark:border-sky-900 bg-sky-500/5',
+    steps: [
+      'Review approved inventory batches and create dispatch records with truck and driver details',
+      'Create shipment records and link DPPs and export documents',
+      'Run the 5-dimension readiness check — resolve all NO-GO findings before booking',
+      'Upload certificates (Phytosanitary, Fumigation, MRL lab results) to the Document Vault',
+      'Upload MRL lab results in Lab Results and link them to the shipment',
+    ],
+  },
+  warehouse_supervisor: {
+    label: 'Warehouse Supervisor Quick Start',
+    color: 'border-orange-200 dark:border-orange-900 bg-orange-500/5',
+    steps: [
+      'Use Scan & Verify to check all incoming bags against collection records as trucks arrive',
+      'Review and grade batches in Inventory — update weights and quality grades as needed',
+      'Approve batches that pass inspection to make them available for dispatch',
+      'Create dispatch records when batches leave the warehouse for processing',
+    ],
   },
 };
 
@@ -237,7 +339,8 @@ function ChecklistStep({ item, done, onToggle }: { item: typeof CHECKLIST[0]; do
 
 export default function GuidePage() {
   const { profile } = useOrg();
-  const role = profile?.role || 'admin';
+  const { startTourForRole, resetTours } = useOnboarding();
+  const role = (profile?.role || 'admin') as string;
   const storageKey = `origintrace_guide_${profile?.id || 'anon'}`;
   const [done, setDone] = useState<Set<string>>(new Set());
   const [section, setSection] = useState<'checklist' | 'compliance'>('checklist');
@@ -260,11 +363,22 @@ export default function GuidePage() {
   const pct = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
   const quickstart = ROLE_QUICKSTART[role];
 
+  const handleRestartTour = () => {
+    resetTours();
+    setTimeout(() => startTourForRole(role), 200);
+  };
+
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Getting Started</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Step-by-step workflow guide and compliance quick-reference for OriginTrace</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Getting Started</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Step-by-step workflow guide and compliance quick-reference</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleRestartTour} className="gap-2 shrink-0">
+          <PlayCircle className="h-4 w-4 text-primary" />
+          Restart Guided Tour
+        </Button>
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
@@ -278,13 +392,17 @@ export default function GuidePage() {
       {section === 'checklist' && (
         <>
           {quickstart && (
-            <Card className="border-primary/20 bg-primary/5">
+            <Card className={`border ${quickstart.color}`}>
               <CardContent className="pt-4 pb-4">
-                <p className="text-sm font-semibold mb-2 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" />{quickstart.label}</p>
-                <ol className="space-y-1">
+                <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <PlayCircle className="h-4 w-4 text-primary" />
+                  {quickstart.label}
+                </p>
+                <ol className="space-y-2">
                   {quickstart.steps.map((s, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                      <span className="font-bold text-primary shrink-0">{i + 1}.</span>{s}
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-3">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">{i + 1}</span>
+                      <span className="leading-relaxed">{s}</span>
                     </li>
                   ))}
                 </ol>
@@ -306,7 +424,13 @@ export default function GuidePage() {
           <div className="space-y-2">
             {items.map(item => <ChecklistStep key={item.id} item={item} done={done.has(item.id)} onToggle={() => toggle(item.id)} />)}
           </div>
-          <p className="text-xs text-muted-foreground">Click the circle icon to mark a step complete. Progress is saved in your browser.</p>
+          <div className="flex items-center justify-between gap-4 flex-wrap pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground">Click the circle to mark a step complete. Progress is saved in your browser.</p>
+            <Button variant="ghost" size="sm" onClick={handleRestartTour} className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Restart Guided Tour
+            </Button>
+          </div>
         </>
       )}
 

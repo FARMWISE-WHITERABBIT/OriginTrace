@@ -15,8 +15,10 @@ import { Label } from '@/components/ui/label';
 import {
   Loader2, Users, Search, MapPin, Package, TrendingUp,
   CheckCircle2, Clock, AlertCircle, LayoutList, LayoutGrid,
-  ArrowUpDown, ChevronUp, ChevronDown,
+  ArrowUpDown, ChevronUp, ChevronDown, Scale, Star, Map,
+  Download, UserPlus, Eye, SlidersHorizontal, X,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TierGate } from '@/components/tier-gate';
 
 interface FarmerLedger {
@@ -57,6 +59,18 @@ function getCommodityColor(commodity: string, colorMap: Record<string, string>):
   return BADGE_COLORS[h % BADGE_COLORS.length];
 }
 
+function relativeDate(dateStr: string | null): string {
+  if (!dateStr) return 'Never';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
 export default function FarmersPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -69,6 +83,11 @@ export default function FarmersPage() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [sortKey, setSortKey] = useState<SortKey>('farmer_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [commodityFilter, setCommodityFilter] = useState<string>('all');
+  const [communityFilter, setCommunityFilter] = useState<string>('all');
+  const [lastCollectionFilter, setLastCollectionFilter] = useState<string>('all');
+  const [frequencyFilter, setFrequencyFilter] = useState<string>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     fetchFarmers();
@@ -113,11 +132,47 @@ export default function FarmersPage() {
       : <ChevronDown className="h-3 w-3 ml-1 inline" />;
   };
 
-  const filtered = farmers.filter(f =>
-    f.farmer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.community?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.commodity?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Unique values for filters
+  const uniqueCommodities = Array.from(new Set(farmers.map(f => f.commodity).filter(Boolean) as string[])).sort();
+  const uniqueCommunities = Array.from(new Set(farmers.map(f => f.community).filter(Boolean) as string[])).sort();
+
+  const activeFilterCount = [
+    commodityFilter !== 'all',
+    communityFilter !== 'all',
+    lastCollectionFilter !== 'all',
+    frequencyFilter !== 'all',
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setCommodityFilter('all');
+    setCommunityFilter('all');
+    setLastCollectionFilter('all');
+    setFrequencyFilter('all');
+  };
+
+  const filtered = farmers.filter(f => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      f.farmer_name?.toLowerCase().includes(q) ||
+      f.community?.toLowerCase().includes(q) ||
+      f.commodity?.toLowerCase().includes(q);
+    const matchesCommodity = commodityFilter === 'all' || f.commodity?.toLowerCase() === commodityFilter.toLowerCase();
+    const matchesCommunity = communityFilter === 'all' || f.community?.toLowerCase() === communityFilter.toLowerCase();
+    const matchesFrequency = frequencyFilter === 'all' || f.delivery_frequency === frequencyFilter;
+    const matchesLastCollection = (() => {
+      if (lastCollectionFilter === 'all') return true;
+      if (lastCollectionFilter === 'never') return !f.last_delivery_date;
+      if (!f.last_delivery_date) return false;
+      const daysAgo = Math.floor((Date.now() - new Date(f.last_delivery_date).getTime()) / 86400000);
+      if (lastCollectionFilter === '30')   return daysAgo <= 30;
+      if (lastCollectionFilter === '90')   return daysAgo > 30 && daysAgo <= 90;
+      if (lastCollectionFilter === '180')  return daysAgo > 90 && daysAgo <= 180;
+      if (lastCollectionFilter === '180+') return daysAgo > 180;
+      return true;
+    })();
+    return matchesSearch && matchesCommodity && matchesCommunity && matchesFrequency && matchesLastCollection;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     let av: any = a[sortKey], bv: any = b[sortKey];
@@ -128,11 +183,11 @@ export default function FarmersPage() {
   });
 
   const getGradeLabel = (score: number | null) => {
-    if (!score) return { label: '–', color: 'secondary' as const };
-    if (score >= 3.5) return { label: 'A', color: 'default' as const };
-    if (score >= 2.5) return { label: 'B', color: 'secondary' as const };
-    if (score >= 1.5) return { label: 'C', color: 'outline' as const };
-    return { label: 'D', color: 'destructive' as const };
+    if (!score) return { label: '–', color: 'secondary' as const, cls: 'bg-muted text-muted-foreground' };
+    if (score >= 3.5) return { label: 'A', color: 'default' as const, cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200' };
+    if (score >= 2.5) return { label: 'B', color: 'secondary' as const, cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200' };
+    if (score >= 1.5) return { label: 'C', color: 'outline' as const, cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200' };
+    return { label: 'D', color: 'destructive' as const, cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200' };
   };
 
   const getFrequencyBadge = (frequency: string) => {
@@ -151,26 +206,53 @@ export default function FarmersPage() {
     );
   };
 
+  const exportAllCSV = () => {
+    const csv = ['Farmer,Community,Commodity,Area (ha),Deliveries (kg),Batches,Grade',
+      ...farmers.map(f => [f.farmer_name, f.community || '', f.commodity || '', f.area_hectares || '', f.total_delivery_kg || '', f.total_batches || '', f.avg_grade_score?.toFixed(1) || ''].join(','))
+    ].join('\n');
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'farmers.csv' });
+    a.click();
+  };
+
   const totalDelivery = farmers.reduce((sum, f) => sum + Number(f.total_delivery_kg), 0);
   const gradedFarmers = farmers.filter(f => f.avg_grade_score);
   const avgGrade = gradedFarmers.length > 0
     ? gradedFarmers.reduce((sum, f) => sum + Number(f.avg_grade_score), 0) / gradedFarmers.length
     : 0;
   const withConsent = farmers.filter(f => f.has_consent).length;
+  const gpsCoverage = farmers.length > 0 ? Math.round((withConsent / farmers.length) * 100) : 0;
+
+  const headerContent = (
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+          <Users className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Farmer Network</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Performance ledger and delivery history</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button variant="outline" size="sm" onClick={exportAllCSV}>
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          Export CSV
+        </Button>
+        <Button size="sm" asChild>
+          <a href="/app/farmers/new">
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+            Register Farmer
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <TierGate feature="farmers_list" requiredTier="starter" featureLabel="Farmers">
       {isLoading ? (
         <div className="p-6 space-y-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                <Users className="h-6 w-6" />
-                Farmer Network
-              </h1>
-              <p className="text-muted-foreground text-sm mt-0.5">Performance ledger and delivery history</p>
-            </div>
-          </div>
+          {headerContent}
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full">
               <thead className="border-b border-border bg-muted/30">
@@ -187,108 +269,222 @@ export default function FarmersPage() {
       ) : (
         <div className="p-6 space-y-6">
           {/* Header */}
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                <Users className="h-6 w-6" />
-                Farmer Network
-              </h1>
-              <p className="text-muted-foreground text-sm mt-0.5">Performance ledger and delivery history</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* View toggle */}
-              <div className="flex rounded-md border overflow-hidden">
-                <Button
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-none border-0 px-2.5 h-9"
-                  onClick={() => setViewMode('table')}
-                  title="Table view"
-                  data-testid="button-view-table"
-                >
-                  <LayoutList className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="rounded-none border-0 px-2.5 h-9"
-                  onClick={() => setViewMode('grid')}
-                  title="Card grid view"
-                  data-testid="button-view-grid"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <a href="/app/farmers/new">+ Register Farmer</a>
-              </Button>
-            </div>
-          </div>
+          {headerContent}
 
-          {/* Summary cards */}
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Card>
+          {/* Stats strip — 4 cols */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="card-accent-emerald transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Total Farmers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Farmers</CardTitle>
+                <div className="h-9 w-9 rounded-lg icon-bg-emerald flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{farmers.length}</div>
-                <p className="text-xs text-muted-foreground">Registered in network</p>
+                <div className="text-2xl font-bold tracking-tight">{farmers.length.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">Registered in network</p>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="card-accent-blue transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Volume</CardTitle>
+                <div className="h-9 w-9 rounded-lg icon-bg-blue flex items-center justify-center shrink-0">
+                  <Scale className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold tracking-tight">{(totalDelivery / 1000).toFixed(1)}t</div>
-                <p className="text-xs text-muted-foreground">Lifetime deliveries</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{totalDelivery.toLocaleString()} kg lifetime</p>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="card-accent-violet transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Avg Grade</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Avg Grade</CardTitle>
+                <div className="h-9 w-9 rounded-lg icon-bg-violet flex items-center justify-center shrink-0">
+                  <Star className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{avgGrade.toFixed(1)}/4.0</div>
-                <p className="text-xs text-muted-foreground">Quality score</p>
+                <div className="text-2xl font-bold tracking-tight">{avgGrade.toFixed(1)}<span className="text-sm font-normal text-muted-foreground">/4.0</span></div>
+                <p className="text-xs text-muted-foreground mt-0.5">Quality score across {gradedFarmers.length} graded</p>
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="card-accent-green transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">With Consent</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">GPS Coverage</CardTitle>
+                <div className="h-9 w-9 rounded-lg icon-bg-green flex items-center justify-center shrink-0">
+                  <Map className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{withConsent}</div>
-                <p className="text-xs text-muted-foreground">
-                  {farmers.length > 0 ? Math.round((withConsent / farmers.length) * 100) : 0}% of farmers
-                </p>
+                <div className="text-2xl font-bold tracking-tight">{gpsCoverage}%</div>
+                <p className="text-xs text-muted-foreground mt-0.5">{withConsent} of {farmers.length} with consent</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, community, commodity..." aria-label="Search farmers"
-              className="pl-9"
-              data-testid="input-search-farmers"
-            />
+          {/* Controls row */}
+          <div className="space-y-3">
+            {/* Row 1: search + filter toggle + view toggle */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[220px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name, community, commodity..."
+                  aria-label="Search farmers"
+                  className="pl-9"
+                  data-testid="input-search-farmers"
+                />
+              </div>
+
+              <Button
+                variant={showAdvancedFilters ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowAdvancedFilters(v => !v)}
+                className="shrink-0 relative"
+                aria-label="Toggle filters"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary-foreground text-primary text-[10px] font-bold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              {(activeFilterCount > 0 || searchQuery) && (
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="shrink-0 text-muted-foreground">
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+
+              <div className="flex-1 hidden sm:block" />
+
+              <div className="segmented-control shrink-0">
+                <button
+                  className="segmented-control-item px-2.5"
+                  data-active={viewMode === 'table'}
+                  onClick={() => setViewMode('table')}
+                  title="Table view"
+                  data-testid="button-view-table"
+                  aria-label="Table view"
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  className="segmented-control-item px-2.5"
+                  data-active={viewMode === 'grid'}
+                  onClick={() => setViewMode('grid')}
+                  title="Card grid view"
+                  data-testid="button-view-grid"
+                  aria-label="Card grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: commodity quick filter (always visible if commodities exist) */}
+            {uniqueCommodities.length > 0 && (
+              <div className="segmented-control flex-wrap gap-y-1">
+                <button
+                  className="segmented-control-item"
+                  data-active={commodityFilter === 'all'}
+                  onClick={() => setCommodityFilter('all')}
+                  aria-label="All commodities"
+                >
+                  All
+                </button>
+                {uniqueCommodities.map(c => (
+                  <button
+                    key={c}
+                    className="segmented-control-item"
+                    data-active={commodityFilter === c.toLowerCase()}
+                    onClick={() => setCommodityFilter(c.toLowerCase())}
+                    aria-label={`Filter by ${c}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Row 3: advanced filters panel */}
+            {showAdvancedFilters && (
+              <div className="rounded-lg border bg-muted/30 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Community */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Community</label>
+                  <Select value={communityFilter} onValueChange={setCommunityFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All communities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All communities</SelectItem>
+                      {uniqueCommunities.map(c => (
+                        <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Last Collection */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Last Collection</label>
+                  <Select value={lastCollectionFilter} onValueChange={setLastCollectionFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Any time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any time</SelectItem>
+                      <SelectItem value="30">Last 30 days</SelectItem>
+                      <SelectItem value="90">31 – 90 days ago</SelectItem>
+                      <SelectItem value="180">91 – 180 days ago</SelectItem>
+                      <SelectItem value="180+">Over 6 months ago</SelectItem>
+                      <SelectItem value="never">Never collected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Delivery Frequency */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Delivery Frequency</label>
+                  <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All frequencies</SelectItem>
+                      <SelectItem value="high">High — active suppliers</SelectItem>
+                      <SelectItem value="medium">Medium — occasional</SelectItem>
+                      <SelectItem value="low">Low — infrequent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* TABLE VIEW */}
           {viewMode === 'table' && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Performance Ledger</CardTitle>
-                <CardDescription>Click a row to see full delivery history</CardDescription>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">Performance Ledger</CardTitle>
+                    <CardDescription>Click a row to see full delivery history</CardDescription>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {sorted.length} of {farmers.length} farmers
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -304,7 +500,7 @@ export default function FarmersPage() {
                       <TableHead className="cursor-pointer select-none" onClick={() => handleSort('farmer_name')}>
                         Farmer <SortIcon col="farmer_name" />
                       </TableHead>
-                      <TableHead className="hidden md:table-cell">Community</TableHead>
+                      <TableHead className="hidden md:table-cell">Community / State</TableHead>
                       <TableHead>Commodity</TableHead>
                       <TableHead className="hidden md:table-cell text-right cursor-pointer select-none" onClick={() => handleSort('area_hectares')}>
                         Area (ha) <SortIcon col="area_hectares" />
@@ -327,12 +523,18 @@ export default function FarmersPage() {
                   <TableBody>
                     {sorted.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="py-12">
-                          <div className="text-center">
-                            {searchQuery ? (
+                        <TableCell colSpan={10} className="py-16">
+                          <div className="empty-state">
+                            <div className="empty-state-icon">
+                              <Users className="h-6 w-6" />
+                            </div>
+                            {searchQuery || commodityFilter !== 'all' ? (
                               <>
                                 <p className="font-medium text-muted-foreground">No farmers match your search</p>
                                 <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
+                                <Button variant="outline" size="sm" className="mt-3" onClick={clearAllFilters}>
+                                  Clear filters
+                                </Button>
                               </>
                             ) : (
                               <>
@@ -353,15 +555,32 @@ export default function FarmersPage() {
                       return (
                         <TableRow
                           key={farmer.farm_id}
-                          className={`cursor-pointer hover:bg-muted/50 ${selected.has(farmer.farm_id) ? 'bg-primary/5' : ''}`}
+                          className={`cursor-pointer transition-colors hover:bg-muted/50 ${selected.has(farmer.farm_id) ? 'bg-primary/5' : ''}`}
                           onClick={() => router.push(`/app/farmers/${farmer.farm_id}`)}
                           data-testid={`farmer-row-${farmer.farm_id}`}
                         >
                           <TableCell onClick={e => { e.stopPropagation(); toggleSelect(farmer.farm_id); }}>
-                            <Checkbox checked={selected.has(farmer.farm_id)} onCheckedChange={() => toggleSelect(farmer.farm_id)} aria-label={`Select ${farmer.farmer_name}`} />
+                            <Checkbox
+                              checked={selected.has(farmer.farm_id)}
+                              onCheckedChange={() => toggleSelect(farmer.farm_id)}
+                              aria-label={`Select ${farmer.farmer_name}`}
+                            />
                           </TableCell>
-                          <TableCell className="font-medium">{farmer.farmer_name}</TableCell>
-                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{farmer.community || '–'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              {/* Avatar initial circle */}
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-semibold text-primary select-none">
+                                {farmer.farmer_name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm leading-tight truncate">{farmer.farmer_name}</p>
+                                <p className="font-mono text-[10px] text-muted-foreground leading-tight">ID #{farmer.farm_id}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-sm text-muted-foreground">{farmer.community || '–'}</span>
+                          </TableCell>
                           <TableCell>
                             {farmer.commodity ? (
                               <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${getCommodityColor(farmer.commodity, commodityColorMap)}`}>
@@ -370,15 +589,20 @@ export default function FarmersPage() {
                             ) : <span className="text-muted-foreground text-sm">–</span>}
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-right font-mono text-sm">{farmer.area_hectares?.toFixed(2) || '–'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{Number(farmer.total_delivery_kg).toLocaleString()}</TableCell>
+                          <TableCell className="text-right">
+                            <p className="font-mono text-sm font-medium">{Number(farmer.total_delivery_kg).toLocaleString()}</p>
+                            <p className="text-[10px] text-muted-foreground">{farmer.total_bags} bags</p>
+                          </TableCell>
                           <TableCell className="hidden md:table-cell text-right font-mono text-sm">{farmer.total_batches}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant={grade.color}>{grade.label}</Badge>
+                            <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs font-bold border ${grade.cls}`}>
+                              {grade.label}
+                            </span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                             {farmer.last_delivery_date
-                              ? new Date(farmer.last_delivery_date).toLocaleDateString()
-                              : <span className="text-muted-foreground/50">Never</span>}
+                              ? relativeDate(farmer.last_delivery_date)
+                              : <span className="text-muted-foreground/50 italic text-xs">Never</span>}
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-center">
                             {farmer.has_consent
@@ -394,31 +618,20 @@ export default function FarmersPage() {
             </Card>
           )}
 
-          {/* Bulk action bar */}
-          {selected.size > 0 && (
-            <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
-              <span className="text-sm font-medium text-muted-foreground">{selected.size} farmer{selected.size !== 1 ? 's' : ''} selected</span>
-              <div className="w-px h-4 bg-border" />
-              <Button size="sm" variant="outline" onClick={() => {
-                const selectedFarmers = sorted.filter(f => selected.has(f.farm_id));
-                const csv = ['Farmer,Community,Commodity,Area (ha),Deliveries (kg)',
-                  ...selectedFarmers.map(f => [f.farmer_name, f.community||'', f.commodity||'', f.area_hectares||'', f.total_delivery_kg||''].join(','))
-                ].join('\n');
-                const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv],{type:'text/csv'})), download: 'farmers.csv' });
-                a.click();
-              }}>Export CSV</Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
-            </div>
-          )}
-
           {/* GRID VIEW */}
           {viewMode === 'grid' && (
             sorted.length === 0 ? (
-              <div className="text-center py-12">
-                {searchQuery ? (
+              <div className="empty-state py-16">
+                <div className="empty-state-icon">
+                  <Users className="h-6 w-6" />
+                </div>
+                {searchQuery || commodityFilter !== 'all' ? (
                   <>
                     <p className="font-medium text-muted-foreground">No farmers match your search</p>
                     <p className="text-sm text-muted-foreground mt-1">Try a different name, community, or commodity</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={clearAllFilters}>
+                      Clear filters
+                    </Button>
                   </>
                 ) : (
                   <>
@@ -439,53 +652,63 @@ export default function FarmersPage() {
                   return (
                     <Card
                       key={farmer.farm_id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="card-accent-emerald cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
                       onClick={() => router.push(`/app/farmers/${farmer.farm_id}`)}
                       data-testid={`farmer-card-${farmer.farm_id}`}
                     >
                       <CardContent className="pt-5 pb-4 space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-sm truncate">{farmer.farmer_name}</p>
+                        {/* Card header row */}
+                        <div className="flex items-start gap-2.5">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-sm font-semibold text-primary select-none">
+                            {farmer.farmer_name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm leading-tight truncate">{farmer.farmer_name}</p>
                             {farmer.community && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                <MapPin className="h-3 w-3" />{farmer.community}
+                                <MapPin className="h-3 w-3 shrink-0" />{farmer.community}
                               </p>
                             )}
                           </div>
-                          <Badge variant={grade.color} className="shrink-0">{grade.label}</Badge>
+                          <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs font-bold border shrink-0 ${grade.cls}`}>
+                            {grade.label}
+                          </span>
                         </div>
 
+                        {/* Commodity badge */}
                         {farmer.commodity && (
                           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-block ${getCommodityColor(farmer.commodity, commodityColorMap)}`}>
                             {farmer.commodity}
                           </span>
                         )}
 
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                          <span className="text-muted-foreground">Volume</span>
-                          <span className="font-mono text-right">{(Number(farmer.total_delivery_kg) / 1000).toFixed(2)}MT</span>
-                          <span className="text-muted-foreground">Batches</span>
-                          <span className="font-mono text-right">{farmer.total_batches}</span>
-                          {farmer.area_hectares != null && (
-                            <>
-                              <span className="text-muted-foreground">Area</span>
-                              <span className="font-mono text-right">{farmer.area_hectares.toFixed(1)} ha</span>
-                            </>
-                          )}
-                          <span className="text-muted-foreground">Last delivery</span>
-                          <span className="text-right text-muted-foreground">
-                            {farmer.last_delivery_date
-                              ? new Date(farmer.last_delivery_date).toLocaleDateString()
-                              : 'Never'}
-                          </span>
+                        {/* Stats */}
+                        <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-border/60">
+                          <div className="text-center">
+                            <p className="text-xs font-bold">{(Number(farmer.total_delivery_kg) / 1000).toFixed(1)}t</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Volume</p>
+                          </div>
+                          <div className="text-center border-x border-border/60">
+                            <p className="text-xs font-bold">{farmer.total_batches}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Batches</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs font-bold">{farmer.area_hectares != null ? `${farmer.area_hectares.toFixed(1)}ha` : '–'}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Area</p>
+                          </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-1 border-t">
-                          {getFrequencyBadge(farmer.delivery_frequency)}
-                          {farmer.has_consent
-                            ? <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                        {/* Footer row */}
+                        <div className="flex items-center justify-between pt-0.5">
+                          <div className="flex items-center gap-1">
+                            {farmer.has_consent
+                              ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                              : <AlertCircle className="h-3.5 w-3.5 text-amber-500" />}
+                            <span className="text-[10px] text-muted-foreground">{farmer.has_consent ? 'Consent OK' : 'No consent'}</span>
+                          </div>
+                          <span className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                            <Eye className="h-3 w-3" />View Profile
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -493,6 +716,25 @@ export default function FarmersPage() {
                 })}
               </div>
             )
+          )}
+
+          {/* Bulk action bar — fixed floating bottom */}
+          {selected.size > 0 && (
+            <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-3">
+              <span className="text-sm font-medium">{selected.size} farmer{selected.size !== 1 ? 's' : ''} selected</span>
+              <div className="w-px h-4 bg-border" />
+              <Button size="sm" variant="outline" onClick={() => {
+                const selectedFarmers = sorted.filter(f => selected.has(f.farm_id));
+                const csv = ['Farmer,Community,Commodity,Area (ha),Deliveries (kg)',
+                  ...selectedFarmers.map(f => [f.farmer_name, f.community || '', f.commodity || '', f.area_hectares || '', f.total_delivery_kg || ''].join(','))
+                ].join('\n');
+                const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'farmers.csv' });
+                a.click();
+              }}>
+                <Download className="h-3.5 w-3.5 mr-1.5" />Export CSV
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            </div>
           )}
         </div>
       )}

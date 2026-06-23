@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, FileText, Ship, Users, ShieldCheck, BarChart3, Printer, Lock, ChevronRight } from 'lucide-react';
+import { Loader2, FileText, Ship, Users, ShieldCheck, BarChart3, Printer, Lock, ChevronRight, Download, FlaskConical } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import {
   PieDonutChart,
   VerticalBarChart,
@@ -16,7 +17,7 @@ import {
   TrendLineChart,
 } from '@/components/charts';
 
-type ReportType = 'shipment_dds' | 'supplier_audit' | 'regulatory_readiness' | 'buyer_intelligence' | 'period_performance';
+type ReportType = 'shipment_dds' | 'supplier_audit' | 'regulatory_readiness' | 'buyer_intelligence' | 'period_performance' | 'compliance_audit';
 type Period = '7d' | '30d' | '90d' | '1y';
 
 const REPORT_TYPES: Array<{
@@ -31,6 +32,7 @@ const REPORT_TYPES: Array<{
   { id: 'supplier_audit', title: 'Supplier Audit Report', description: 'Aggregated KYC status, GPS verification rate, and volume history across all farms.', icon: Users, minTier: 'pro' },
   { id: 'regulatory_readiness', title: 'Regulatory Readiness Summary', description: 'Portfolio-level compliance rate against each of the five regulatory frameworks.', icon: ShieldCheck, minTier: 'pro' },
   { id: 'buyer_intelligence', title: 'Buyer Intelligence Report', description: 'Verified provenance statistics, risk flags, and ESG metrics across sourced shipments.', icon: FileText, minTier: 'enterprise' },
+  { id: 'compliance_audit', title: 'Compliance Audit Report', description: 'Full audit readiness score, lab results coverage, farm data completeness, and exportable PDF for border submissions.', icon: ShieldCheck, minTier: 'pro' },
 ];
 
 const TIER_LEVELS: Record<string, number> = { starter: 0, basic: 1, pro: 2, enterprise: 3 };
@@ -41,17 +43,54 @@ export default function ReportBuilderPage() {
   const [period, setPeriod] = useState<Period>('30d');
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [auditScore, setAuditScore] = useState<any>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const currentTier = (organization as any)?.subscription_tier || 'starter';
   const currentTierLevel = TIER_LEVELS[currentTier] ?? 0;
+
+  const downloadAuditPdf = useCallback(async () => {
+    if (!organization) return;
+    setIsDownloadingPdf(true);
+    try {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - (period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365) * 86400000).toISOString().split('T')[0];
+      const res = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportType: 'compliance_audit', startDate, endDate }),
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const { base64, fileName } = await res.json();
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${base64}`;
+      link.download = fileName;
+      link.click();
+    } catch (e) {
+      console.error('PDF download error:', e);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }, [organization, period]);
 
   const generateReport = useCallback(async () => {
     if (!selectedReport) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/reports?type=${selectedReport}&period=${period}`);
-      if (res.ok) {
-        const result = await res.json();
-        setData(result);
+      if (selectedReport === 'compliance_audit') {
+        const [scoreRes, analyticsRes] = await Promise.all([
+          fetch('/api/audit-readiness'),
+          fetch(`/api/reports?type=period_performance&period=${period}`),
+        ]);
+        const scoreData = scoreRes.ok ? await scoreRes.json() : null;
+        const analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
+        setAuditScore(scoreData);
+        setData(analyticsData);
+      } else {
+        const res = await fetch(`/api/reports?type=${selectedReport}&period=${period}`);
+        if (res.ok) {
+          const result = await res.json();
+          setData(result);
+        }
       }
     } catch (error) {
       console.error('Failed to generate report:', error);
@@ -136,6 +175,12 @@ export default function ReportBuilderPage() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
+          {selectedReport === 'compliance_audit' && (
+            <Button variant="outline" size="sm" onClick={downloadAuditPdf} disabled={isDownloadingPdf} data-testid="button-download-audit-pdf">
+              {isDownloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              Download PDF
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => window.print()} data-testid="button-print-report">
             <Printer className="h-4 w-4 mr-2" />
             Print / PDF
@@ -158,7 +203,7 @@ export default function ReportBuilderPage() {
           <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
         </div>
       ) : (
-        <ReportContent type={selectedReport} data={data} period={period} />
+        <ReportContent type={selectedReport} data={data} period={period} auditScore={auditScore} />
       )}
 
       <style jsx global>{`
@@ -174,7 +219,7 @@ export default function ReportBuilderPage() {
   );
 }
 
-function ReportContent({ type, data, period }: { type: ReportType; data: any; period: string }) {
+function ReportContent({ type, data, period, auditScore }: { type: ReportType; data: any; period: string; auditScore?: any }) {
   switch (type) {
     case 'period_performance':
       return <PeriodPerformanceReport data={data} period={period} />;
@@ -186,6 +231,8 @@ function ReportContent({ type, data, period }: { type: ReportType; data: any; pe
       return <RegulatoryReadinessReport data={data} />;
     case 'buyer_intelligence':
       return <BuyerIntelligenceReport data={data} />;
+    case 'compliance_audit':
+      return <ComplianceAuditReport data={data} auditScore={auditScore} />;
     default:
       return null;
   }
@@ -587,6 +634,107 @@ function BuyerIntelligenceReport({ data }: { data: any }) {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+const GRADE_COLOR: Record<string, string> = {
+  A: 'bg-emerald-100 text-emerald-800',
+  B: 'bg-green-100 text-green-800',
+  C: 'bg-yellow-100 text-yellow-800',
+  D: 'bg-orange-100 text-orange-800',
+  F: 'bg-red-100 text-red-800',
+};
+
+const SCORE_COMPONENTS = [
+  { key: 'farmDataCompleteness', label: 'Farm Data Completeness', weight: 25 },
+  { key: 'batchRecordQuality', label: 'Batch Record Quality', weight: 20 },
+  { key: 'labTestCoverage', label: 'Lab Test Coverage', weight: 20 },
+  { key: 'documentHealth', label: 'Document Health', weight: 20 },
+  { key: 'cleanShipmentRate', label: 'Clean Shipment Rate', weight: 15 },
+];
+
+function ComplianceAuditReport({ data, auditScore }: { data: any; auditScore: any }) {
+  const grade = auditScore?.grade || '—';
+  const overall = auditScore?.overallScore || 0;
+  const components = auditScore?.components || {};
+
+  return (
+    <div className="space-y-6" data-testid="report-compliance-audit">
+      <SectionTitle>Audit Readiness Score</SectionTitle>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="md:col-span-1 flex flex-col items-center justify-center py-6">
+          <div className={`h-20 w-20 rounded-full flex items-center justify-center text-3xl font-bold mb-2 ${GRADE_COLOR[grade] || 'bg-muted'}`}>
+            {grade}
+          </div>
+          <p className="text-2xl font-bold">{overall}/100</p>
+          <p className="text-xs text-muted-foreground mt-1">Overall Readiness Score</p>
+        </Card>
+        <Card className="md:col-span-2">
+          <CardContent className="pt-4 space-y-3">
+            {SCORE_COMPONENTS.map(({ key, label, weight }) => {
+              const val = components[key] ?? 0;
+              const scaled = Math.round(val * weight / 100);
+              return (
+                <div key={key}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{label}</span>
+                    <span className="text-muted-foreground">{val}% <span className="text-xs">(×{weight}% = {scaled}pts)</span></span>
+                  </div>
+                  <Progress value={val} className="h-2" />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+
+      <SectionTitle>Lab Results Coverage</SectionTitle>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Total Batches</p><p className="text-xl font-bold">{data?.batchSummary?.current || 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Compliance Rate</p><p className="text-xl font-bold">{data?.compliance?.batchRate || 0}%</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Flagged Batches</p><p className="text-xl font-bold">{data?.compliance?.flaggedBatches || 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Verified Farms</p><p className="text-xl font-bold">{data?.supplyChainNodes?.verifiedFarms || 0}</p></CardContent></Card>
+      </div>
+
+      <SectionTitle>Compliance Posture</SectionTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Farm Compliance</CardTitle></CardHeader>
+          <CardContent>
+            <PieDonutChart
+              data={(data?.farmComplianceBreakdown || []).map((f: any) => ({
+                name: f.status, value: f.count,
+                color: f.status === 'Approved' ? '#2E7D6B' : f.status === 'Pending' ? '#F59E0B' : f.status === 'Rejected' ? '#EF4444' : '#9CA3AF',
+              }))}
+              donut height={220}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Deforestation Risk</CardTitle></CardHeader>
+          <CardContent>
+            <PieDonutChart
+              data={(data?.deforestationRisk || []).map((d: any) => ({
+                name: d.level, value: d.count,
+                color: d.level === 'None Detected' ? '#2E7D6B' : d.level === 'Low' ? '#6FB8A8' : d.level === 'Medium' ? '#F59E0B' : '#EF4444',
+              }))}
+              donut height={220}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <SectionTitle>Shipment & Document Health</SectionTitle>
+      <Card>
+        <CardContent className="pt-4 space-y-2">
+          <DataRow label="Total Shipments" value={data?.shipmentsByDestination?.reduce((s: number, d: any) => s + d.count, 0) || 0} testId="row-total-shipments" />
+          <DataRow label="Farm Compliance Rate" value={`${data?.compliance?.farmRate || 0}%`} testId="row-farm-rate-audit" />
+          <DataRow label="Batch Compliance Rate" value={`${data?.compliance?.batchRate || 0}%`} testId="row-batch-rate-audit" />
+          <DataRow label="GPS Verified Farms" value={data?.supplyChainNodes?.verifiedFarms || 0} testId="row-gps-verified" />
+          <DataRow label="Total Hectares Mapped" value={(data?.supplyChainNodes?.totalHectares || 0).toLocaleString()} testId="row-hectares-audit" />
+        </CardContent>
+      </Card>
     </div>
   );
 }

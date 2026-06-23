@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const { enforceTier } = await import('@/lib/api/tier-guard');
+    const tierBlock = await enforceTier(profile.org_id, 'pedigree');
+    if (tierBlock) return tierBlock;
+
     const { searchParams } = new URL(request.url);
     const finishedGoodId = searchParams.get('id');
 

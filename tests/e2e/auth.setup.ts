@@ -9,6 +9,7 @@
 import { test as setup, expect } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { authenticateContextWithCredentials, getE2eBaseUrl } from './helpers/qa-flows';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -17,17 +18,13 @@ const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    || 'obemog@gmail.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'IloveCloudsC69@';
 const AUTH_FILE      = join(__dirname, '.auth/admin.json');
 
+setup.setTimeout(60_000);
+
 setup('authenticate as admin', async ({ page }) => {
-  await page.goto('/auth/login');
-
-  await page.locator('#email').waitFor({ state: 'visible' });
-  await page.locator('#email').fill(ADMIN_EMAIL);
-  await page.locator('#password').fill(ADMIN_PASSWORD);
-  await page.locator('[data-testid="button-login"]').click();
-
-  // Wait for redirect to /app — confirms login succeeded
-  await page.waitForURL(/\/app/, { timeout: 25_000 });
-  expect(page.url()).toContain('/app');
+  page.setDefaultNavigationTimeout(60_000);
+  await authenticateContextWithCredentials(page.context(), ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto(`${getE2eBaseUrl()}/app`, { waitUntil: 'domcontentloaded' });
+  expect(page.url()).toMatch(/\/(app|superadmin)(?:$|[/?#])/);
 
   // Save auth state (cookies + localStorage) for reuse
   await page.context().storageState({ path: AUTH_FILE });

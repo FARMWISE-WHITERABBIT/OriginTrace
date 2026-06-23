@@ -23,6 +23,11 @@ async function getAuthAndProfile(request: NextRequest): Promise<AuthResult> {
   if (!profile.org_id) return { error: NextResponse.json({ error: 'No organization assigned' }, { status: 403 }) };
 
   const supabaseAdmin = createAdminClient();
+  
+  const { enforceTier } = await import('@/lib/api/tier-guard');
+  const tierBlock = await enforceTier(profile.org_id, 'documents');
+  if (tierBlock) return { error: tierBlock };
+
   return { user, profile: profile as { org_id: string; role: string }, supabaseAdmin };
 }
 

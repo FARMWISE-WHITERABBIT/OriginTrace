@@ -17,6 +17,7 @@ import {
   Users,
   Award,
 } from 'lucide-react';
+import { STATUS_COLORS } from '@/lib/chart-colors';
 
 interface SupplierRiskTiers {
   low: number;
@@ -75,9 +76,9 @@ interface ESGData {
 }
 
 const RISK_COLORS: Record<string, string> = {
-  low: '#16a34a',
-  medium: '#f59e0b',
-  high: '#ef4444',
+  low:    STATUS_COLORS.success,
+  medium: STATUS_COLORS.warning,
+  high:   STATUS_COLORS.danger,
 };
 
 const RISK_LABELS: Record<string, string> = {

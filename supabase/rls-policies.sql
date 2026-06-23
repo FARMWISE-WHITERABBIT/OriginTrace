@@ -27,23 +27,27 @@ ALTER TABLE agent_sync_status ENABLE ROW LEVEL SECURITY;
 -- =============================================
 
 CREATE OR REPLACE FUNCTION public.get_user_org_id()
-RETURNS integer
-LANGUAGE sql
+RETURNS UUID
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
-  SELECT org_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
+BEGIN
+  RETURN (SELECT org_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1);
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS text
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
-  SELECT role FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
+BEGIN
+  RETURN (SELECT role FROM public.profiles WHERE user_id = auth.uid() LIMIT 1);
+END;
 $$;
 
 -- =============================================

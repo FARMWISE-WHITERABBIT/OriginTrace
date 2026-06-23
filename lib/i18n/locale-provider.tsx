@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { defaultLocale, getDirection, type Locale, locales } from '@/i18n';
+import defaultMessages from '@/messages/en.json';
 
 interface LocaleContextType {
   locale: Locale;
@@ -33,8 +34,7 @@ function getStoredLocale(): Locale {
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
-  const [messages, setMessages] = useState<Record<string, unknown> | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [messages, setMessages] = useState<Record<string, unknown>>(defaultMessages);
 
   const loadMessages = useCallback(async (loc: Locale) => {
     try {
@@ -49,7 +49,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = getStoredLocale();
     setLocaleState(stored);
-    loadMessages(stored).then(() => setIsReady(true));
+    loadMessages(stored);
   }, [loadMessages]);
 
   useEffect(() => {
@@ -66,10 +66,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, [loadMessages]);
 
   const direction = getDirection(locale);
-
-  if (!isReady || !messages) {
-    return <>{children}</>;
-  }
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, direction }}>

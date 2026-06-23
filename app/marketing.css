@@ -1,0 +1,3336 @@
+/**
+ * OriginTrace Marketing Design System
+ * =====================================
+ * Faithfully adapted from Mivora (Webestica/Webflow) with OriginTrace brand
+ * substituted throughout — Origin Green #2E7D6B replaces Mivora's #04AF4C,
+ * Deep Forest #1F5F52 replaces charcoal darks, warm earth tones added for
+ * the agricultural supply-chain context.
+ *
+ * Loaded only in app/(marketing)/layout.tsx — zero impact on enterprise app.
+ *
+ * Sections
+ * ─────────
+ *  1.  Design tokens (CSS custom properties)
+ *  2.  Typography — display font + scale
+ *  3.  Container system (940 / 980 / 1200 / 1390px + full)
+ *  4.  Section spacing (8.125rem standard, Mivora baseline)
+ *  5.  Margin scale — 17-step named utility (Mivora combo-class pattern)
+ *  6.  Section surface variants
+ *  7.  Pre-section title chip + section header
+ *  8.  Button variants
+ *  9.  Blog card — image zoom-out + overlay (Mivora exact behaviour)
+ * 10.  Feature / capability card
+ * 11.  Team card
+ * 12.  Stat / counter card
+ * 13.  Mission list item tag pill
+ * 14.  Compliance reg-tag pills
+ * 15.  Logo marquee (infinite scroll, Mivora duplicate-DOM pattern)
+ * 16.  Case study sticky stack
+ * 17.  Hero section
+ * 18.  Nav utilities
+ * 19.  Rich text / blog prose
+ * 20.  Icon badge
+ * 21.  Grid helpers
+ * 22.  Dividers
+ * 23.  Animation utilities (CSS-only; complements motion.tsx framer variants)
+ */
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────────── */
+  :root {
+    /* ── Mivora exact design tokens (sourced from mivora.webflow.css) ─── */
+    --color--black:       #212121;
+    --color--white:       white;
+    --color--gray-1:      #282828;
+    --color--gray-2:      #636363;
+    --color--gray-3:      #7b7b7b;
+    --color--gray-4:      #bebebe;
+    --color--gray-5:      lightgrey;
+    --color--gray-6:      #ebebeb;
+    --color--gray-7:      whitesmoke;
+    --color--gray-8:      #f9f9f9;
+    --color--transparent: #0000;
+    --border-radius--xs:  0.3475rem;
+    --border-radius--sm:  0.625rem;
+    --border-radius--sm-01: 0.4375rem;
+    --border-radius--md:  1.25rem;
+    --border-radius--lg:  3.125rem;
+    --border-radius--button: 6.25rem;
+    --border-radius--form-input: 0.625rem;
+    --font-family--body:    Inter, sans-serif;
+    --font-family--heading: "Instrument Sans", sans-serif;
+    --font-size--size-1:  0.938rem;
+    --font-size--size-2:  1rem;
+    --font-size--size-3:  1.125rem;
+    --font-size--size-4:  1.25rem;
+    --font-size--size-5:  1.375rem;
+    --font-size--size-6:  1.75rem;
+    --font-size--size-7:  2rem;
+    --font-size--size-8:  2.25rem;
+    --font-size--size-9:  2.5rem;
+    --font-size--size-10: 3rem;
+    --font-size--size-11: 3.5rem;
+    --font-size--size-12: 5rem;
+
+    /* ── Brand colours (OriginTrace — replaces Mivora's #7eea57 lime) ─── */
+    --mk-green:          #2E7D6B;   /* Origin Green — primary CTA */
+    --mk-green-dark:     #1F5F52;   /* Deep Forest — hover / dark sections */
+    --mk-green-mid:      #3d9b86;   /* Mid teal — interactive states */
+    --mk-green-light:    hsl(166 46% 92%);  /* Sage tint — chip bg, card tint */
+    --mk-green-pale:     hsl(166 30% 97%);  /* Near-white green wash */
+
+    /* ── Surface variants (mapped to Mivora grays) ──────────────────── */
+    --mk-surface-white:  var(--color--white);     /* pure white */
+    --mk-surface-warm:   hsl(43 30% 97%);         /* Off-white warm */
+    --mk-surface-green:  hsl(166 30% 97%);        /* Very light green wash */
+    --mk-surface-gray:   var(--color--gray-8);    /* #f9f9f9 — Mivora .background-gray */
+    --mk-surface-dark:   var(--color--black);     /* #212121 — Mivora dark sections */
+    --mk-surface-black:  var(--color--gray-1);    /* #282828 — footer */
+
+    /* ── Text hierarchy (mapped to Mivora grays) ─────────────────────── */
+    --mk-text-primary:   var(--color--black);     /* #212121 */
+    --mk-text-secondary: var(--color--gray-2);    /* #636363 */
+    --mk-text-muted:     var(--color--gray-3);    /* #7b7b7b — Mivora .text-gray-3 */
+    --mk-text-on-dark:   hsl(0 0% 95%);
+    --mk-text-on-dark-2: var(--color--gray-4);    /* #bebebe — Mivora .white-700-text */
+
+    /* ── Border (Mivora gray-6 = #ebebeb) ───────────────────────────── */
+    --mk-border:         var(--color--gray-6);    /* #ebebeb */
+    --mk-border-dark:    hsl(0 0% 100% / 0.1);
+
+    /* ── Section spacing — 8.125rem = 130px is Mivora's standard ──────── */
+    --section-xs:   3rem;      /*  48px — compact utility */
+    --section-sm:   5rem;      /*  80px — tight */
+    --section-md:   8.125rem;  /* 130px — Mivora standard */
+    --section-lg:   10.5rem;   /* 168px — generous */
+    --section-xl:   13.5rem;   /* 216px — hero-scale */
+
+    /* ── Container widths (Mivora hierarchy) ─────────────────────────── */
+    --container-2xs: 36rem;    /*  576px — caption / pull-quote */
+    --container-xs:  44rem;    /*  704px — narrow body */
+    --container-sm:  61.25rem; /*  980px — Mivora .container-small */
+    --container-md:  75rem;    /* 1200px — standard wide */
+    --container-lg:  86.875rem;/* 1390px — Mivora .container large */
+
+    /* ── Border radius ──────────────────────────────────────────────── */
+    --mk-radius-xs:   0.375rem; /* matches app --radius */
+    --mk-radius-sm:   0.625rem;
+    --mk-radius-md:   0.875rem;
+    --mk-radius-card: 1rem;
+    --mk-radius-hero: 1.5rem;
+    --mk-radius-pill: 9999px;
+
+    /* ── Animation ──────────────────────────────────────────────────── */
+    --ease-out-quart:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-in-out-expo:  cubic-bezier(0.87, 0, 0.13, 1);
+    --ease-spring:       cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast:   0.2s;
+    --dur-base:   0.4s;
+    --dur-slow:   0.65s;
+    --dur-enter:  0.6s;
+
+    /* ── Pre-title chip ─────────────────────────────────────────────── */
+    --pre-title-color: var(--mk-green);
+    --pre-title-bg:    var(--mk-green-light);
+
+    /* ── Shadows ────────────────────────────────────────────────────── */
+    --mk-shadow-xs: 0 1px 3px hsl(0 0% 0% / 0.06);
+    --mk-shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.08), 0 1px 2px hsl(0 0% 0% / 0.04);
+    --mk-shadow-md: 0 6px 20px hsl(0 0% 0% / 0.08), 0 2px 6px hsl(0 0% 0% / 0.04);
+    --mk-shadow-lg: 0 16px 40px hsl(0 0% 0% / 0.1), 0 4px 10px hsl(0 0% 0% / 0.06);
+    --mk-shadow-xl: 0 24px 64px hsl(0 0% 0% / 0.12), 0 8px 20px hsl(0 0% 0% / 0.06);
+
+    /* ── Green glow (hover lift accent) ─────────────────────────────── */
+    --mk-glow-green: 0 8px 28px hsl(166 46% 34% / 0.3);
+  }
+
+  .dark {
+    --mk-surface-white:  hsl(168 18% 9%);
+    --mk-surface-warm:   hsl(43 10% 10%);
+    --mk-surface-green:  hsl(166 20% 10%);
+    --mk-surface-gray:   hsl(220 12% 14%);
+    --mk-surface-dark:   hsl(168 28% 5%);
+    --mk-surface-black:  hsl(0 0% 3%);
+    --mk-text-primary:   hsl(0 0% 95%);
+    --mk-text-secondary: hsl(218 11% 65%);
+    --mk-text-muted:     hsl(218 11% 50%);
+    --mk-border:         hsl(168 15% 20%);
+    --pre-title-color:   hsl(166 46% 55%);
+    --pre-title-bg:      hsl(166 30% 13%);
+    --mk-green-light:    hsl(166 30% 14%);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1b. MARKETING PAGE BODY OVERRIDES
+   globals.css sets body { font-family: var(--font-sans) } (Plus Jakarta Sans) and
+   bg-background (a Tailwind HSL token). We override both for marketing pages.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+  /* Page-level background — Mivora uses var(--color--gray-8) = #f9f9f9 */
+  .min-h-screen.overflow-x-hidden {
+    background-color: var(--color--gray-8) !important;
+  }
+
+  /* All text within marketing pages uses Mivora's body font (Inter) */
+  .mk-page,
+  .mk-page *,
+  .mk-footer,
+  .mk-footer *,
+  header[data-testid="marketing-nav"],
+  header[data-testid="marketing-nav"] * {
+    font-family: var(--font-family--body);
+  }
+
+  /* Display classes and card titles re-apply Instrument Sans explicitly */
+  .text-display-2xl,
+  .text-display-xl,
+  .text-display-lg,
+  .text-display-md,
+  .text-display-sm,
+  .mk-blog-card__title,
+  .mk-card__title,
+  .mk-team-card__name,
+  .mk-stat-card__value,
+  .mk-stat-row__value,
+  .mk-sticky-card__number,
+  .mk-sticky-card__title,
+  .mk-sticky-card__counter-value,
+  .mk-prose h1,
+  .mk-prose h2,
+  .mk-prose h3,
+  .mk-prose h4,
+  .mk-industries-tab-title,
+  .mk-counter-number,
+  .mk-testimonial-name,
+  .mk-footer-col__heading {
+    font-family: var(--font-display);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. TYPOGRAPHY — display font + scale
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Instrument Sans is Mivora's heading font — matches Webflow source exactly.
+     --font-instrument is set by Next.js font loader in layout.tsx */
+  :root {
+    --font-display: var(--font-instrument, var(--font-family--heading, "Instrument Sans", "Inter Tight", ui-sans-serif, system-ui, sans-serif));
+  }
+
+  /* Display scale aligned to Mivora's --font-size--size-N tokens */
+  .text-display-2xl {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 6vw, var(--font-size--size-12));  /* max 5rem */
+    font-weight: 800;
+    line-height: 1.03;
+    letter-spacing: -0.035em;
+  }
+  .text-display-xl {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5vw, var(--font-size--size-11)); /* max 3.5rem */
+    font-weight: 800;
+    line-height: 1.07;
+    letter-spacing: -0.03em;
+  }
+  .text-display-lg {
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 4vw, var(--font-size--size-9)); /* max 2.5rem */
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+  }
+  .text-display-md {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, var(--font-size--size-8));   /* max 2.25rem */
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+  }
+  .text-display-sm {
+    font-family: var(--font-display);
+    font-size: clamp(1.125rem, 2vw, var(--font-size--size-6)); /* max 1.75rem */
+    font-weight: 600;
+    line-height: 1.28;
+    letter-spacing: -0.015em;
+  }
+
+  /* Two-tone heading helpers (Mivora .text-gray-3 / .text-primary pattern) */
+  .text-mk-muted   { color: var(--mk-text-muted); }
+  .text-mk-brand   { color: var(--mk-green); }
+  .text-mk-primary { color: var(--mk-text-primary); }
+  .text-mk-on-dark { color: var(--mk-text-on-dark); }
+
+  /* Dark section .white-700-text equivalent */
+  .text-mk-faded { color: var(--mk-text-on-dark-2); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. CONTAINER SYSTEM
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Base rule — all containers share this */
+  .mk-container,
+  .mk-container-2xs,
+  .mk-container-xs,
+  .mk-container-sm,
+  .mk-container-md,
+  .mk-container-lg,
+  .mk-container-full {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 640px)  { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2rem; } }
+  @media (min-width: 1024px) { .mk-container, .mk-container-2xs, .mk-container-xs, .mk-container-sm, .mk-container-md, .mk-container-lg, .mk-container-full { padding-inline: 2.5rem; } }
+
+  .mk-container-wide {
+    width: 100%;
+    max-width: 1390px;
+    margin-inline: auto;
+    padding-inline: clamp(1.5rem, 5vw, 6rem);
+  }
+
+  .mk-container-2xs { max-width: var(--container-2xs); }
+  .mk-container-xs  { max-width: var(--container-xs); }
+  .mk-container-sm  { max-width: var(--container-sm); }  /* 980px — Mivora .container-small */
+  .mk-container     { max-width: var(--container-md); }  /* 1200px — standard */
+  .mk-container-md  { max-width: var(--container-md); }
+  .mk-container-lg  { max-width: var(--container-lg); }  /* 1390px — Mivora .container */
+  .mk-container-full { max-width: none; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. SECTION SPACING
+   ───────────────────────────────────────────────────────────────────────────── */
+  .section-spacing-xs { padding-block: var(--section-xs); }
+  .section-spacing-sm { padding-block: var(--section-sm); }
+  .section-spacing    { padding-block: var(--section-md); }  /* 8.125rem — Mivora standard */
+  .section-spacing-lg { padding-block: var(--section-lg); }
+  .section-spacing-xl { padding-block: var(--section-xl); }
+
+  /* Mivora exact: section-spacing collapses to 6.25rem at ≤991px */
+  @media screen and (max-width: 991px) {
+    .section-spacing    { padding-block: 6.25rem; }
+    .section-spacing-lg { padding-block: 6.25rem; }
+  }
+  @media screen and (max-width: 767px) {
+    .section-spacing-sm { padding-block: 4rem; }
+  }
+
+  .section-pt    { padding-top: var(--section-md); }
+  .section-pb    { padding-bottom: var(--section-md); }
+  .section-pt-lg { padding-top: var(--section-lg); }
+  .section-pb-lg { padding-bottom: var(--section-lg); }
+  .section-pt-sm { padding-top: var(--section-sm); }
+  .section-pb-sm { padding-bottom: var(--section-sm); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. MARGIN SCALE — 17-step (Mivora combo-class pattern)
+   Usage: <div class="margin-bottom margin-large">
+   The direction class (.margin-bottom / .margin-top) reads --mk-margin
+   set by the size class.
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Size tokens */
+  .margin-tiny     { --mk-margin: 0.25rem;  }   /*  4px */
+  .margin-xsmall   { --mk-margin: 0.5rem;   }   /*  8px */
+  .margin-small    { --mk-margin: 0.75rem;  }   /* 12px */
+  .margin-medium   { --mk-margin: 1rem;     }   /* 16px */
+  .margin-medium-2 { --mk-margin: 1.5rem;   }   /* 24px */
+  .margin-large    { --mk-margin: 2rem;     }   /* 32px */
+  .margin-large-2  { --mk-margin: 2.5rem;   }   /* 40px */
+  .margin-xlarge   { --mk-margin: 3rem;     }   /* 48px */
+  .margin-xlarge-2 { --mk-margin: 4rem;     }   /* 64px */
+  .margin-2xlarge  { --mk-margin: 5rem;     }   /* 80px */
+  .margin-2xlarge-2{ --mk-margin: 6rem;     }   /* 96px */
+  .margin-3xlarge  { --mk-margin: 7rem;     }   /* 112px */
+  .margin-3xlarge-2{ --mk-margin: 8.125rem; }   /* 130px — = section-md */
+  .margin-4xlarge  { --mk-margin: 10rem;    }   /* 160px */
+  .margin-4xlarge-2{ --mk-margin: 12rem;    }   /* 192px */
+  .margin-5xlarge  { --mk-margin: 15rem;    }   /* 240px */
+  .margin-huge     { --mk-margin: 20rem;    }   /* 320px */
+
+  /* Direction applicators */
+  .margin-bottom { margin-bottom: var(--mk-margin, 1rem); }
+  .margin-top    { margin-top:    var(--mk-margin, 1rem); }
+  .margin-left   { margin-left:   var(--mk-margin, 1rem); }
+  .margin-right  { margin-right:  var(--mk-margin, 1rem); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   6. SECTION SURFACE VARIANTS
+   ───────────────────────────────────────────────────────────────────────────── */
+  .section-white  { background-color: var(--mk-surface-white); }
+  .section-warm   { background-color: var(--mk-surface-warm); }
+  .section-green  { background-color: var(--mk-surface-green); }
+  .section-gray   { background-color: var(--mk-surface-gray); }   /* Mivora .background-gray */
+  .section-dark   { background-color: var(--mk-surface-dark);  color: var(--mk-text-on-dark); }
+  .section-black  { background-color: var(--mk-surface-black); color: var(--mk-text-on-dark); }
+
+  /* Mivora top/bottom border strips */
+  .section-bordered-t { border-top:    1px solid var(--mk-border); }
+  .section-bordered-b { border-bottom: 1px solid var(--mk-border); }
+  .section-bordered   { border-top: 1px solid var(--mk-border); border-bottom: 1px solid var(--mk-border); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   7. PRE-SECTION TITLE CHIP + SECTION HEADER
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* The chip itself — Mivora .pre-section-title */
+  .pre-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.875rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--pre-title-bg);
+    color: var(--pre-title-color);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  /* On dark sections, chip becomes semi-opaque white */
+  .section-dark .pre-title,
+  .section-black .pre-title {
+    background-color: hsl(0 0% 100% / 0.1);
+    color: hsl(0 0% 100% / 0.85);
+  }
+
+  /* Section header wrapper — centred (default) */
+  .section-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 52rem;
+    margin-inline: auto;
+    margin-bottom: 4rem;
+  }
+  .section-header .pre-title    { margin-bottom: 1rem; }
+  .section-header__title        { max-width: 34ch; }
+  .section-header__body {
+    max-width: 52ch;
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--mk-text-secondary);
+    margin-top: 1rem;
+  }
+  .section-dark  .section-header__body,
+  .section-black .section-header__body { color: var(--mk-text-on-dark-2); }
+
+  /* Left-aligned variant */
+  .section-header--left {
+    align-items: flex-start;
+    text-align: left;
+    margin-inline: 0;
+  }
+
+  /* Centred variant (default section-header is already centred — alias for explicitness) */
+  .section-header--center {
+    align-items: center;
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  /* Suppress bottom margin on a heading inside a section-header */
+  .no-margin-bottom { margin-bottom: 0; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   8. BUTTON VARIANTS (Mivora .button-primary / .button-black / common-button)
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Shared base */
+  .btn-mk-primary,
+  .btn-mk-dark,
+  .btn-mk-ghost,
+  .btn-mk-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: var(--border-radius--button);
+    font-family: var(--font-family--body);
+    font-size: 0.9375rem;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition:
+      background-color var(--dur-fast) ease,
+      border-color     var(--dur-fast) ease,
+      color            var(--dur-fast) ease,
+      transform        var(--dur-fast) var(--ease-spring),
+      box-shadow       var(--dur-fast) ease;
+    white-space: nowrap;
+  }
+
+  /* ── Green / primary — Mivora .button-primary with OriginTrace green ── */
+  .btn-mk-primary {
+    background-color: var(--mk-green);
+    color: #fff;
+    border-color: var(--mk-green);
+  }
+  .btn-mk-primary:hover {
+    background-color: var(--mk-green-dark);
+    border-color: var(--mk-green-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--mk-glow-green);
+  }
+  .btn-mk-primary:active { transform: translateY(0); box-shadow: none; }
+
+  /* ── Black — Mivora .button-black — used on light sections ── */
+  .btn-mk-dark {
+    background-color: var(--mk-surface-black);
+    color: #fff;
+    border-color: var(--mk-surface-black);
+  }
+  .btn-mk-dark:hover {
+    background-color: hsl(220 20% 18%);
+    border-color: hsl(220 20% 18%);
+    transform: translateY(-2px);
+    box-shadow: var(--mk-shadow-md);
+  }
+  .btn-mk-dark:active { transform: translateY(0); }
+
+  /* ── Ghost — on dark sections ── */
+  .btn-mk-ghost {
+    background-color: transparent;
+    color: #fff;
+    border-color: hsl(0 0% 100% / 0.35);
+  }
+  .btn-mk-ghost:hover {
+    background-color: hsl(0 0% 100% / 0.08);
+    border-color: hsl(0 0% 100% / 0.6);
+    transform: translateY(-2px);
+  }
+  .btn-mk-ghost:active { transform: translateY(0); }
+
+  /* ── Outline green — on light sections ── */
+  .btn-mk-outline {
+    background-color: transparent;
+    color: var(--mk-green);
+    border-color: var(--mk-green);
+  }
+  .btn-mk-outline:hover {
+    background-color: var(--mk-green);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: var(--mk-glow-green);
+  }
+  .btn-mk-outline:active { transform: translateY(0); }
+
+  /* Size modifiers */
+  .btn-mk-sm {
+    padding: 0.625rem 1.375rem;
+    font-size: 0.8125rem;
+  }
+  .btn-mk-lg {
+    padding: 1.0625rem 2.5rem;
+    font-size: 1.0625rem;
+  }
+
+  /* Icon circle for "top button" scroll-up pattern (Mivora .top-button) */
+  .btn-mk-icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-spring);
+    flex-shrink: 0;
+  }
+  .btn-mk-icon-circle:hover {
+    background-color: var(--mk-green-dark);
+    transform: translateY(-2px);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   9. BLOG CARD — Mivora exact hover behaviour
+      Images start pre-zoomed to scale(1.1) and normalise back to scale(1)
+      on hover (zoom-out reveal), with a dark overlay fade-in layered on top.
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-blog-card {
+    display: block;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--border-radius--sm);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow var(--dur-base) var(--ease-out-quart), transform var(--dur-base) var(--ease-out-quart);
+  }
+  .mk-blog-card:hover {
+    box-shadow: var(--mk-shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  /* Image wrapper — clips both the zoom and the overlay */
+  .mk-blog-card__img-wrap {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+  }
+
+  /* The image itself — pre-scaled to 1.1, normalises on card hover */
+  .mk-blog-card__img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* ⚠️ START at 1.1 (Mivora pattern — zoom-out reveal) */
+    transform: scale(1.1);
+    transition: transform 0.7s var(--ease-out-quart);
+    will-change: transform;
+  }
+  .mk-blog-card:hover .mk-blog-card__img-wrap img {
+    transform: scale(1);
+  }
+
+  /* Overlay — always-on bottom gradient so meta text is legible */
+  .mk-blog-card__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 40%,
+      hsl(168 51% 12% / 0.7) 100%
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* (mk-blog-category, mk-blog-date, mk-blog-chips defined in section 25b) */
+
+  /* Card body */
+  .mk-blog-card__body {
+    padding: 1.375rem 1.5rem 1.75rem;
+  }
+  .mk-blog-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--mk-text-muted);
+    margin-bottom: 0.625rem;
+  }
+  .mk-blog-card__title {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    color: var(--mk-text-primary);
+    transition: color var(--dur-fast) ease;
+  }
+  .mk-blog-card:hover .mk-blog-card__title {
+    color: var(--mk-green);
+  }
+  .mk-blog-card__desc {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--mk-text-secondary);
+    margin-top: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Read-more arrow link */
+  .mk-blog-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--mk-green);
+    transition: gap var(--dur-fast) ease;
+  }
+  .mk-blog-card:hover .mk-blog-card__link {
+    gap: 0.625rem;
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   10. FEATURE / CAPABILITY CARD (Mivora .capability-card / .why-choose-item)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-card {
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--border-radius--sm);
+    padding: 2rem;
+    transition: box-shadow var(--dur-base) var(--ease-out-quart), transform var(--dur-base) var(--ease-out-quart);
+  }
+  .mk-card:hover {
+    box-shadow: var(--mk-shadow-lg);
+    transform: translateY(-3px);
+  }
+
+  /* On dark section */
+  .section-dark .mk-card,
+  .section-black .mk-card {
+    background-color: hsl(0 0% 100% / 0.04);
+    border-color: var(--mk-border-dark);
+  }
+  .section-dark .mk-card:hover,
+  .section-black .mk-card:hover {
+    background-color: hsl(0 0% 100% / 0.07);
+  }
+
+  /* Card icon area */
+  .mk-card__icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.75rem;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 1.25rem;
+  }
+  .section-dark .mk-card__icon,
+  .section-black .mk-card__icon {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 60%);
+  }
+
+  .mk-card__title {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--mk-text-primary);
+    margin-bottom: 0.5rem;
+  }
+  .section-dark .mk-card__title,
+  .section-black .mk-card__title { color: var(--mk-text-on-dark); }
+
+  .mk-card__body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--mk-text-secondary);
+  }
+  .section-dark .mk-card__body,
+  .section-black .mk-card__body { color: var(--mk-text-on-dark-2); }
+
+  /* Mivora .capability-arrow / .text-link — bottom read-more row */
+  .mk-card__arrow {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 1.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--mk-green);
+    transition: gap var(--dur-fast) ease;
+  }
+  .mk-card:hover .mk-card__arrow { gap: 0.625rem; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   11. TEAM CARD (Mivora team-section / .owner-image-div)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-team-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Image container — clips zoom */
+  .mk-team-card__img-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--mk-radius-card);
+    aspect-ratio: 4 / 5;
+    margin-bottom: 1rem;
+  }
+
+  /* Image — pre-scaled 1.05, normalise on hover (Mivora scroll-triggered scale) */
+  .mk-team-card__img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.05);
+    transition: transform 0.7s var(--ease-out-quart);
+    will-change: transform;
+  }
+  .mk-team-card:hover .mk-team-card__img-wrap img {
+    transform: scale(1);
+  }
+
+  /* Social links overlay on hover */
+  .mk-team-card__socials {
+    position: absolute;
+    bottom: 0.875rem;
+    left: 0.875rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .mk-team-card:hover .mk-team-card__socials {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mk-team-card__social-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: background-color var(--dur-fast) ease;
+  }
+  .mk-team-card__social-icon:hover {
+    background-color: var(--mk-green);
+    color: #fff;
+  }
+
+  .mk-team-card__name {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--mk-text-primary);
+    margin-bottom: 0.1875rem;
+  }
+  .section-dark .mk-team-card__name,
+  .section-black .mk-team-card__name { color: var(--mk-text-on-dark); }
+
+  .mk-team-card__role {
+    font-size: 0.8125rem;
+    color: var(--mk-text-muted);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   12. STAT / COUNTER CARD (Mivora .counter-section / .proven-number-card)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 1.75rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
+  }
+  .section-dark .mk-stat-card,
+  .section-black .mk-stat-card {
+    background-color: hsl(0 0% 100% / 0.04);
+    border-color: var(--mk-border-dark);
+  }
+
+  .mk-stat-card__value {
+    font-family: var(--font-display);
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--mk-green);
+  }
+  .section-dark .mk-stat-card__value,
+  .section-black .mk-stat-card__value { color: hsl(166 46% 58%); }
+
+  .mk-stat-card__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mk-text-secondary);
+    line-height: 1.4;
+  }
+  .section-dark .mk-stat-card__label,
+  .section-black .mk-stat-card__label { color: var(--mk-text-on-dark-2); }
+
+  /* Inline stat row (Mivora .counter-item row with .counter-divider between) */
+  .mk-stat-row {
+    display: flex;
+    align-items: stretch;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .mk-stat-row__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 7rem;
+  }
+  .mk-stat-row__value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--mk-green);
+  }
+  .mk-stat-row__label {
+    font-size: 0.8125rem;
+    color: var(--mk-text-muted);
+    font-weight: 500;
+  }
+  /* .counter-divider vertical rule */
+  .mk-stat-row__divider {
+    width: 1px;
+    background-color: var(--mk-border);
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+  .section-dark .mk-stat-row__divider,
+  .section-black .mk-stat-row__divider { background-color: var(--mk-border-dark); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   13. MISSION LIST ITEM TAG PILL (Mivora .our-mission-list-item)
+   Inline horizontal items: icon + text, pill-shaped on tinted bg
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-mission-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4375rem 1rem 0.4375rem 0.5rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green-light);
+    color: var(--mk-green-dark);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .mk-mission-item__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--mk-radius-pill);
+    background-color: var(--mk-green);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-dark .mk-mission-item {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(0 0% 90%);
+  }
+  .section-dark .mk-mission-item__icon {
+    background-color: hsl(166 46% 50%);
+  }
+
+  /* Industries / feature list item (Mivora .industries-list-item pattern) */
+  .mk-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--mk-text-secondary);
+    line-height: 1.55;
+  }
+  .mk-list-item__icon {
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1875rem;
+  }
+  .section-dark .mk-list-item { color: var(--mk-text-on-dark-2); }
+  .section-dark .mk-list-item__icon {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 55%);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   14. COMPLIANCE REGULATION TAG PILLS
+   ───────────────────────────────────────────────────────────────────────────── */
+  .reg-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--mk-radius-pill);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1;
+    border: 1.5px solid currentColor;
+  }
+  .reg-tag--eudr  { color: #2E7D6B; background: hsl(166 46% 95%); }
+  .reg-tag--fsma  { color: #1D4ED8; background: hsl(217 91% 96%); }
+  .reg-tag--uk    { color: #92400E; background: hsl(43 96% 95%); }
+  .reg-tag--china { color: #B91C1C; background: hsl(0 72% 96%); }
+  .reg-tag--uae   { color: #6D28D9; background: hsl(258 90% 96%); }
+  .reg-tag--gacc  { color: #B91C1C; background: hsl(0 72% 96%); }
+
+  .dark .reg-tag--eudr  { color: hsl(166 46% 58%); background: hsl(166 30% 12%); }
+  .dark .reg-tag--fsma  { color: hsl(217 91% 68%); background: hsl(217 60% 12%); }
+  .dark .reg-tag--uk    { color: hsl(43 96% 55%);  background: hsl(43 60% 11%); }
+  .dark .reg-tag--china { color: hsl(0 72% 62%);   background: hsl(0 50% 12%); }
+  .dark .reg-tag--uae   { color: hsl(258 90% 72%); background: hsl(258 50% 12%); }
+  .dark .reg-tag--gacc  { color: hsl(0 72% 62%);   background: hsl(0 50% 12%); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   15. LOGO MARQUEE — Mivora .client-bg-wrap duplicate-DOM infinite scroll
+   HTML pattern:
+     <div class="mk-marquee-wrap">
+       <div class="mk-marquee-track" aria-hidden="true">
+         <!-- logos × N -->
+       </div>
+       <div class="mk-marquee-track" aria-hidden="true">
+         <!-- exact duplicate of above -->
+       </div>
+     </div>
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Outer: clips overflow + applies edge fade */
+  .mk-marquee-wrap {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    user-select: none;
+  }
+
+  /* Each track — must be display:flex and wide enough that two copies fill the viewport */
+  .mk-marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 3.5rem;
+    width: max-content;
+    animation: mk-scroll 28s linear infinite;
+    will-change: transform;
+  }
+
+  /* Pause on hover for accessibility */
+  .mk-marquee-wrap:hover .mk-marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* With two duplicate tracks side-by-side we translate -50% to loop seamlessly */
+  @keyframes mk-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Slower / faster speed modifiers */
+  .mk-marquee-track--slow   { animation-duration: 50s; }
+  .mk-marquee-track--fast   { animation-duration: 16s; }
+  .mk-marquee-track--rev    { animation-direction: reverse; }
+
+  /* The wrapping section — Mivora .cta-center-section has marquee below CTA */
+  .mk-marquee-section {
+    padding-block: 3.5rem;
+    background-color: var(--mk-surface-gray);
+    border-top: 1px solid var(--mk-border);
+    border-bottom: 1px solid var(--mk-border);
+  }
+  .section-dark .mk-marquee-section,
+  .section-black .mk-marquee-section {
+    background-color: hsl(0 0% 100% / 0.03);
+    border-color: var(--mk-border-dark);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   16. CASE STUDY STICKY STACK (Mivora .case-study-sticky-container)
+   Cards stack with increasing top offsets — set inline style on each
+   .mk-sticky-card: style="top: calc(5rem + N * 1.5rem)"
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Outer container must be tall enough to drive the scroll */
+  .mk-sticky-container {
+    position: relative;
+  }
+
+  /* Each card becomes sticky */
+  .mk-sticky-card {
+    position: sticky;
+    top: 5rem;  /* override per-card via inline style for stacking offsets */
+    border-radius: var(--mk-radius-hero);
+    overflow: hidden;
+    will-change: transform;
+  }
+
+  /* Inner layout — Mivora splits image left / content right */
+  .mk-sticky-card__inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 26rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-hero);
+    overflow: hidden;
+    box-shadow: var(--mk-shadow-xl);
+  }
+  @media (max-width: 768px) {
+    .mk-sticky-card__inner { grid-template-columns: 1fr; }
+  }
+
+  .mk-sticky-card__img {
+    position: relative;
+    overflow: hidden;
+    min-height: 18rem;
+  }
+  .mk-sticky-card__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mk-sticky-card__content {
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .mk-sticky-card__number {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--mk-green);
+    margin-bottom: 0.25rem;
+  }
+  .mk-sticky-card__title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    color: var(--mk-text-primary);
+  }
+  .mk-sticky-card__body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--mk-text-secondary);
+  }
+  /* Counter below (Mivora .case-counter-items) */
+  .mk-sticky-card__counters {
+    display: flex;
+    gap: 2rem;
+    margin-top: 0.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--mk-border);
+    flex-wrap: wrap;
+  }
+  .mk-sticky-card__counter-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--mk-green);
+    display: block;
+  }
+  .mk-sticky-card__counter-label {
+    font-size: 0.75rem;
+    color: var(--mk-text-muted);
+    font-weight: 500;
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   17. HERO SECTION (Mivora .hero-section exact values)
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Mivora exact: .hero-section
+     padding-top: 12rem, padding-bottom: 8.125rem, margin-top: -7rem
+     border-bottom-right-radius: var(--border-radius--md) = 1.25rem
+     overflow: hidden on section BUT we keep visible for hero-detail-wrap bleed */
+  .mk-hero {
+    position: relative;
+    overflow: visible;
+    margin-top: -7rem;
+    min-height: calc(100svh + 7rem);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: var(--border-radius--md);
+    background-color: var(--color--white);
+  }
+
+  @media screen and (max-width: 991px) {
+    .mk-hero {
+      min-height: calc(100svh + 7rem);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+  @media screen and (max-width: 767px) {
+    .mk-hero { min-height: unset; height: auto; border-radius: 0; }
+  }
+  @media screen and (max-width: 479px) {
+    .mk-hero { border-radius: 0; }
+  }
+
+  .mk-hero--inner {
+    min-height: 50svh;
+    padding-block: var(--section-lg);
+  }
+  .mk-hero--sm {
+    min-height: 40svh;
+    padding-block: var(--section-md);
+  }
+
+  /* Mivora exact: .hero-overlay — background-color: var(--color--black), opacity: 0.5 */
+  .mk-hero__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-color: var(--color--black);
+    opacity: 0.5;
+    border-bottom-right-radius: var(--border-radius--md);
+  }
+  @media screen and (max-width: 991px) {
+    .mk-hero__overlay { border-bottom-right-radius: 0; }
+  }
+
+  /* Content fills section and pushes to bottom */
+  .mk-hero__content {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 0;
+  }
+
+  /* ── Mobile hero layout (≤767px)
+     .mk-hero has margin-top: -7rem so hero content starts 112px ABOVE the
+     viewport top (slides behind the fixed nav). All padding-top values must
+     add that 7rem offset to appear correctly below the nav.
+     Headline at top (below nav), card directly below — hero shrinks to content.
+     ── */
+  @media screen and (max-width: 767px) {
+    /* Switch from absolute to in-flow so hero height = content height */
+    .mk-hero__content {
+      position: relative;
+      inset: unset;
+      justify-content: flex-start;
+      /* 7rem = hero margin offset + 5.5rem = nav height (~74px) + ~14px gap */
+      padding-top: calc(7rem + 5.5rem);
+      padding-bottom: 0;
+    }
+    /* Container — natural flow */
+    .mk-hero .mk-container-lg {
+      flex: unset;
+      display: block;
+    }
+    /* Grid — natural column stack, no forced height */
+    .hero-content-grid {
+      flex: unset !important;
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 2rem !important;
+      min-height: unset !important;
+      height: auto !important;
+    }
+    /* Headline group */
+    .hero-left-col {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    .hero-right-col { padding-bottom: 0; }
+    /* Card fills full mobile width — no desktop max-width constraint */
+    .hero-detail-wrap { max-width: none; margin-left: 0; margin-right: 0; }
+  }
+
+  /* Mivora .hero-detail-wrap — card bottom aligns with hero section bottom */
+  .hero-detail-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    margin-bottom: 0;
+    padding-top: 1.875rem;
+    padding-right: 1.875rem;
+    padding-left: 1.875rem;
+    flex-flow: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    border-top-left-radius: var(--border-radius--sm);
+    border-top-right-radius: var(--border-radius--sm);
+    background-color: var(--color--white);
+    /* Desktop: cap card width so it doesn't stretch across the full 45fr column */
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: 0;
+    text-decoration: none;
+  }
+
+  /* Quarter-circle concave fills — sit just outside the card's bottom corners,
+     creating a smooth visual join between the card's base and the section below */
+  .hero-left-decorative {
+    position: absolute;
+    bottom: 0;
+    left: -25px;
+  }
+
+  .hero-right-decorative {
+    position: absolute;
+    bottom: 0;
+    right: -25px;
+  }
+
+  @media screen and (max-width: 991px) {
+    .hero-detail-wrap {
+      margin-bottom: 0;
+      padding-top: 1.25rem;
+      padding-right: 1.25rem;
+      padding-left: 1.25rem;
+    }
+    .hero-left-decorative { bottom: 0; left: -25px; }
+    .hero-right-decorative { bottom: 0; right: -25px; }
+  }
+
+  @media screen and (max-width: 767px) {
+    .hero-left-decorative  { bottom: 0; }
+    .hero-right-decorative { bottom: -1px; }
+  }
+
+  @media screen and (max-width: 479px) {
+    .hero-detail-wrap {
+      padding-top: 0.9375rem;
+      padding-right: 0.9375rem;
+      padding-left: 0.9375rem;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   18. NAV UTILITIES (Mivora .navbar + scroll-state)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 4.5rem;
+    display: flex;
+    align-items: center;
+    transition:
+      background-color 0.3s ease,
+      box-shadow       0.3s ease,
+      backdrop-filter  0.3s ease;
+  }
+  .mk-nav--scrolled {
+    background-color: hsl(var(--background) / 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--mk-shadow-sm);
+  }
+  .mk-nav--transparent {
+    background-color: transparent;
+  }
+
+  /* Nav link */
+  .mk-nav__link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mk-text-secondary);
+    text-decoration: none;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--mk-radius-xs);
+    transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+  }
+  .mk-nav__link:hover,
+  .mk-nav__link--active {
+    color: var(--mk-green);
+    background-color: var(--mk-green-light);
+  }
+
+  /* Dropdown panel */
+  .mk-nav__dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 14rem;
+    background-color: var(--mk-surface-white);
+    border: 1px solid var(--mk-border);
+    border-radius: var(--mk-radius-card);
+    box-shadow: var(--mk-shadow-lg);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .mk-nav__dropdown-link {
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--mk-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mk-text-primary);
+    text-decoration: none;
+    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  }
+  .mk-nav__dropdown-link:hover {
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   19. RICH TEXT / BLOG PROSE (Mivora .blog-rich-text.w-richtext)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-prose {
+    font-size: 1.0625rem;
+    line-height: 1.78;
+    color: var(--mk-text-primary);
+  }
+  .mk-prose h1,
+  .mk-prose h2,
+  .mk-prose h3,
+  .mk-prose h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-top: 2.5rem;
+    margin-bottom: 0.875rem;
+    color: var(--mk-text-primary);
+  }
+  .mk-prose h2 { font-size: 1.625rem; font-weight: 700; }
+  .mk-prose h3 { font-size: 1.25rem;  font-weight: 700; }
+  .mk-prose h4 { font-size: 1.0625rem; font-weight: 600; }
+  .mk-prose p  { margin-bottom: 1.375rem; }
+  .mk-prose ul,
+  .mk-prose ol { margin-bottom: 1.375rem; padding-left: 1.625rem; }
+  .mk-prose li { margin-bottom: 0.5rem; }
+  .mk-prose a  {
+    color: var(--mk-green);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: opacity var(--dur-fast) ease;
+  }
+  .mk-prose a:hover { opacity: 0.75; }
+  .mk-prose blockquote {
+    border-left: 3px solid var(--mk-green);
+    padding: 1rem 1.5rem;
+    margin: 2rem 0;
+    background-color: var(--mk-green-pale);
+    border-radius: 0 var(--mk-radius-md) var(--mk-radius-md) 0;
+    font-style: italic;
+    font-size: 1.125rem;
+  }
+  .mk-prose code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.875em;
+    background-color: var(--mk-surface-gray);
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    border: 1px solid var(--mk-border);
+  }
+  .mk-prose pre {
+    background-color: hsl(220 20% 10%);
+    color: hsl(0 0% 90%);
+    padding: 1.5rem;
+    border-radius: var(--mk-radius-card);
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+  .mk-prose pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+  }
+  .mk-prose img {
+    border-radius: var(--mk-radius-card);
+    margin-block: 2rem;
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .mk-prose hr {
+    border: none;
+    height: 1px;
+    background-color: var(--mk-border);
+    margin-block: 2.5rem;
+  }
+  .mk-prose strong { font-weight: 700; color: var(--mk-text-primary); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   20. ICON BADGE (marketing-scale, larger than app variants)
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.875rem;
+    background-color: var(--mk-green-light);
+    color: var(--mk-green);
+    flex-shrink: 0;
+  }
+  .mk-icon-badge--lg {
+    width: 4.25rem;
+    height: 4.25rem;
+    border-radius: 1rem;
+  }
+  .mk-icon-badge--xl {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 1.25rem;
+    font-size: 1.5rem;
+  }
+  /* On dark sections */
+  .section-dark .mk-icon-badge,
+  .section-black .mk-icon-badge {
+    background-color: hsl(0 0% 100% / 0.08);
+    color: hsl(166 46% 58%);
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   21. GRID HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
+  .mk-grid-2    { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+  .mk-grid-3    { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  .mk-grid-4    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+  .mk-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 2rem; }
+
+  /* Gap modifiers */
+  .mk-gap-sm  { gap: 1rem; }
+  .mk-gap-md  { gap: 2rem; }
+  .mk-gap-lg  { gap: 3rem; }
+  .mk-gap-xl  { gap: 4rem; }
+
+  @media (max-width: 1024px) {
+    .mk-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .mk-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .mk-grid-2,
+    .mk-grid-3,
+    .mk-grid-4 { grid-template-columns: 1fr; }
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   22. DIVIDERS
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Mivora .counter-divider vertical rule */
+  .mk-divider-v {
+    width: 1px;
+    align-self: stretch;
+    background-color: var(--mk-border);
+    flex-shrink: 0;
+  }
+  .section-dark .mk-divider-v,
+  .section-black .mk-divider-v { background-color: var(--mk-border-dark); }
+
+  /* Horizontal */
+  .mk-divider-h {
+    height: 1px;
+    width: 100%;
+    background-color: var(--mk-border);
+    border: none;
+    display: block;
+  }
+  .section-dark .mk-divider-h,
+  .section-black .mk-divider-h { background-color: var(--mk-border-dark); }
+
+  /* Short decorative rule (Mivora uses ~3rem-wide green line beneath pre-titles) */
+  .mk-rule {
+    display: block;
+    width: 3rem;
+    height: 3px;
+    background-color: var(--mk-green);
+    border-radius: var(--mk-radius-pill);
+    margin-top: 0.75rem;
+  }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   23. ANIMATION UTILITIES
+   CSS-only fallback; primary animation uses framer-motion via motion.tsx.
+   Elements that should animate in can use these classes + IntersectionObserver
+   or simply class-toggle. Mivora uses opacity:0 initial state on all elements
+   and Webflow IX2 to trigger; here we use data-animate attribute.
+   ───────────────────────────────────────────────────────────────────────────── */
+  /* Initial hidden state — mirrors Mivora's style="opacity:0" */
+  [data-animate] {
+    opacity: 0;
+    transition:
+      opacity    var(--dur-enter) var(--ease-out-quart),
+      transform  var(--dur-enter) var(--ease-out-quart);
+  }
+
+  [data-animate="fade-up"]   { transform: translateY(2.5rem); }
+  [data-animate="fade-down"] { transform: translateY(-2.5rem); }
+  [data-animate="fade-left"] { transform: translateX(2.5rem); }
+  [data-animate="fade-right"]{ transform: translateX(-2.5rem); }
+  [data-animate="scale"]     { transform: scale(0.88); }
+  [data-animate="scale-up"]  { transform: scale(0.88) translateY(1rem); }
+
+  /* Triggered state — add .is-visible via IntersectionObserver */
+  [data-animate].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Stagger delays */
+  [data-delay="100"] { transition-delay: 0.1s; }
+  [data-delay="200"] { transition-delay: 0.2s; }
+  [data-delay="300"] { transition-delay: 0.3s; }
+  [data-delay="400"] { transition-delay: 0.4s; }
+  [data-delay="500"] { transition-delay: 0.5s; }
+  [data-delay="600"] { transition-delay: 0.6s; }
+  [data-delay="700"] { transition-delay: 0.7s; }
+  [data-delay="800"] { transition-delay: 0.8s; }
+
+  /* Pure CSS keyframe variants (no JS) */
+  .animate-fade-in-up {
+    animation: anim-fade-in-up var(--dur-enter) var(--ease-out-quart) both;
+  }
+  .animate-fade-in {
+    animation: anim-fade-in var(--dur-enter) var(--ease-out-quart) both;
+  }
+  .animate-scale-in {
+    animation: anim-scale-in var(--dur-enter) var(--ease-out-quart) both;
+  }
+
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+  .animate-delay-500 { animation-delay: 0.5s; }
+  .animate-delay-600 { animation-delay: 0.6s; }
+
+  @keyframes anim-fade-in-up {
+    from { opacity: 0; transform: translateY(2.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes anim-scale-in {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+.mk-contact-link {
+  color: var(--mk-text-on-dark-2);
+  transition: color 0.2s;
+}
+.mk-contact-link:hover {
+  color: var(--mk-green);
+}
+
+/* Mivora .nav-divider — shape SVG bridging the 9px gap between left pill and CTA */
+.nav-divider {
+  position: absolute;
+  inset: 0% -11px 0% auto;   /* right: -11px sits it on the outer edge of the pill */
+  width: 13px;
+  height: 50px;
+  margin-top: auto;
+  margin-bottom: auto;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Nav link — Mivora style: left-aligned group, no background on idle */
+.mk-nav-link,
+.mk-pill-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 500;
+  color: var(--mk-text-secondary);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.mk-nav-link:hover,
+.mk-pill-nav__link:hover {
+  color: var(--mk-text-primary);
+}
+.mk-nav-link[data-active],
+.mk-pill-nav__link[data-active] {
+  color: var(--mk-green);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   24. INDUSTRIES TABS (Mivora industries-tab-section)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-industries-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.mk-industries-tab-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.mk-industries-link-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1.125rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--mk-border);
+  background: var(--color--white);
+  color: var(--mk-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+  text-align: left;
+}
+.mk-industries-link-wrap:hover {
+  border-color: var(--mk-text-muted);
+  color: var(--mk-text-primary);
+}
+.mk-industries-link-wrap[data-active] {
+  border: 1.5px dashed var(--mk-green);
+  color: var(--mk-green);
+  background: var(--color--white);
+}
+
+.mk-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.mk-industries-link-wrap[data-active] .mk-tab-icon {
+  opacity: 1;
+  color: var(--mk-green);
+}
+
+.mk-tab-text {
+  font-size: 0.9375rem;
+}
+
+.mk-industries-tab-card {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  background: var(--mk-surface-white);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: var(--mk-shadow-lg);
+  border: 1px solid var(--mk-border);
+  min-height: 480px;
+  animation: anim-fade-in var(--dur-base) var(--ease-out-quart) both;
+}
+
+.mk-industries-tab-image {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mk-industries-tab-content {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mk-industries-tag {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: var(--mk-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3125rem 0.75rem;
+  border-radius: var(--mk-radius-pill);
+}
+
+.mk-industries-tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2.5rem 2rem;
+}
+
+.mk-industries-tab-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mk-text-primary);
+  margin: 0;
+}
+
+.mk-industries-tab-desc {
+  font-size: 1.0625rem;
+  line-height: 1.72;
+  color: var(--mk-text-secondary);
+}
+
+.mk-industries-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Industries tab bar */
+.mk-industries-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-bottom: 1.75rem;
+}
+@media (max-width: 767px) {
+  .mk-industries-tabbar {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.625rem;
+    margin-bottom: 1.25rem;
+  }
+  /* Each tab becomes a full-width bordered row — matches reference design */
+  .mk-industries-tab-btn {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 0.75rem;
+    border: 1.5px dashed var(--mk-border);
+    padding: 0.875rem 1rem;
+    white-space: normal;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    background: var(--mk-surface-white);
+  }
+  .mk-industries-tab-btn[data-active] {
+    border: 1.5px solid var(--mk-text-primary);
+    border-radius: 0.75rem;
+  }
+  /* Icon in a small square box on mobile */
+  .mk-industries-tab-icon-wrap {
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--color--gray-6);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mk-industries-tab-btn[data-active] .mk-industries-tab-icon-wrap {
+    background: var(--color--gray-6);
+  }
+}
+
+.mk-industries-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: 1px solid var(--mk-border);
+  background: var(--mk-surface-white);
+  color: var(--mk-text-secondary);
+  white-space: nowrap;
+}
+.mk-industries-tab-btn[data-active] {
+  border: 1.5px dashed var(--mk-text-primary);
+  color: var(--mk-text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.mk-industries-tab-icon-wrap {
+  display: flex;
+  align-items: center;
+  color: var(--mk-text-muted);
+}
+.mk-industries-tab-btn[data-active] .mk-industries-tab-icon-wrap {
+  color: var(--mk-text-primary);
+}
+
+@media (max-width: 1024px) {
+  .mk-industries-tab-card  { grid-template-columns: 1fr; }
+  .mk-industries-tab-image { min-height: 260px; }
+}
+@media (max-width: 767px) {
+  .mk-industries-tab-card   { border-radius: 1rem; min-height: unset; }
+  .mk-industries-tab-image  { min-height: 240px; }
+  .mk-industries-tab-content { padding: 1.5rem 1.25rem !important; }
+}
+@media (max-width: 640px) {
+  .mk-industries-tab-menu { gap: 0.5rem; }
+  .mk-industries-link-wrap { padding: 0.5rem 0.875rem; font-size: 0.875rem; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   25b. BLOG LAYOUT — heading left + 2-up card slider right
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-blog-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+.mk-blog-layout__heading {
+  position: sticky;
+  top: 6rem;
+}
+
+/* Slider wrapper — overflow visible so arrows bleed outside */
+.mk-blog-slider {
+  position: relative;
+}
+
+/* 2-column card grid */
+.mk-blog-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Card link — no border, clean */
+.mk-blog-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--border-radius--sm);
+  overflow: hidden;
+  transition: transform 0.25s ease;
+}
+.mk-blog-item:hover {
+  transform: translateY(-4px);
+}
+
+/* Image wrapper */
+.mk-blog-image-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--border-radius--sm);
+}
+
+/* Image — pre-zoomed, normalises on hover */
+.mk-blog-image {
+  transform: scale(1.1);
+  transform-origin: center;
+  transition: transform 0.7s ease;
+}
+.mk-blog-item:hover .mk-blog-image {
+  transform: scale(1);
+}
+
+/* Chips overlaid at top of image */
+.mk-blog-chips {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Category chip — lime green pill */
+.mk-blog-category {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: var(--mk-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Date chip — dark charcoal pill */
+.mk-blog-date {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: rgba(20, 20, 20, 0.75);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* Title below image */
+.mk-blog-info {
+  padding: 0.875rem 0 0;
+}
+
+.mk-blog-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--mk-text-primary);
+  margin: 0;
+  transition: color 0.15s ease;
+}
+.mk-blog-item:hover .mk-blog-title {
+  color: var(--mk-green);
+}
+
+/* Arrows at outer edges of card group, vertically centred at image midpoint */
+.mk-blog-arrow-wrap {
+  position: absolute;
+  top: 38%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mk-text-primary);
+  padding: 0;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.mk-blog-arrow-wrap:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  transform: translateY(-50%) scale(1.06);
+}
+.mk-blog-arrow-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.mk-blog-arrow-wrap--left  { left:  -1.5rem; }
+.mk-blog-arrow-wrap--right { right: -1.5rem; }
+
+@media (max-width: 1024px) {
+  .mk-blog-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+  .mk-blog-layout__heading { position: static; }
+  .mk-blog-arrow-wrap--left  { left:  0.25rem; }
+  .mk-blog-arrow-wrap--right { right: 0.25rem; }
+}
+@media (max-width: 767px) {
+  /* Single card: arrows straddle card edges — half in, half out */
+  .mk-blog-section .mk-container-lg { overflow: visible; }
+  .mk-blog-slider { overflow: visible; }
+  .mk-blog-arrow-wrap--left  { left:  -1.5rem; }
+  .mk-blog-arrow-wrap--right { right: -1.5rem; }
+  .mk-blog-arrow-wrap {
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.18);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   25c. DARK CARD ILLUSTRATION
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-card__illustration {
+  height: 8rem;
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   25d. INDUSTRIES TAB ICON
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mk-industries-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--mk-text-secondary);
+  line-height: 1.55;
+}
+
+.mk-industries-feature-dot {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  color: var(--mk-text-primary);
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   25. COUNTER SECTION (Mivora counter-section — grid-counter)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-counter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+.mk-counter-item {
+  padding: 2.5rem 2rem;
+  border-right: 1px solid var(--mk-border);
+}
+.mk-counter-item:last-child { border-right: none; }
+
+.mk-counter-title {
+  font-size: 0.9375rem;
+  color: var(--mk-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  max-width: 18ch;
+}
+
+.mk-counter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mk-counter-arrow {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--mk-green);
+  line-height: 1;
+  transform: rotate(0deg);
+}
+
+.mk-counter-number {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--mk-text-primary);
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .mk-counter-grid { grid-template-columns: repeat(2, 1fr); }
+  .mk-counter-item:nth-child(2) { border-right: none; }
+  .mk-counter-item:nth-child(3),
+  .mk-counter-item:nth-child(4) { border-top: 1px solid var(--mk-border); }
+}
+@media (max-width: 640px) {
+  .mk-counter-grid { grid-template-columns: 1fr; }
+  .mk-counter-item { border-right: none; border-bottom: 1px solid var(--mk-border); }
+  .mk-counter-item:last-child { border-bottom: none; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   26. TECHNOLOGY SPLIT (Mivora technology-section — grid-technology)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-technology-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 5rem;
+  align-items: start;
+}
+
+.mk-technology-title-wrap {
+  position: sticky;
+  top: 7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mk-technology-info-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.mk-technology-info {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+  .mk-technology-grid          { grid-template-columns: 1fr; gap: 2.5rem; }
+  .mk-technology-title-wrap    { position: static; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   27. TESTIMONIALS (Mivora testimonial-section — dark)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.mk-testimonial-item {
+  position: relative;
+  background: hsl(0 0% 100% / 0.05);
+  border: 1px solid hsl(0 0% 100% / 0.1);
+  border-radius: var(--mk-radius-card);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: background var(--dur-base) ease, border-color var(--dur-base) ease;
+  overflow: hidden;
+}
+.mk-testimonial-item:hover {
+  background: hsl(0 0% 100% / 0.08);
+  border-color: hsl(0 0% 100% / 0.18);
+}
+
+.mk-testimonial-member-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.mk-testimonial-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--mk-green);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mk-testimonial-name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--mk-text-on-dark);
+  margin: 0;
+}
+
+.mk-testimonial-position {
+  font-size: 0.75rem;
+  color: var(--mk-text-on-dark-2);
+  margin-top: 0.125rem;
+}
+
+.mk-testimonial-desc {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--mk-text-on-dark-2);
+  flex: 1;
+}
+
+.mk-testimonial-shape {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.25rem;
+  width: 30px;
+  height: 57px;
+  opacity: 0.15;
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .mk-testimonial-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .mk-testimonial-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   28. CERTIFICATION MARQUEE ITEMS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-cert-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1.5rem;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--mk-text-secondary);
+  border: 1.5px solid var(--mk-border);
+  border-radius: var(--mk-radius-pill);
+  background: var(--mk-surface-white);
+  flex-shrink: 0;
+}
+
+.mk-cert-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--mk-green);
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   29. CLIENT LOGO TICKER — matches .client-section / .client-wrap / .client-item
+   Two duplicate .mk-client-item rows scroll continuously via CSS animation.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-client-section {
+  padding-block: 2.5rem;
+  background: var(--color--white, #fff);
+  border-top: 1px solid var(--mk-border);
+  border-bottom: 1px solid var(--mk-border);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.mk-client-wrap {
+  display: flex;
+  width: max-content;
+  animation: mk-client-scroll 28s linear infinite;
+}
+.mk-client-wrap:hover {
+  animation-play-state: paused;
+}
+
+@keyframes mk-client-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.mk-client-item {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+  padding-inline: 1.75rem;
+  flex-shrink: 0;
+}
+
+.mk-client-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+.mk-client-logo:hover {
+  opacity: 1;
+}
+
+.mk-client-logo__abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background: var(--mk-green-light);
+  color: var(--mk-green);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.mk-client-logo__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--mk-text-primary);
+  letter-spacing: -0.01em;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   29. FOOTER (Mivora footer — forest background + two floating panels)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-footer {
+  position: relative;
+  overflow: hidden;
+  padding-block: var(--section-md);
+}
+
+.mk-footer__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.mk-footer__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 30, 25, 0.88);
+  z-index: 1;
+}
+
+.mk-footer__inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: var(--container-lg);
+  margin-inline: auto;
+  padding-inline: 2.5rem;
+}
+
+.mk-footer__panels {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 30px; /* matches shape SVG width exactly */
+  align-items: start;
+  position: relative;
+}
+
+.mk-footer__shape {
+  position: absolute;
+  top: 50%;
+  /* left panel = 1/2.8 of (100% - 30px gap). Shape fills the gap precisely. */
+  left: calc((100% - 30px) / 2.8);
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: none;
+  width: 30px;
+  height: 57px;
+}
+
+/* Mobile shape wrapper — centred between stacked panels */
+.mk-footer__shape-mobile-wrap {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  height: 0;           /* zero height so it sits flush in the grid gap */
+  position: relative;
+  z-index: 10;
+}
+.mk-footer__shape--mobile {
+  width: 72px;
+  height: 38px;
+  transform: rotate(90deg);
+  pointer-events: none;
+}
+
+/* Shared panel base */
+.mk-footer-panel {
+  background: var(--color--white);
+  border-radius: var(--border-radius--md);
+  padding: 2.5rem;
+}
+
+
+/* Left panel */
+.mk-footer-panel--left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mk-footer-panel__logo {
+  display: flex;
+  align-items: center;
+}
+
+.mk-footer-panel__tagline {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--mk-text-primary);
+  max-width: 24ch;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Subscribe form */
+.mk-footer-subscribe {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mk-footer-subscribe__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem 1rem;
+  border-radius: var(--border-radius--button);
+  border: 1.5px solid var(--mk-border);
+  font-size: 0.875rem;
+  color: var(--mk-text-primary);
+  background: var(--mk-surface-gray);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.mk-footer-subscribe__input:focus {
+  border-color: var(--mk-green);
+  background: #fff;
+}
+.mk-footer-subscribe__input::placeholder {
+  color: var(--mk-text-muted);
+}
+
+.mk-footer-subscribe__success {
+  font-size: 0.875rem;
+  color: var(--mk-green);
+  font-weight: 600;
+}
+
+.mk-footer-panel__attr {
+  font-size: 0.75rem;
+  color: var(--mk-text-muted);
+  margin-top: auto;
+}
+
+/* Right panel */
+.mk-footer-panel--right {
+  padding: 2rem 2.5rem;
+}
+
+.mk-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem 2rem;
+}
+
+.mk-footer-col__heading {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mk-text-primary);
+  margin-bottom: 1rem;
+}
+
+.mk-footer-col__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.mk-footer-col__link {
+  font-size: 0.875rem;
+  color: var(--mk-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.mk-footer-col__link:hover {
+  color: var(--mk-green);
+}
+
+.mk-footer-col__address {
+  font-style: normal;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--mk-text-secondary);
+}
+
+.mk-footer-socials {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mk-footer-social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--mk-text-primary);
+  text-decoration: none;
+  transition: color 0.15s, transform 0.15s;
+}
+.mk-footer-social-icon:hover {
+  color: var(--mk-green);
+  transform: scale(1.1);
+}
+
+@media (max-width: 1024px) {
+  .mk-footer__panels {
+    grid-template-columns: 1fr;
+    gap: 0;                    /* remove gap — shape wrapper handles spacing */
+  }
+  .mk-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  /* Hide the desktop shape (positioned in side gap) */
+  .mk-footer__shape--desktop { display: none; }
+  /* Gap between stacked panels — shape sits in this gap, overlapping into both */
+  .mk-footer__panels { gap: 8px; }
+  /* Shape wrapper: zero height, overflow visible so shape bleeds into both panels */
+  .mk-footer__shape-mobile-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
+  }
+  .mk-footer__shape--mobile {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 72px;   /* larger than base 57px — more overlap into each panel */
+    height: 38px;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .mk-footer__inner {
+    padding-inline: 1.25rem;
+  }
+  .mk-footer-panel {
+    padding: 1.75rem;
+  }
+  .mk-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BLOG LAYOUT — heading left + 2-up card slider right
+   Matches: .grid-blog-main / .blog-slider / .blog-slide structure
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-blog-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+.mk-blog-layout__heading {
+  position: sticky;
+  top: 6rem;
+}
+
+/* Slider wrapper (.blog-slider) — overflow visible so arrows bleed outside */
+.mk-blog-slider {
+  position: relative;
+}
+
+/* 2-column card grid (.blog-mask shows 2 slides at once) */
+.mk-blog-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Card link (.blog-item) — no border, clean rounded image */
+.mk-blog-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.25s ease;
+}
+.mk-blog-item:hover {
+  transform: translateY(-4px);
+}
+
+/* Image wrapper (.blog-image-wrap) */
+.mk-blog-image-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--border-radius--sm);
+}
+
+/* Image — pre-zoomed scale(1.1), normalises on hover (.blog-image) */
+.mk-blog-image {
+  transform: scale(1.1);
+  transform-origin: center;
+  transition: transform 0.7s ease;
+}
+.mk-blog-item:hover .mk-blog-image {
+  transform: scale(1);
+}
+
+/* Chips at top of image (.blog-meta-wrap equivalent) */
+.mk-blog-chips {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Category chip — green pill (.blog-category) */
+.mk-blog-category {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: var(--mk-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Date chip — dark charcoal pill (.blog-date) */
+.mk-blog-date {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 6.25rem;
+  background: rgba(20, 20, 20, 0.75);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* Title below image (.blog-info / .blog-title) */
+.mk-blog-info {
+  padding: 0.875rem 0 0;
+}
+.mk-blog-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--mk-text-primary);
+  margin: 0;
+  transition: color 0.15s ease;
+}
+.mk-blog-item:hover .mk-blog-title {
+  color: var(--mk-green);
+}
+
+/* Arrows at outer edges of card group (.blog-arrow-wrap left / right) */
+.mk-blog-arrow-wrap {
+  position: absolute;
+  top: 38%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mk-text-primary);
+  padding: 0;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.mk-blog-arrow-wrap:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  transform: translateY(-50%) scale(1.06);
+}
+.mk-blog-arrow-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.mk-blog-arrow-wrap--left  { left:  -1.5rem; }
+.mk-blog-arrow-wrap--right { right: -1.5rem; }
+
+/* Numbered dot nav (.slide-nav w-round w-num) */
+.mk-slide-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+}
+.mk-slide-dot {
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  border: 1px solid var(--mk-border);
+  background: transparent;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--mk-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.mk-slide-dot[data-active] {
+  background: var(--mk-green);
+  border-color: var(--mk-green);
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .mk-blog-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+  .mk-blog-layout__heading { position: static; }
+  .mk-blog-arrow-wrap--left  { left:  0.25rem; }
+  .mk-blog-arrow-wrap--right { right: 0.25rem; }
+}
+@media (max-width: 640px) {
+  .mk-blog-cards { grid-template-columns: 1fr; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SOLUTIONS PAGE — hero, stats card, intro twin-columns
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Hero modifier — inner-page variant.
+   min-height: 66svh (4/6 of viewport). Flex column + flex:1 chain makes
+   the content stretch to fill the section, so the right column's
+   justify-end pins the card bottom exactly to the section bottom. */
+.mk-hero--solutions {
+  min-height: 66svh;
+  margin-top: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Overlay — no bottom-right radius on solutions page */
+.mk-hero__overlay--solutions {
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Content — in-flow (not absolute) and stretching to fill the hero.
+   Reuses .hero-content-grid / .hero-left-col / .hero-right-col from
+   the homepage so the card lands in exactly the same horizontal position. */
+.mk-hero__content--solutions {
+  position: relative;
+  inset: unset;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 7rem;
+  padding-bottom: 0;
+}
+.mk-hero__content--solutions .mk-container-lg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.mk-hero__content--solutions .hero-content-grid {
+  flex: 1;
+}
+
+.solutions-stats-row {
+  display: flex;
+}
+
+.solutions-stats-col {
+  flex: 1;
+  padding: 0 1rem;
+}
+.solutions-stats-col:first-child { padding-left: 0; }
+.solutions-stats-col:last-child  { padding-right: 0; }
+
+/* Field operations header strip */
+.solutions-field-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+/* Intro section — twin text columns flanking asterisk */
+.solutions-twin-cols {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 3rem;
+  align-items: center;
+  max-width: 900px;
+  margin-inline: auto;
+  margin-top: 3rem;
+}
+
+/* ── Mobile ────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* On mobile the shared .hero-content-grid / .hero-left-col CSS takes over,
+     same as the homepage. Only override what differs on solutions. */
+  /* Section shrinks to content on mobile — card bottom = section bottom */
+  .mk-hero--solutions { min-height: unset; }
+
+  /* No -7rem slide on solutions: just nav height (~74px) + gap */
+  .mk-hero__content--solutions {
+    padding-top: 6.5rem;
+  }
+
+  .solutions-twin-cols {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .solutions-field-header {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  /* Who It's For panels — stack image above text on mobile */
+  [data-testid^="card-role-"] > .mk-container-lg {
+    grid-template-columns: 1fr !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div:first-child {
+    min-height: 240px !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div[style*="order: 1"],
+  [data-testid^="card-role-"] > .mk-container-lg > div[style*="order: 0"] {
+    order: unset !important;
+  }
+
+  [data-testid^="card-role-"] > .mk-container-lg > div:last-child {
+    padding: 1.75rem 1.25rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .solutions-stats-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .solutions-stats-col {
+    padding: 0;
+    border-right: none !important;
+    border-bottom: 1px solid var(--mk-border);
+    padding-bottom: 1.25rem;
+  }
+  .solutions-stats-col:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FAQ SECTION
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mk-faq-section {
+  background: var(--color--gray-7);
+  border-radius: 2rem 2rem 0 0;
+  margin-top: -2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.mk-faq-header {
+  margin-bottom: 3rem;
+}
+
+.mk-faq-body {
+  display: grid;
+  grid-template-columns: 45fr 55fr;
+  gap: 3.5rem;
+  align-items: start;
+}
+
+.mk-faq-image-wrap {
+  position: relative;
+  height: 600px;
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.mk-faq-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mk-faq-item {
+  border: 1px dashed var(--mk-border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.625rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.mk-faq-item--open {
+  border-color: var(--mk-green);
+  border-style: solid;
+}
+
+.mk-faq-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--mk-text-primary);
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.mk-faq-item--open .mk-faq-trigger {
+  color: var(--mk-green-dark);
+}
+
+.mk-faq-icon {
+  flex-shrink: 0;
+  color: var(--mk-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mk-faq-item--open .mk-faq-icon {
+  color: var(--mk-green);
+}
+
+.mk-faq-answer {
+  padding: 0 1.25rem 1.25rem;
+  font-size: 0.875rem;
+  color: var(--mk-text-secondary);
+  line-height: 1.75;
+}
+
+@media (max-width: 767px) {
+  .mk-faq-body {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .mk-faq-image-wrap {
+    height: 260px;
+  }
+}
+
+/* ── Compliance framework panels ── */
+.compliance-framework-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 320px;
+}
+
+@media (max-width: 767px) {
+  .compliance-framework-grid {
+    grid-template-columns: 1fr;
+  }
+  .compliance-framework-grid > div:first-child {
+    min-height: 200px !important;
+  }
+  .eudr-who-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   30. ROLE / WHO-IT'S-FOR PANELS (industry + solutions pages)
+   Split: image left|right + content. Alternates per panel.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* The inner grid inside each panel's .mk-container-lg */
+.mk-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 480px;
+}
+
+/* Image side */
+.mk-role-image {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+/* Content side */
+.mk-role-content {
+  padding: 3rem 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Stats row at the bottom of each panel */
+.mk-role-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 1.5rem;
+  gap: 1rem;
+}
+
+/* ── Tablet (768–1023px) ── */
+@media (max-width: 1023px) {
+  .mk-role-content {
+    padding: 2rem 2rem 1.75rem;
+  }
+}
+
+/* ── Mobile (≤767px) ── */
+@media (max-width: 767px) {
+  .mk-role-grid {
+    grid-template-columns: 1fr !important;
+    min-height: unset !important;
+  }
+
+  /* Image always on top — reset any inline order */
+  .mk-role-image {
+    min-height: 260px !important;
+    order: 0 !important;
+  }
+
+  /* Content below image */
+  .mk-role-content {
+    padding: 1.75rem 1.25rem 1.5rem !important;
+    order: 1 !important;
+  }
+
+  /* Stat row: 3 → 2 columns */
+  .mk-role-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Hero left col: reduce the Tailwind py-16 (4rem) down to 2rem on mobile */
+  .hero-left-col {
+    padding-top: 2rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+@media (max-width: 479px) {
+  /* Stat row: 2 → 1 column on very small screens */
+  .mk-role-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   31. COMPLIANCE TIMELINE STRIP
+   Horizontal row of milestone items — scrollable on mobile.
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+.mk-timeline-strip {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 3rem;
+  padding-top: 2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mk-timeline-strip::-webkit-scrollbar { display: none; }
+
+.mk-timeline-item {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1.25rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.mk-timeline-item:last-child { border-right: none; }
+
+.mk-timeline-item--active {
+  background: rgba(46, 125, 107, 0.15);
+  border-radius: 0.5rem;
+}
+
+.mk-timeline-year {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mk-timeline-item--active .mk-timeline-year {
+  color: var(--mk-green-mid);
+}
+
+.mk-timeline-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .mk-timeline-strip {
+    margin-top: 2rem;
+    padding-top: 0;
+    border-top: none;
+    gap: 0;
+  }
+  .mk-timeline-item {
+    min-width: 100px;
+    padding: 0.625rem 0.875rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .mk-timeline-item {
+    min-width: 88px;
+    padding: 0.5rem 0.75rem;
+  }
+  .mk-timeline-label {
+    font-size: 0.75rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   32. MISC MOBILE TIGHTENING
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* Section header: reduce bottom margin on mobile */
+@media (max-width: 767px) {
+  .section-header {
+    margin-bottom: 2rem;
+  }
+
+  /* solutions-field-header: tablet gap already in place, mobile stack */
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+
+  /* Who It's For header inside industry pages */
+  .section-header--left.margin-bottom.margin-xlarge {
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* Tablet: solutions-field-header narrower gap */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .solutions-field-header {
+    gap: 1.5rem;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   33. DEMO PAGE RESPONSIVE GRIDS
+   ─────────────────────────────────────────────────────────────────────────────*/
+
+/* 3-card feature grid — collapses to 1 column on mobile */
+.mk-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+/* 2-col form layout — stacks on mobile */
+.mk-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .mk-feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mk-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mk-feature-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

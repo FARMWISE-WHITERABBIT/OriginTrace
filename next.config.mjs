@@ -1,5 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import withPWAInit from 'next-pwa';
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -8,29 +12,63 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development' && process.env.ENABLE_PWA_DEV !== 'true',
   fallbacks: { document: '/offline.html' },
   runtimeCaching: [
+    // ── Supabase REST API — NetworkFirst so live data is preferred ──────────
     {
       urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'supabase-api-cache',
         expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
-        networkTimeoutSeconds: 10,
+        networkTimeoutSeconds: 5,
+      },
+    },
+    // ── Supabase Storage (images, docs) — CacheFirst for performance ────────
+    // ── App-specific API routes — NetworkFirst, fall back to cache ──────────
+    // Supabase storage is intentionally not cached here because the documents bucket can contain sensitive files.
+    // Covers read-only lookup endpoints useful while offline:
+    // locations, commodities, and tenant field farmer lists
+    {
+      urlPattern: /^\/api\/(locations|commodities)\b.*/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'app-reference-cache',
+        expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 }, // 24h
       },
     },
     {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
-      handler: 'CacheFirst',
+      urlPattern: /^\/api\/(collect\/farmers|farmers)\b.*/i,
+      handler: 'NetworkFirst',
       options: {
-        cacheName: 'supabase-storage-cache',
-        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+        cacheName: 'app-field-data-cache',
+        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 4 }, // 4h
+        networkTimeoutSeconds: 4,
       },
     },
+    // ── Next.js static assets — CacheFirst, long TTL ────────────────────────
     {
       urlPattern: /\/_next\/static\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'next-static-cache',
         expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+      },
+    },
+    // ── Next.js image optimisation endpoint ─────────────────────────────────
+    {
+      urlPattern: /\/_next\/image\?.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'next-image-cache',
+        expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+      },
+    },
+    // ── App icons and static images ──────────────────────────────────────────
+    {
+      urlPattern: /\/images\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'static-images-cache',
+        expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
       },
     },
   ],
@@ -48,25 +86,26 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.sentry.io",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://www.googletagmanager.com https://www.youtube.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
+      "img-src 'self' data: blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co",
-      "frame-src 'self' https://js.paystack.co",
+      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
+      "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
-      "media-src 'self' blob:",
+      "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
     ].join('; '),
   },
 ];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},
+  turbopack: { root: rootDir },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    turbopackUseSystemTlsCerts: true,
   },
   images: {
     remotePatterns: [
@@ -87,6 +126,16 @@ const nextConfig = {
       {
         source: '/auth/buyer-register',
         destination: '/auth/login',
+        permanent: true,
+      },
+      {
+        source: '/insights',
+        destination: '/blog',
+        permanent: true,
+      },
+      {
+        source: '/insights/:slug*',
+        destination: '/blog/:slug*',
         permanent: true,
       },
     ];

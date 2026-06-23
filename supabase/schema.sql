@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS farms (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farmer_name TEXT NOT NULL,
   farmer_id TEXT,
+  local_id TEXT,
   phone TEXT,
   state_id UUID REFERENCES states(id),
   lga_id UUID REFERENCES lgas(id),
@@ -122,6 +123,7 @@ CREATE TABLE IF NOT EXISTS collection_batches (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farm_id UUID NOT NULL REFERENCES farms(id),
   agent_id UUID NOT NULL REFERENCES profiles(id),
+  -- Inventory/dispatch flows use resolved and dispatched after collection is complete.
   status TEXT DEFAULT 'collecting' CHECK (status IN ('collecting', 'completed', 'aggregated', 'resolved', 'dispatched', 'shipped')),
   total_weight DECIMAL(10,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
@@ -162,7 +164,7 @@ CREATE TABLE IF NOT EXISTS agent_sync_status (
   is_online BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(agent_id, device_id)
+  UNIQUE(agent_id)
 );
 
 -- Compliance Files (for document storage)
@@ -200,6 +202,7 @@ CREATE INDEX IF NOT EXISTS idx_villages_lga_id ON villages(lga_id);
 
 -- Spatial index for PostGIS farm boundaries
 CREATE INDEX IF NOT EXISTS idx_farms_boundary_geo ON farms USING GIST (boundary_geo);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_farms_org_local_id ON farms (org_id, local_id) WHERE local_id IS NOT NULL;
 
 -- Function to sync JSONB boundary to PostGIS geography column
 CREATE OR REPLACE FUNCTION sync_farm_boundary_geo()
@@ -483,8 +486,8 @@ ON CONFLICT (commodity, region) DO NOTHING;
 -- Farm Conflicts table for spatial conflict detection
 CREATE TABLE IF NOT EXISTS farm_conflicts (
   id SERIAL PRIMARY KEY,
-  farm_a_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  farm_b_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_a_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_b_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   overlap_ratio DECIMAL(5,4),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
   resolved_by UUID REFERENCES auth.users(id),
@@ -598,7 +601,7 @@ SELECT
   f.community,
   f.area_hectares,
   f.commodity,
-  COALESCE(SUM(b.weight), 0) AS total_delivery_kg,
+  COALESCE(SUM(b.weight_kg), 0) AS total_delivery_kg,
   COUNT(DISTINCT cb.id) AS total_batches,
   COUNT(b.id) AS total_bags,
   ROUND(AVG(CASE 
@@ -652,7 +655,8 @@ CREATE POLICY "System admins can manage all conflicts" ON farm_conflicts
 -- Processing Runs (factory processing sessions)
 CREATE TABLE IF NOT EXISTS processing_runs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   run_code TEXT NOT NULL,
   facility_name TEXT NOT NULL,
   facility_location TEXT,
@@ -675,7 +679,7 @@ CREATE TABLE IF NOT EXISTS processing_runs (
 CREATE TABLE IF NOT EXISTS processing_run_batches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   processing_run_id UUID NOT NULL REFERENCES processing_runs(id) ON DELETE CASCADE,
-  collection_batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  collection_batch_id UUID NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
   weight_contribution_kg DECIMAL(12,2) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(processing_run_id, collection_batch_id)
@@ -684,7 +688,8 @@ CREATE TABLE IF NOT EXISTS processing_run_batches (
 -- Finished Goods (export-ready products with pedigree)
 CREATE TABLE IF NOT EXISTS finished_goods (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   pedigree_code TEXT NOT NULL,
   product_name TEXT NOT NULL,
   product_type TEXT NOT NULL,
@@ -713,6 +718,7 @@ CREATE TABLE IF NOT EXISTS finished_goods (
 -- Standard Recovery Rates by Product Type
 CREATE TABLE IF NOT EXISTS recovery_standards (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   commodity TEXT NOT NULL,
   product_type TEXT NOT NULL,
   standard_recovery_rate DECIMAL(5,2) NOT NULL,
@@ -1205,7 +1211,8 @@ CREATE TABLE IF NOT EXISTS compliance_profiles (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   destination_market TEXT NOT NULL,
-  regulation_framework TEXT NOT NULL CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'custom')),
+  -- Keep this list aligned with live compliance/scoring flows, including China GACC.
+  regulation_framework TEXT NOT NULL CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom')),
   required_documents JSONB DEFAULT '[]',
   required_certifications JSONB DEFAULT '[]',
   geo_verification_level TEXT DEFAULT 'polygon' CHECK (geo_verification_level IN ('basic', 'polygon', 'satellite')),
@@ -1377,7 +1384,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 
 -- ============================================
 -- T003: BAGS weight → weight_kg (idempotent)
-=======
+-- ============================================
 -- AUDIT EVENTS (Phase 11 — Immutable Append-Only Log)
 -- ============================================
 
@@ -1542,6 +1549,7 @@ CREATE INDEX IF NOT EXISTS idx_farmer_inputs_farm ON farmer_inputs(farm_id);
 
 CREATE TABLE IF NOT EXISTS yield_benchmarks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   commodity TEXT NOT NULL,
   country TEXT,
   region TEXT,
@@ -1601,10 +1609,11 @@ CREATE INDEX IF NOT EXISTS idx_farm_certifications_expiry ON farm_certifications
 -- SCHEMA FIXES — Compliance Gaps (Phase 11)
 -- ============================================
 
--- Fix regulation_framework CHECK to include all 7 frameworks
+-- Fix regulation_framework CHECK to include all app-supported frameworks,
+-- including China GACC profiles created by demo and shipment flows.
 ALTER TABLE compliance_profiles DROP CONSTRAINT IF EXISTS compliance_profiles_regulation_framework_check;
 ALTER TABLE compliance_profiles ADD CONSTRAINT compliance_profiles_regulation_framework_check
-  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'));
+  CHECK (regulation_framework IN ('EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom'));
 
 -- Fix compliance_files file_type CHECK to support all regulatory document types
 ALTER TABLE compliance_files DROP CONSTRAINT IF EXISTS compliance_files_file_type_check;
@@ -1628,13 +1637,9 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'en'
 
 DO $$
 BEGIN
-  -- Rename weight to weight_kg if the old column exists and the new one doesn't
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'bags' AND column_name = 'weight'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'bags' AND column_name = 'weight_kg'
   ) THEN
     ALTER TABLE bags RENAME COLUMN weight TO weight_kg;
     -- Adjust precision to match app expectations
@@ -1660,6 +1665,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   destination_port TEXT,
   target_regulations TEXT[] DEFAULT ARRAY[]::TEXT[],
   compliance_profile_id UUID REFERENCES compliance_profiles(id),
+  -- Readiness scoring and shipment detail pages persist checklist state here.
   doc_status JSONB DEFAULT '{}',
   storage_controls JSONB DEFAULT '{}',
   total_weight_kg NUMERIC(12,2),
@@ -1690,6 +1696,8 @@ CREATE TABLE IF NOT EXISTS shipment_items (
   item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good', 'lot')),
   batch_id UUID,
   finished_good_id UUID,
+  -- Nullable direct source-farm pointer for shipment item traceability drill-downs.
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   farm_count INTEGER DEFAULT 0,
   traceability_complete BOOLEAN DEFAULT false,
@@ -1878,7 +1886,7 @@ CREATE TABLE IF NOT EXISTS tenant_health_metrics (
 CREATE TABLE IF NOT EXISTS farmer_performance_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   -- Identity
   farmer_name TEXT NOT NULL,
   community TEXT,
@@ -1915,7 +1923,7 @@ CREATE INDEX IF NOT EXISTS idx_farmer_ledger_delivery ON farmer_performance_ledg
 ALTER TABLE farmer_performance_ledger ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "org_access_farmer_performance_ledger" ON farmer_performance_ledger
   FOR ALL USING (org_id = get_user_org_id());
-=======
+-- ============================================
 -- BOUNDARY ANALYSIS (Phase 12)
 -- ============================================
 
@@ -2011,6 +2019,10 @@ ALTER TABLE shipments ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS estimated_ship_date DATE;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS total_items INTEGER DEFAULT 0;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+-- Optional commercial references used by export shipment logistics workflows.
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS export_invoice_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS letter_of_credit_number TEXT;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS incoterm TEXT;
 
 -- ============================================
 -- BATCH CONTRIBUTIONS (Multi-farm batch collection)
@@ -2018,8 +2030,8 @@ ALTER TABLE shipments ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.u
 
 CREATE TABLE IF NOT EXISTS batch_contributions (
   id SERIAL PRIMARY KEY,
-  batch_id INTEGER NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES collection_batches(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   farmer_name TEXT,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
@@ -2056,9 +2068,9 @@ CREATE TABLE IF NOT EXISTS shipment_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
   item_type TEXT NOT NULL CHECK (item_type IN ('batch', 'finished_good')),
-  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  batch_id UUID REFERENCES collection_batches(id) ON DELETE SET NULL,
   finished_good_id UUID REFERENCES finished_goods(id) ON DELETE SET NULL,
-  farm_id INTEGER REFERENCES farms(id) ON DELETE SET NULL,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   farm_count INTEGER DEFAULT 0,
   traceability_complete BOOLEAN DEFAULT false,
@@ -2086,6 +2098,13 @@ CREATE POLICY "System admins can manage all shipment items" ON shipment_items
 CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment ON shipment_items(shipment_id);
 CREATE INDEX IF NOT EXISTS idx_shipment_items_batch ON shipment_items(batch_id);
 CREATE INDEX IF NOT EXISTS idx_shipment_items_finished_good ON shipment_items(finished_good_id);
+
+-- Detail fields used by shipment lot APIs and UI lot cards.
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS lot_code TEXT;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS commodity TEXT;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS total_weight_kg NUMERIC(12,2);
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS total_bags INTEGER DEFAULT 0;
+ALTER TABLE shipment_lots ADD COLUMN IF NOT EXISTS farm_count INTEGER DEFAULT 0;
 
 -- ============================================
 -- SHIPMENT LOTS (Sub-groupings within a shipment)
@@ -2134,7 +2153,7 @@ CREATE TABLE IF NOT EXISTS shipment_lot_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   lot_id UUID NOT NULL REFERENCES shipment_lots(id) ON DELETE CASCADE,
   shipment_item_id UUID REFERENCES shipment_items(id) ON DELETE SET NULL,
-  batch_id INTEGER REFERENCES collection_batches(id) ON DELETE SET NULL,
+  batch_id UUID REFERENCES collection_batches(id) ON DELETE SET NULL,
   weight_kg NUMERIC(12,2) DEFAULT 0,
   bag_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -2332,8 +2351,8 @@ CREATE INDEX IF NOT EXISTS idx_tenant_health_metrics_trend ON tenant_health_metr
 
 CREATE TABLE IF NOT EXISTS farmer_performance_ledger_table (
   id SERIAL PRIMARY KEY,
-  org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
   season TEXT NOT NULL,
   total_collections INTEGER DEFAULT 0,
   total_weight_kg NUMERIC(12,2) DEFAULT 0,
@@ -2487,7 +2506,7 @@ CREATE POLICY "webhook_deliveries_org_read" ON webhook_deliveries
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM webhook_endpoints we
-      WHERE we.id = webhook_deliveries.endpoint_id
+      WHERE we.id = webhook_deliveries.webhook_id
         AND we.org_id = get_user_org_id()
     )
   );
@@ -2499,6 +2518,14 @@ CREATE POLICY "webhook_deliveries_service_write" ON webhook_deliveries
 -- ── RLS: webhook_events ───────────────────────────────────────────────────────
 -- Inbound or internal webhook event log.
 -- Org users can read their own events; service role inserts.
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
 

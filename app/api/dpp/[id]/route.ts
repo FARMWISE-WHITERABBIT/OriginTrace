@@ -239,14 +239,32 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = createAdminClient();
-    const { user } = await import('@/lib/api-auth').then(m => m.getAuthenticatedProfile(request));
+    const supabaseAdmin = createAdminClient();
+    
+    const { getAuthenticatedProfile } = await import('@/lib/api-auth');
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile || !profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const { enforceTier } = await import('@/lib/api/tier-guard');
+    const tierBlock = await enforceTier(profile.org_id, 'digital_product_passport');
+    if (tierBlock) return tierBlock;
+
+    const { requireRole, ROLES } = await import('@/lib/rbac');
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
+
     const body = await request.json();
     const allowed = ['status', 'carbon_footprint_kg'];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) { if (key in body) updates[key] = body[key]; }
-    const { error } = await supabase.from('digital_product_passports').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
+    
+    const { error } = await supabaseAdmin
+      .from('digital_product_passports')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('org_id', profile.org_id);
+      
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: 'Internal server error' }, { status: 500 }); }

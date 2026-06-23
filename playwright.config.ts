@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const rawBaseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
+const baseURL = rawBaseURL.replace('http://127.0.0.1:5000', 'http://localhost:5000');
+
 /**
  * Playwright E2E configuration — Session 10
  *
@@ -33,7 +36,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
+    baseURL,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
@@ -62,6 +65,11 @@ export default defineConfig({
       name: 'chromium-public',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /marketing\.spec\.ts/,
+    },
+    {
+      name: 'red-team',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /red-team-probe\.spec\.ts/,
     },
   ],
 });
