@@ -27,6 +27,8 @@ import {
   type ShipmentForGate,
 } from '@/lib/services/shipment-stages';
 import { getEscrowStatus } from '@/lib/services/escrow';
+import { checkFarmEligibility, type FarmRecord } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
 
@@ -126,6 +128,62 @@ export async function POST(
       );
     }
 
+    // ── Soft farm compliance check (stage 3+ only) ────────────────────────────
+    // At documentation stage and beyond, surface any EUDR eligibility issues
+    // as warnings. Collection is never blocked — but the operator should see
+    // compliance gaps before a document leaves the building.
+    const farmComplianceWarnings: Array<{
+      farmId: string;
+      status: string;
+      blockers: string[];
+      blocker_codes: string[];
+      warnings: string[];
+      warning_codes: string[];
+    }> = [];
+
+    if (targetStage >= 3) {
+      const { data: shipmentItems } = await supabase
+        .from('shipment_items')
+        .select('batch_id')
+        .eq('shipment_id', shipmentId)
+        .not('batch_id', 'is', null);
+
+      const batchIds = (shipmentItems ?? []).map((i: any) => i.batch_id).filter(Boolean);
+
+      if (batchIds.length > 0) {
+        const { data: batches } = await supabase
+          .from('collection_batches')
+          .select('farm_id')
+          .in('id', batchIds);
+
+        const farmIds = [...new Set((batches ?? []).map((b: any) => b.farm_id).filter(Boolean))];
+
+        if (farmIds.length > 0) {
+          const { data: farmRows } = await supabase
+            .from('farms')
+            .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp, conflict_status')
+            .in('id', farmIds)
+            .eq('org_id', profile.org_id);
+
+          const targetMarkets = normalizeMarketCodes(shipment.target_regulations ?? ['EU']);
+
+          for (const farm of farmRows ?? []) {
+            const eligibility = checkFarmEligibility(farm as unknown as FarmRecord, targetMarkets);
+            if (!eligibility.eligible || eligibility.warnings.length > 0) {
+              farmComplianceWarnings.push({
+                farmId: String(farm.id),
+                status: eligibility.status,
+                blockers: eligibility.blockers,
+                blocker_codes: eligibility.blocker_codes,
+                warnings: eligibility.warnings,
+                warning_codes: eligibility.warning_codes,
+              });
+            }
+          }
+        }
+      }
+    }
+
     // ── Build updated stage tracking data ─────────────────────────────────────
     const historyEntry = buildStageHistoryEntry(currentStage, targetStage, user.id, note);
     const updatedStageHistory = [
@@ -173,6 +231,7 @@ export async function POST(
         legacyStatus: newLegacyStatus,
         note,
         gateWarnings: gateResult.warnings,
+        farmComplianceWarnings: farmComplianceWarnings.length > 0 ? farmComplianceWarnings : undefined,
       },
     });
 
@@ -217,6 +276,7 @@ export async function POST(
         legacyStatus: newLegacyStatus,
       },
       warnings: gateResult.warnings,
+      farmComplianceWarnings: farmComplianceWarnings.length > 0 ? farmComplianceWarnings : undefined,
     });
   } catch (error) {
     console.error('Advance stage error:', error);

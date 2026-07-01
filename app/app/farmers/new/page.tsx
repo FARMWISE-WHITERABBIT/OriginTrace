@@ -36,9 +36,9 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { OCRCapture } from '@/components/ocr-capture';
 
-interface LocationState { id: number; name: string; }
-interface LocationLGA { id: number; name: string; state_id: number; }
-interface LocationVillage { id: number; name: string; lga_id: number; }
+interface LocationState { id: string; name: string; }
+interface LocationLGA { id: string; name: string; state_id: string; }
+interface LocationVillage { id: string; name: string; lga_id: string; }
 
 export default function FarmerRegistrationPage() {
   const router = useRouter();
@@ -190,7 +190,8 @@ export default function FarmerRegistrationPage() {
             phone: phone || null,
             commodity: commodity || null,
             community: community || selectedLGA || selectedState,
-
+            state_id: states.find(s => s.name === selectedState)?.id ?? null,
+            lga_id: lgas.find(l => l.name === selectedLGA)?.id ?? null,
             consent_timestamp: consentData?.timestamp ?? null,
             consent_signature: consentData?.signature ?? null,
           }),

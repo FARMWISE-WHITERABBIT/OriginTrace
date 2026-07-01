@@ -26,6 +26,8 @@ import {
   type TracesFarm,
   type TracesShipment,
 } from '@/lib/services/traces-api';
+import { checkFarmEligibility, type FarmRecord } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 
 const ALLOWED_ROLES = ['admin', 'compliance_officer'];
 
@@ -182,6 +184,51 @@ export async function POST(
       }
     }
 
+    // ── Soft compliance check — warn, never block ─────────────────────────────
+    const targetMarkets = normalizeMarketCodes(shipment.target_regulations ?? ['EU']);
+    const complianceWarnings: Array<{
+      farmId: string;
+      status: string;
+      blockers: string[];
+      blocker_codes: string[];
+      warnings: string[];
+      warning_codes: string[];
+    }> = [];
+
+    for (const farm of farms) {
+      const eligibility = checkFarmEligibility(farm as unknown as FarmRecord, targetMarkets);
+      if (!eligibility.eligible || eligibility.warnings.length > 0) {
+        complianceWarnings.push({
+          farmId: String((farm as any).id),
+          status: eligibility.status,
+          blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
+          warnings: eligibility.warnings,
+          warning_codes: eligibility.warning_codes,
+        });
+      }
+    }
+
+    // Log the compliance state at DDS generation time — creates an auditable record
+    // of whether the operator knew about non-compliant farms before generating the document.
+    if (complianceWarnings.length > 0) {
+      await logAuditEvent({
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'dds.compliance_warnings_present',
+        resourceType: 'shipment',
+        resourceId: shipmentId,
+        metadata: {
+          farmCount: farms.length,
+          nonCompliantCount: complianceWarnings.length,
+          complianceWarnings,
+          targetMarkets,
+          note: 'DDS generated despite compliance warnings — operator chose to proceed.',
+        },
+      });
+    }
+
     // Determine commodity from request or org defaults
     const commodity =
       ('commodity' in data ? data.commodity : undefined) ??
@@ -233,6 +280,7 @@ export async function POST(
         status: result.status,
         draftReferenceNumber: tracesPayload.draftReferenceNumber,
         payload: tracesPayload,
+        complianceWarnings: complianceWarnings.length > 0 ? complianceWarnings : undefined,
         instructions: [
           '1. Download this JSON and log in to the EU TRACES portal at https://webgate.ec.europa.eu/tracesnt/',
           '2. Navigate to EUDR → Due Diligence Statements → New Statement',

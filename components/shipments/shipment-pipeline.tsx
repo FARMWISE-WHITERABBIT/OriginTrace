@@ -891,7 +891,14 @@ export function ShipmentPipeline({
         if (data.warnings?.length) setAdvanceWarnings(data.warnings);
         return;
       }
-      if (data.warnings?.length) setAdvanceWarnings(data.warnings);
+      const allWarnings = [...(data.warnings ?? [])];
+      if (data.farmComplianceWarnings?.length) {
+        data.farmComplianceWarnings.forEach((fw: any) => {
+          const msgs = [...(fw.blockers ?? []), ...(fw.warnings ?? [])];
+          msgs.forEach((m: string) => allWarnings.push(`Farm ${fw.farmId}: ${m}`));
+        });
+      }
+      if (allWarnings.length) setAdvanceWarnings(allWarnings);
       toast({
         title: `Stage advanced`,
         description: `Now at Stage ${data.transition.to}: ${data.transition.stageName}`,
