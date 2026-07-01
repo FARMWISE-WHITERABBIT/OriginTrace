@@ -13,8 +13,6 @@ const farmCreateSchema = z.object({
   farmer_id: z.string().optional(),
   phone: z.string().optional().nullable(),
   community: z.string().min(1, 'Community is required'),
-  state_id: z.number().optional().nullable(),
-  lga_id: z.number().optional().nullable(),
   boundary: z.object({
     type: z.string().optional(),
     coordinates: z.array(z.any()).optional(),
@@ -125,7 +123,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { farmer_name, phone, community, state_id, lga_id, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+    const { farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
 
     // Auto-generate a farmer ID if not explicitly provided
     let farmer_id = parsed.data.farmer_id;
@@ -174,8 +172,6 @@ export async function POST(request: NextRequest) {
         farmer_id: farmer_id,
         phone: phone || null,
         community,
-        state_id: state_id || null,
-        lga_id: lga_id || null,
         commodity: commodity || null,
         boundary: boundary || null,
         area_hectares: area_hectares || null,

@@ -190,8 +190,7 @@ export default function FarmerRegistrationPage() {
             phone: phone || null,
             commodity: commodity || null,
             community: community || selectedLGA || selectedState,
-            state_id: states.find(s => s.name === selectedState)?.id ?? null,
-            lga_id: lgas.find(l => l.name === selectedLGA)?.id ?? null,
+
             consent_timestamp: consentData?.timestamp ?? null,
             consent_signature: consentData?.signature ?? null,
           }),
