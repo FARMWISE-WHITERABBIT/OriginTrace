@@ -112,39 +112,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
+    // Compliance gate is advisory at collection time — collection is never blocked.
+    // Eligibility warnings are returned in the response and logged for the audit trail.
     const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
-    const override = compliance_override_reason
-      ? { reason: compliance_override_reason, actorRole: profile.role }
-      : undefined;
-    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets, override);
+    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets);
 
-    if (!eligibility.eligible) {
-      return NextResponse.json(
-        {
-          error: 'Farm Compliance Gate: this farm cannot contribute to this batch.',
-          blockers: eligibility.blockers,
-          blocker_codes: eligibility.blocker_codes,
-          warnings: eligibility.warnings,
-          warning_codes: eligibility.warning_codes,
-          farm_id,
-        },
-        { status: 422 }
-      );
-    }
-
-    if (override && eligibility.warnings.some((w) => w.startsWith('[ADMIN OVERRIDE]'))) {
+    if (eligibility.warnings.length > 0 || !eligibility.eligible) {
       await logAuditEvent({
         orgId: batch.org_id,
         actorId: user.id,
         actorEmail: user.email,
-        action: 'farm.compliance_gate.overridden',
+        action: 'farm.compliance_warning',
         resourceType: 'farm',
         resourceId: farm_id,
         metadata: {
           batch_id,
-          overrideReason: compliance_override_reason,
-          actorRole: profile.role,
-          overrideWarnings: eligibility.warnings,
+          eligibility_status: eligibility.status,
+          blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
+          warnings: eligibility.warnings,
+          warning_codes: eligibility.warning_codes,
+          note: 'Collection not blocked; compliance check deferred to export stage.',
         },
       });
     }
@@ -174,7 +162,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to add contribution', details: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ contribution });
+    return NextResponse.json({
+      contribution,
+      complianceWarnings: eligibility.eligible ? eligibility.warnings : eligibility.blockers,
+      complianceWarningCodes: eligibility.eligible ? eligibility.warning_codes : eligibility.blocker_codes,
+      complianceStatus: eligibility.status,
+    });
   } catch (error) {
     console.error('Batch contributions POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
