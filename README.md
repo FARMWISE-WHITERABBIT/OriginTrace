@@ -249,6 +249,68 @@ supabase/
 
 ---
 
+## Changelog
+
+### 2026-07-01 — Pre-Onboarding Hardening Sprint (branch: `bryan2`)
+
+#### Bug Fixes — Priority 0 (Demo-blocking)
+
+**Farmer Registration**
+- Fixed `phone` field rejecting `null` — Zod schema now uses `.optional().nullable()`, so registration completes when phone is omitted
+- Fixed `state_id`/`lga_id` type mismatch: DB columns are `UUID`, locations API returns UUID strings; frontend interfaces updated from `id: number` to `id: string` and both IDs now persist correctly to `farms` table for geomapping and compliance reporting
+
+**Smart Collects / Collection Flow**
+- Removed EUDR compliance hard-block from `POST /api/batches` and `PUT /api/sync` — field agents can now collect regardless of farm EUDR eligibility; compliance is checked at export/shipment stage instead
+- Quick Add Farmer UI surfaced in Smart Collects Step 2 — the inline registration form (name, phone, community) was already implemented in `use-collection-logic.ts` but not exposed; now accessible via "Quick Add New Farmer" button within the collection workflow
+- `batch-contributions` route (manual contribution via batch detail page) aligned with Smart Collects: hard 422 block removed, collection always succeeds, compliance warnings logged to audit trail and returned in response
+
+**Mobile / Camera**
+- ID document upload input now includes `capture="environment"` so mobile devices open the rear camera instead of the file picker
+- Button label updated from "Upload ID Document" to "Capture / Upload ID"
+
+**Online/Offline Detection**
+- Replaced `navigator.onLine`-only detection (unreliable on mobile networks) with a real network probe to `/api/ping` (HEAD request, 4s timeout, 30s interval)
+- New `/api/ping` route added (`GET` and `HEAD`) for connectivity probing
+- `lib/hooks/use-online-status.ts` re-exports from canonical `components/online-status.tsx` to keep both import paths in sync
+
+#### Security
+
+**Rate Limiting**
+- Added rate limiting to `GET /api/public/verify` (public unauthenticated QR scan endpoint) — uses `RATE_LIMIT_PRESETS.auth` (10 requests/60 seconds per IP); returns 429 with `Retry-After` on breach
+
+#### Compliance Hardening — Pre-Onboarding
+
+**Soft compliance gate at export/document generation**
+- `POST /api/shipments/[id]/advance-stage`: when advancing to Stage 3+, runs `checkFarmEligibility` for all farms contributing to the shipment via `shipment_items → collection_batches → farms`. Compliance issues are returned as `farmComplianceWarnings` in the response and written to `audit_logs` (`shipment.stage_advanced` event metadata). The shipment advance always succeeds — operator sees warnings in the UI before proceeding.
+- `POST /api/shipments/[id]/submit-dds`: runs `checkFarmEligibility` for all contributing farms before generating the TRACES DDS payload. If any farm has blockers or warnings, logs a `dds.compliance_warnings_present` audit event with full farm-level detail (farm ID, blocker codes, warning codes, note that operator chose to proceed). Returns `complianceWarnings` in the download response.
+- Shipment pipeline UI (`shipment-pipeline.tsx`) now displays farm-level compliance warnings in the existing amber warning banner after each stage advance.
+
+#### API Fixes
+
+**Bearer token authentication**
+- Fixed 22 API routes that called `getAuthenticatedProfile()` without passing the `request` object — Bearer token auth was silently falling back to cookie auth only, breaking mobile/agent API clients
+- Routes fixed: `audit-readiness`, `bags`, `batches`, `buyer/shipments/[id]/proof-status`, `escrow/[id]/dispute`, `escrow/[id]/release`, `escrow/disputes/[id]`, `escrow`, `farmer-bank-accounts`, `keys`, `lab-results/[id]`, `lab-results`, `org/kyc/[orgId]/review`, `org/kyc/banks`, `org/kyc`, `org/kyc/verify-bank`, `reports/generate`, `service-providers/[id]`, `shipment-templates/[id]`, `shipments/[id]/advance-stage`, `shipments/[id]/stuffing`, `shipments/[id]/submit-dds`
+
+**Tier gating**
+- `hasTierAccess(undefined, feature)` now defaults to `'starter'` tier (conservative) instead of fail-open; fixes UI showing Pro/Enterprise features to users with no tier set
+- `components/app-sidebar.tsx` and `components/tier-gate.tsx` now import `hasTierAccess` from canonical `modules/identity-access/domain/tier-policy` instead of the local config copy
+
+**Webhooks**
+- `WEBHOOK_EVENTS` in `lib/webhooks.ts` was a manually-maintained 14-item subset; replaced with re-export of the canonical 31-event catalog from `modules/integrations/domain/event-catalog.ts`
+
+**Audit logging**
+- Account deletion audit event changed from fire-and-forget (`void supabase...`) to `await` so failures are surfaced
+
+#### Database / Migrations
+
+- `supabase/migrations/` symlink created at repo root (`migrations → supabase/migrations/`) so test files that reference `../migrations/` resolve correctly
+- Atomic rate-limit RPC (`increment_rate_limit`) — eliminates SELECT+UPDATE race condition in distributed rate limiter; uses single `INSERT ... ON CONFLICT DO UPDATE` statement
+- JWT custom claims hook (`custom_access_token_hook`) — stores `app_role`, `org_id`, `org_tier`, `is_superadmin` in JWT `app_metadata` on every login/refresh; middleware reads tier from JWT with zero DB round-trips
+- Atomic shipment creation RPC (`create_shipment_atomic`) — wraps shipment INSERT + contract link + document linking in a single transaction
+- Atomic batch sync RPC (`sync_batches_atomic`) — replaces N×M per-batch loop with single DB round-trip; idempotent on `local_id`
+
+---
+
 ## License
 
 Proprietary — OriginTrace / FarmWise WhiteRabbit. All rights reserved.
