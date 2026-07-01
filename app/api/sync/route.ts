@@ -111,6 +111,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   return NextResponse.json({ sync_status: syncStatus, success: true });
 }, 'sync/POST');
 
+<<<<<<< HEAD
 export const PUT = withErrorHandling(async (request: NextRequest) => {
   const { user, profile } = await getAuthenticatedProfile(request);
   if (!user || !profile) return ApiError.unauthorized();

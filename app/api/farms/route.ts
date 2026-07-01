@@ -13,8 +13,10 @@ const farmCreateSchema = z.object({
   local_id: z.string().min(1).optional(),
   farmer_name: z.string().min(1, 'Farmer name is required'),
   farmer_id: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
   community: z.string().min(1, 'Community is required'),
+  state_id: z.number().optional().nullable(),
+  lga_id: z.number().optional().nullable(),
   boundary: z.object({
     type: z.string().optional(),
     coordinates: z.array(z.any()).optional(),
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { local_id, farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+    const { local_id, farmer_name, phone, community, state_id, lga_id, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
 
     if (local_id) {
       const { data: existingFarm, error: existingError } = await supabaseAdmin
@@ -203,6 +205,8 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         community,
         local_id: local_id || null,
+        state_id: state_id || null,
+        lga_id: lga_id || null,
         commodity: commodity || null,
         boundary: boundary || null,
         area_hectares: area_hectares || null,
