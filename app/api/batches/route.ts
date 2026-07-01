@@ -5,7 +5,6 @@ import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { parsePagination } from '@/lib/api/validation';
-import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
 import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 import { emitEvent } from '@/lib/services/events';
 
@@ -109,11 +108,10 @@ export async function POST(request: NextRequest) {
 
     const { farm_id, bags, notes, local_id, collected_at, compliance_override_reason, target_markets } = parsed.data;
 
-    // ── Farm Compliance Gate ──────────────────────────────────────────────────
-    // Fetch full farm record including compliance gate fields
+    // Fetch farm to verify ownership
     const { data: farm, error: farmError } = await supabase
       .from('farms')
-      .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp, conflict_status')
+      .select('id, compliance_status')
       .eq('id', farm_id)
       .eq('org_id', profile.org_id)
       .single();
@@ -122,31 +120,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
-    // Resolve target markets: use provided value, else fall back to org's active compliance profiles
     const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
 
-    const override = compliance_override_reason
-      ? { reason: compliance_override_reason, actorRole: profile.role }
-      : undefined;
-
-    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets, override);
-
-    if (!eligibility.eligible) {
-      return NextResponse.json(
-        {
-          error: 'Farm Compliance Gate: this farm cannot contribute to this batch.',
-          blockers: eligibility.blockers,
-          blocker_codes: eligibility.blocker_codes,
-          warnings: eligibility.warnings,
-          warning_codes: eligibility.warning_codes,
-          farmId: farm_id,
-        },
-        { status: 422 }
-      );
-    }
-
+    // Compliance checks are deferred to the shipment/export stage — not blocked at collection
     // If admin used override, log it before proceeding
-    if (override && eligibility.warnings.some((w) => w.startsWith('[ADMIN OVERRIDE]'))) {
+    if (compliance_override_reason) {
       await logAuditEvent({
         orgId: profile.org_id,
         actorId: user.id,
@@ -157,7 +135,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           overrideReason: compliance_override_reason,
           actorRole: profile.role,
-          overrideWarnings: eligibility.warnings,
+          overrideWarnings: [],
         },
       });
     }

@@ -190,6 +190,8 @@ export default function FarmerRegistrationPage() {
             phone: phone || null,
             commodity: commodity || null,
             community: community || selectedLGA || selectedState,
+            state_id: states.find(s => s.name === selectedState)?.id ?? null,
+            lga_id: lgas.find(l => l.name === selectedLGA)?.id ?? null,
             consent_timestamp: consentData?.timestamp ?? null,
             consent_signature: consentData?.signature ?? null,
           }),
@@ -639,6 +641,7 @@ export default function FarmerRegistrationPage() {
             ref={idInputRef}
             type="file"
             accept="image/*,.pdf"
+            capture="environment"
             className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0], 'id'); }}
             data-testid="input-id-document"
@@ -672,8 +675,8 @@ export default function FarmerRegistrationPage() {
                 onClick={() => idInputRef.current?.click()}
                 data-testid="button-upload-id"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload ID Document
+                <Camera className="h-4 w-4 mr-2" />
+                Capture / Upload ID
               </Button>
             )}
           </div>
