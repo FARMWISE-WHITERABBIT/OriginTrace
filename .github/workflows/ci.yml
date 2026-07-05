@@ -26,6 +26,12 @@ jobs:
       - name: Type check
         run: npm run check
 
+      - name: Migration hygiene
+        run: npm run check:migrations
+
+      - name: Skills in sync (.agents -> .claude)
+        run: npm run skills:check
+
       - name: Run tests
         run: npm test
         env:

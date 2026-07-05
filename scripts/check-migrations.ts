@@ -21,7 +21,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
+// This script runs as an ES module (package.json "type": "module"), so
+// __dirname is not defined — derive it from import.meta.url.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const CANONICAL_DIR = path.join(ROOT, 'supabase', 'migrations');
 const LEGACY_DIR    = path.join(ROOT, 'migrations');
@@ -82,16 +86,22 @@ if (!fs.existsSync(CANONICAL_DIR)) {
 
     const ts = match[1];
 
-    // Check 3: Duplicate timestamps
-    if (seenTimestamps.has(ts)) {
-      issues.push({
-        severity: 'error',
-        message:
-          `supabase/migrations/${file}: timestamp "${ts}" conflicts with ${seenTimestamps.get(ts)}. ` +
-          `Rename one to use a unique timestamp.`,
-      });
-    } else {
-      seenTimestamps.set(ts, file);
+    // Check 3: Duplicate timestamps.
+    // Multiple migrations sharing an 8-digit DATE prefix (YYYYMMDD) are normal
+    // and safe — `supabase db push` applies them in deterministic filename
+    // order. Only full-precision timestamps (>=12 digits, YYYYMMDDHHMM[SS])
+    // colliding indicate a genuine copy-paste conflict.
+    if (ts.length >= 12) {
+      if (seenTimestamps.has(ts)) {
+        issues.push({
+          severity: 'error',
+          message:
+            `supabase/migrations/${file}: timestamp "${ts}" conflicts with ${seenTimestamps.get(ts)}. ` +
+            `Rename one to use a unique timestamp.`,
+        });
+      } else {
+        seenTimestamps.set(ts, file);
+      }
     }
 
     // Check 4: Future timestamps

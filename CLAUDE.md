@@ -122,7 +122,9 @@ Develop on the branch assigned to your current task (the harness names it per-se
 
 Migrations live in **`supabase/migrations/`** (56 files as of 2026-07). They are applied manually via the Supabase SQL editor / `supabase db push`, so **code and the live DB drift** — this is the single biggest source of production bugs in this repo (serial "fix column mismatch" commits: `batch_id`→`batch_code`, phantom `weight_kg`, INTEGER-vs-UUID org ids).
 
-Before writing code against a table, **verify the live schema** — don't guess column names. Use `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. There is **no generated `Database` type** (the client is `createClient(url, key)` untyped), so the compiler will NOT catch a wrong column name. Generating `lib/supabase/database.types.ts` and typing the client would eliminate this class of bug.
+Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. There is **no generated `Database` type** yet (the client is `createClient(url, key)` untyped), so the compiler will NOT catch a wrong column name.
+
+- Generate types with **`SUPABASE_PROJECT_ID=<ref> npm run gen:types`** → writes `lib/supabase/database.types.ts`, then type the clients `createClient<Database>(url, key)`. ⚠ The OriginTrace DB has `farms`/`collection_batches`/`shipments`/`profiles`; it is **not** the "FarmWise" Supabase project (a different product) — `gen:types` refuses to write if the signature tables are absent.
 
 - ⚠ **Two migration dirs exist.** `supabase/migrations/` is canonical; the top-level `migrations/` is legacy and `scripts/check-migrations.ts` fails CI on any SQL left there. Never add migrations to the root.
 - Filename convention: `YYYYMMDD_<description>.sql`; no duplicate date prefixes (the check script enforces both).
@@ -143,7 +145,7 @@ Before writing code against a table, **verify the live schema** — don't guess 
 
 This repo ships **22 project-specific skills** as `SKILL.md` files under `.agents/skills/` (api-routes, rbac, multi-tenancy, supabase-migrations, geospatial, compliance-regulations, offline-sync, playwright-tester, seed-data, deployment, i18n, ocr, security, testing, ui-components, release-notes, shipment-scoring, …), catalogued with trigger keywords in `agents.md`. Consult `agents.md` and the relevant `SKILL.md` before working in that domain — they encode the hard-won conventions.
 
-> Note: these live in `.agents/skills/`, so Claude Code does not auto-load them as native `/skills`. The API-routes skill prescribes a `withErrorHandling` + `ApiError` "gold standard" (`lib/api-error.ts` / `lib/rbac.ts`) that is currently used by only ~3 of 178 routes — treat it as the target pattern for new/edited routes, but expect most existing routes to use ad-hoc `try/catch` + `NextResponse.json({ error })`.
+> Note: these live in `.agents/skills/`, so Claude Code does not auto-load them as native `/skills`. The API-routes skill prescribes a `withErrorHandling` + `ApiError` "gold standard" (`lib/api/errors.ts`) that is currently used by only ~3 of 178 routes — treat it as the target pattern for new/edited routes, but expect most existing routes to use ad-hoc `try/catch` + `NextResponse.json({ error })`.
 
 ---
 

@@ -30,6 +30,14 @@
 | 17 | [testing](#17-testing) | QA & Testing | `write a test`, `unit test`, `E2E test`, `Playwright`, `Vitest`, `test coverage`, `run the test suite` |
 | 18 | [ui-components](#18-ui-components) | Frontend | `add a component`, `shadcn`, `UI component`, `Tailwind class`, `white-label`, `theming`, `design system` |
 | 19 | [office-hours](#19-office-hours) | Product | `brainstorm this`, `is this worth building`, `help me think through`, `office hours`, `I have an idea` |
+| 29 | [schema-verify](#29-schema-verify) | Database | `column`, `.from(`, `select from`, `does this column exist`, `table shape`, `schema drift`, `untyped client` |
+| 30 | [vercel-preflight](#30-vercel-preflight) | DevOps | `push`, `deploy`, `build error`, `Suspense`, `useSearchParams`, `server component`, `middleware`, `Hobby cron` |
+| 31 | [marketing-page](#31-marketing-page) | Frontend | `marketing page`, `compliance page`, `industry page`, `hero section`, `marketing.css`, `match the EUDR pattern` |
+| 32 | [page-data-fetch](#32-page-data-fetch) | Frontend | `fetch data`, `load the list`, `useEffect fetch`, `loading state`, `data table`, `useApiResource`, `useOrg` |
+
+> Skills 1–19 and 29–32 are OriginTrace-specific and live in `.agents/skills/`.
+> They are mirrored into `.claude/skills/` (so Claude Code auto-loads them) by
+> `npm run skills:sync`; CI enforces they stay in sync (`npm run skills:check`).
 
 ### General-Purpose Skills (from `skills-main`)
 

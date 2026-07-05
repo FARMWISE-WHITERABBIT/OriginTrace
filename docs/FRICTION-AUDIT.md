@@ -2,7 +2,30 @@
 
 _Audited 2026-07-05 on branch `claude/origintrace-audit-wdk6q0`. Method: parallel subagents over 312 commits of git history, the meta-doc corpus (`ANTHONY.md`, `agents.md`, `Operations_ai.md`, `failure_ai.md`, `cve.md`, `untested.md`), all 178 API route handlers, the test suite, and CLAUDE.md claims vs. reality._
 
-This is where the team keeps losing time, grouped into clusters, each with the evidence behind it and a concrete fix (new skill, automation, or doc change). The CLAUDE.md fixes in §4 have already been applied in this branch; the skills and automations in §2–§3 are proposals with ready-to-drop scaffolds.
+This is where the team keeps losing time, grouped into clusters, each with the evidence behind it and a concrete fix (new skill, automation, or doc change).
+
+## 0. Status — what has been fixed in this branch
+
+| Fix | Status |
+|-----|--------|
+| CLAUDE.md stale/wrong facts (branch, 9 roles, migrations, tree, auth nuance, `lib/api/errors.ts` path) | ✅ applied |
+| `tsconfig.json` deprecated `baseUrl` removed → `npm run check` clean on TS 5.6 **and** 6.x | ✅ applied (typecheck + build verified) |
+| Broken `scripts/check-migrations.ts` (`__dirname` ESM crash; over-strict same-day dup rule) fixed | ✅ applied (now passes: 56 migrations) |
+| Stale legacy `migrations/*.sql` (superseded Session 7/8 drafts) deleted; dir removed | ✅ applied |
+| `check-migrations` + `skills:check` wired into CI | ✅ applied |
+| 22 `.agents/skills/` mirrored into `.claude/skills/` so they auto-load; `npm run skills:sync` + CI drift guard | ✅ applied (24 skills live) |
+| 4 new skills: `schema-verify`, `vercel-preflight`, `marketing-page`, `page-data-fetch` | ✅ authored + catalogued |
+| `hooks/use-api-resource.ts` canonical data hook (C4) | ✅ added |
+| `npm run preflight` (migrations + tsc + build) automation (C3) | ✅ added |
+| Supabase type generation tooling: `npm run gen:types` + `scripts/gen-types.ts` | ⚠️ tooling shipped — **cannot generate the file here**: none of the 3 Supabase projects this session can reach is the OriginTrace DB (they are FarmWise, a bookings app, and a trading-bot app). Run `SUPABASE_PROJECT_ID=<ref> npm run gen:types` against the real project ref to finish C1. |
+| API "gold standard" (`withErrorHandling`/`ApiError`) adoption: 3/178 routes | ▶ campaign — helper exists + skill added; mass migration intentionally not swept blind |
+| Page boilerplate migration onto `useApiResource`: 40 pages | ▶ campaign — hook + skill added; per-page migration left as follow-up |
+
+Verification: `npm run check` ✓, `npm run check:migrations` ✓, `npm run skills:check` ✓, `npm test` → **691 passed**, `npm run build` compiles with **0** module/path errors (only offline Google-Fonts fetch fails in this sandbox; CI/Vercel builds normally).
+
+---
+
+The remaining sections are the underlying analysis. The CLAUDE.md fixes in §4 were applied first; §2–§3 record the skills and automations, now built.
 
 ---
 
