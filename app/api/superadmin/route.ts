@@ -371,11 +371,7 @@ export async function GET(request: NextRequest) {
       case 'kyc_record': {
         const orgId = searchParams.get('org_id');
         if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
-        // TODO(schema-drift): 'org_kyc_records' table does not exist in the live DB
-        // (migration 20260403_org_kyc.sql defines it but was never applied) — this query
-        // has always failed at runtime; needs a product decision on whether to apply the
-        // migration or remove the KYC record feature.
-        const { data: kycRecord } = await (supabase as any)
+        const { data: kycRecord } = await supabase
           .from('org_kyc_records')
           .select('*')
           .eq('org_id', orgId)

@@ -19,13 +19,9 @@ export async function GET(
     const supabase = createServiceClient();
     const { token } = params;
 
-    // TODO(schema-drift): 'evidence_packages' is defined in supabase/migrations/20260403_lab_results.sql
-    // and matches this code exactly, but it's absent from the generated database.types.ts — the
-    // migration was likely never applied to the DB the types were generated from (or types are stale).
-    // Cast as `any` here until the migration is applied/reapplied and types regenerated.
     // ── Validate token ───────────────────────────────────────────────────────
-    const { data: pkg, error } = await (supabase
-      .from('evidence_packages' as any) as any)
+    const { data: pkg, error } = await supabase
+      .from('evidence_packages')
       .select('id, org_id, shipment_id, expires_at, views')
       .eq('token', token)
       .single();
@@ -42,8 +38,8 @@ export async function GET(
     }
 
     // Increment view counter (fire-and-forget)
-    (supabase
-      .from('evidence_packages' as any) as any)
+    supabase
+      .from('evidence_packages')
       .update({ views: pkg.views + 1 })
       .eq('id', pkg.id)
       .then(() => {});

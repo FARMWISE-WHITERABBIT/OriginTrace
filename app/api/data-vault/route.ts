@@ -124,10 +124,19 @@ export async function POST(request: NextRequest) {
 
       if (!error && data) {
         if (table === 'profiles') {
-          exportData[table] = (data as unknown as Record<string, unknown>[]).map((p: Record<string, unknown>) => ({
+          const profileRows = data as unknown as Record<string, unknown>[];
+          // profiles has no email column — it lives on auth.users, keyed by user_id.
+          const emails = await Promise.all(
+            profileRows.map(async (p) => {
+              if (!p.user_id) return null;
+              const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(p.user_id as string);
+              return authUser?.user?.email ?? null;
+            })
+          );
+          exportData[table] = profileRows.map((p, i) => ({
             id: p.id,
             full_name: p.full_name,
-            email: p.email,
+            email: emails[i],
             role: p.role,
             created_at: p.created_at
           }));

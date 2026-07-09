@@ -46,12 +46,8 @@ export async function PATCH(
 
     const { action, notes } = parsed.data;
 
-    // TODO(schema-drift): 'org_kyc_records' is defined in supabase/migrations/20260403_org_kyc.sql
-    // and matches this code exactly, but it's absent from the generated database.types.ts — the
-    // migration was likely never applied to the DB the types were generated from (or types are stale).
-    // Cast as `any` here until the migration is applied/reapplied and types regenerated.
-    const { data: kyc, error: fetchErr } = await (supabase
-      .from('org_kyc_records' as any) as any)
+    const { data: kyc, error: fetchErr } = await supabase
+      .from('org_kyc_records')
       .select('id, org_id, kyc_status')
       .eq('org_id', params.orgId)
       .single();
@@ -60,8 +56,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'KYC record not found for this organisation' }, { status: 404 });
     }
 
-    const { data: updated, error: updateErr } = await (supabase
-      .from('org_kyc_records' as any) as any)
+    const { data: updated, error: updateErr } = await supabase
+      .from('org_kyc_records')
       .update({
         kyc_status:  action,
         kyc_notes:   notes ?? null,

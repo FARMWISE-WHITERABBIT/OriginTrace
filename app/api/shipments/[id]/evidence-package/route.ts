@@ -157,12 +157,8 @@ export async function POST(
     });
 
     // ── Persist the evidence package record ──────────────────────────────────
-    // TODO(schema-drift): 'evidence_packages' is defined in supabase/migrations/20260403_lab_results.sql
-    // and matches this code exactly, but it's absent from the generated database.types.ts — the
-    // migration was likely never applied to the DB the types were generated from (or types are stale).
-    // Cast as `any` here until the migration is applied/reapplied and types regenerated.
-    const { error: insertError } = await (supabase
-      .from('evidence_packages' as any) as any)
+    const { error: insertError } = await supabase
+      .from('evidence_packages')
       .insert({
         org_id:      profile.org_id,
         shipment_id: shipmentId,
@@ -218,9 +214,8 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    // TODO(schema-drift): see note above — 'evidence_packages' is missing from database.types.ts.
-    const { data, error } = await (supabase
-      .from('evidence_packages' as any) as any)
+    const { data, error } = await supabase
+      .from('evidence_packages')
       .select('id, token, expires_at, views, created_at')
       .eq('org_id', profile.org_id)
       .eq('shipment_id', id)

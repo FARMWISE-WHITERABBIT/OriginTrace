@@ -4,7 +4,10 @@ export type EscrowDisputeStatus = 'open' | 'under_review' | 'resolved' | 'escala
 
 export interface EscrowMilestone {
   milestone_id: string;
-  stage: number;
+  // Two real callers disagree on shape: app/api/escrow/route.ts uses a numeric shipment-pipeline
+  // stage (1-9), app/api/shipments/[id]/payment-setup/route.ts uses a free-text label like
+  // 'on_delivery'. Not read/compared anywhere in lib/services/escrow.ts, so kept permissive.
+  stage: string | number;
   amount: number;
   description: string;
   released_at?: string;

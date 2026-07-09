@@ -23,33 +23,38 @@ This is where the team keeps losing time, grouped into clusters, each with the e
 
 Verification: `npm run check` ✓ (0 errors, was 422 mid-campaign), `npm run check:migrations` ✓, `npm run skills:check` ✓, `npm test` → **691 passed**, `npm run build` compiles with **0** module/path errors (only offline Google-Fonts fetch fails in this sandbox; CI/Vercel builds normally).
 
-### C1 result — typing the clients surfaced 422 real bugs, not false positives
+### C1 result — typing the clients surfaced 422 real bugs; the missing migrations are now applied
 
-Generating real types and wiring `createClient<Database>(...)` into the 4 client factories made `tsc` fail with 422 errors across 89 files — every one traced back to either a wrong/renamed column, a string/bigint ID boundary mismatch, or (the big one) **a table or RPC function whose migration exists in `supabase/migrations/` but was never applied to the live DB.** Fixed via 5 domain-scoped passes (compliance/DDS/DPP, shipments, payments/escrow, farms/frontend, misc backend), each grounded against `database.types.ts` as source of truth, with a strict rule for the payments/escrow batch: type-level fixes only, never touch a dollar amount or formula.
+Generating real types and wiring `createClient<Database>(...)` into the 4 client factories made `tsc` fail with 422 errors across 89 files — every one traced back to either a wrong/renamed column, a string/bigint ID boundary mismatch, or (the big one) **a table or RPC function whose migration existed in `supabase/migrations/` but was never applied to the live DB.** Fixed via 5 domain-scoped passes (compliance/DDS/DPP, shipments, payments/escrow, farms/frontend, misc backend), each grounded against `database.types.ts` as source of truth, with a strict rule for the payments/escrow batch: type-level fixes only, never touch a dollar amount or formula.
 
-**Never-applied migrations found (tables/RPCs referenced in code, absent from the live DB):**
+**Never-applied migrations — reviewed for safety, then applied to the live OriginTrace project (`gnvcvvsnnesieugnzmrz`):**
 
-| Missing | Migration that defines it | Impact |
+| Was missing | Migration | Fixed before applying |
 |---|---|---|
-| `escrow_accounts`, `escrow_disputes`, `escrow_transactions` | `20260403_escrow_foundations.sql` | **Entire escrow feature is non-functional in production** — `lib/services/escrow.ts` (create/release/dispute, all money-movement) and `/api/escrow`, `/api/shipments/[id]/payment-setup`, `/api/payments/hub-summary`, `/api/payments/instruction/[token]` all silently fail today. |
-| `create_shipment_atomic` RPC | `20260311_session8_9.sql` | **`POST /api/shipments` cannot create a shipment at all in production right now.** |
-| `evidence_packages` | `20260403_lab_results.sql` | Buyer proof-status page and shipment evidence-package generation/DDS exports are broken. |
-| `org_kyc_records` | `20260403_org_kyc.sql` | Org KYC review flow (`/api/org/kyc/*`, superadmin) is broken. |
-| `shipment_templates` | `20260403_shipment_templates.sql` | Shipment-templates feature is entirely broken. |
-| `container_stuffing_records` | `20260403_container_stuffing.sql` | Container stuffing recording is broken. |
-| `sync_conflicts` table, `sync_batches_atomic` RPC | `20260328_sync_conflicts.sql` / `20260311_session8_9.sql` | Offline-agent conflict resolution and atomic sync are broken. |
-| `virtual_accounts` | none found — no matching schema at all | SWIFT virtual-account payment instructions broken; only lead is an unverified `grey_virtual_accounts` JSONB column on `organizations`. |
+| `escrow_accounts`, `escrow_disputes`, `escrow_transactions` | `20260403_escrow_foundations.sql` | Applied as-is (already clean, UUID-consistent). |
+| `create_shipment_atomic`, `sync_batches_atomic` RPCs | `20260311_session8_9.sql` | **Rewritten** — original was written against a pre-UUID (BIGINT) schema and referenced columns that don't exist (`collection_batches.gps_lat/gps_lng/estimated_bags/estimated_weight/batch_id`, `bags` joined on `id` instead of `serial`, `batch_contributions.org_id`). Corrected version verified end-to-end via live `BEGIN/ROLLBACK` test calls. Also fixed two callers passing the wrong ID type (`app/api/shipments/route.ts` was passing `profiles.id` where `shipments.created_by` needs `auth.users.id`; `app/api/sync/route.ts` had the inverse bug on `agent_id`). |
+| `evidence_packages` | `20260403_lab_results.sql` | Applied as-is. |
+| `org_kyc_records` | `20260403_org_kyc.sql` | Applied as-is. |
+| `shipment_templates` | `20260403_shipment_templates.sql` | **Fixed an RLS bug before applying**: policy checked `profiles.id = auth.uid()` instead of `profiles.user_id = auth.uid()` — as written, the table would have been unreadable by every real user despite RLS "working." |
+| `container_stuffing_records` | `20260403_container_stuffing.sql` | Same RLS bug, same fix. |
+| `sync_conflicts` | `20260328_sync_conflicts.sql` | Applied as-is (dependency functions `get_user_org_id`/`is_system_admin` confirmed live first). |
+| `shipments.doc_status` / `storage_controls` | `20260520_add_shipment_readiness_json.sql` | Applied as-is (found while cleaning up the last TODOs, wasn't in the original 8). |
+| `organizations.invite_code`, `organizations.active_lgas` | none existed — authored new | New migration `20260709_organizations_invite_code.sql`. |
+| `farm_conflicts.resolved_by/resolved_at/resolution_notes` | none existed — authored new | New migration `20260709_farm_conflicts_resolution_audit.sql`. |
+| `virtual_accounts` | none found — no matching schema at all | **Still open.** SWIFT virtual-account payment instructions remain broken; only lead is an unverified `grey_virtual_accounts` JSONB column on `organizations` — needs a product decision, left flagged rather than guessed at. |
 
-All of the above are left as `(supabase as any).from(...)` / `.rpc(...)` casts with inline `TODO(schema-drift)` comments pointing at the source migration — this keeps `npm run check` green and is honest about the gap (the features were already broken; a compile error was just the wrong way to surface it). **Action needed:** confirm each migration's intended state, apply the ones that should be live, then re-run `npm run gen:types` and delete the corresponding `as any` casts to get real type safety back on these paths.
+All applied migrations were reviewed against the live schema before running (checked for BIGINT/UUID mismatches, phantom columns, and RLS policy bugs), and the app code's `(supabase as any)` casts / `TODO(schema-drift)` markers were removed once each table was confirmed live and column names verified to match. `npm run check` and `npm test` (691 passed) stayed green throughout. The two hand-authored RPCs (`create_shipment_atomic`, `sync_batches_atomic`) were additionally verified against live data via `BEGIN ... ROLLBACK` transactions before being trusted.
 
 **Real, previously-silent bugs found and fixed (not just missing tables):**
 - `app/api/webhooks/paystack/route.ts` — `SELECT` on `payment_links` referenced a phantom `amount` column, so `charge.success` webhook events never matched a payment link — **subscription payments were never being marked "paid."** Fixed (real column is `amount_ngn`, and the match should be on `paystack_reference`).
 - `app/api/shipments/[id]/route.ts` — `bags` select included a nonexistent `farm_id`, crashing the entire shipment-detail GET at runtime whenever a shipment had batch items. Fixed.
-- `app/api/conflicts/route.ts` (PATCH) — writes `resolution_notes`/`resolved_at`/`resolved_by` on `farm_conflicts`, none of which exist live — **admins cannot resolve farm conflicts with notes**, fails at the DB layer. No `tsc` error (supabase-js doesn't excess-property-check `.update()` here), so left as a flagged `TODO`, not silently fixed by guessing the right migration.
-- `app/api/settings/route.ts` — `organizations.invite_code` doesn't exist; invite-code generation/regeneration has always failed. Flagged.
-- `app/api/locations/route.ts` — `organizations.active_lgas` doesn't exist; has always returned `[]`. Flagged.
-- `app/api/data-vault/route.ts` — GDPR export requests `profiles.email`, which doesn't exist; export has always silently omitted it. Flagged (out of scope of the 422, found in passing).
-- `app/api/farmers/[id]/files/route.ts` — `compliance_files.file_name` is `NOT NULL` but no caller ever populates it (same bug independently present in the farmer-files upload route). Flagged.
+- `app/api/shipments/route.ts` — `p_created_by` was passing `profiles.id` into a column FK'd to `auth.users(id)`; fixed to `user.id`. Would have made every shipment-creation call fail even after the RPC itself was fixed.
+- `app/api/sync/route.ts` — inverse bug: `p_user_id` was passing the auth user ID into `collection_batches.agent_id`, which is FK'd to `profiles.id`. Fixed.
+- `app/api/data-vault/route.ts` — GDPR export requested `profiles.email` (doesn't exist; email lives on `auth.users`) — export was silently omitting every user's email. Fixed via `auth.admin.getUserById()`, same pattern used elsewhere in the codebase.
+- `app/api/conflicts/route.ts` (PATCH) — wrote `resolution_notes`/`resolved_at`/`resolved_by` on `farm_conflicts`; columns now exist via the new migration above. Fixed.
+- `app/api/settings/route.ts` — `organizations.invite_code` now exists; invite-code generation/regeneration fixed.
+- `app/api/locations/route.ts` — `organizations.active_lgas` now exists; fixed.
+- `app/api/farmers/[id]/files/route.ts` — `compliance_files.file_name` is `NOT NULL` but no caller populates it. **Still open** — needs a product decision on where the name should come from, not a schema question.
 
 ---
 
@@ -148,6 +153,6 @@ Then type the clients (`createClient<Database>(...)`). Wrong column names become
 
 ## 5. If you do three things
 
-1. **Decide on the 8 never-applied migrations found while closing C1** (escrow, shipment creation, evidence packages, org KYC, shipment templates, container stuffing, sync conflicts — table in §0 "C1 result"). Escrow and shipment-creation are the most severe: real money and core workflow features are silently dead in production right now.
+1. ~~Decide on the never-applied migrations found while closing C1~~ — done. All applied (escrow, shipment creation, evidence packages, org KYC, shipment templates, container stuffing, sync conflicts, shipment readiness JSON, org invite codes, farm-conflict resolution audit). One remains genuinely open: `virtual_accounts` has no migration at all — needs a product decision, not a schema fix.
 2. ~~Copy `.agents/skills/*` into `.claude/skills/`~~ — done, 24 skills live natively.
 3. **Add a local `next build && npm run check` pre-push gate** (C3) — most deploy-only breakages were locally catchable.

@@ -51,13 +51,9 @@ export async function GET(
     }
 
     // Fetch evidence package
-    // TODO(schema-drift): table 'evidence_packages' does not exist on the live DB — the
-    // migration (supabase/migrations/20260403_lab_results.sql) that creates it has not been
-    // applied. This query will fail at runtime until that migration is applied. Needs a
-    // product decision: apply the migration, or remove this feature until it is.
-    const { data: evidencePackage } = await (supabase as any)
+    const { data: evidencePackage } = await supabase
       .from('evidence_packages')
-      .select('id, share_token, expires_at, view_count, created_at')
+      .select('id, token, expires_at, views, created_at')
       .eq('shipment_id', shipmentId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -141,8 +137,8 @@ export async function GET(
             generated: true,
             expires_at: evidencePackage.expires_at,
             expired: evidencePackageExpired,
-            share_token: evidencePackage.share_token,
-            view_count: evidencePackage.view_count,
+            share_token: evidencePackage.token,
+            view_count: evidencePackage.views,
             ok: evidenceOk,
           }
         : { generated: false, expired: false, ok: false },

@@ -49,11 +49,8 @@ export async function GET(
       return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
     }
 
-    // TODO(schema-drift): table 'container_stuffing_records' does not exist on the live DB —
-    // the migration (supabase/migrations/20260403_container_stuffing.sql) that creates it has
-    // not been applied. This query will fail at runtime until that migration is applied.
     const { data: records, error } = await supabase
-      .from('container_stuffing_records' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_container_stuffing.sql
+      .from('container_stuffing_records')
       .select('*')
       .eq('shipment_id', params.id)
       .eq('org_id', profile.org_id)
@@ -129,10 +126,8 @@ export async function POST(
       );
     }
 
-    // TODO(schema-drift): table 'container_stuffing_records' does not exist on the live DB —
-    // see note in GET above.
     const { data: record, error } = await supabase
-      .from('container_stuffing_records' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_container_stuffing.sql
+      .from('container_stuffing_records')
       .insert({
         ...parsed.data,
         shipment_id: params.id,

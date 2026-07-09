@@ -14,9 +14,9 @@ const shipmentCreateSchema = z.object({
   destination_port: z.string().optional(),
   notes: z.string().optional(),
   estimated_ship_date: z.string().optional(),
-  compliance_profile_id: z.number().optional(),
-  contract_id: z.number().optional(),
-  document_ids: z.array(z.number()).optional(),
+  compliance_profile_id: z.string().uuid().optional(),
+  contract_id: z.string().uuid().optional(),
+  document_ids: z.array(z.string().uuid()).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -126,27 +126,23 @@ export async function POST(request: NextRequest) {
 
     // Atomic RPC: shipment INSERT + contract link + document links in one transaction.
     // Partial failures (e.g. contract link error) no longer leave orphan shipments.
-    // TODO(schema-drift): the Postgres function 'create_shipment_atomic' does not exist on the
-    // live DB — the migration (supabase/migrations/20260311_session8_9.sql) that creates it
-    // has not been applied. This means POST /api/shipments cannot currently create a shipment
-    // at all in production. Needs a product decision: apply the migration.
     const { data: shipmentData, error: shipmentError } = await supabase.rpc(
-      'create_shipment_atomic' as any,
+      'create_shipment_atomic',
       {
         p_org_id:               profile.org_id,
-        p_created_by:           profile.id,
+        p_created_by:           user.id,
         p_shipment_code:        shipmentCode,
         p_destination_country:  destination_country,
         p_commodity:            commodity,
-        p_buyer_company:        buyer_company        ?? null,
-        p_buyer_contact:        buyer_contact        ?? null,
-        p_target_regulations:   target_regulations   ?? null,
-        p_destination_port:     destination_port     ?? null,
-        p_notes:                notes                ?? null,
-        p_estimated_ship_date:  estimated_ship_date  ?? null,
-        p_compliance_profile_id: compliance_profile_id ?? null,
-        p_contract_id:          contract_id          ?? null,
-        p_document_ids:         document_ids         ?? null,
+        p_buyer_company:        buyer_company        ?? undefined,
+        p_buyer_contact:        buyer_contact        ?? undefined,
+        p_target_regulations:   target_regulations   ?? undefined,
+        p_destination_port:     destination_port     ?? undefined,
+        p_notes:                notes                ?? undefined,
+        p_estimated_ship_date:  estimated_ship_date  ?? undefined,
+        p_compliance_profile_id: compliance_profile_id ?? undefined,
+        p_contract_id:          contract_id          ?? undefined,
+        p_document_ids:         document_ids         ?? undefined,
       }
     );
 

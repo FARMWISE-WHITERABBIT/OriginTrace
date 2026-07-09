@@ -23,11 +23,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // TODO(schema-drift): table 'container_stuffing_records' does not exist on the live DB —
-    // the migration (supabase/migrations/20260403_container_stuffing.sql) that creates it has
-    // not been applied. This query will fail at runtime until that migration is applied.
     const { error } = await supabase
-      .from('container_stuffing_records' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_container_stuffing.sql
+      .from('container_stuffing_records')
       .delete()
       .eq('id', params.recordId)
       .eq('shipment_id', params.id)

@@ -26,14 +26,10 @@ export async function GET(request: NextRequest) {
         .eq('id', orgId)
         .single(),
 
-      // TODO(schema-drift): 'escrow_accounts' does not exist on the live DB (migration
-      // supabase/migrations/20260403_escrow_foundations.sql never applied); even once applied,
-      // 'amount_usd' isn't a column that migration defines (it has 'total_amount' instead) —
-      // needs a product decision on which field this KPI should actually sum.
-      // Sum of active escrow amounts
-      (supabase as any)
+      // Sum of active escrow amounts (held_amount = still locked, not yet released)
+      supabase
         .from('escrow_accounts')
-        .select('amount_usd')
+        .select('held_amount')
         .eq('org_id', orgId)
         .in('status', ['active', 'disputed']),
 
@@ -53,7 +49,7 @@ export async function GET(request: NextRequest) {
     let pending_escrow_usd = 0;
     if (escrowRes.status === 'fulfilled' && escrowRes.value.data) {
       pending_escrow_usd = escrowRes.value.data.reduce(
-        (sum: number, row: any) => sum + Number(row.amount_usd ?? 0),
+        (sum, row) => sum + Number(row.held_amount ?? 0),
         0,
       );
     }

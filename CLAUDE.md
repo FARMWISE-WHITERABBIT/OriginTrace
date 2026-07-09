@@ -20,7 +20,7 @@
 |-------|--------|
 | Framework | Next.js 16.2.6, App Router, Turbopack (check `package.json` for exact pin) |
 | Language | TypeScript (strict) |
-| Database | Supabase (Postgres + RLS) — clients typed with generated `Database` types (see Database Migrations for the 8 tables/RPCs still pending their migration) |
+| Database | Supabase (Postgres + RLS) — clients typed with generated `Database` types (see Database Migrations for the one still-open schema gap, `virtual_accounts`) |
 | Auth | Supabase Auth + `getAuthenticatedProfile()` |
 | Validation | `zod` (used in ~63 API routes) |
 | UI | shadcn/ui + Tailwind CSS |
@@ -120,16 +120,15 @@ Develop on the branch assigned to your current task (the harness names it per-se
 
 ## Database Migrations
 
-Migrations live in **`supabase/migrations/`** (56 files as of 2026-07). They are applied manually via the Supabase SQL editor / `supabase db push`, so **code and the live DB drift** — this is the single biggest source of production bugs in this repo (serial "fix column mismatch" commits: `batch_id`→`batch_code`, phantom `weight_kg`, INTEGER-vs-UUID org ids).
+Migrations live in **`supabase/migrations/`** (58 files as of 2026-07-09). Historically they were applied manually via the Supabase SQL editor rather than `supabase db push` — Supabase's own migration-tracking table only recorded 2 of them before 2026-07-09, even though dozens more were live. This caused real drift: several migration files existed in the repo but were **never actually run against the live DB**, so code referencing their tables/columns compiled but 500'd in production (or, worse, failed silently). All known cases of this were found and resolved on 2026-07-09 — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for the full list, including two RPC functions (`create_shipment_atomic`, `sync_batches_atomic`) that had to be rewritten (not just applied) because they were written against a pre-UUID schema.
 
 Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. `lib/supabase/database.types.ts` **is generated and committed**, and all 4 client factories (`lib/supabase/{client,server,admin,middleware}.ts`) are typed with `createClient<Database>(...)` — a wrong column name now fails `npm run check`, not just production.
 
 - Regenerate with **`SUPABASE_PROJECT_ID=gnvcvvsnnesieugnzmrz npm run gen:types`** (OriginTrace project ref) after any schema change → rewrites `lib/supabase/database.types.ts`. ⚠ The OriginTrace DB has `farms`/`collection_batches`/`shipments`/`profiles`; it is **not** the "FarmWise" Supabase project (a different product) — `gen:types` refuses to write if the signature tables are absent.
-- ⚠ **Several tables/RPCs referenced in code do not exist on the live DB** — their migrations exist under `supabase/migrations/` but were never applied: `escrow_accounts`/`escrow_disputes`/`escrow_transactions`, `create_shipment_atomic` RPC (blocks `POST /api/shipments` entirely), `evidence_packages`, `org_kyc_records`, `shipment_templates`, `container_stuffing_records`, `sync_conflicts`/`sync_batches_atomic`. These call sites are cast `(supabase as any)` with an inline `TODO(schema-drift)` comment rather than guessed at — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for the full list and impact. Do not "fix" these by inventing column/table names; the fix is a migration decision, not a code change.
-
+- Applying a migration by hand (Supabase MCP `apply_migration` or the dashboard SQL editor)? **Review it against the live schema first** — several past migration files assumed a schema shape (BIGINT ids, columns like `gps_lat`/`estimated_bags`) that no longer matches reality. Check column types via `information_schema.columns`, and for anything with an RLS policy, verify the policy actually references `profiles.user_id = auth.uid()` (not `profiles.id`) — two migrations were found with that exact bug, which would have made the table silently unreadable despite RLS "working."
+- ⚠ **`virtual_accounts` is still genuinely missing** — no migration defines it at all (only an unverified `grey_virtual_accounts` JSONB column on `organizations`). SWIFT payment instructions are broken pending a product decision on the real shape. `app/api/farmers/[id]/files/route.ts`'s `compliance_files.file_name` NOT NULL constraint with no populating caller is also still open.
 - ⚠ **Two migration dirs exist.** `supabase/migrations/` is canonical; the top-level `migrations/` is legacy and `scripts/check-migrations.ts` fails CI on any SQL left there. Never add migrations to the root.
 - Filename convention: `YYYYMMDD_<description>.sql`; no duplicate date prefixes (the check script enforces both).
-- There is no known "pending" migration — the previously-listed `20260407_org_totp_2fa.sql` is present and ~40 migrations deep in history (long since applied).
 
 ---
 

@@ -95,17 +95,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // TODO(schema-drift): 'invite_code' column does not exist on 'organizations' in the
-    // live DB — this whole generate-and-persist-on-read flow has always failed at runtime.
-    // Needs a product decision: add the column via migration, or remove the feature.
-    const orgAny = organization as any;
-    if (!orgAny.invite_code) {
+    if (!organization.invite_code) {
       let newCode = '';
       for (let attempt = 0; attempt < 10; attempt++) {
         const candidate = String(Math.floor(100000 + Math.random() * 900000));
-        const { data: existing } = await (supabaseAdmin
+        const { data: existing } = await supabaseAdmin
           .from('organizations')
-          .select('id') as any)
+          .select('id')
           .eq('invite_code', candidate)
           .maybeSingle();
         if (!existing) {
@@ -114,11 +110,11 @@ export async function GET(request: NextRequest) {
         }
       }
       if (!newCode) newCode = String(Math.floor(100000 + Math.random() * 900000));
-      await (supabaseAdmin
+      await supabaseAdmin
         .from('organizations')
-        .update({ invite_code: newCode } as any))
+        .update({ invite_code: newCode })
         .eq('id', orgId);
-      orgAny.invite_code = newCode;
+      organization.invite_code = newCode;
     }
     
     return NextResponse.json({ 

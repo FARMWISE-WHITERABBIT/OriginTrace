@@ -35,10 +35,6 @@ export async function GET(request: NextRequest) {
     const tierBlock = await enforceTier(profile.org_id, 'boundary_conflicts');
     if (tierBlock) return tierBlock;
 
-    // TODO(schema-drift): 'resolution_notes'/'resolved_at'/'resolved_by' were previously selected here
-    // but no longer exist on 'farm_conflicts' in the live DB, and 'gps_accuracy'/'synced_at' plus the
-    // profiles!farms_created_by_fkey relation don't exist on 'farms' either — needs product decision
-    // (re-add migration for resolution notes tracking, or drop the PATCH handler's write to them below).
     const { data: conflicts, error } = await supabaseAdmin
       .from('farm_conflicts')
       .select(`

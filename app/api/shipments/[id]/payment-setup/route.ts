@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { createEscrow } from '@/lib/services/escrow';
 import { z } from 'zod';
 
 const paymentSetupSchema = z.object({
@@ -64,29 +65,23 @@ export async function POST(
     }));
 
     // Create escrow account if USDC method
-    // TODO(schema-drift): table 'escrow_accounts' does not exist on the live DB — the
-    // migration (supabase/migrations/20260403_escrow_foundations.sql) that creates it has not
-    // been applied. This is a money/escrow-affecting flow — leaving as-is rather than guessing
-    // at a fix; needs a product decision (apply the migration before this path can work).
     let escrowId: string | null = null;
     if (payment_method === 'escrow_usdc') {
-      const { data: escrow, error: escrowErr } = await (supabase as any)
-        .from('escrow_accounts')
-        .insert({
-          org_id: profile.org_id,
-          shipment_id: shipmentId,
-          amount_usd,
-          status: 'active',
-          milestone_config: milestoneConfig,
-        })
-        .select('id')
-        .single();
-
-      if (escrowErr) {
-        console.error('Escrow creation error:', escrowErr.message);
+      try {
+        const escrow = await createEscrow({
+          orgId: profile.org_id,
+          shipmentId,
+          currency: 'USD',
+          totalAmount: amount_usd,
+          milestones: milestoneConfig,
+          createdBy: user.id,
+          actorEmail: user.email,
+        });
+        escrowId = escrow.id;
+      } catch (escrowErr) {
+        console.error('Escrow creation error:', escrowErr instanceof Error ? escrowErr.message : escrowErr);
         return NextResponse.json({ error: 'Failed to create escrow account' }, { status: 500 });
       }
-      escrowId = escrow.id;
     }
 
     // Update shipment payment fields

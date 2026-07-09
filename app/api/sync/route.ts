@@ -5,6 +5,7 @@ import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
 import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 import { withErrorHandling, ApiError } from '@/lib/api/errors';
 import { requireRole, ROLES } from '@/lib/rbac';
+import type { Json } from '@/lib/supabase/database.types';
 
 const ALLOWED_SYNC_ROLES = ROLES.FIELD_ROLES;
 
@@ -179,13 +180,10 @@ export const PUT = withErrorHandling(async (request: NextRequest) => {
     }
   }
 
-  // TODO(schema-drift): 'sync_batches_atomic' RPC is defined in migration
-  // 20260311_session8_9.sql but does not exist in the live DB — this call has always
-  // failed at runtime; needs a product decision on whether to apply the migration.
-  const { data: results, error: syncError } = await (serviceClient as any).rpc('sync_batches_atomic', {
+  const { data: results, error: syncError } = await serviceClient.rpc('sync_batches_atomic', {
     p_org_id:  profile.org_id,
-    p_user_id: user.id,
-    p_batches: batches,
+    p_user_id: profile.id,
+    p_batches: batches as unknown as Json,
   });
 
   if (syncError) return ApiError.internal(syncError, 'sync/PUT/rpc');
@@ -212,11 +210,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
   const { conflict_id, resolution } = parsed.data;
   const serviceClient = createServiceClient();
 
-  // TODO(schema-drift): 'sync_conflicts' table is defined in migration
-  // 20260328_sync_conflicts.sql but does not exist in the live DB — this whole
-  // conflict-resolution flow has always failed at runtime; needs a product decision
-  // on whether to apply the migration.
-  const { data: conflict, error: fetchError } = await (serviceClient as any)
+  const { data: conflict, error: fetchError } = await serviceClient
     .from('sync_conflicts')
     .select('*')
     .eq('id', conflict_id)
@@ -225,7 +219,11 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
   if (fetchError || !conflict) return ApiError.notFound('Conflict');
 
   if (resolution === 'field') {
-    const fd = conflict.field_data;
+    const fd = conflict.field_data as any;
+    // TODO(schema-drift): 'collection_batches' has no gps_lat/gps_lng/updated_at columns —
+    // this update has always failed at runtime for the 'field' resolution path (accepting the
+    // synced field data over server data). Needs a product decision: collection_batches has no
+    // GPS columns at all, so gps_lat/gps_lng have no destination; drop them, or add columns.
     const { error: updateError } = await serviceClient
       .from('collection_batches')
       .update({
@@ -237,13 +235,13 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
         total_weight: fd.total_weight,
         bag_count: fd.bag_count,
         updated_at: new Date().toISOString()
-      })
+      } as any)
       .eq('id', conflict.batch_id);
-    
+
     if (updateError) return ApiError.internal(updateError, 'sync/PATCH/resolve-field');
   }
 
-  const { error: resolveError } = await (serviceClient as any)
+  const { error: resolveError } = await serviceClient
     .from('sync_conflicts')
     .update({
       status: 'resolved',

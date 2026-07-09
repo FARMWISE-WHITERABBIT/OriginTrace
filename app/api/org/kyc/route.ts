@@ -28,12 +28,8 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    // TODO(schema-drift): 'org_kyc_records' is defined in supabase/migrations/20260403_org_kyc.sql
-    // and matches this code exactly, but it's absent from the generated database.types.ts — the
-    // migration was likely never applied to the DB the types were generated from (or types are stale).
-    // Cast as `any` here until the migration is applied/reapplied and types regenerated.
-    const { data, error } = await (supabase
-      .from('org_kyc_records' as any) as any)
+    const { data, error } = await supabase
+      .from('org_kyc_records')
       .select('*')
       .eq('org_id', profile.org_id)
       .maybeSingle();
@@ -65,9 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert KYC record
-    // TODO(schema-drift): see note above — 'org_kyc_records' is missing from database.types.ts.
-    const { data: existing } = await (supabase
-      .from('org_kyc_records' as any) as any)
+    const { data: existing } = await supabase
+      .from('org_kyc_records')
       .select('id, kyc_status')
       .eq('org_id', profile.org_id)
       .maybeSingle();
@@ -82,8 +77,8 @@ export async function POST(request: NextRequest) {
 
     let result;
     if (existing) {
-      const { data, error } = await (supabase
-        .from('org_kyc_records' as any) as any)
+      const { data, error } = await supabase
+        .from('org_kyc_records')
         .update(payload)
         .eq('org_id', profile.org_id)
         .select()
@@ -91,8 +86,8 @@ export async function POST(request: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       result = data;
     } else {
-      const { data, error } = await (supabase
-        .from('org_kyc_records' as any) as any)
+      const { data, error } = await supabase
+        .from('org_kyc_records')
         .insert(payload)
         .select()
         .single();

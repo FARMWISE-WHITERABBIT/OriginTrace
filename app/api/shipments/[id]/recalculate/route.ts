@@ -36,13 +36,8 @@ export async function POST(
         id: shipment.id,
         destination_country: shipment.destination_country || null,
         target_regulations: shipment.target_regulations || [],
-        // TODO(schema-drift): columns 'doc_status' / 'storage_controls' do not exist on the
-        // live 'shipments' table — the migration
-        // (supabase/migrations/20260520_add_shipment_readiness_json.sql) that adds them has
-        // not been applied, so these are always empty at runtime today. Needs a product
-        // decision: apply the migration to make doc/storage-based scoring actually work.
-        doc_status: (shipment as unknown as Record<string, unknown>).doc_status || {},
-        storage_controls: (shipment as unknown as Record<string, unknown>).storage_controls || {},
+        doc_status: shipment.doc_status || {},
+        storage_controls: shipment.storage_controls || {},
         estimated_ship_date: shipment.estimated_ship_date || null,
       },
       items: [],

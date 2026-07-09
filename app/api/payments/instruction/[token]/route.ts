@@ -74,16 +74,14 @@ export async function GET(
     // Fetch escrow milestones if USDC
     let milestones: any[] = [];
     if (shipment.payment_method === 'escrow_usdc') {
-      // TODO(schema-drift): 'escrow_accounts' does not exist on the live DB (migration
-      // supabase/migrations/20260403_escrow_foundations.sql never applied).
-      const { data: escrow } = await (supabase as any)
+      const { data: escrow } = await supabase
         .from('escrow_accounts')
-        .select('amount_usd, milestone_config, status')
+        .select('milestone_config, status')
         .eq('shipment_id', shipment.id)
         .in('status', ['active', 'disputed'])
         .limit(1)
         .maybeSingle();
-      milestones = escrow?.milestone_config ?? [];
+      milestones = (escrow?.milestone_config as any[]) ?? [];
     }
 
     return NextResponse.json({

@@ -63,11 +63,6 @@ export async function POST(
     const { note } = parsed.data;
 
     // ── Fetch shipment with all gate-relevant fields ───────────────────────────
-    // TODO(schema-drift): column 'doc_status' does not exist on 'shipments' — the migration
-    // (supabase/migrations/20260520_add_shipment_readiness_json.sql) that adds it has not been
-    // applied. Selecting it here would fail the whole query, so it's omitted and defaulted to
-    // an empty object below. This means the EUDR doc-type gate check (phyto/coo) at Stage 3
-    // will always block until that migration is applied — needs a product decision.
     const { data: shipment, error: fetchError } = await supabase
       .from('shipments')
       .select(`
@@ -82,7 +77,7 @@ export async function POST(
         target_regulations,
         readiness_score, readiness_decision,
         buyer_company, buyer_contact,
-        shipment_code
+        shipment_code, doc_status
       `)
       .eq('id', shipmentId)
       .eq('org_id', profile.org_id)
@@ -103,7 +98,7 @@ export async function POST(
     }
 
     // ── Validate gate conditions ───────────────────────────────────────────────
-    const shipmentForGate = { ...shipment, doc_status: {} } as unknown as ShipmentForGate;
+    const shipmentForGate = { ...shipment, doc_status: shipment.doc_status ?? {} } as unknown as ShipmentForGate;
     const stageGate = validateStageGate(shipmentForGate, targetStage);
     const readinessGate = validateReadinessHardGate(shipmentForGate, targetStage);
 

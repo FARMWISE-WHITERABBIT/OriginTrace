@@ -55,12 +55,8 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // TODO(schema-drift): table 'shipment_templates' does not exist on the live DB — the
-    // migration (supabase/migrations/20260403_shipment_templates.sql) that creates it has not
-    // been applied. This query will fail at runtime until that migration is applied. Needs a
-    // product decision: apply the migration, or remove this feature until it is.
     const { data, error } = await supabase
-      .from('shipment_templates' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_shipment_templates.sql
+      .from('shipment_templates')
       .select('*')
       .eq('id', params.id)
       .eq('org_id', profile.org_id)
@@ -98,10 +94,8 @@ export async function PATCH(
       );
     }
 
-    // TODO(schema-drift): table 'shipment_templates' does not exist on the live DB — see note
-    // in GET above.
     const { data, error } = await supabase
-      .from('shipment_templates' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_shipment_templates.sql
+      .from('shipment_templates')
       .update({ ...parsed.data, updated_at: new Date().toISOString() })
       .eq('id', params.id)
       .eq('org_id', profile.org_id)
@@ -132,10 +126,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // TODO(schema-drift): table 'shipment_templates' does not exist on the live DB — see note
-    // in GET above.
     const { error } = await supabase
-      .from('shipment_templates' as any) // TODO(schema-drift): table missing on live DB, see supabase/migrations/20260403_shipment_templates.sql
+      .from('shipment_templates')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', params.id)
       .eq('org_id', profile.org_id);

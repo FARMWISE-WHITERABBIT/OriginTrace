@@ -846,6 +846,79 @@ export type Database = {
         }
         Relationships: []
       }
+      container_stuffing_records: {
+        Row: {
+          bag_count: number
+          batch_id: string | null
+          created_at: string | null
+          gross_weight_kg: number
+          id: string
+          item_description: string
+          lot_number: string | null
+          net_weight_kg: number | null
+          org_id: string
+          recorded_by: string | null
+          remarks: string | null
+          shipment_id: string
+          tare_weight_kg: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          bag_count?: number
+          batch_id?: string | null
+          created_at?: string | null
+          gross_weight_kg?: number
+          id?: string
+          item_description: string
+          lot_number?: string | null
+          net_weight_kg?: number | null
+          org_id: string
+          recorded_by?: string | null
+          remarks?: string | null
+          shipment_id: string
+          tare_weight_kg?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          bag_count?: number
+          batch_id?: string | null
+          created_at?: string | null
+          gross_weight_kg?: number
+          id?: string
+          item_description?: string
+          lot_number?: string | null
+          net_weight_kg?: number | null
+          org_id?: string
+          recorded_by?: string | null
+          remarks?: string | null
+          shipment_id?: string
+          tare_weight_kg?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_stuffing_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "collection_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_stuffing_records_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_stuffing_records_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_shipments: {
         Row: {
           contract_id: string
@@ -1372,6 +1445,193 @@ export type Database = {
           },
         ]
       }
+      escrow_accounts: {
+        Row: {
+          buyer_org_id: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          held_amount: number
+          id: string
+          milestone_config: Json | null
+          org_id: string
+          released_amount: number
+          shipment_id: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_org_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          held_amount?: number
+          id?: string
+          milestone_config?: Json | null
+          org_id: string
+          released_amount?: number
+          shipment_id?: string | null
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_org_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          held_amount?: number
+          id?: string
+          milestone_config?: Json | null
+          org_id?: string
+          released_amount?: number
+          shipment_id?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_accounts_buyer_org_id_fkey"
+            columns: ["buyer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_accounts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_accounts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_accounts_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escrow_disputes: {
+        Row: {
+          buyer_confirmed: boolean
+          created_at: string
+          escrow_id: string
+          exporter_confirmed: boolean
+          id: string
+          raised_by: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_confirmed?: boolean
+          created_at?: string
+          escrow_id: string
+          exporter_confirmed?: boolean
+          id?: string
+          raised_by: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_confirmed?: boolean
+          created_at?: string
+          escrow_id?: string
+          exporter_confirmed?: boolean
+          id?: string
+          raised_by?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_disputes_escrow_id_fkey"
+            columns: ["escrow_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escrow_transactions: {
+        Row: {
+          actor_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          escrow_id: string
+          id: string
+          milestone_id: string | null
+          payment_id: string | null
+          reason: string | null
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          amount: number
+          created_at?: string
+          currency: string
+          escrow_id: string
+          id?: string
+          milestone_id?: string | null
+          payment_id?: string | null
+          reason?: string | null
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          escrow_id?: string
+          id?: string
+          milestone_id?: string | null
+          payment_id?: string | null
+          reason?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_transactions_escrow_id_fkey"
+            columns: ["escrow_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_transactions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_registrations: {
         Row: {
           checked_in: boolean
@@ -1492,6 +1752,54 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          org_id: string
+          shipment_id: string
+          token: string
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          org_id: string
+          shipment_id: string
+          token: string
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          org_id?: string
+          shipment_id?: string
+          token?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_packages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_packages_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_certifications: {
         Row: {
           certificate_number: string | null
@@ -1558,6 +1866,9 @@ export type Database = {
           org_id: string
           overlap_ratio: number | null
           resolution_action: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           severity: string | null
           status: string
           updated_at: string
@@ -1570,6 +1881,9 @@ export type Database = {
           org_id: string
           overlap_ratio?: number | null
           resolution_action?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           status?: string
           updated_at?: string
@@ -1582,6 +1896,9 @@ export type Database = {
           org_id?: string
           overlap_ratio?: number | null
           resolution_action?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           status?: string
           updated_at?: string
@@ -2765,8 +3082,92 @@ export type Database = {
           },
         ]
       }
+      org_kyc_records: {
+        Row: {
+          account_verified_at: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_code: string | null
+          bank_name: string | null
+          cac_registration_number: string | null
+          created_at: string
+          director_id_number: string | null
+          director_id_type: string | null
+          director_id_url: string | null
+          director_name: string | null
+          id: string
+          kyc_notes: string | null
+          kyc_status: string
+          org_id: string
+          paystack_recipient_code: string | null
+          rc_number: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          submitted_at: string | null
+          tin: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_verified_at?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          cac_registration_number?: string | null
+          created_at?: string
+          director_id_number?: string | null
+          director_id_type?: string | null
+          director_id_url?: string | null
+          director_name?: string | null
+          id?: string
+          kyc_notes?: string | null
+          kyc_status?: string
+          org_id: string
+          paystack_recipient_code?: string | null
+          rc_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string | null
+          tin?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_verified_at?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          cac_registration_number?: string | null
+          created_at?: string
+          director_id_number?: string | null
+          director_id_type?: string | null
+          director_id_url?: string | null
+          director_name?: string | null
+          id?: string
+          kyc_notes?: string | null
+          kyc_status?: string
+          org_id?: string
+          paystack_recipient_code?: string | null
+          rc_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string | null
+          tin?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_kyc_records_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
+          active_lgas: string[] | null
           blockradar_wallet_id: string | null
           brand_colors: Json | null
           commodities: string[] | null
@@ -2774,6 +3175,7 @@ export type Database = {
           grace_period_ends_at: string | null
           grey_virtual_accounts: Json | null
           id: string
+          invite_code: string | null
           logo_url: string | null
           name: string
           settings: Json | null
@@ -2789,6 +3191,7 @@ export type Database = {
           usdc_deposit_address: string | null
         }
         Insert: {
+          active_lgas?: string[] | null
           blockradar_wallet_id?: string | null
           brand_colors?: Json | null
           commodities?: string[] | null
@@ -2796,6 +3199,7 @@ export type Database = {
           grace_period_ends_at?: string | null
           grey_virtual_accounts?: Json | null
           id?: string
+          invite_code?: string | null
           logo_url?: string | null
           name: string
           settings?: Json | null
@@ -2811,6 +3215,7 @@ export type Database = {
           usdc_deposit_address?: string | null
         }
         Update: {
+          active_lgas?: string[] | null
           blockradar_wallet_id?: string | null
           brand_colors?: Json | null
           commodities?: string[] | null
@@ -2818,6 +3223,7 @@ export type Database = {
           grace_period_ends_at?: string | null
           grey_virtual_accounts?: Json | null
           id?: string
+          invite_code?: string | null
           logo_url?: string | null
           name?: string
           settings?: Json | null
@@ -3605,6 +4011,116 @@ export type Database = {
           },
         ]
       }
+      shipment_templates: {
+        Row: {
+          buyer_company: string | null
+          buyer_contact: string | null
+          certification_costs_ngn: number | null
+          clearing_agent_contact: string | null
+          clearing_agent_name: string | null
+          commodity: string | null
+          container_type: string | null
+          contract_price_per_mt: number | null
+          created_at: string | null
+          created_by: string | null
+          customs_fees_ngn: number | null
+          description: string | null
+          destination_country: string | null
+          destination_port: string | null
+          freight_cost_usd: number | null
+          freight_forwarder_contact: string | null
+          freight_forwarder_name: string | null
+          freight_insurance_usd: number | null
+          id: string
+          inspection_fees_ngn: number | null
+          is_active: boolean
+          name: string
+          org_id: string
+          phyto_lab_costs_ngn: number | null
+          port_handling_charges_ngn: number | null
+          port_of_discharge: string | null
+          port_of_loading: string | null
+          shipping_line: string | null
+          target_regulations: string[] | null
+          updated_at: string | null
+          usd_ngn_rate: number | null
+        }
+        Insert: {
+          buyer_company?: string | null
+          buyer_contact?: string | null
+          certification_costs_ngn?: number | null
+          clearing_agent_contact?: string | null
+          clearing_agent_name?: string | null
+          commodity?: string | null
+          container_type?: string | null
+          contract_price_per_mt?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          customs_fees_ngn?: number | null
+          description?: string | null
+          destination_country?: string | null
+          destination_port?: string | null
+          freight_cost_usd?: number | null
+          freight_forwarder_contact?: string | null
+          freight_forwarder_name?: string | null
+          freight_insurance_usd?: number | null
+          id?: string
+          inspection_fees_ngn?: number | null
+          is_active?: boolean
+          name: string
+          org_id: string
+          phyto_lab_costs_ngn?: number | null
+          port_handling_charges_ngn?: number | null
+          port_of_discharge?: string | null
+          port_of_loading?: string | null
+          shipping_line?: string | null
+          target_regulations?: string[] | null
+          updated_at?: string | null
+          usd_ngn_rate?: number | null
+        }
+        Update: {
+          buyer_company?: string | null
+          buyer_contact?: string | null
+          certification_costs_ngn?: number | null
+          clearing_agent_contact?: string | null
+          clearing_agent_name?: string | null
+          commodity?: string | null
+          container_type?: string | null
+          contract_price_per_mt?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          customs_fees_ngn?: number | null
+          description?: string | null
+          destination_country?: string | null
+          destination_port?: string | null
+          freight_cost_usd?: number | null
+          freight_forwarder_contact?: string | null
+          freight_forwarder_name?: string | null
+          freight_insurance_usd?: number | null
+          id?: string
+          inspection_fees_ngn?: number | null
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          phyto_lab_costs_ngn?: number | null
+          port_handling_charges_ngn?: number | null
+          port_of_discharge?: string | null
+          port_of_loading?: string | null
+          shipping_line?: string | null
+          target_regulations?: string[] | null
+          updated_at?: string | null
+          usd_ngn_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipments: {
         Row: {
           actual_arrival_date: string | null
@@ -3629,6 +4145,7 @@ export type Database = {
           customs_fees_ngn: number | null
           destination_country: string | null
           destination_port: string | null
+          doc_status: Json | null
           estimated_ship_date: string | null
           eta: string | null
           etd: string | null
@@ -3676,6 +4193,7 @@ export type Database = {
           stage_data: Json | null
           stage_history: Json | null
           status: string | null
+          storage_controls: Json | null
           target_regulations: string[] | null
           total_items: number | null
           total_shipment_value_usd: number | null
@@ -3708,6 +4226,7 @@ export type Database = {
           customs_fees_ngn?: number | null
           destination_country?: string | null
           destination_port?: string | null
+          doc_status?: Json | null
           estimated_ship_date?: string | null
           eta?: string | null
           etd?: string | null
@@ -3755,6 +4274,7 @@ export type Database = {
           stage_data?: Json | null
           stage_history?: Json | null
           status?: string | null
+          storage_controls?: Json | null
           target_regulations?: string[] | null
           total_items?: number | null
           total_shipment_value_usd?: number | null
@@ -3787,6 +4307,7 @@ export type Database = {
           customs_fees_ngn?: number | null
           destination_country?: string | null
           destination_port?: string | null
+          doc_status?: Json | null
           estimated_ship_date?: string | null
           eta?: string | null
           etd?: string | null
@@ -3834,6 +4355,7 @@ export type Database = {
           stage_data?: Json | null
           stage_history?: Json | null
           status?: string | null
+          storage_controls?: Json | null
           target_regulations?: string[] | null
           total_items?: number | null
           total_shipment_value_usd?: number | null
@@ -4125,6 +4647,77 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_conflicts: {
+        Row: {
+          agent_id: string
+          batch_id: string
+          created_at: string
+          field_data: Json
+          id: string
+          org_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          server_data: Json
+          status: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id: string
+          created_at?: string
+          field_data: Json
+          id?: string
+          org_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          server_data: Json
+          status?: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string
+          created_at?: string
+          field_data?: Json
+          id?: string
+          org_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          server_data?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "collection_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_conflicts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4830,6 +5423,26 @@ export type Database = {
             }
             Returns: string
           }
+      create_shipment_atomic: {
+        Args: {
+          p_buyer_company?: string
+          p_buyer_contact?: string
+          p_commodity: string
+          p_compliance_profile_id?: string
+          p_contract_id?: string
+          p_created_by: string
+          p_destination_country: string
+          p_destination_port?: string
+          p_document_ids?: string[]
+          p_estimated_ship_date?: string
+          p_notes?: string
+          p_org_id: string
+          p_shipment_code: string
+          p_target_regulations?: string[]
+        }
+        Returns: Json
+      }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -4961,6 +5574,7 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_org_tier: { Args: { p_org_id: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
       gettransactionid: { Args: never; Returns: unknown }
       increment_rate_limit: {
@@ -5593,6 +6207,10 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      sync_batches_atomic: {
+        Args: { p_batches: Json; p_org_id: string; p_user_id: string }
+        Returns: Json
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
