@@ -100,6 +100,19 @@ Money page: /compliance/uae. Persona: UAE trader/importer.
 - Ginger CN-0910 30% check-rate origin scope (Nigerian ginger appears NOT listed — inferred from absence).
 - Conflicting CBI figures for Germany's 2024 ginger imports (587 t vs 1,280 t).
 
-## 6. Suggested cadence
+## 6. Geographic reality check (GSC country data, July 2026)
+
+What the country breakdown shows, and how it re-weights the plan:
+
+- **Most impressions are off-ICP bycatch.** The US alone is 25,701 impressions / 8 clicks (0.03% CTR); Brazil 1,726 / 0; LatAm (AR, MX, CO, PE, EC, CL) another ~1,500 / 0. This is the GACC guide ranking globally for generic "GACC registration" queries — US/Brazilian food exporters to China, not African-commodity ICP. **Consequence: global CTR is a misleading KPI.** Judge CTR *per target geo*, not blended; the "0.24% CTR problem" is substantially an off-market-impressions artifact.
+- **Target geos convert well but barely see us.** Nigeria: 21 clicks / 275 impressions (**7.6% CTR** — best in the table) but tiny volume: Google rarely shows us for Nigerian queries because the Nigeria-intent content (NXP/NEPC, sesame/ginger export process) doesn't exist yet. Clusters A/B/C attack exactly this — the constraint is impressions, not CTR.
+- **EU importer audience is present and under-converted:** UK 10/729, NL 7/774, DE 3/720, ES 3/330, IT 2/378, FR 1/402. Cluster D content + title/description work is the lever; NL/DE/UK ports match the sesame/cocoa entry-point story.
+- **UAE is nearly invisible** (2/137) — Cluster E builds that audience from scratch; expect to create impressions, not harvest them.
+- **Origin-expansion signal:** Ghana 3/61, Côte d'Ivoire 2/30, Kenya 3/222, Ethiopia 2/74, Tanzania 2/63 — small but present. C2 (Ghana low-risk benchmarking) is the natural first pull for Ghana; an East-Africa variant (Kenya/Ethiopia sesame + coffee-EUDR) is a later wave if these grow.
+- **India (16/740) is the #2 clicker** — Indian sesame/spice exporters hitting the same compliance content. Not ICP; treat as bycatch, don't invest, but it validates that commodity-compliance queries travel.
+
+**Measurement change:** report the funnel as {cluster × target-geo} — e.g. Cluster A success = Nigeria impressions growth + Nigeria CTR ≥ 5%; Cluster D success = UK/NL/DE clicks; Cluster E = UAE impressions from ~zero. Demo-request attribution stays the north star.
+
+## 7. Suggested cadence
 
 2 posts/week sustains this roadmap: **Wave 1 (weeks 1–4): all P0** — A1, A2, B1, C1, C2, D1, D2, E1, E2 + the §2 content-debt fixes. **Wave 2 (weeks 5–8): P1.** **Wave 3: P2 + refresh cycle** (the C1 tracker updates on every EUDR news event; §2 table becomes a standing quarterly review).
