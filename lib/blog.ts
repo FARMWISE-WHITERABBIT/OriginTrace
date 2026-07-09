@@ -4,6 +4,8 @@ export interface BlogPost {
   description: string;
   date: string;
   dateISO: string;
+  /** Set when a post is substantially updated — feeds Article schema dateModified and the "Updated" label. */
+  dateModifiedISO?: string;
   category: string;
   readingTime: string;
   author: string;
@@ -25,6 +27,7 @@ export type BlogSection =
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'image'; src: string; alt: string; caption?: string }
   | { type: 'cta'; heading: string; text: string; buttonText: string; href: string }
+  | { type: 'faq'; title?: string; items: { q: string; a: string }[] }
   | { type: 'references'; items: { label: string; url: string; publisher?: string }[] };
 
 import { posts } from '@/content/blog/index';

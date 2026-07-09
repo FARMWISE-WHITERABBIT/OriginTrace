@@ -203,6 +203,26 @@ function RenderSection({ section }: { section: BlogSection }) {
         </div>
       );
 
+    case 'faq':
+      return (
+        <div className="my-8">
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-5">
+            {section.title || 'Frequently Asked Questions'}
+          </h2>
+          <div className="space-y-4">
+            {section.items.map((item, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-5"
+              >
+                <p className="font-semibold text-slate-900 dark:text-white mb-2">{item.q}</p>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
     case 'references':
       return (
         <div className="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
@@ -249,7 +269,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     headline: post.title,
     description: post.description,
     datePublished: post.dateISO,
-    dateModified: post.dateISO,
+    dateModified: post.dateModifiedISO || post.dateISO,
     author: { '@type': 'Organization', name: post.author },
     publisher: {
       '@type': 'Organization',
@@ -260,9 +280,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     keywords: post.tags.join(', '),
   };
 
+  const faqItems = post.content.flatMap(s => (s.type === 'faq' ? s.items : []));
+  const faqSchema = faqItems.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map(item => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
       <MarketingNav />
 
       <main className="pt-24 pb-20 md:pb-28">
