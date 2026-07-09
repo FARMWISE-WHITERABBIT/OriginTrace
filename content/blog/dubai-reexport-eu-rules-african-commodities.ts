@@ -166,8 +166,8 @@ export const post: BlogPost = {
     {
       type: 'cta',
       heading: 'Stop Selling EU-Grade Goods at Re-Export Prices',
-      text: 'If your African supply arrives with farm records, lot traceability, and a lab trail already attached, every market is open to you. OriginTrace builds that data pack from the farm up — see it live on your own commodity flow.',
-      buttonText: 'Book a Demo',
+      text: 'If your African supply arrives with farm records, lot traceability, and a lab trail already attached, every market is open to you. Onboard your origin suppliers onto OriginTrace and that data pack builds itself, shipment after shipment — maintained at origin, visible in Dubai.',
+      buttonText: 'Onboard Your Origin Suppliers',
       href: '/demo',
     },
     {

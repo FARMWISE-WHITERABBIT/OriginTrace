@@ -33,8 +33,8 @@ Write like a knowledgeable trade-compliance friend explaining something over cof
   - One at the end.
 - CTA copy by persona (vary wording, keep the promise):
   - **Exporters**: "See how ready your next shipment is" / "Get your farms mapped and your documents in one place" → `/demo`
-  - **EU importers**: "Verify a supplier before you commit — request a supplier risk snapshot" → `/demo`
-  - **UAE importers/re-exporters**: "One data pack for Dubai, the GCC, and the EU — see it live" → `/demo`
+  - **EU importers**: two-step funnel — mid-article: "Verify a supplier before you commit — request a supplier risk snapshot"; end: **the onboarding play** — "Bring your suppliers onto OriginTrace" (importers onboard their exporters and make on-platform documentation part of the order: farm records, lab tests, compliance docs, shipment tracking, visible from the buyer workspace). Verification is the hook; onboarding is the product motion.
+  - **UAE importers/re-exporters**: mid: "One data pack for Dubai, the GCC, and the EU — see it live"; end: "Onboard your origin suppliers" (same onboarding play, re-export framing)
 - CTA text sells the outcome, never the feature. "Stop losing containers at Rotterdam" beats "Explore our compliance module."
 - **Link the money page early**: a natural in-text link to the relevant `/compliance/*` page within the first third of the post, plus 1–2 links to related posts. Not just the bottom CTA.
 

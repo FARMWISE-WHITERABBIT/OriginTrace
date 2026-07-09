@@ -161,8 +161,8 @@ export const post: BlogPost = {
     {
       type: 'cta',
       heading: 'Stop Paying Storage on Preventable Holds',
-      text: 'The importers who clear Jebel Ali fastest get a complete supplier data pack before the shipment moves — and reuse it for Dubai, the GCC, and the EU. See what that looks like with your own supply chain, live.',
-      buttonText: 'See It Live',
+      text: 'The importers who clear Jebel Ali fastest put their suppliers on OriginTrace and make the data pack a condition of the order — origin records, CoAs, labels, and shipment tracking, complete before the container moves, reusable for Dubai, the GCC, and the EU.',
+      buttonText: 'Get Your Suppliers On Board',
       href: '/demo',
     },
     {

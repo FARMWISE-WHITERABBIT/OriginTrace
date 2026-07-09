@@ -146,6 +146,18 @@ export const post: BlogPost = {
       text: 'One more tell: a credible supplier expects these questions and answers them quickly, because their system generates this data as a by-product of how they already buy cocoa. Defensiveness — "our data is confidential", "no buyer has ever asked for this" — is information too. Plenty of buyers are asking now, and every serious one will be by December.',
     },
     {
+      type: 'h2',
+      text: 'Make Verification Permanent: Put Your Suppliers on the Platform',
+    },
+    {
+      type: 'paragraph',
+      text: 'Everything in this guide is a point-in-time check. It tells you a supplier was credible the week you looked. The stronger position is standing visibility: importers on OriginTrace onboard their exporters onto the platform, and make on-platform documentation part of the order itself.',
+    },
+    {
+      type: 'paragraph',
+      text: 'What that changes in practice: the exporter maintains farm polygons, batch-to-plot mapping, lab results, and compliance documents inside OriginTrace as they operate — and you see the same records from your buyer workspace, shipment by shipment. You\'re no longer requesting a data pack and hoping it\'s honest; you\'re watching it accumulate. Verification stops being an audit and becomes the default state of the relationship.',
+    },
+    {
       type: 'faq',
       items: [
         {
@@ -173,8 +185,8 @@ export const post: BlogPost = {
     {
       type: 'cta',
       heading: 'Six Months Is Enough — If You Start Now',
-      text: 'Get a supplier risk snapshot before your next contract: verified plot geometry, satellite cross-checks against deforestation data, and batch-level traceability evidence your compliance team can put straight into a DDS.',
-      buttonText: 'Book a Demo',
+      text: 'Verification is step one. Step two is bringing your suppliers onto OriginTrace, so every future lot arrives with plot geometry, batch traceability, and DDS-ready evidence attached by default — maintained by the exporter, visible to you. Book a demo and see the importer workspace with a real supply chain in it.',
+      buttonText: 'Bring Your Suppliers Onto OriginTrace',
       href: '/demo',
     },
     {

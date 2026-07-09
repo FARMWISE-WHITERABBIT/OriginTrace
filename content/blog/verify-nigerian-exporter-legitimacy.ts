@@ -188,6 +188,18 @@ export const post: BlogPost = {
       text: 'Blind telegraphic transfers — especially full prepayment — are how nearly every commodity scam ends. An exporter who won\'t work with an LC or inspection-linked terms on a first deal isn\'t offering you a deal at all. The best Nigerian exporters have worked this out: they volunteer certificate numbers, inspection access, and traceability records upfront, because being easy to verify wins contracts.',
     },
     {
+      type: 'h2',
+      text: 'Beyond the First Deal: Put Your Suppliers on the Platform',
+    },
+    {
+      type: 'paragraph',
+      text: 'The checklist above gets you safely through deal one. But re-running it manually for every supplier, every season, doesn\'t scale — and it still only proves the past. The importers who solve this permanently onboard their exporters onto OriginTrace and make the platform part of the trading relationship.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Your supplier documents their supply chain where you can see it: farmer registry, collection batches, lab tests, compliance certificates, and live shipment tracking. Instead of chasing PDFs before each contract, you open your buyer workspace and look. And it cuts both ways — for a legitimate exporter, being permanently easy to verify is a selling point that wins repeat orders.',
+    },
+    {
       type: 'faq',
       items: [
         {
@@ -215,8 +227,8 @@ export const post: BlogPost = {
     {
       type: 'cta',
       heading: 'Commit With Evidence, Not Hope',
-      text: 'Documents prove a company exists — traceability proves the goods do. Request a supplier risk snapshot and see what a verifiable, farm-to-shipment supply chain looks like before you sign.',
-      buttonText: 'Get a Supplier Risk Snapshot',
+      text: 'Documents prove a company exists — traceability proves the goods do. The buyers who stop worrying about this altogether onboard their exporters onto OriginTrace and make on-platform documentation part of the order: farm records, lab tests, compliance documents, and shipment tracking, all in one place you can see.',
+      buttonText: 'Onboard Your First Supplier',
       href: '/demo',
     },
     {

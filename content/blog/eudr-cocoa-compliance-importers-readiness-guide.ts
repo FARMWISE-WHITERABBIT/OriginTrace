@@ -197,9 +197,9 @@ export const post: BlogPost = {
     },
     {
       type: 'cta',
-      heading: 'Give Your Buyers Full Traceability Access',
-      text: 'OriginTrace includes a Buyer Portal that gives your EU customers direct access to supply chain data, GPS evidence, and DDS documentation — exactly what their compliance teams need.',
-      buttonText: 'See the Buyer Portal',
+      heading: 'Make Your Cocoa Suppliers Show, Not Tell',
+      text: 'Onboard your West African suppliers onto OriginTrace and get direct access to their supply chain: farm polygons, GPS evidence, batch records, and DDS-ready documentation, maintained at origin and visible from your buyer workspace before every shipment.',
+      buttonText: 'Bring Your Suppliers Onto OriginTrace',
       href: '/demo',
     },
   ],
