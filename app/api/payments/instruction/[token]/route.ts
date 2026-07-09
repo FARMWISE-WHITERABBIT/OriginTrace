@@ -55,12 +55,16 @@ export async function GET(
       // Get USDC deposit address
       const { data: orgData } = await supabase
         .from('organizations')
-        .select('wallet_deposit_address')
+        .select('usdc_deposit_address')
         .eq('id', shipment.org_id)
         .single();
-      walletAddress = orgData?.wallet_deposit_address ?? null;
+      walletAddress = orgData?.usdc_deposit_address ?? null;
     } else if (shipment.payment_method === 'swift_virtual') {
-      const { data: accounts } = await supabase
+      // TODO(schema-drift): 'virtual_accounts' table does not exist on the live DB. The only
+      // related schema found is a 'grey_virtual_accounts' JSONB column on 'organizations', but
+      // its shape isn't verifiable from generated types — needs a product decision before this
+      // can be mapped for real rather than cast through.
+      const { data: accounts } = await (supabase as any)
         .from('virtual_accounts')
         .select('currency, account_number, routing_number, bank_name, iban, swift')
         .eq('org_id', shipment.org_id);
@@ -70,7 +74,9 @@ export async function GET(
     // Fetch escrow milestones if USDC
     let milestones: any[] = [];
     if (shipment.payment_method === 'escrow_usdc') {
-      const { data: escrow } = await supabase
+      // TODO(schema-drift): 'escrow_accounts' does not exist on the live DB (migration
+      // supabase/migrations/20260403_escrow_foundations.sql never applied).
+      const { data: escrow } = await (supabase as any)
         .from('escrow_accounts')
         .select('amount_usd, milestone_config, status')
         .eq('shipment_id', shipment.id)

@@ -27,6 +27,7 @@ import {
   type ShipmentForGate,
 } from '@/lib/services/shipment-stages';
 import { getEscrowStatus } from '@/lib/services/escrow';
+import type { Json } from '@/lib/supabase/database.types';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
 
@@ -62,13 +63,17 @@ export async function POST(
     const { note } = parsed.data;
 
     // ── Fetch shipment with all gate-relevant fields ───────────────────────────
+    // TODO(schema-drift): column 'doc_status' does not exist on 'shipments' — the migration
+    // (supabase/migrations/20260520_add_shipment_readiness_json.sql) that adds it has not been
+    // applied. Selecting it here would fail the whole query, so it's omitted and defaulted to
+    // an empty object below. This means the EUDR doc-type gate check (phyto/coo) at Stage 3
+    // will always block until that migration is applied — needs a product decision.
     const { data: shipment, error: fetchError } = await supabase
       .from('shipments')
       .select(`
         id, current_stage, stage_data, stage_history,
         compliance_profile_id, purchase_order_number,
         inspection_body, inspection_result,
-        doc_status,
         clearing_agent_name, customs_declaration_number, exit_certificate_number,
         freight_forwarder_name, vessel_name, etd, eta,
         container_number, container_seal_number,
@@ -98,8 +103,9 @@ export async function POST(
     }
 
     // ── Validate gate conditions ───────────────────────────────────────────────
-    const stageGate = validateStageGate(shipment as ShipmentForGate, targetStage);
-    const readinessGate = validateReadinessHardGate(shipment as ShipmentForGate, targetStage);
+    const shipmentForGate = { ...shipment, doc_status: {} } as unknown as ShipmentForGate;
+    const stageGate = validateStageGate(shipmentForGate, targetStage);
+    const readinessGate = validateReadinessHardGate(shipmentForGate, targetStage);
 
     // Check for escrow dispute hold
     const escrowStatus = await getEscrowStatus(shipmentId);
@@ -143,8 +149,8 @@ export async function POST(
       .from('shipments')
       .update({
         current_stage: targetStage,
-        stage_data: updatedStageData,
-        stage_history: updatedStageHistory,
+        stage_data: updatedStageData as unknown as Json,
+        stage_history: updatedStageHistory as unknown as Json,
         status: newLegacyStatus,
         updated_at: new Date().toISOString(),
       })

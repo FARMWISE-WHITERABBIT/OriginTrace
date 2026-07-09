@@ -22,13 +22,13 @@ const settingsPatchSchema = z.object({
 
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
 
-async function getImpersonatedOrgId(): Promise<number | null> {
+async function getImpersonatedOrgId(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
     if (!impersonationCookie) return null;
     // Cookie is HMAC-signed — must use verifyCookiePayload, not JSON.parse
-    const data = await verifyCookiePayload<{ org_id: number; expires_at: string }>(impersonationCookie.value);
+    const data = await verifyCookiePayload<{ org_id: string; expires_at: string }>(impersonationCookie.value);
     if (data && new Date(data.expires_at) > new Date()) {
       return data.org_id;
     }
@@ -95,13 +95,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    if (!organization.invite_code) {
+    // TODO(schema-drift): 'invite_code' column does not exist on 'organizations' in the
+    // live DB — this whole generate-and-persist-on-read flow has always failed at runtime.
+    // Needs a product decision: add the column via migration, or remove the feature.
+    const orgAny = organization as any;
+    if (!orgAny.invite_code) {
       let newCode = '';
       for (let attempt = 0; attempt < 10; attempt++) {
         const candidate = String(Math.floor(100000 + Math.random() * 900000));
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await (supabaseAdmin
           .from('organizations')
-          .select('id')
+          .select('id') as any)
           .eq('invite_code', candidate)
           .maybeSingle();
         if (!existing) {
@@ -110,11 +114,11 @@ export async function GET(request: NextRequest) {
         }
       }
       if (!newCode) newCode = String(Math.floor(100000 + Math.random() * 900000));
-      await supabaseAdmin
+      await (supabaseAdmin
         .from('organizations')
-        .update({ invite_code: newCode })
+        .update({ invite_code: newCode } as any))
         .eq('id', orgId);
-      organization.invite_code = newCode;
+      orgAny.invite_code = newCode;
     }
     
     return NextResponse.json({ 
@@ -198,7 +202,7 @@ export async function PATCH(request: NextRequest) {
         .eq('id', orgId)
         .single();
       
-      updates.settings = { ...(currentOrg?.settings || {}), ...settings };
+      updates.settings = { ...((currentOrg?.settings as Record<string, unknown>) || {}), ...settings };
     }
     
     if (active_lgas !== undefined) {

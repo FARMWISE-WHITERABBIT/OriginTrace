@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
 import { shipmentOutcomeSchema, parseBody } from '@/lib/api/validation';
+import type { TablesInsert } from '@/lib/supabase/database.types';
 
 export async function GET(
   request: NextRequest,
@@ -113,7 +114,7 @@ export async function POST(
       return NextResponse.json({ error: `Rejection category must be one of: ${validRejectionCategories.join(', ')}` }, { status: 400 });
     }
 
-    const insertData: Record<string, any> = {
+    const insertData: TablesInsert<'shipment_outcomes'> = {
       shipment_id: id,
       org_id: profile.org_id,
       recorded_by: profile.id,

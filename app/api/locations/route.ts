@@ -68,12 +68,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch LGAs' }, { status: 500 });
       }
       
-      const { data: organization } = await supabaseAdmin
+      // TODO(schema-drift): 'active_lgas' column does not exist on 'organizations' in the
+      // live DB — this select has always failed at runtime (error silently discarded below),
+      // so activeLgas is always []. Needs a product decision: add the column via migration,
+      // or move this into the 'settings' JSONB column.
+      const { data: organization } = await (supabaseAdmin
         .from('organizations')
-        .select('active_lgas')
+        .select('active_lgas') as any)
         .eq('id', profile.org_id)
         .single();
-      
+
       const activeLgas = organization?.active_lgas || [];
       
       const lgasWithStatus = lgas?.map(lga => ({

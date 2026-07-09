@@ -3,6 +3,7 @@
  * OriginTrace events occur. Called from the same places as dispatchWebhookEvent.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Json } from '@/lib/supabase/database.types';
 import {
   type PlatformEventType,
   type IntegrationEventType as _IntegrationEventType,
@@ -82,10 +83,10 @@ async function fireIntegration(
     id: string;
     endpoint_url: string;
     http_method: string;
-    headers: Record<string, string> | null;
+    headers: Json | null;
     api_key_enc: string | null;
-    event_subscriptions: string[];
-    field_mapping: Record<string, string> | null;
+    event_subscriptions: string[] | null;
+    field_mapping: Json | null;
   },
   event: string,
   payload: Record<string, unknown>,
@@ -93,13 +94,13 @@ async function fireIntegration(
 ): Promise<DispatchResult> {
   const mappedPayload = applyFieldMapping(
     { event, org_id: orgId, timestamp: new Date().toISOString(), data: payload },
-    integration.field_mapping ?? {},
+    (integration.field_mapping as Record<string, string> | null) ?? {},
   );
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-OriginTrace-Event': event,
-    ...(integration.headers ?? {}),
+    ...((integration.headers as Record<string, string> | null) ?? {}),
   };
 
   if (integration.api_key_enc) {

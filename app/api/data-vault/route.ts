@@ -118,13 +118,13 @@ export async function POST(request: NextRequest) {
 
     for (const table of selectedTables) {
       const { data, error } = await supabaseAdmin
-        .from(table)
+        .from(table as any)
         .select('*')
         .eq('org_id', profile.org_id);
 
       if (!error && data) {
         if (table === 'profiles') {
-          exportData[table] = data.map((p: Record<string, unknown>) => ({
+          exportData[table] = (data as unknown as Record<string, unknown>[]).map((p: Record<string, unknown>) => ({
             id: p.id,
             full_name: p.full_name,
             email: p.email,

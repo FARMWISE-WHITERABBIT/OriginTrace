@@ -126,8 +126,12 @@ export async function POST(request: NextRequest) {
 
     // Atomic RPC: shipment INSERT + contract link + document links in one transaction.
     // Partial failures (e.g. contract link error) no longer leave orphan shipments.
+    // TODO(schema-drift): the Postgres function 'create_shipment_atomic' does not exist on the
+    // live DB — the migration (supabase/migrations/20260311_session8_9.sql) that creates it
+    // has not been applied. This means POST /api/shipments cannot currently create a shipment
+    // at all in production. Needs a product decision: apply the migration.
     const { data: shipmentData, error: shipmentError } = await supabase.rpc(
-      'create_shipment_atomic',
+      'create_shipment_atomic' as any,
       {
         p_org_id:               profile.org_id,
         p_created_by:           profile.id,

@@ -39,13 +39,14 @@ export async function GET(request: NextRequest) {
     for (const org of expiringSoon || []) {
       try {
         const { data: admin } = await supabase
-          .from('profiles').select('email, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
-        if (admin?.email) {
-          const expiryDate = new Date(org.subscription_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+          .from('profiles').select('user_id, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
+        const adminEmail = admin ? (await supabase.auth.admin.getUserById(admin.user_id)).data?.user?.email : undefined;
+        if (adminEmail) {
+          const expiryDate = new Date(org.subscription_expires_at ?? now).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
           await sendEmail({
-            to: admin.email,
+            to: adminEmail,
             subject: 'Your OriginTrace subscription expires soon',
-            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#92400e;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">⚠ Subscription Expiring Soon</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin.full_name || 'there'},</p><p>Your <strong>${org.subscription_tier.charAt(0).toUpperCase() + org.subscription_tier.slice(1)}</strong> plan expires on <strong>${expiryDate}</strong>.</p><p>After expiry you will have a 7-day grace period before your account reverts to the Starter plan. Contact your OriginTrace account manager or reply to this email to renew.</p></div></div>`,
+            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#92400e;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">⚠ Subscription Expiring Soon</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin?.full_name || 'there'},</p><p>Your <strong>${(org.subscription_tier ?? 'starter').charAt(0).toUpperCase() + (org.subscription_tier ?? 'starter').slice(1)}</strong> plan expires on <strong>${expiryDate}</strong>.</p><p>After expiry you will have a 7-day grace period before your account reverts to the Starter plan. Contact your OriginTrace account manager or reply to this email to renew.</p></div></div>`,
             text: `Your OriginTrace ${org.subscription_tier} plan expires on ${expiryDate}. Contact us to renew.`,
           });
           warned++;
@@ -70,12 +71,13 @@ export async function GET(request: NextRequest) {
         }).eq('id', org.id);
 
         const { data: admin } = await supabase
-          .from('profiles').select('email, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
-        if (admin?.email) {
+          .from('profiles').select('user_id, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
+        const adminEmail = admin ? (await supabase.auth.admin.getUserById(admin.user_id)).data?.user?.email : undefined;
+        if (adminEmail) {
           await sendEmail({
-            to: admin.email,
+            to: adminEmail,
             subject: 'Your OriginTrace subscription has expired — 7 day grace period',
-            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#dc2626;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">Subscription Expired</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin.full_name || 'there'},</p><p>Your OriginTrace <strong>${org.subscription_tier}</strong> plan has expired. You have a <strong>7-day grace period</strong> to renew before your account reverts to Starter.</p><p>Contact your OriginTrace account manager immediately to keep your data and features intact.</p></div></div>`,
+            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#dc2626;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">Subscription Expired</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin?.full_name || 'there'},</p><p>Your OriginTrace <strong>${org.subscription_tier}</strong> plan has expired. You have a <strong>7-day grace period</strong> to renew before your account reverts to Starter.</p><p>Contact your OriginTrace account manager immediately to keep your data and features intact.</p></div></div>`,
             text: `Your OriginTrace ${org.subscription_tier} plan has expired. You have 7 days to renew before downgrade.`,
           });
         }
@@ -111,12 +113,13 @@ export async function GET(request: NextRequest) {
         });
 
         const { data: admin } = await supabase
-          .from('profiles').select('email, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
-        if (admin?.email) {
+          .from('profiles').select('user_id, full_name').eq('org_id', org.id).eq('role', 'admin').limit(1).single();
+        const adminEmail = admin ? (await supabase.auth.admin.getUserById(admin.user_id)).data?.user?.email : undefined;
+        if (adminEmail) {
           await sendEmail({
-            to: admin.email,
+            to: adminEmail,
             subject: 'Your OriginTrace account has been downgraded to Starter',
-            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#166534;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">Account Downgraded</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin.full_name || 'there'},</p><p>Your OriginTrace account has been moved to the <strong>Starter</strong> plan. Your data is safe but some features are no longer accessible.</p><p>Contact us to reactivate your subscription and regain full access.</p></div></div>`,
+            html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#166534;color:white;padding:24px;border-radius:8px 8px 0 0"><h2 style="margin:0">Account Downgraded</h2></div><div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px"><p>Hello ${admin?.full_name || 'there'},</p><p>Your OriginTrace account has been moved to the <strong>Starter</strong> plan. Your data is safe but some features are no longer accessible.</p><p>Contact us to reactivate your subscription and regain full access.</p></div></div>`,
             text: 'Your OriginTrace account has been downgraded to Starter. Contact us to reactivate.',
           });
         }

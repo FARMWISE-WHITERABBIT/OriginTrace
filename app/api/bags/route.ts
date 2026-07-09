@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
     const bagRows = Array.from({ length: count }, () => ({
       org_id: profile.org_id,
       status: 'empty',
+      serial: crypto.randomUUID(),
     }));
 
     const { data: createdBags, error: insertError } = await supabaseAdmin

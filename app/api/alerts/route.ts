@@ -40,7 +40,11 @@ export async function GET(request: NextRequest) {
         .lt('updated_at', fourteenDaysAgo),
 
       // Escrow accounts with < 10% of target funded (partially_funded or awaiting_payment)
-      supabase
+      // TODO(schema-drift): 'escrow_accounts' table does not exist in the live DB
+      // (migration 20260403_escrow_foundations.sql defines it but was never applied) —
+      // this query has always failed at runtime; needs a product decision on whether to
+      // apply the migration or remove this alert.
+      (supabase as any)
         .from('escrow_accounts')
         .select('id, amount_usd, funded_amount_usd, status')
         .eq('org_id', orgId)

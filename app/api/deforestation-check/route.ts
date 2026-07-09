@@ -13,6 +13,7 @@ import {
   type GfwPolygon,
 } from '@/lib/services/gfw-deforestation';
 import { z } from 'zod';
+import type { Json } from '@/lib/supabase/database.types';
 
 const coordinatePairSchema = z.tuple([
   z.number().min(-180).max(180),
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       const { data: farm, error: farmError } = await supabaseAdmin
         .from('farms')
         .select('id, boundary, area_hectares, org_id')
-        .eq('id', farm_id)
+        .eq('id', String(farm_id))
         .single();
 
       if (farmError || !farm) {
@@ -147,8 +148,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      farmPolygon = farm.boundary;
-      farmAreaHectares = parseFloat(farm.area_hectares || '0');
+      farmPolygon = farm.boundary as typeof farmPolygon;
+      farmAreaHectares = farm.area_hectares || 0;
     }
 
     let result: DeforestationResult;
@@ -169,8 +170,8 @@ export async function POST(request: NextRequest) {
     if (farmId) {
       const { error: updateError } = await supabaseAdmin
         .from('farms')
-        .update({ deforestation_check: result })
-        .eq('id', farmId);
+        .update({ deforestation_check: result as unknown as Json })
+        .eq('id', String(farmId));
 
       if (updateError) {
         console.error('Failed to persist deforestation check:', updateError);
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
           const { data: farm } = await supabaseAdmin
             .from('farms')
             .select('farmer_name')
-            .eq('id', farmId)
+            .eq('id', String(farmId))
             .single();
 
           const { data: org } = await supabaseAdmin

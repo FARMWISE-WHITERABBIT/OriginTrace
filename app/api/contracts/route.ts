@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);
 
-    let contracts = [];
+    let contracts: any[] = [];
 
     if (buyerProfile) {
       const { data } = await supabaseAdmin

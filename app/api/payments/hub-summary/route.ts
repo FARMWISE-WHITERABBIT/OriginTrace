@@ -22,12 +22,16 @@ export async function GET(request: NextRequest) {
       // USDC wallet balance
       supabase
         .from('organizations')
-        .select('wallet_id, wallet_balance_usdc')
+        .select('blockradar_wallet_id, usdc_balance')
         .eq('id', orgId)
         .single(),
 
+      // TODO(schema-drift): 'escrow_accounts' does not exist on the live DB (migration
+      // supabase/migrations/20260403_escrow_foundations.sql never applied); even once applied,
+      // 'amount_usd' isn't a column that migration defines (it has 'total_amount' instead) —
+      // needs a product decision on which field this KPI should actually sum.
       // Sum of active escrow amounts
-      supabase
+      (supabase as any)
         .from('escrow_accounts')
         .select('amount_usd')
         .eq('org_id', orgId)
@@ -43,13 +47,13 @@ export async function GET(request: NextRequest) {
 
     let wallet_balance_usdc = 0;
     if (walletRes.status === 'fulfilled' && walletRes.value.data) {
-      wallet_balance_usdc = Number(walletRes.value.data.wallet_balance_usdc ?? 0);
+      wallet_balance_usdc = Number(walletRes.value.data.usdc_balance ?? 0);
     }
 
     let pending_escrow_usd = 0;
     if (escrowRes.status === 'fulfilled' && escrowRes.value.data) {
       pending_escrow_usd = escrowRes.value.data.reduce(
-        (sum, row) => sum + Number(row.amount_usd ?? 0),
+        (sum: number, row: any) => sum + Number(row.amount_usd ?? 0),
         0,
       );
     }

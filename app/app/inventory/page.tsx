@@ -276,7 +276,7 @@ export default function InventoryPage() {
         const { data: batchData, error: batchError } = await supabase
           .from('collection_batches')
           .select('*')
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .order('created_at', { ascending: false });
 
         if (batchError) {
@@ -286,19 +286,19 @@ export default function InventoryPage() {
 
         // Fetch farm data for all batches
         const farmIds = [...new Set((batchData || []).map(b => b.farm_id).filter(Boolean))];
-        let farmMap: Record<number, { farmer_name: string; community: string }> = {};
-        
+        let farmMap: Record<string, { farmer_name: string; community: string }> = {};
+
         if (farmIds.length > 0) {
           const { data: farms, error: farmError } = await supabase
             .from('farms')
             .select('id, farmer_name, community')
             .in('id', farmIds);
-          
+
           if (!farmError && farms) {
             farmMap = farms.reduce((acc, f) => {
               acc[f.id] = { farmer_name: f.farmer_name, community: f.community };
               return acc;
-            }, {} as Record<number, { farmer_name: string; community: string }>);
+            }, {} as Record<string, { farmer_name: string; community: string }>);
           }
         }
 

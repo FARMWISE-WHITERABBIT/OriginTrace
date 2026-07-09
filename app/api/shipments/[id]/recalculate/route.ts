@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
+import type { Json } from '@/lib/supabase/database.types';
 
 /**
  * POST /api/shipments/[id]/recalculate
@@ -35,8 +36,13 @@ export async function POST(
         id: shipment.id,
         destination_country: shipment.destination_country || null,
         target_regulations: shipment.target_regulations || [],
-        doc_status: shipment.doc_status || {},
-        storage_controls: shipment.storage_controls || {},
+        // TODO(schema-drift): columns 'doc_status' / 'storage_controls' do not exist on the
+        // live 'shipments' table — the migration
+        // (supabase/migrations/20260520_add_shipment_readiness_json.sql) that adds them has
+        // not been applied, so these are always empty at runtime today. Needs a product
+        // decision: apply the migration to make doc/storage-based scoring actually work.
+        doc_status: (shipment as unknown as Record<string, unknown>).doc_status || {},
+        storage_controls: (shipment as unknown as Record<string, unknown>).storage_controls || {},
         estimated_ship_date: shipment.estimated_ship_date || null,
       },
       items: [],
@@ -57,8 +63,8 @@ export async function POST(
       .update({
         readiness_score: Math.round(readiness.overall_score),
         readiness_decision: readiness.decision,
-        risk_flags: readiness.risk_flags,
-        score_breakdown: readiness.dimensions,
+        risk_flags: readiness.risk_flags as unknown as Json,
+        score_breakdown: readiness.dimensions as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

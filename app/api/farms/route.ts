@@ -167,7 +167,11 @@ export async function POST(request: NextRequest) {
       .eq('id', profile.org_id)
       .single();
 
-    const settings = org?.settings || {};
+    const settings = (org?.settings || {}) as {
+      require_polygon?: boolean;
+      require_national_id?: boolean;
+      require_land_deed?: boolean;
+    };
 
     if (settings.require_polygon && (!boundary || !boundary.coordinates || boundary.coordinates[0]?.length < 4)) {
       return NextResponse.json(

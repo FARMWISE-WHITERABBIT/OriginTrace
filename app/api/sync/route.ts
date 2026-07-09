@@ -90,9 +90,9 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();
   const { pending_batches, pending_bags, is_online } = body;
   
-  const upsertPayload: Record<string, any> = {
-    org_id: profile.org_id,
-    agent_id: profile.id,
+  const upsertPayload = {
+    org_id: profile.org_id as string,
+    agent_id: profile.id as string,
     last_seen_at: new Date().toISOString(),
     pending_batches: pending_batches || 0,
     pending_bags: pending_bags || 0,
@@ -179,7 +179,10 @@ export const PUT = withErrorHandling(async (request: NextRequest) => {
     }
   }
 
-  const { data: results, error: syncError } = await serviceClient.rpc('sync_batches_atomic', {
+  // TODO(schema-drift): 'sync_batches_atomic' RPC is defined in migration
+  // 20260311_session8_9.sql but does not exist in the live DB — this call has always
+  // failed at runtime; needs a product decision on whether to apply the migration.
+  const { data: results, error: syncError } = await (serviceClient as any).rpc('sync_batches_atomic', {
     p_org_id:  profile.org_id,
     p_user_id: user.id,
     p_batches: batches,
@@ -209,7 +212,11 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
   const { conflict_id, resolution } = parsed.data;
   const serviceClient = createServiceClient();
 
-  const { data: conflict, error: fetchError } = await serviceClient
+  // TODO(schema-drift): 'sync_conflicts' table is defined in migration
+  // 20260328_sync_conflicts.sql but does not exist in the live DB — this whole
+  // conflict-resolution flow has always failed at runtime; needs a product decision
+  // on whether to apply the migration.
+  const { data: conflict, error: fetchError } = await (serviceClient as any)
     .from('sync_conflicts')
     .select('*')
     .eq('id', conflict_id)
@@ -236,7 +243,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
     if (updateError) return ApiError.internal(updateError, 'sync/PATCH/resolve-field');
   }
 
-  const { error: resolveError } = await serviceClient
+  const { error: resolveError } = await (serviceClient as any)
     .from('sync_conflicts')
     .update({
       status: 'resolved',

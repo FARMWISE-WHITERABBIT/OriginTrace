@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
     const { data: profile } = await supabaseAdmin
-      .from('profiles').select('full_name, email, org_id, role').eq('user_id', user.id).single();
+      .from('profiles').select('full_name, org_id, role').eq('user_id', user.id).single();
 
     if (!profile?.org_id) return NextResponse.json({ error: 'No organisation' }, { status: 400 });
     if (profile.role !== 'admin') return NextResponse.json({ error: 'Only org admins can request upgrades' }, { status: 403 });
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
           <table style="width:100%;border-collapse:collapse">
             <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Organisation</td><td style="font-weight:600">${org?.name}</td></tr>
-            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Contact</td><td>${profile.full_name} &lt;${profile.email}&gt;</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Contact</td><td>${profile.full_name} &lt;${user.email}&gt;</td></tr>
             <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Current plan</td><td>${currentLabel}</td></tr>
             <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Requested plan</td><td><strong>${tierLabel}</strong></td></tr>
             ${parsed.data.note ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Note</td><td>${parsed.data.note}</td></tr>` : ''}
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
           <p style="margin-top:20px"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade'}/superadmin/organisations" style="background:#166534;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">Generate Payment Link →</a></p>
         </div>
       </div>`,
-      text: `Upgrade request from ${org?.name} (${profile.email}) to ${tierLabel}. Note: ${parsed.data.note || 'none'}.`,
+      text: `Upgrade request from ${org?.name} (${user.email}) to ${tierLabel}. Note: ${parsed.data.note || 'none'}.`,
     });
 
     // Log the request

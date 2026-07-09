@@ -64,9 +64,13 @@ export async function POST(
     }));
 
     // Create escrow account if USDC method
+    // TODO(schema-drift): table 'escrow_accounts' does not exist on the live DB — the
+    // migration (supabase/migrations/20260403_escrow_foundations.sql) that creates it has not
+    // been applied. This is a money/escrow-affecting flow — leaving as-is rather than guessing
+    // at a fix; needs a product decision (apply the migration before this path can work).
     let escrowId: string | null = null;
     if (payment_method === 'escrow_usdc') {
-      const { data: escrow, error: escrowErr } = await supabase
+      const { data: escrow, error: escrowErr } = await (supabase as any)
         .from('escrow_accounts')
         .insert({
           org_id: profile.org_id,

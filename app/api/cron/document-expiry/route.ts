@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       const orgAdmins = adminsByOrg[orgId] || [];
 
       const docsWithDays = docs.map(doc => {
-        const expiryDate = new Date(doc.expiry_date);
+        const expiryDate = new Date(doc.expiry_date!);
         const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         return {
           id: doc.id,
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
       }
 
       for (const doc of docs) {
-        const expiryDate = new Date(doc.expiry_date);
+        const expiryDate = new Date(doc.expiry_date!);
         const newStatus = expiryDate < now ? 'expired' : 'expiring_soon';
         if (doc.status !== newStatus) {
           await supabase
@@ -223,19 +223,19 @@ export async function GET(request: NextRequest) {
 
       const { data: expiringCerts } = await supabase
         .from('farm_certifications')
-        .select('id, farm_id, certification_type, expiry_date')
+        .select('id, farm_id, certification_body, expiry_date')
         .eq('org_id', orgId)
         .not('expiry_date', 'is', null)
         .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
         .gte('expiry_date', now.toISOString().split('T')[0]);
 
       for (const cert of (expiringCerts || [])) {
-        const certExpiry = new Date(cert.expiry_date);
+        const certExpiry = new Date(cert.expiry_date!);
         const daysLeft = Math.ceil((certExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         dispatchWebhookEvent(orgId, 'certification.expiring', {
           certification_id: cert.id,
           farm_id: cert.farm_id,
-          certification_type: cert.certification_type,
+          certification_type: cert.certification_body,
           expiry_date: cert.expiry_date,
           days_remaining: daysLeft,
         });

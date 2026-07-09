@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
     if (!shipmentId) return NextResponse.json({ error: 'shipment_id required' }, { status: 400 });
 
     const supabase = createAdminClient();
-    const { data: escrow, error } = await supabase
+    // TODO(schema-drift): 'escrow_accounts' does not exist on the live DB (migration
+    // supabase/migrations/20260403_escrow_foundations.sql never applied).
+    const { data: escrow, error } = await (supabase as any)
       .from('escrow_accounts')
       .select('id, total_amount, status, milestone_config, created_at')
       .eq('org_id', profile.org_id)

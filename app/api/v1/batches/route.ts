@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 }
 
 const createBatchSchema = z.object({
-  farm_id: z.number().int().positive(),
+  farm_id: z.string().uuid(),
   agent_id: z.string().uuid(),
   status: z.string().optional().default('collecting'),
   total_weight: z.number().optional().default(0),
@@ -116,6 +116,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found or does not belong to your organization' }, { status: 404 });
     }
 
+    // TODO(schema-drift): 'gps_lat', 'gps_lng', 'estimated_bags', 'estimated_weight' are
+    // accepted in the public API request body but have no equivalent columns on
+    // 'collection_batches' — they are currently silently dropped on insert (same as
+    // before this typing pass). 'batch_id' is stored in 'local_id', the closest existing
+    // equivalent (client-supplied external identifier). Needs a product decision on
+    // whether to add columns for the GPS/estimate fields.
     const { data: batch, error } = await supabase
       .from('collection_batches')
       .insert({
@@ -123,15 +129,11 @@ export async function POST(request: NextRequest) {
         farm_id: parsed.data.farm_id,
         agent_id: parsed.data.agent_id,
         status: parsed.data.status,
-        total_weight: String(parsed.data.total_weight),
+        total_weight: parsed.data.total_weight,
         bag_count: parsed.data.bag_count,
         notes: parsed.data.notes || null,
         commodity: parsed.data.commodity || null,
-        batch_id: parsed.data.batch_id || null,
-        gps_lat: parsed.data.gps_lat != null ? String(parsed.data.gps_lat) : null,
-        gps_lng: parsed.data.gps_lng != null ? String(parsed.data.gps_lng) : null,
-        estimated_bags: parsed.data.estimated_bags || null,
-        estimated_weight: parsed.data.estimated_weight != null ? String(parsed.data.estimated_weight) : null,
+        local_id: parsed.data.batch_id || null,
       })
       .select()
       .single();

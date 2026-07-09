@@ -68,7 +68,7 @@ const createFarmSchema = z.object({
   legality_doc_url: z.string().url().optional(),
   commodity: z.string().optional().default('cocoa'),
   area_hectares: z.number().positive().optional(),
-  community: z.string().optional(),
+  community: z.string().min(1, 'community is required'),
   consent_timestamp: z.string().optional(),
   consent_photo_url: z.string().url().optional(),
   consent_signature: z.string().optional(),
@@ -103,17 +103,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // TODO(schema-drift): 'location_id' is accepted in the public API request body but
+    // has no equivalent column on 'farms' (which uses separate lga_id/state_id/village_id
+    // FKs instead of a single flat location id) — it is currently silently dropped on
+    // insert (same as before this typing pass). Needs a product decision on which of the
+    // three location FKs (if any) this should map to.
     const { data: farm, error } = await supabase
       .from('farms')
       .insert({
         org_id: auth.orgId,
         farmer_name: parsed.data.farmer_name,
         boundary: parsed.data.boundary,
-        location_id: parsed.data.location_id || null,
         legality_doc_url: parsed.data.legality_doc_url || null,
         commodity: parsed.data.commodity,
-        area_hectares: parsed.data.area_hectares != null ? String(parsed.data.area_hectares) : null,
-        community: parsed.data.community || null,
+        area_hectares: parsed.data.area_hectares ?? null,
+        community: parsed.data.community,
         consent_timestamp: parsed.data.consent_timestamp || null,
         consent_photo_url: parsed.data.consent_photo_url || null,
         consent_signature: parsed.data.consent_signature || null,

@@ -53,7 +53,7 @@ export async function predictYield(
       .single(),
     supabase
       .from('collection_batches')
-      .select('total_weight_kg, total_weight, collection_date, collected_at, created_at, commodity')
+      .select('total_weight, collected_at, created_at, commodity')
       .eq('farm_id', farmId)
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
@@ -88,10 +88,10 @@ export async function predictYield(
 
   const seasonBuckets: Record<string, number> = {};
   for (const b of batches) {
-    const dateStr = b.collection_date || b.collected_at || b.created_at;
+    const dateStr = b.collected_at || b.created_at;
     if (!dateStr) continue;
     const key = getSeasonLabel(dateStr);
-    const weight = b.total_weight_kg || b.total_weight || 0;
+    const weight = b.total_weight || 0;
     seasonBuckets[key] = (seasonBuckets[key] || 0) + Number(weight);
   }
 

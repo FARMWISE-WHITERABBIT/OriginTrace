@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     .is('reminders_sent->24h', null);
 
   for (const job of jobs24h ?? []) {
-    const meetingAt = new Date(job.meeting_at);
+    const meetingAt = new Date(job.meeting_at!);
 
     if (job.lead_phone) {
       await send24hReminder(job.lead_phone, job.lead_name, meetingAt, calcomLink)
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     await supabase
       .from('lead_nurture_jobs')
-      .update({ reminders_sent: { ...(job.reminders_sent || {}), '24h': true } })
+      .update({ reminders_sent: { ...((job.reminders_sent as Record<string, boolean>) || {}), '24h': true } })
       .eq('id', job.id);
 
     results.reminders_24h++;
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     .is('reminders_sent->1h', null);
 
   for (const job of jobs1h ?? []) {
-    const meetingAt = new Date(job.meeting_at);
+    const meetingAt = new Date(job.meeting_at!);
 
     if (job.lead_phone) {
       await send1hReminder(job.lead_phone, job.lead_name, meetingAt)
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     await supabase
       .from('lead_nurture_jobs')
       .update({
-        reminders_sent: { ...(job.reminders_sent || {}), '1h': true },
+        reminders_sent: { ...((job.reminders_sent as Record<string, boolean>) || {}), '1h': true },
       })
       .eq('id', job.id);
 
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       .from('lead_nurture_jobs')
       .update({
         status: 'no_show',
-        reminders_sent: { ...(job.reminders_sent || {}), no_show: true },
+        reminders_sent: { ...((job.reminders_sent as Record<string, boolean>) || {}), no_show: true },
       })
       .eq('id', job.id);
 

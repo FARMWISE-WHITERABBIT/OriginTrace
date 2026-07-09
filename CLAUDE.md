@@ -20,7 +20,7 @@
 |-------|--------|
 | Framework | Next.js 16.2.6, App Router, Turbopack (check `package.json` for exact pin) |
 | Language | TypeScript (strict) |
-| Database | Supabase (Postgres + RLS) — **untyped client, no generated `Database` types** (see Database Migrations) |
+| Database | Supabase (Postgres + RLS) — clients typed with generated `Database` types (see Database Migrations for the 8 tables/RPCs still pending their migration) |
 | Auth | Supabase Auth + `getAuthenticatedProfile()` |
 | Validation | `zod` (used in ~63 API routes) |
 | UI | shadcn/ui + Tailwind CSS |
@@ -122,9 +122,10 @@ Develop on the branch assigned to your current task (the harness names it per-se
 
 Migrations live in **`supabase/migrations/`** (56 files as of 2026-07). They are applied manually via the Supabase SQL editor / `supabase db push`, so **code and the live DB drift** — this is the single biggest source of production bugs in this repo (serial "fix column mismatch" commits: `batch_id`→`batch_code`, phantom `weight_kg`, INTEGER-vs-UUID org ids).
 
-Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. There is **no generated `Database` type** yet (the client is `createClient(url, key)` untyped), so the compiler will NOT catch a wrong column name.
+Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. `lib/supabase/database.types.ts` **is generated and committed**, and all 4 client factories (`lib/supabase/{client,server,admin,middleware}.ts`) are typed with `createClient<Database>(...)` — a wrong column name now fails `npm run check`, not just production.
 
-- Generate types with **`SUPABASE_PROJECT_ID=<ref> npm run gen:types`** → writes `lib/supabase/database.types.ts`, then type the clients `createClient<Database>(url, key)`. ⚠ The OriginTrace DB has `farms`/`collection_batches`/`shipments`/`profiles`; it is **not** the "FarmWise" Supabase project (a different product) — `gen:types` refuses to write if the signature tables are absent.
+- Regenerate with **`SUPABASE_PROJECT_ID=gnvcvvsnnesieugnzmrz npm run gen:types`** (OriginTrace project ref) after any schema change → rewrites `lib/supabase/database.types.ts`. ⚠ The OriginTrace DB has `farms`/`collection_batches`/`shipments`/`profiles`; it is **not** the "FarmWise" Supabase project (a different product) — `gen:types` refuses to write if the signature tables are absent.
+- ⚠ **Several tables/RPCs referenced in code do not exist on the live DB** — their migrations exist under `supabase/migrations/` but were never applied: `escrow_accounts`/`escrow_disputes`/`escrow_transactions`, `create_shipment_atomic` RPC (blocks `POST /api/shipments` entirely), `evidence_packages`, `org_kyc_records`, `shipment_templates`, `container_stuffing_records`, `sync_conflicts`/`sync_batches_atomic`. These call sites are cast `(supabase as any)` with an inline `TODO(schema-drift)` comment rather than guessed at — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for the full list and impact. Do not "fix" these by inventing column/table names; the fix is a migration decision, not a code change.
 
 - ⚠ **Two migration dirs exist.** `supabase/migrations/` is canonical; the top-level `migrations/` is legacy and `scripts/check-migrations.ts` fails CI on any SQL left there. Never add migrations to the root.
 - Filename convention: `YYYYMMDD_<description>.sql`; no duplicate date prefixes (the check script enforces both).

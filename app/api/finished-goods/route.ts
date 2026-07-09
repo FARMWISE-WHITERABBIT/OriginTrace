@@ -8,7 +8,7 @@ import { z } from 'zod';
 const finishedGoodCreateSchema = z.object({
   product_name: z.string().min(1, 'Product name is required'),
   product_type: z.string().optional(),
-  processing_run_id: z.number({ required_error: 'Processing run ID is required' }),
+  processing_run_id: z.string({ required_error: 'Processing run ID is required' }),
   weight_kg: z.number().positive('Weight must be positive'),
   batch_number: z.string().optional(),
   lot_number: z.string().optional(),

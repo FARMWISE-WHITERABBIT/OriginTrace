@@ -120,7 +120,7 @@ export async function PATCH(request: NextRequest) {
     const { data: currentOrg, error: fetchError } = await supabaseAdmin
       .from('organizations')
       .select('settings')
-      .eq('id', org_id)
+      .eq('id', String(org_id))
       .single();
 
     if (fetchError || !currentOrg) {
@@ -149,7 +149,7 @@ export async function PATCH(request: NextRequest) {
         enterprise: { features: { satellite_overlays: true, advanced_mapping: true, financing: true, api_access: true, buyer_portal_access: true, dpp_access: true }, agent_seat_limit: -1, monthly_collection_limit: -1 }
       };
 
-      const tierTemplates = configRow?.value || fallbackDefaults;
+      const tierTemplates = (configRow?.value as typeof fallbackDefaults) || fallbackDefaults;
       const defaults = tierTemplates[subscription_tier] || fallbackDefaults[subscription_tier];
       if (defaults) {
         settingsUpdate.feature_flags = { ...DEFAULT_FEATURE_FLAGS, ...(defaults.features || {}) };
@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
     const { data: organization, error: updateError } = await supabaseAdmin
       .from('organizations')
       .update(updatePayload)
-      .eq('id', org_id)
+      .eq('id', String(org_id))
       .select()
       .single();
 
@@ -192,7 +192,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update organization settings' }, { status: 500 });
     }
 
-    const tierData = extractTierFromSettings(organization.settings);
+    const tierData = extractTierFromSettings(organization.settings as Record<string, unknown> | null);
     return NextResponse.json({ 
       organization: {
         id: organization.id,

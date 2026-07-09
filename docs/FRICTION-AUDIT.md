@@ -17,11 +17,39 @@ This is where the team keeps losing time, grouped into clusters, each with the e
 | 4 new skills: `schema-verify`, `vercel-preflight`, `marketing-page`, `page-data-fetch` | ✅ authored + catalogued |
 | `hooks/use-api-resource.ts` canonical data hook (C4) | ✅ added |
 | `npm run preflight` (migrations + tsc + build) automation (C3) | ✅ added |
-| Supabase type generation tooling: `npm run gen:types` + `scripts/gen-types.ts` | ⚠️ tooling shipped — **cannot generate the file here**: none of the 3 Supabase projects this session can reach is the OriginTrace DB (they are FarmWise, a bookings app, and a trading-bot app). Run `SUPABASE_PROJECT_ID=<ref> npm run gen:types` against the real project ref to finish C1. |
+| Supabase type generation: `lib/supabase/database.types.ts` generated from the real OriginTrace project (`gnvcvvsnnesieugnzmrz`) and committed; all 4 client factories (`lib/supabase/{client,server,admin,middleware}.ts`) now `createClient<Database>(...)` | ✅ applied — **C1 closed**. See "C1 result" below — this surfaced 422 real compile errors, all fixed or explicitly flagged. |
 | API "gold standard" (`withErrorHandling`/`ApiError`) adoption: 3/178 routes | ▶ campaign — helper exists + skill added; mass migration intentionally not swept blind |
 | Page boilerplate migration onto `useApiResource`: 40 pages | ▶ campaign — hook + skill added; per-page migration left as follow-up |
 
-Verification: `npm run check` ✓, `npm run check:migrations` ✓, `npm run skills:check` ✓, `npm test` → **691 passed**, `npm run build` compiles with **0** module/path errors (only offline Google-Fonts fetch fails in this sandbox; CI/Vercel builds normally).
+Verification: `npm run check` ✓ (0 errors, was 422 mid-campaign), `npm run check:migrations` ✓, `npm run skills:check` ✓, `npm test` → **691 passed**, `npm run build` compiles with **0** module/path errors (only offline Google-Fonts fetch fails in this sandbox; CI/Vercel builds normally).
+
+### C1 result — typing the clients surfaced 422 real bugs, not false positives
+
+Generating real types and wiring `createClient<Database>(...)` into the 4 client factories made `tsc` fail with 422 errors across 89 files — every one traced back to either a wrong/renamed column, a string/bigint ID boundary mismatch, or (the big one) **a table or RPC function whose migration exists in `supabase/migrations/` but was never applied to the live DB.** Fixed via 5 domain-scoped passes (compliance/DDS/DPP, shipments, payments/escrow, farms/frontend, misc backend), each grounded against `database.types.ts` as source of truth, with a strict rule for the payments/escrow batch: type-level fixes only, never touch a dollar amount or formula.
+
+**Never-applied migrations found (tables/RPCs referenced in code, absent from the live DB):**
+
+| Missing | Migration that defines it | Impact |
+|---|---|---|
+| `escrow_accounts`, `escrow_disputes`, `escrow_transactions` | `20260403_escrow_foundations.sql` | **Entire escrow feature is non-functional in production** — `lib/services/escrow.ts` (create/release/dispute, all money-movement) and `/api/escrow`, `/api/shipments/[id]/payment-setup`, `/api/payments/hub-summary`, `/api/payments/instruction/[token]` all silently fail today. |
+| `create_shipment_atomic` RPC | `20260311_session8_9.sql` | **`POST /api/shipments` cannot create a shipment at all in production right now.** |
+| `evidence_packages` | `20260403_lab_results.sql` | Buyer proof-status page and shipment evidence-package generation/DDS exports are broken. |
+| `org_kyc_records` | `20260403_org_kyc.sql` | Org KYC review flow (`/api/org/kyc/*`, superadmin) is broken. |
+| `shipment_templates` | `20260403_shipment_templates.sql` | Shipment-templates feature is entirely broken. |
+| `container_stuffing_records` | `20260403_container_stuffing.sql` | Container stuffing recording is broken. |
+| `sync_conflicts` table, `sync_batches_atomic` RPC | `20260328_sync_conflicts.sql` / `20260311_session8_9.sql` | Offline-agent conflict resolution and atomic sync are broken. |
+| `virtual_accounts` | none found — no matching schema at all | SWIFT virtual-account payment instructions broken; only lead is an unverified `grey_virtual_accounts` JSONB column on `organizations`. |
+
+All of the above are left as `(supabase as any).from(...)` / `.rpc(...)` casts with inline `TODO(schema-drift)` comments pointing at the source migration — this keeps `npm run check` green and is honest about the gap (the features were already broken; a compile error was just the wrong way to surface it). **Action needed:** confirm each migration's intended state, apply the ones that should be live, then re-run `npm run gen:types` and delete the corresponding `as any` casts to get real type safety back on these paths.
+
+**Real, previously-silent bugs found and fixed (not just missing tables):**
+- `app/api/webhooks/paystack/route.ts` — `SELECT` on `payment_links` referenced a phantom `amount` column, so `charge.success` webhook events never matched a payment link — **subscription payments were never being marked "paid."** Fixed (real column is `amount_ngn`, and the match should be on `paystack_reference`).
+- `app/api/shipments/[id]/route.ts` — `bags` select included a nonexistent `farm_id`, crashing the entire shipment-detail GET at runtime whenever a shipment had batch items. Fixed.
+- `app/api/conflicts/route.ts` (PATCH) — writes `resolution_notes`/`resolved_at`/`resolved_by` on `farm_conflicts`, none of which exist live — **admins cannot resolve farm conflicts with notes**, fails at the DB layer. No `tsc` error (supabase-js doesn't excess-property-check `.update()` here), so left as a flagged `TODO`, not silently fixed by guessing the right migration.
+- `app/api/settings/route.ts` — `organizations.invite_code` doesn't exist; invite-code generation/regeneration has always failed. Flagged.
+- `app/api/locations/route.ts` — `organizations.active_lgas` doesn't exist; has always returned `[]`. Flagged.
+- `app/api/data-vault/route.ts` — GDPR export requests `profiles.email`, which doesn't exist; export has always silently omitted it. Flagged (out of scope of the 422, found in passing).
+- `app/api/farmers/[id]/files/route.ts` — `compliance_files.file_name` is `NOT NULL` but no caller ever populates it (same bug independently present in the farmer-files upload route). Flagged.
 
 ---
 
@@ -31,10 +59,10 @@ The remaining sections are the underlying analysis. The CLAUDE.md fixes in §4 w
 
 ## 1. Friction clusters (ranked by cost)
 
-### C1 — Schema/DB drift is the #1 bug source ★
+### C1 — Schema/DB drift is the #1 bug source ★ — **closed, see "C1 result" in §0**
 **Evidence:** 41% of all non-merge commits are `fix:`. A recurring sub-family fixes column-name mismatches against the live DB _after_ deploy: `4d364a1` (bags/batch_contributions/farms), `a76bd39` (`batch_id`→`batch_code`), `111a445`+`edf2b34` ("remaining schema column mismatches"), `e8a765d` (phantom `weight_kg`), `48f7275`→`cdf9c33` (a UUID/INTEGER org-id migration flip-flop where one fix contradicted the next), `a9e6de0`/`0c032ad` (missing columns → Vercel 500s).
-**Root cause:** migrations are applied manually via the Supabase SQL editor, and **there is no generated `Database` type** — `lib/supabase/admin.ts` calls `createClient(url, key)` untyped. A wrong column name compiles clean and fails only in production. `app/app/farmers/[id]/page.tsx` (17 commits) and `app/api/farmers/[id]/route.ts` (13) are the churn hotspots.
-**Fix:** generate + commit `lib/supabase/database.types.ts`, type both clients, and add a CI drift check (§3-A). This converts a class of production 500s into compile errors.
+**Root cause:** migrations were applied manually via the Supabase SQL editor with no generated `Database` type, so a wrong column name compiled clean and failed only in production. `app/app/farmers/[id]/page.tsx` (17 commits) and `app/api/farmers/[id]/route.ts` (13) were the churn hotspots.
+**Fix:** `lib/supabase/database.types.ts` is now generated and committed, both clients are typed, and `npm run gen:types` + the sanity guard in `scripts/gen-types.ts` exist for regeneration. Typing the clients converted this bug class from silent production 500s into compile errors — and surfaced 422 of them in one pass (see §0). A remaining CI drift gate (§3-A, auto-regenerate + diff in CI) is still open as a follow-up so this doesn't silently go stale again.
 
 ### C2 — Marketing pixel-pushing & build-then-rebuild
 **Evidence:** `app/marketing.css` is the single most-churned file (26 commits). The solutions hero card was repositioned in three consecutive commits (`e4dff53`→`36d6eeb`→`3b0c494`); mobile hero visibility/height/padding was fixed 6+ separate ways (`e9392ae`, `ef2d99f`, `9bf81f3`, `f9db9ca`, `3417251`, `d88fa81`). Whole page families were built then wholesale redesigned to "match the EUDR pattern" (`241a5db`, `7976bc6`, `7656f02`, `f6eb57f` — 22 redesign/rebuild commits, ~8% of history). The design-system doc (`6fd9681`) was written _after_ this churn.
@@ -120,6 +148,6 @@ Then type the clients (`createClient<Database>(...)`). Wrong column names become
 
 ## 5. If you do three things
 
-1. **Generate + commit typed Supabase types and gate them in CI** (C1) — kills the biggest bug family.
-2. **Copy `.agents/skills/*` into `.claude/skills/`** so the 22 existing skills load natively, and add `schema-verify` + `vercel-preflight`.
+1. **Decide on the 8 never-applied migrations found while closing C1** (escrow, shipment creation, evidence packages, org KYC, shipment templates, container stuffing, sync conflicts — table in §0 "C1 result"). Escrow and shipment-creation are the most severe: real money and core workflow features are silently dead in production right now.
+2. ~~Copy `.agents/skills/*` into `.claude/skills/`~~ — done, 24 skills live natively.
 3. **Add a local `next build && npm run check` pre-push gate** (C3) — most deploy-only breakages were locally catchable.

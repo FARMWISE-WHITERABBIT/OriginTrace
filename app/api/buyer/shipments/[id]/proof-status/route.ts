@@ -51,7 +51,11 @@ export async function GET(
     }
 
     // Fetch evidence package
-    const { data: evidencePackage } = await supabase
+    // TODO(schema-drift): table 'evidence_packages' does not exist on the live DB — the
+    // migration (supabase/migrations/20260403_lab_results.sql) that creates it has not been
+    // applied. This query will fail at runtime until that migration is applied. Needs a
+    // product decision: apply the migration, or remove this feature until it is.
+    const { data: evidencePackage } = await (supabase as any)
       .from('evidence_packages')
       .select('id, share_token, expires_at, view_count, created_at')
       .eq('shipment_id', shipmentId)
@@ -82,8 +86,9 @@ export async function GET(
     // Fetch document health (count of shipment documents)
     const { data: documents, count: documentCount } = await supabase
       .from('documents')
-      .select('id, doc_type, status', { count: 'exact' })
-      .eq('shipment_id', shipmentId);
+      .select('id, document_type, status', { count: 'exact' })
+      .eq('linked_entity_type', 'shipment')
+      .eq('linked_entity_id', shipmentId);
 
     const docSummary = {
       total: documentCount ?? 0,

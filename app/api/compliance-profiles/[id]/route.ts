@@ -23,8 +23,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const profileId = parseInt(id, 10);
-    if (isNaN(profileId)) {
+    const profileId = id;
+    if (!profileId) {
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }
 
@@ -74,8 +74,8 @@ export async function GET(
     const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
     if (tierBlock) return tierBlock;
 
-    const profileId = parseInt(id, 10);
-    if (isNaN(profileId)) {
+    const profileId = id;
+    if (!profileId) {
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }
 

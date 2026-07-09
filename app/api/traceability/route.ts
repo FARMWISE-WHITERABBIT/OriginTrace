@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     let collectionData = null;
     let farmData = null;
     let agentData = null;
-    let contributors: Array<{ farmer_name: string | null; weight_kg: number; bag_count: number; farm_id: string | null; community: string | null; compliance_status: string | null }> = [];
+    let contributors: Array<{ farmer_name: string | null; weight_kg: number | null; bag_count: number | null; farm_id: string | null; community: string | null; compliance_status: string | null }> = [];
 
     if (bagData.status !== 'unused') {
       // Primary path: legacy collections table (individual bag scan)
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
           facility_name: string | null;
           input_weight_kg: number | null;
           output_weight_kg: number | null;
-          org_id: number | null;
+          org_id: string | null;
         };
         type ProcessingRunBatchRow = { processing_run_id: string; processing_runs: ProcessingRunRow | null };
 
@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
                 // Look up shipment containing this specific finished good (org-scoped via shipments join)
                 type ShipmentItemRow = {
                   shipment_id: string;
-                  shipments: { shipment_code: string | null; status: string | null; destination_country: string | null; estimated_ship_date: string | null; org_id: number | null } | null;
+                  shipments: { shipment_code: string | null; status: string | null; destination_country: string | null; estimated_ship_date: string | null; org_id: string | null } | null;
                 };
                 const { data: shipItem } = await supabaseAdmin
                   .from('shipment_items')

@@ -55,9 +55,13 @@ export async function POST(
     // ── Fetch linked farms via batches → farm ────────────────────────────────
     // Path: shipment → finished_goods → collection_batches → farms
     // Also direct: shipment_batches junction if it exists; fall back to farmer_name on batches
+    // TODO(schema-drift): 'collection_batches' has no 'shipment_id' column — batches now link to
+    // shipments indirectly via shipment_items/shipment_lot_items (batch_id → lot/item → shipment_id).
+    // This .eq('shipment_id', ...) filter cannot match anything against the live schema; needs a
+    // product decision on which junction path is canonical before this can be fixed properly.
     const { data: batches } = await supabase
       .from('collection_batches')
-      .select('id, batch_code, collection_date, total_weight, bag_count, farmer_name, farm_id')
+      .select('id, batch_code, collected_at, total_weight, bag_count, farm_id')
       .eq('org_id', profile.org_id)
       .eq('shipment_id', shipmentId);
 
@@ -66,10 +70,14 @@ export async function POST(
     if (farmIds.length > 0) {
       const { data: farmRows } = await supabase
         .from('farms')
-        .select('id, farmer_name, community, state, compliance_status, boundary_geo, deforestation_check')
+        .select('id, farmer_name, community, state_id, states(name), compliance_status, boundary_geo, deforestation_check')
         .in('id', farmIds);
       farms = (farmRows ?? []).map((f) => ({
-        ...f,
+        id: f.id,
+        farmer_name: f.farmer_name,
+        community: f.community,
+        state: f.states?.name,
+        compliance_status: f.compliance_status,
         boundary_geo: f.boundary_geo !== null,
         deforestation_check_risk:
           f.deforestation_check
@@ -79,6 +87,7 @@ export async function POST(
             : 'pending',
       }));
     }
+    const farmerNameByFarmId = new Map(farms.map((f) => [f.id, f.farmer_name]));
 
     // ── Fetch lab results linked to shipment ─────────────────────────────────
     const { data: labResults } = await supabase
@@ -90,10 +99,10 @@ export async function POST(
     // ── Fetch compliance documents for shipment ──────────────────────────────
     const { data: documents } = await supabase
       .from('documents')
-      .select('doc_type, file_name, status, expiry_date')
+      .select('document_type, file_name, status, expiry_date')
       .eq('org_id', profile.org_id)
-      .eq('entity_type', 'shipment')
-      .eq('entity_id', shipmentId)
+      .eq('linked_entity_type', 'shipment')
+      .eq('linked_entity_id', shipmentId)
       .neq('status', 'archived');
 
     // ── Generate time-limited access token ───────────────────────────────────
@@ -106,27 +115,54 @@ export async function POST(
       orgName:  org?.name ?? 'Unknown Organisation',
       shipment: {
         ...shipment,
+        destination_country: shipment.destination_country ?? 'Unknown',
+        status: shipment.status ?? 'unknown',
+        created_at: shipment.created_at ?? generatedAt,
+        shipment_code: shipment.shipment_code ?? undefined,
+        total_weight_kg: shipment.total_weight_kg ?? undefined,
+        commodity: shipment.commodity ?? undefined,
+        container_number: shipment.container_number ?? undefined,
+        vessel_name: shipment.vessel_name ?? undefined,
+        bill_of_lading_number: shipment.bill_of_lading_number ?? undefined,
+        port_of_loading: shipment.port_of_loading ?? undefined,
+        port_of_discharge: shipment.port_of_discharge ?? undefined,
+        etd: shipment.etd ?? undefined,
+        eta: shipment.eta ?? undefined,
         prenotif_eu_traces: shipment.prenotif_eu_traces ?? 'not_filed',
+        prenotif_eu_traces_ref: shipment.prenotif_eu_traces_ref ?? undefined,
       },
       farms,
       batches:    (batches ?? []).map((b) => ({
         id:              b.id,
-        batch_code:      b.batch_code,
-        collection_date: b.collection_date,
-        total_weight:    b.total_weight,
-        bag_count:       b.bag_count,
-        farmer_name:     b.farmer_name,
+        batch_code:      b.batch_code ?? '',
+        collection_date: b.collected_at ?? '',
+        total_weight:    b.total_weight ?? 0,
+        bag_count:       b.bag_count ?? 0,
+        farmer_name:     (b.farm_id ? farmerNameByFarmId.get(b.farm_id) : undefined) ?? 'Unknown',
       })),
-      labResults:  (labResults ?? []),
-      documents:   (documents ?? []),
+      labResults:  (labResults ?? []).map((l) => ({
+        ...l,
+        certificate_number: l.certificate_number ?? undefined,
+        certificate_expiry_date: l.certificate_expiry_date ?? undefined,
+      })),
+      documents:   (documents ?? []).map((d) => ({
+        doc_type: d.document_type,
+        file_name: d.file_name ?? '',
+        status: d.status ?? 'unknown',
+        expiry_date: d.expiry_date ?? undefined,
+      })),
       packageToken: token,
       packageExpiresAt: expiresAt,
       generatedAt,
     });
 
     // ── Persist the evidence package record ──────────────────────────────────
-    const { error: insertError } = await supabase
-      .from('evidence_packages')
+    // TODO(schema-drift): 'evidence_packages' is defined in supabase/migrations/20260403_lab_results.sql
+    // and matches this code exactly, but it's absent from the generated database.types.ts — the
+    // migration was likely never applied to the DB the types were generated from (or types are stale).
+    // Cast as `any` here until the migration is applied/reapplied and types regenerated.
+    const { error: insertError } = await (supabase
+      .from('evidence_packages' as any) as any)
       .insert({
         org_id:      profile.org_id,
         shipment_id: shipmentId,
@@ -182,8 +218,9 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
-    const { data, error } = await supabase
-      .from('evidence_packages')
+    // TODO(schema-drift): see note above — 'evidence_packages' is missing from database.types.ts.
+    const { data, error } = await (supabase
+      .from('evidence_packages' as any) as any)
       .select('id, token, expires_at, views, created_at')
       .eq('org_id', profile.org_id)
       .eq('shipment_id', id)
@@ -194,7 +231,7 @@ export async function GET(
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
     return NextResponse.json({
-      packages: (data ?? []).map((p) => ({
+      packages: (data ?? []).map((p: any) => ({
         ...p,
         shareableUrl: `${appUrl}/evidence/${p.token}`,
       })),
