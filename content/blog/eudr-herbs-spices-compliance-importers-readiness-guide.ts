@@ -42,7 +42,7 @@ export const post: BlogPost = {
       type: 'table',
       headers: ['Requirement', 'Legal Basis', 'Who Delivers It'],
       rows: [
-        ['Phytosanitary certificate', 'Reg (EU) 2019/2072', 'The exporter, issued by the origin-country plant-health authority (FMARD in Nigeria).'],
+        ['Phytosanitary certificate', 'Reg (EU) 2019/2072', 'The exporter, issued by the origin-country plant-health authority (NAQS, under FMARD, in Nigeria).'],
         ['Ralstonia additional declaration', 'EU plant-health rules (new)', 'The exporter — ginger and turmeric need an extra declaration on the phytosanitary certificate with exact prescribed wording for Ralstonia pseudosolanacearum.'],
         ['Aflatoxin limits (ginger: 5 µg/kg B1, 10 µg/kg total)', 'EU contaminant limits', 'Both — the supplier controls drying and storage; you verify with accredited-lab results per lot.'],
         ['Pesticide residue limits (MRLs)', 'Reg (EC) 396/2005', 'Both — supplier spraying practice, importer verification testing.'],
@@ -168,7 +168,7 @@ export const post: BlogPost = {
         },
         {
           q: 'What documents should I require when importing Nigerian ginger?',
-          a: 'A phytosanitary certificate issued by FMARD carrying the prescribed Ralstonia pseudosolanacearum additional declaration, lot-specific accredited-lab results for aflatoxins (5 µg/kg B1, 10 µg/kg total for ginger) and pesticide residues, evidence of a HACCP system, and traceability records linking the lot to its origin.',
+          a: 'A phytosanitary certificate issued by NAQS (under FMARD) carrying the prescribed Ralstonia pseudosolanacearum additional declaration, lot-specific accredited-lab results for aflatoxins (5 µg/kg B1, 10 µg/kg total for ginger) and pesticide residues, evidence of a HACCP system, and traceability records linking the lot to its origin.',
         },
         {
           q: 'What are the aflatoxin limits for ginger imported into the EU?',

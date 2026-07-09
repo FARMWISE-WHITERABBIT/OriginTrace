@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Dubai earned its position honestly. The UAE imports the vast majority of its food, and the emirate\'s infrastructure — the DMCC Agro ecosystem, the Dubai Trade / ATLP single window, Jebel Ali\'s transshipment capacity — makes it the natural redistribution point for African commodities heading to the GCC and Asia. Nigerian ginger, for instance, arrives in bulk at low unit prices precisely because re-export is the business model. We cover the UAE side of the trade on our UAE compliance page at origintrace.trade/compliance/uae, and our step-by-step FIRS registration walkthrough is publishing alongside this post at /blog/dubai-food-import-firs-registration-guide. This piece is about the other direction: what happens when the goods leave Dubai for Europe.',
+      text: 'Dubai earned its position honestly. The UAE imports the vast majority of its food, and the emirate\'s infrastructure — the DMCC Agro ecosystem, the Dubai Trade / ATLP single window, Jebel Ali\'s transshipment capacity — makes it the natural redistribution point for African commodities heading to the GCC and Asia. Nigerian ginger, for instance, arrives in bulk at low unit prices precisely because re-export is the business model. We cover the UAE side of the trade on our [UAE compliance page](/compliance/uae), and our step-by-step [FIRS registration walkthrough](/blog/dubai-food-import-firs-registration-guide) covers the import direction. This piece is about the other direction: what happens when the goods leave Dubai for Europe.',
     },
     {
       type: 'h2',

@@ -43,7 +43,7 @@ export const post: BlogPost = {
       type: 'callout',
       variant: 'tip',
       title: 'Importing Into the UAE Regularly?',
-      text: 'OriginTrace packages origin data, certificates of analysis, label files, and batch traceability into one supplier data pack that\'s ready before the shipment moves. See how it works for UAE importers at origintrace.trade/compliance/uae.',
+      text: 'OriginTrace packages origin data, certificates of analysis, label files, and batch traceability into one supplier data pack that\'s ready before the shipment moves. [See how it works for UAE importers](/compliance/uae).',
     },
     {
       type: 'h2',
@@ -131,7 +131,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'We\'ve published a companion guide on exactly this — what changes when your Dubai cargo is destined for onward markets, including the EU rules that now reach African commodities transiting the Gulf. Read it at origintrace.trade/blog/dubai-reexport-eu-rules-african-commodities.',
+      text: 'We\'ve published a companion guide on exactly this — what changes when your Dubai cargo is destined for onward markets, including the EU rules that now reach African commodities transiting the Gulf. Read [the re-export guide](/blog/dubai-reexport-eu-rules-african-commodities) before your next onward deal.',
     },
     {
       type: 'faq',

@@ -42,7 +42,7 @@ export const post: BlogPost = {
       type: 'table',
       headers: ['Requirement', 'Where It Comes From', 'What It Means for You'],
       rows: [
-        ['Phytosanitary certificate', 'Reg (EU) 2019/2072', 'Issued in Nigeria by FMARD. Required for plant products; no certificate, no entry.'],
+        ['Phytosanitary certificate', 'Reg (EU) 2019/2072', 'Issued in Nigeria by NAQS (the quarantine service under FMARD). Required for plant products; no certificate, no entry.'],
         ['Ralstonia additional declaration', 'EU plant-health rules (new)', 'Ginger and turmeric need an extra declaration on the phytosanitary certificate, with exact prescribed wording.'],
         ['Aflatoxin limits', 'EU contaminant limits for ginger', '5 µg/kg aflatoxin B1 and 10 µg/kg total aflatoxins. Driven by drying and storage discipline.'],
         ['Pesticide residues (MRLs)', 'Reg (EC) 396/2005', 'Residues must sit below the EU maximum for each substance — check the limits for your crop before you spray.'],
@@ -63,7 +63,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Every plant-product consignment into the EU needs a phytosanitary certificate under Reg (EU) 2019/2072. In Nigeria, the Federal Ministry of Agriculture (FMARD) issues it. Most exporters know this part. What\'s new — and catching people out — is that ginger and turmeric now need an additional declaration on that certificate addressing Ralstonia pseudosolanacearum, a bacterial plant pathogen the EU is worried about in these crops.',
+      text: 'Every plant-product consignment into the EU needs a phytosanitary certificate under Reg (EU) 2019/2072. In Nigeria, it\'s issued by the Nigeria Agricultural Quarantine Service (NAQS), under the Federal Ministry of Agriculture (FMARD). Most exporters know this part. What\'s new — and catching people out — is that ginger and turmeric now need an additional declaration on that certificate addressing Ralstonia pseudosolanacearum, a bacterial plant pathogen the EU is worried about in these crops.',
     },
     {
       type: 'paragraph',

@@ -85,7 +85,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Read the pack like an auditor: company name, address, and signatures should match perfectly across every document. And if you\'re buying sesame for Europe, there\'s a sharper test. Under Regulation (EU) 2019/1793, Nigerian sesame faces increased official controls at the EU border — around half of consignments get pulled for Salmonella checks. A serious sesame exporter already tests every lot at an ISO/IEC 17025-accredited lab and can show you a recent analysis certificate. If they\'ve never heard of this requirement, they haven\'t shipped sesame to Europe, whatever the website says. Our sesame export compliance guide covers those border checks in detail.',
+      text: 'Read the pack like an auditor: company name, address, and signatures should match perfectly across every document. And if you\'re buying sesame for Europe, there\'s a sharper test. Under Regulation (EU) 2019/1793, Nigerian sesame faces increased official controls at the EU border — around half of consignments get pulled for Salmonella checks. A serious sesame exporter already tests every lot at an ISO/IEC 17025-accredited lab and can show you a recent analysis certificate. If they\'ve never heard of this requirement, they haven\'t shipped sesame to Europe, whatever the website says. [Our sesame export compliance guide](/blog/sesame-seed-eudr-export-compliance-guide) covers those border checks in detail.',
     },
     {
       type: 'paragraph',
