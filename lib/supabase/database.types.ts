@@ -4375,6 +4375,88 @@ export type Database = {
           },
         ]
       }
+      shipping_events: {
+        Row: {
+          classifier: string
+          created_at: string
+          event_code: string
+          event_time: string
+          id: string
+          location_locode: string | null
+          location_name: string | null
+          org_id: string
+          process_outcome: string | null
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          raw: Json | null
+          shipment_id: string
+          subscription_id: string
+          vessel_name: string | null
+          voyage_number: string | null
+        }
+        Insert: {
+          classifier?: string
+          created_at?: string
+          event_code: string
+          event_time: string
+          id?: string
+          location_locode?: string | null
+          location_name?: string | null
+          org_id: string
+          process_outcome?: string | null
+          processed_at?: string | null
+          provider: string
+          provider_event_id: string
+          raw?: Json | null
+          shipment_id: string
+          subscription_id: string
+          vessel_name?: string | null
+          voyage_number?: string | null
+        }
+        Update: {
+          classifier?: string
+          created_at?: string
+          event_code?: string
+          event_time?: string
+          id?: string
+          location_locode?: string | null
+          location_name?: string | null
+          org_id?: string
+          process_outcome?: string | null
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          raw?: Json | null
+          shipment_id?: string
+          subscription_id?: string
+          vessel_name?: string | null
+          voyage_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_events_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -4970,6 +5052,69 @@ export type Database = {
             columns: ["buyer_org_id"]
             isOneToOne: false
             referencedRelation: "buyer_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_subscriptions: {
+        Row: {
+          auto_release_enabled: boolean
+          bill_of_lading_number: string | null
+          carrier_scac: string | null
+          container_number: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          provider: string
+          provider_reference_id: string
+          shipment_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          auto_release_enabled?: boolean
+          bill_of_lading_number?: string | null
+          carrier_scac?: string | null
+          container_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          provider: string
+          provider_reference_id: string
+          shipment_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_release_enabled?: boolean
+          bill_of_lading_number?: string | null
+          carrier_scac?: string | null
+          container_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          provider?: string
+          provider_reference_id?: string
+          shipment_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_subscriptions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_subscriptions_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
             referencedColumns: ["id"]
           },
         ]

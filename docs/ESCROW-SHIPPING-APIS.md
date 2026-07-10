@@ -94,3 +94,26 @@ Grounded in the actual repo:
 - Terminal operator direct feeds (APM Terminals API program) [TK].
 
 Sources: [Maersk TradeLens discontinuation](https://www.maersk.com/news/articles/2022/11/29/maersk-and-ibm-to-discontinue-tradelens), [Supply Chain Dive – TradeLens shutdown](https://www.supplychaindive.com/news/Maersk-IBM-shut-down-TradeLens/637580/), [DCSA conformance](https://dcsa.org/standard-conformance), [DCSA T&T documentation](https://dcsa.org/standards/track-and-trace/standard-documentation-track-and-trace), [Splash247 – carriers adopting DCSA T&T](https://splash247.com/top-carriers-adopting-dcsa-track-and-trace-standards/), [Vizion API overview](https://www.vizionapi.com/container-tracking/api-overview), [Vizion docs – plans](https://docs.vizionapi.com/docs/plans), [Vizion pricing](https://www.vizionapi.com/container-tracking/pricing), [Terminal49 container tracking API](https://terminal49.com/container-tracking-api), [Terminal49 webhooks](https://terminal49.com/docs/api-docs/api-reference/webhooks/create-a-webhook), [Terminal49 API pricing](https://terminal49.com/api-pricing), [Kpler MarineTraffic data services](https://www.kpler.com/product/maritime/data-services), [MarineTraffic AIS API docs](https://servicedocs.marinetraffic.com/), [MarineTraffic container tracking](https://container-tracking.marinetraffic.com/), [Data Docked AIS API comparison](https://datadocked.com/ais-api-providers), [Lloyd's List Intelligence Seasearcher](https://www.lloydslistintelligence.com/solutions/seasearcher), [LLI API docs](https://apidocs.lloydslistintelligence.com/), [LLI API solutions](https://www.lloydslistintelligence.com/solutions/api)
+---
+
+## (G) MVP skeleton — BUILT (2026-07-09)
+
+Implemented on this branch, provider-agnostic (Terminal49/Vizion slot in as adapters later):
+
+| Piece | Where |
+|---|---|
+| Tables `tracking_subscriptions` + `shipping_events` (RLS, idempotency constraints) | `supabase/migrations/20260709_shipping_event_tracking.sql` — **applied to the live DB**; types regenerated |
+| Trigger engine (pure decision fn + ingest + processor + cron sweep) | `lib/services/shipping-events.ts` |
+| Provider webhook receiver with adapter registry (`mock` HMAC adapter shipped) | `app/api/webhooks/tracking/[provider]/route.ts` |
+| Subscription API (GET/POST, role-gated, audit-logged) | `app/api/shipments/[id]/tracking/route.ts` |
+| Manual event recording (ops path + E2E test path, admin-only) | `app/api/shipments/[id]/tracking/events/route.ts` |
+| Settlement-window sweep | `app/api/cron/tracking-sync/route.ts` (Bearer CRON_SECRET; NOT in vercel.json — Hobby cron cap; schedule via GH Action) |
+| Decision-matrix tests (21) | `tests/shipping-events.test.ts` |
+
+**Safety invariants encoded:** ACT-only; stages 6–8 only (stage 9/delivery permanently manual via dual-confirmation); auto-release opt-in per subscription; settlement delay (default 24h, `TRACKING_SETTLEMENT_DELAY_HOURS`); dispute freeze; no-double-release; releases attributed to the subscription creator (`auth.users` FK — no system user); events matched by provider reference, never bare container number.
+
+**New env vars:** `TRACKING_WEBHOOK_SECRET` (HMAC key for the `mock` webhook adapter; unset = adapter rejects everything), `TRACKING_SETTLEMENT_DELAY_HOURS` (optional, default 24).
+
+**Milestone stage normalization:** the engine accepts both numeric stages (1–9) and the legacy payment-setup labels (`on_delivery` → 9 etc.) via `normalizeMilestoneStage()`; unknown labels are never automated.
+
+**Next step (deferred by design):** wire Terminal49 — add an adapter in the webhook route (their signature scheme + payload mapping), POST subscriptions to their API on stage-6 container assignment, and run the 20–50-container pilot before enabling `auto_release_enabled` on real escrows.
