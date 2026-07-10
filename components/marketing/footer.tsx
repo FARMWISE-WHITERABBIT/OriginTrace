@@ -7,6 +7,7 @@ import { useState } from 'react';
 const footerLinks = [
   { href: '/',                label: 'Home' },
   { href: '/solutions',       label: 'Solutions' },
+  { href: '/importers',       label: 'For Importers' },
   { href: '/compliance',      label: 'Compliance Hub' },
   { href: '/industries',      label: 'Industries' },
   { href: '/blog',            label: 'Insights' },

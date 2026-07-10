@@ -151,7 +151,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Everything in this guide is a point-in-time check. It tells you a supplier was credible the week you looked. The stronger position is standing visibility: importers on OriginTrace onboard their exporters onto the platform, and make on-platform documentation part of the order itself.',
+      text: 'Everything in this guide is a point-in-time check. It tells you a supplier was credible the week you looked. The stronger position is standing visibility: importers on OriginTrace onboard their exporters onto the platform, and make on-platform documentation part of the order itself. [See how the buyer workspace works](/importers).',
     },
     {
       type: 'paragraph',

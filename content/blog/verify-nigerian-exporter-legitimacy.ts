@@ -193,7 +193,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The checklist above gets you safely through deal one. But re-running it manually for every supplier, every season, doesn\'t scale — and it still only proves the past. The importers who solve this permanently onboard their exporters onto OriginTrace and make the platform part of the trading relationship.',
+      text: 'The checklist above gets you safely through deal one. But re-running it manually for every supplier, every season, doesn\'t scale — and it still only proves the past. The importers who solve this permanently onboard their exporters onto [OriginTrace for buyers](/importers) and make the platform part of the trading relationship.',
     },
     {
       type: 'paragraph',

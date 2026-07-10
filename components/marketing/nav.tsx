@@ -28,6 +28,7 @@ const MOBILE_DRAWER_TOP = '72px';
 const navLinks = [
   { href: '/',           label: 'Home' },
   { href: '/solutions',  label: 'Solutions' },
+  { href: '/importers',  label: 'For Importers' },
   { href: '/compliance/eudr', label: 'Compliance', dropdown: complianceLinks },
   { href: '/industries', label: 'Industries', dropdown: industryLinks },
   { href: '/blog',       label: 'Insights' },
