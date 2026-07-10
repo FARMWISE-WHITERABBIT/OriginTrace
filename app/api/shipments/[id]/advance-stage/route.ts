@@ -27,6 +27,7 @@ import {
   type ShipmentForGate,
 } from '@/lib/services/shipment-stages';
 import { getEscrowStatus } from '@/lib/services/escrow';
+import { subscribeShipmentToTerminal49 } from '@/lib/services/terminal49';
 import type { Json } from '@/lib/supabase/database.types';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
@@ -157,6 +158,26 @@ export async function POST(
     if (updateError) {
       console.error('Error advancing shipment stage:', updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // ── Container tracking (best-effort, non-blocking) ─────────────────────────
+    // Completing stage 6 (Container Stuffing) means container_number is now
+    // confirmed — start Terminal49 tracking for visibility. Fire-and-forget,
+    // same discipline as dispatchWebhookEvent: any failure (missing API key,
+    // network, provider error) is logged inside subscribeShipmentToTerminal49
+    // and never blocks the stage advancement. This creates tracking only;
+    // escrow auto-release stays opt-in via POST /api/shipments/[id]/tracking.
+    if (currentStage === 6) {
+      void subscribeShipmentToTerminal49({
+        shipmentId,
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        containerNumber: shipment.container_number,
+        billOfLadingNumber: shipment.bill_of_lading_number,
+      }).catch((err) =>
+        console.error('[terminal49] subscribe rejected (non-blocking):', err)
+      );
     }
 
     // ── Audit log ─────────────────────────────────────────────────────────────

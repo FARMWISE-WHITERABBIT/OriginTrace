@@ -11,6 +11,18 @@ export interface EscrowMilestone {
   amount: number;
   description: string;
   released_at?: string;
+  /**
+   * Optional shipping-event code(s) (DCSA-style, e.g. 'LOAD', 'DEPA' — see
+   * SHIPPING_EVENT_CODES in lib/services/shipping-events.ts) that this
+   * milestone requires before the auto-release engine will match it. Multiple
+   * conceptually distinct events map onto the same pipeline stage (LOAD/ISSU/
+   * DEPA are all stage 7), so a stage-only match can release the wrong tranche
+   * when an org configures several milestones at one stage. When set, the
+   * engine only matches this milestone for those exact event codes; when
+   * absent (all legacy milestone_config JSONB), the engine matches on stage
+   * alone, exactly as before. Additive + optional — no migration needed.
+   */
+  trigger_event_code?: string | string[] | null;
 }
 
 export interface EscrowAccount {

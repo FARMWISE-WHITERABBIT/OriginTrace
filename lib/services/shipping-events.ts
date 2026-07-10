@@ -22,7 +22,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/lib/audit';
-import { getEscrowStatus, releaseMilestone } from '@/lib/services/escrow';
+import { getEscrowStatus, releaseMilestone, EscrowConcurrencyError } from '@/lib/services/escrow';
 import type { EscrowMilestone, EscrowStatusResult } from '@/lib/types/escrow';
 import type { Database } from '@/lib/supabase/database.types';
 
@@ -97,6 +97,75 @@ export function normalizeMilestoneStage(stage: string | number): number | null {
   return STAGE_LABELS[trimmed] ?? null;
 }
 
+// ─── Port-of-discharge verification (DISC anti-fraud gate) ───────────────────
+// A DISC event at a transshipment port must be tracked, never released on —
+// transshipment is where container/vessel substitution and event noise
+// concentrate (docs/ESCROW-SHIPPING-APIS.md §D). shipments.port_of_discharge
+// is free text in this app (e.g. "Hamburg" — see the shipment pipeline UI and
+// seed data), while event locations arrive as UN/LOCODEs and/or names, so we
+// only release when we can build a CONFIDENT match; anything else fails
+// closed ('pod_mismatch' / 'pod_unverified'), never fuzzy-matches.
+
+export type PodMatchResult = 'match' | 'mismatch' | 'unverified';
+
+/** Lowercase, strip diacritics, drop everything non-alphanumeric. */
+function normalizePortName(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/^port\s+of\s+/, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+const LOCODE_RE = /^[A-Za-z]{2}[A-Za-z0-9]{3}$/;
+
+/**
+ * Confident-match rules (documented, no guessing):
+ *  1. If port_of_discharge looks like a UN/LOCODE (5 chars) and the event has
+ *     a LOCODE: case-insensitive exact equality is a match.
+ *  2. If the event carries a location name: exact equality after
+ *     normalization (lowercase, diacritics stripped, punctuation removed,
+ *     leading "Port of " dropped, and for the shipment value only the segment
+ *     before the first comma — "Rotterdam, NL" → "rotterdam"). No substring
+ *     or fuzzy matching.
+ * If neither rule can produce a match but comparable data existed → mismatch.
+ * If the shipment has no POD recorded, or the event has no location → unverified.
+ */
+export function verifyDischargePortMatch(
+  shipmentPortOfDischarge: string | null,
+  eventLocode: string | null,
+  eventLocationName: string | null
+): PodMatchResult {
+  const pod = shipmentPortOfDischarge?.trim();
+  if (!pod) return 'unverified';
+
+  const locode = eventLocode?.trim();
+  const name = eventLocationName?.trim();
+  if (!locode && !name) return 'unverified';
+
+  if (locode && LOCODE_RE.test(pod) && pod.toUpperCase() === locode.toUpperCase()) {
+    return 'match';
+  }
+
+  if (name) {
+    const podFirstSegment = pod.split(',')[0] ?? pod;
+    if (
+      normalizePortName(podFirstSegment) !== '' &&
+      normalizePortName(podFirstSegment) === normalizePortName(name)
+    ) {
+      return 'match';
+    }
+  }
+
+  // Comparable data existed but nothing matched confidently. If the POD is
+  // free text and the event only has a LOCODE, we cannot verify (different
+  // formats, no normalization table) — fail closed as 'unverified' rather
+  // than calling it a definite mismatch.
+  if (!LOCODE_RE.test(pod) && !name) return 'unverified';
+  return 'mismatch';
+}
+
 // ─── Settlement delay ─────────────────────────────────────────────────────────
 
 const DEFAULT_SETTLEMENT_DELAY_HOURS = 24;
@@ -119,6 +188,11 @@ export interface ReleaseDecisionInput {
   actorId: string | null;
   escrowStatus: EscrowStatusResult | null;
   settlementHours: number;
+  /** Event location (shipping_events.location_locode / location_name). Used by the DISC POD gate. */
+  eventLocationLocode?: string | null;
+  eventLocationName?: string | null;
+  /** shipments.port_of_discharge (free text). Required to release on a DISC event. */
+  shipmentPortOfDischarge?: string | null;
 }
 
 export type ReleaseDecision =
@@ -147,10 +221,42 @@ export function decideEventAction(input: ReleaseDecisionInput): ReleaseDecision 
   if (input.escrowStatus?.hasOpenDispute) return { action: 'skip', reason: 'dispute_hold' };
   if (escrow.status !== 'active') return { action: 'skip', reason: `escrow_${escrow.status}` };
 
+  // DISC anti-fraud gate: a discharge at a transshipment port must never
+  // release the arrival tranche. Only release a DISC event when its location
+  // confidently matches the shipment's recorded port of discharge; fail
+  // closed otherwise (docs/ESCROW-SHIPPING-APIS.md §D).
+  if (input.eventCode === 'DISC') {
+    const podMatch = verifyDischargePortMatch(
+      input.shipmentPortOfDischarge ?? null,
+      input.eventLocationLocode ?? null,
+      input.eventLocationName ?? null
+    );
+    if (podMatch !== 'match') {
+      return {
+        action: 'skip',
+        reason: podMatch === 'mismatch' ? 'pod_mismatch' : 'pod_unverified',
+      };
+    }
+  }
+
   const milestones: EscrowMilestone[] = escrow.milestone_config ?? [];
-  const milestone = milestones.find(
-    (m) => !m.released_at && normalizeMilestoneStage(m.stage) === stage
-  );
+  const eventCode = input.eventCode.toUpperCase();
+  const milestone = milestones.find((m) => {
+    if (m.released_at) return false;
+    if (normalizeMilestoneStage(m.stage) !== stage) return false;
+    // Event-specific matching: a milestone tagged with trigger_event_code(s)
+    // only matches those exact codes (LOAD/ISSU/DEPA all collapse onto stage
+    // 7, so stage-only matching could release the "vessel departed" tranche
+    // off a LOAD event). Untagged milestones keep the legacy stage-only
+    // behavior for existing milestone_config JSONB.
+    if (m.trigger_event_code !== undefined && m.trigger_event_code !== null) {
+      const codes = Array.isArray(m.trigger_event_code)
+        ? m.trigger_event_code
+        : [m.trigger_event_code];
+      return codes.some((c) => c.toUpperCase() === eventCode);
+    }
+    return true;
+  });
   if (!milestone) return { action: 'skip', reason: `no_matching_milestone:stage_${stage}` };
 
   const settledAt = input.eventTime.getTime() + input.settlementHours * 3_600_000;
@@ -184,6 +290,7 @@ export interface NormalizedShippingEvent {
 
 export type IngestResult =
   | { status: 'no_subscription' }
+  | { status: 'subscription_inactive'; subscription: TrackingSubscription }
   | { status: 'duplicate'; subscription: TrackingSubscription }
   | { status: 'stored'; event: ShippingEvent; subscription: TrackingSubscription };
 
@@ -205,8 +312,15 @@ export async function ingestShippingEvent(
     .eq('provider_reference_id', providerReferenceId)
     .single();
 
-  if (!subscription || subscription.status === 'cancelled') {
+  if (!subscription) {
     return { status: 'no_subscription' };
+  }
+  // Allow-list, not deny-list: only an 'active' subscription ingests events.
+  // Late/out-of-order events arriving after the cycle closed ('completed'),
+  // errored ('error'), or was cancelled are rejected — a closed subscription
+  // must never feed the release engine.
+  if (subscription.status !== 'active') {
+    return { status: 'subscription_inactive', subscription };
   }
 
   const { data: inserted, error } = await supabase
@@ -260,6 +374,17 @@ export async function processShippingEvent(
 
   const escrowStatus = await getEscrowStatus(event.shipment_id).catch(() => null);
 
+  // The DISC POD gate needs the shipment's recorded port of discharge.
+  let shipmentPortOfDischarge: string | null = null;
+  if (event.event_code === 'DISC') {
+    const { data: shp } = await supabase
+      .from('shipments')
+      .select('port_of_discharge')
+      .eq('id', event.shipment_id)
+      .single();
+    shipmentPortOfDischarge = shp?.port_of_discharge ?? null;
+  }
+
   const decision = decideEventAction({
     eventCode: event.event_code,
     classifier: event.classifier,
@@ -269,6 +394,9 @@ export async function processShippingEvent(
     actorId: subscription.created_by,
     escrowStatus,
     settlementHours: settlementDelayHours(),
+    eventLocationLocode: event.location_locode,
+    eventLocationName: event.location_name,
+    shipmentPortOfDischarge,
   });
 
   let outcome: string;
@@ -308,6 +436,21 @@ export async function processShippingEvent(
         },
       });
     } catch (err) {
+      if (err instanceof EscrowConcurrencyError) {
+        // A concurrent writer beat us to the escrow row (e.g. two stage-7
+        // events racing, or a webhook retry racing the cron sweep). Nothing
+        // was written by our attempt — this is retryable, not a failure.
+        // Leave processed_at NULL (same as the 'defer' path) so the cron
+        // sweep re-runs the event against fresh escrow state; if the racing
+        // writer already released this milestone, the retry lands on
+        // 'no_matching_milestone' and is marked processed then.
+        outcome = 'release_conflict_retry';
+        await supabase
+          .from('shipping_events')
+          .update({ process_outcome: outcome })
+          .eq('id', event.id);
+        return outcome;
+      }
       outcome = `error:${err instanceof Error ? err.message : 'release_failed'}`.slice(0, 200);
     }
   } else {

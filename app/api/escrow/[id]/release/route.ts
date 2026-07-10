@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
-import { releaseMilestone } from '@/lib/services/escrow';
+import { releaseMilestone, EscrowConcurrencyError } from '@/lib/services/escrow';
 
 const ALLOWED_ROLES = ['admin', 'aggregator'];
 
@@ -44,6 +44,12 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Escrow release error:', error);
+    if (error instanceof EscrowConcurrencyError) {
+      return NextResponse.json(
+        { error: 'The escrow was updated by another operation at the same time. Refresh and try again.' },
+        { status: 409 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('blocked') || message.includes('not found') ? 400 : 500;
     return NextResponse.json({ error: message }, { status });

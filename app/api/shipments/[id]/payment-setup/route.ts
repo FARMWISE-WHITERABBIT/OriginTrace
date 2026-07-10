@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { createEscrow } from '@/lib/services/escrow';
+import { SHIPPING_EVENT_CODES } from '@/lib/services/shipping-events';
 import { z } from 'zod';
 
 const paymentSetupSchema = z.object({
@@ -12,6 +13,11 @@ const paymentSetupSchema = z.object({
       stage: z.string(),
       amount: z.number().positive(),
       description: z.string().min(1),
+      // Optional: restrict auto-release matching to specific shipping-event
+      // code(s). Omitted = legacy stage-only matching (backward compatible).
+      trigger_event_code: z
+        .union([z.enum(SHIPPING_EVENT_CODES), z.array(z.enum(SHIPPING_EVENT_CODES)).min(1)])
+        .optional(),
     })
   ).optional(),
 });
@@ -62,6 +68,9 @@ export async function POST(
       stage: m.stage,
       amount: m.amount,
       description: m.description,
+      ...('trigger_event_code' in m && m.trigger_event_code
+        ? { trigger_event_code: m.trigger_event_code }
+        : {}),
     }));
 
     // Create escrow account if USDC method

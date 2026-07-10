@@ -110,10 +110,25 @@ Implemented on this branch, provider-agnostic (Terminal49/Vizion slot in as adap
 | Settlement-window sweep | `app/api/cron/tracking-sync/route.ts` (Bearer CRON_SECRET; NOT in vercel.json — Hobby cron cap; schedule via GH Action) |
 | Decision-matrix tests (21) | `tests/shipping-events.test.ts` |
 
-**Safety invariants encoded:** ACT-only; stages 6–8 only (stage 9/delivery permanently manual via dual-confirmation); auto-release opt-in per subscription; settlement delay (default 24h, `TRACKING_SETTLEMENT_DELAY_HOURS`); dispute freeze; no-double-release; releases attributed to the subscription creator (`auth.users` FK — no system user); events matched by provider reference, never bare container number.
+**Safety invariants encoded:** ACT-only; stages 6–8 only (stage 9/delivery permanently manual via dual-confirmation); auto-release opt-in per subscription; settlement delay (default 24h, `TRACKING_SETTLEMENT_DELAY_HOURS`); dispute freeze; no-double-release (plus optimistic concurrency on `escrow_accounts.updated_at` — a lost race throws `EscrowConcurrencyError` before any ledger write and the event is retried by the cron sweep); releases attributed to the subscription creator (`auth.users` FK — no system user); events matched by provider reference, never bare container number; DISC releases gated on a confident port-of-discharge match (`pod_mismatch`/`pod_unverified` fail closed — transshipment discharges never release); subscription status is an allow-list (only `active` ingests); optional per-milestone `trigger_event_code` pins a milestone to specific event codes (untagged milestones keep stage-only matching).
 
 **New env vars:** `TRACKING_WEBHOOK_SECRET` (HMAC key for the `mock` webhook adapter; unset = adapter rejects everything), `TRACKING_SETTLEMENT_DELAY_HOURS` (optional, default 24).
 
 **Milestone stage normalization:** the engine accepts both numeric stages (1–9) and the legacy payment-setup labels (`on_delivery` → 9 etc.) via `normalizeMilestoneStage()`; unknown labels are never automated.
 
-**Next step (deferred by design):** wire Terminal49 — add an adapter in the webhook route (their signature scheme + payload mapping), POST subscriptions to their API on stage-6 container assignment, and run the 20–50-container pilot before enabling `auto_release_enabled` on real escrows.
+### Terminal49 integration — BUILT (2026-07-10, unpiloted)
+
+`lib/services/terminal49.ts` + a `terminal49` entry in the webhook adapter registry:
+
+| Piece | Detail |
+|---|---|
+| Webhook verify | `X-T49-Webhook-Signature` = HMAC-SHA256 hex of the raw body, keyed with the secret returned by Terminal49's `POST /v2/webhooks` (**[V]** terminal49.com/docs, in-depth webhooks guide). Unset secret = reject everything. |
+| Webhook parse | JSON:API `webhook_notification` envelope → `NormalizedShippingEvent[]`. Event map: `vessel_loaded`→LOAD, `vessel_departed`→DEPA, `vessel_arrived`→ARRI, `vessel_discharged`→DISC, `full_in`→GTIN, `full_out`→GTOT; `transshipment_*`→`TS*` codes (stored for visibility, deliberately absent from `EVENT_STAGE_MAP` so they can never release); `estimated.*`→classifier EST (never releases). NOT mapped (skipped, never guessed): `empty_out/empty_in/vessel_berthed/available/not_available/delivered/rail_*/feeder_*`. Terminal49 has **no STUF or ISSU events** — milestones pinned to those codes cannot fire from this provider. |
+| Subscription matching | Transport-event webhooks do **not** carry the tracking_request id (**[V]** payload examples page), so tracking requests are created with `ref_numbers: ["ot-sub:<subscription uuid>"]`; Terminal49 echoes `ref_numbers` back on the included shipment resource and the webhook route resolves the subscription from it. `tracking_request.*` lifecycle notifications resolve directly via the reference object (`failed`→subscription `error`, `tracking_stopped`→`cancelled`). |
+| Subscribe | `subscribeShipmentToTerminal49()` POSTs `POST /v2/tracking_requests` (`Authorization: Token <key>`; `request_type` bill_of_lading/container, `auto_detect_vocc_scac` when no SCAC known) fired-and-forgotten from advance-stage when stage 6 (Container Stuffing) completes. Never throws; failure = log line only. Inserts `tracking_subscriptions` with **`auto_release_enabled: false` always** — visibility only; money automation stays a separate explicit opt-in via `POST /api/shipments/[id]/tracking`. |
+
+**Terminal49 env vars:** `TERMINAL49_API_KEY` (API token for tracking-request creation; unset = subscribe no-ops with a log line), `TERMINAL49_WEBHOOK_SECRET` (the `secret` from webhook creation; unset = webhook adapter rejects everything). The webhook itself must be created once against `https://<host>/api/webhooks/tracking/terminal49` via their `POST /v2/webhooks` (dashboard or API) — store the returned `secret`.
+
+**Unverified against a live account (confirm during the pilot):** exact `Content-Type` accepted on tracking-request creation (we send `application/vnd.api+json`); whether `ref_numbers` reliably propagate onto the shipment resource included in every transport-event webhook (the whole matching path rides on this); the short-vs-full form of `transport_event.attributes.event`; whether `attributes.timestamp` is always present on actual events.
+
+**Next step:** run the 20–50-container pilot (compare Terminal49 events against manual records at Apapa/Tin Can/Lekki/Tema) before `auto_release_enabled` is ever turned on for a real escrow. Nothing in the Terminal49 wiring enables it automatically.
