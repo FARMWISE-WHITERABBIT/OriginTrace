@@ -1,11 +1,17 @@
 /**
  * /api/shipments/[id]/tracking
  *
- * GET  — tracking subscriptions + stored shipping events for a shipment.
- * POST — create a tracking subscription for the shipment (provider-agnostic;
- *        'manual' until an external provider is wired in). Escrow auto-release
- *        is opt-in via auto_release_enabled and, even then, only affects
- *        stages 6–8 — the final tranche stays on dual confirmation.
+ * GET   — tracking subscriptions + stored shipping events for a shipment.
+ * POST  — create a tracking subscription for the shipment (provider-agnostic;
+ *         'manual' until an external provider is wired in). Escrow auto-release
+ *         is opt-in via auto_release_enabled and, even then, only affects
+ *         stages 6–8 — the final tranche stays on dual confirmation.
+ * PATCH — toggle auto_release_enabled on an existing subscription (e.g. the
+ *         one Terminal49 auto-creates on stage 6, which always starts false).
+ *         Admin-only: this is the literal switch for money automation, a
+ *         higher bar than POST (logistics roles can create tracking
+ *         subscriptions for visibility, but only an admin can opt one into
+ *         releasing funds). Audit-logged with before/after state.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -129,3 +135,102 @@ export const POST = withErrorHandling(async (
 
   return NextResponse.json({ subscription }, { status: 201 });
 }, 'shipments/tracking/POST');
+
+const patchSubscriptionSchema = z.object({
+  // Optional: which subscription to update. If a shipment has exactly one
+  // subscription, it's inferred; with more than one (e.g. a manual + a
+  // Terminal49 subscription), it must be specified explicitly.
+  subscription_id: z.string().uuid().optional(),
+  auto_release_enabled: z.boolean(),
+});
+
+export const PATCH = withErrorHandling(async (
+  request: NextRequest,
+  ctx: unknown
+) => {
+  const { params } = ctx as { params: Promise<{ id: string }> };
+  const { id } = await params;
+
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user) return ApiError.unauthorized();
+  if (!profile?.org_id) return ApiError.forbidden('No organization assigned');
+
+  // Admin-only: enabling auto_release_enabled is what actually authorizes the
+  // trigger engine to move money on this subscription's future events.
+  const roleError = requireRole(profile, ROLES.ADMIN_ONLY);
+  if (roleError) return roleError;
+
+  const parsed = patchSubscriptionSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return ApiError.validation(parsed.error);
+  const body = parsed.data;
+
+  const shipment = await loadShipmentForOrg(id, profile.org_id);
+  if (!shipment) return ApiError.notFound('Shipment');
+
+  const supabase = createAdminClient();
+
+  let subscriptionId = body.subscription_id;
+  if (!subscriptionId) {
+    const { data: candidates } = await supabase
+      .from('tracking_subscriptions')
+      .select('id')
+      .eq('shipment_id', id)
+      .eq('org_id', profile.org_id)
+      .order('created_at', { ascending: false });
+
+    if (!candidates || candidates.length === 0) {
+      return ApiError.notFound('Tracking subscription');
+    }
+    if (candidates.length > 1) {
+      return ApiError.conflict(
+        'Shipment has more than one tracking subscription — specify subscription_id'
+      );
+    }
+    subscriptionId = candidates[0].id;
+  }
+
+  const { data: before } = await supabase
+    .from('tracking_subscriptions')
+    .select('*')
+    .eq('id', subscriptionId)
+    .eq('shipment_id', id)
+    .eq('org_id', profile.org_id)
+    .maybeSingle();
+
+  if (!before) return ApiError.notFound('Tracking subscription');
+
+  if (before.auto_release_enabled === body.auto_release_enabled) {
+    // No-op — return current state without writing or logging a change.
+    return NextResponse.json({ subscription: before });
+  }
+
+  const { data: subscription, error } = await supabase
+    .from('tracking_subscriptions')
+    .update({
+      auto_release_enabled: body.auto_release_enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', subscriptionId)
+    .eq('org_id', profile.org_id)
+    .select()
+    .single();
+
+  if (error) return ApiError.internal(error, 'shipments/tracking/PATCH');
+
+  await logAuditEvent({
+    orgId: profile.org_id,
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'shipment.tracking_auto_release_toggled',
+    resourceType: 'tracking_subscription',
+    resourceId: subscription.id,
+    metadata: {
+      shipmentId: id,
+      provider: subscription.provider,
+      before: before.auto_release_enabled,
+      after: subscription.auto_release_enabled,
+    },
+  });
+
+  return NextResponse.json({ subscription });
+}, 'shipments/tracking/PATCH');

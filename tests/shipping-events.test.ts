@@ -244,12 +244,12 @@ describe('verifyDischargePortMatch', () => {
   });
 });
 
-describe('decideEventAction — DISC POD gate', () => {
+describe('decideEventAction — DISC/ARRI POD gate', () => {
   const stage8Escrow = () => escrowWith([{ milestone_id: 'm8', stage: 8 }]);
 
-  it('releases a DISC event whose location matches the shipment POD', () => {
+  it.each(['DISC', 'ARRI'] as const)('releases a %s event whose location matches the shipment POD', (eventCode) => {
     const decision = decideEventAction(input({
-      eventCode: 'DISC',
+      eventCode,
       escrowStatus: stage8Escrow(),
       shipmentPortOfDischarge: 'Hamburg',
       eventLocationLocode: 'DEHAM',
@@ -258,9 +258,9 @@ describe('decideEventAction — DISC POD gate', () => {
     expect(decision).toMatchObject({ action: 'release', milestoneId: 'm8', stage: 8 });
   });
 
-  it('skips (pod_mismatch) a DISC at a transshipment port, never releasing', () => {
+  it.each(['DISC', 'ARRI'] as const)('skips (pod_mismatch) a %s at a transshipment port, never releasing', (eventCode) => {
     const decision = decideEventAction(input({
-      eventCode: 'DISC',
+      eventCode,
       escrowStatus: stage8Escrow(),
       shipmentPortOfDischarge: 'Hamburg',
       eventLocationLocode: 'ESALG',
@@ -269,10 +269,10 @@ describe('decideEventAction — DISC POD gate', () => {
     expect(decision).toMatchObject({ action: 'skip', reason: 'pod_mismatch' });
   });
 
-  it('fails closed (pod_unverified) when the match cannot be confidently made', () => {
+  it.each(['DISC', 'ARRI'] as const)('fails closed (pod_unverified) for %s when the match cannot be confidently made', (eventCode) => {
     // No POD recorded on the shipment
     expect(decideEventAction(input({
-      eventCode: 'DISC',
+      eventCode,
       escrowStatus: stage8Escrow(),
       shipmentPortOfDischarge: null,
       eventLocationLocode: 'DEHAM',
@@ -280,18 +280,10 @@ describe('decideEventAction — DISC POD gate', () => {
 
     // Event carries no location at all
     expect(decideEventAction(input({
-      eventCode: 'DISC',
+      eventCode,
       escrowStatus: stage8Escrow(),
       shipmentPortOfDischarge: 'Hamburg',
     }))).toMatchObject({ action: 'skip', reason: 'pod_unverified' });
-  });
-
-  it('does not apply the POD gate to non-DISC events (ARRI still releases)', () => {
-    const decision = decideEventAction(input({
-      eventCode: 'ARRI',
-      escrowStatus: stage8Escrow(),
-    }));
-    expect(decision).toMatchObject({ action: 'release', milestoneId: 'm8', stage: 8 });
   });
 });
 

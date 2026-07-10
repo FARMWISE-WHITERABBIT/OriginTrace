@@ -97,14 +97,20 @@ export function normalizeMilestoneStage(stage: string | number): number | null {
   return STAGE_LABELS[trimmed] ?? null;
 }
 
-// ─── Port-of-discharge verification (DISC anti-fraud gate) ───────────────────
-// A DISC event at a transshipment port must be tracked, never released on —
-// transshipment is where container/vessel substitution and event noise
-// concentrate (docs/ESCROW-SHIPPING-APIS.md §D). shipments.port_of_discharge
-// is free text in this app (e.g. "Hamburg" — see the shipment pipeline UI and
-// seed data), while event locations arrive as UN/LOCODEs and/or names, so we
-// only release when we can build a CONFIDENT match; anything else fails
-// closed ('pod_mismatch' / 'pod_unverified'), never fuzzy-matches.
+// ─── Port-of-discharge verification (transshipment anti-fraud gate) ──────────
+// A DISC or ARRI event at a transshipment port must be tracked, never
+// released on — transshipment is where container/vessel substitution and
+// event noise concentrate (docs/ESCROW-SHIPPING-APIS.md §D). Both event codes
+// map to stage 8 (arrival/discharge) and a vessel can just as easily "arrive"
+// at an intermediate transshipment port as it can "discharge" there, so the
+// gate applies to both, not just DISC. shipments.port_of_discharge is free
+// text in this app (e.g. "Hamburg" — see the shipment pipeline UI and seed
+// data), while event locations arrive as UN/LOCODEs and/or names, so we only
+// release when we can build a CONFIDENT match; anything else fails closed
+// ('pod_mismatch' / 'pod_unverified'), never fuzzy-matches.
+
+/** Event codes that represent arrival at a port and must be POD-verified before releasing. */
+const POD_GATED_EVENT_CODES: ReadonlySet<string> = new Set(['DISC', 'ARRI']);
 
 export type PodMatchResult = 'match' | 'mismatch' | 'unverified';
 
@@ -188,10 +194,10 @@ export interface ReleaseDecisionInput {
   actorId: string | null;
   escrowStatus: EscrowStatusResult | null;
   settlementHours: number;
-  /** Event location (shipping_events.location_locode / location_name). Used by the DISC POD gate. */
+  /** Event location (shipping_events.location_locode / location_name). Used by the DISC/ARRI POD gate. */
   eventLocationLocode?: string | null;
   eventLocationName?: string | null;
-  /** shipments.port_of_discharge (free text). Required to release on a DISC event. */
+  /** shipments.port_of_discharge (free text). Required to release on a DISC or ARRI event. */
   shipmentPortOfDischarge?: string | null;
 }
 
@@ -221,11 +227,11 @@ export function decideEventAction(input: ReleaseDecisionInput): ReleaseDecision 
   if (input.escrowStatus?.hasOpenDispute) return { action: 'skip', reason: 'dispute_hold' };
   if (escrow.status !== 'active') return { action: 'skip', reason: `escrow_${escrow.status}` };
 
-  // DISC anti-fraud gate: a discharge at a transshipment port must never
-  // release the arrival tranche. Only release a DISC event when its location
-  // confidently matches the shipment's recorded port of discharge; fail
-  // closed otherwise (docs/ESCROW-SHIPPING-APIS.md §D).
-  if (input.eventCode === 'DISC') {
+  // Transshipment anti-fraud gate: an arrival or discharge at a transshipment
+  // port must never release the arrival tranche. Only release a DISC/ARRI
+  // event when its location confidently matches the shipment's recorded port
+  // of discharge; fail closed otherwise (docs/ESCROW-SHIPPING-APIS.md §D).
+  if (POD_GATED_EVENT_CODES.has(input.eventCode)) {
     const podMatch = verifyDischargePortMatch(
       input.shipmentPortOfDischarge ?? null,
       input.eventLocationLocode ?? null,
@@ -374,9 +380,9 @@ export async function processShippingEvent(
 
   const escrowStatus = await getEscrowStatus(event.shipment_id).catch(() => null);
 
-  // The DISC POD gate needs the shipment's recorded port of discharge.
+  // The transshipment POD gate (DISC/ARRI) needs the shipment's recorded port of discharge.
   let shipmentPortOfDischarge: string | null = null;
-  if (event.event_code === 'DISC') {
+  if (POD_GATED_EVENT_CODES.has(event.event_code)) {
     const { data: shp } = await supabase
       .from('shipments')
       .select('port_of_discharge')
