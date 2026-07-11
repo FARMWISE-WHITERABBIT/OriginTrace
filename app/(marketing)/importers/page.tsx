@@ -6,9 +6,11 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
 import { SimpleFAQList } from '@/components/marketing/faq-accordion';
 import { FAQSchema } from '@/components/marketing/faq-schema';
-import { ChevronRight, ShieldCheck, Banknote, FileText } from 'lucide-react';
+import { getPostBySlug } from '@/lib/blog';
+import { ChevronRight, ShieldCheck, Banknote, FileText, Lock, CheckCircle2, ShieldQuestion } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'For Importers & Buyers',
@@ -111,47 +113,47 @@ const importerFaqs = [
   },
 ];
 
-const escrowPoints = [
+const escrowSteps = [
   {
-    title: 'Funds held, not wired',
-    body: 'Money sits in escrow against agreed milestones instead of leaving your account on an invoice and a promise. Both sides see the same ledger.',
+    number: '01',
+    title: 'Funds move into escrow, not to your supplier',
+    body: 'When the contract is signed, your payment moves into a secured account instead of leaving on an invoice and a promise. Your supplier sees the funds are committed; you keep control until delivery is proven.',
+    icon: Lock,
   },
   {
-    title: 'Released on verified events',
-    body: 'Milestones release against carrier-confirmed shipping events — loaded on board, vessel departed, discharged at destination — not against a supplier\'s say-so. Estimated events never move money.',
+    number: '02',
+    title: 'Every milestone is verified independently',
+    body: 'As the shipment moves — gate-in, loaded on board, vessel departed, discharged at destination — OriginTrace checks each event against the carrier\'s own tracking data. Not your supplier\'s word. Not an estimate.',
+    icon: CheckCircle2,
   },
   {
-    title: 'You confirm the final tranche',
-    body: 'Delivery is never automated. The last payment releases only when both sides confirm — and any dispute freezes everything until it\'s resolved.',
+    number: '03',
+    title: 'Payment releases in tranches, matched to what actually happened',
+    body: 'Each carrier-confirmed milestone triggers its agreed share of the payment automatically. If a milestone hasn\'t happened, nothing moves — there\'s no way to release funds against a shipment that isn\'t where it\'s supposed to be.',
+    icon: Banknote,
   },
   {
-    title: 'It makes you the buyer suppliers prioritize',
-    body: 'Your best suppliers already deal with buyers who ask for 90-day letter-of-credit terms and the paperwork that comes with them. A buyer whose money releases at verified milestones, not months later, is the contract they take first.',
+    number: '04',
+    title: 'You confirm the final release',
+    body: 'The last tranche is never automatic. Delivery only completes when you sign off — and if a dispute is raised at any point, every remaining release freezes until it\'s resolved.',
+    icon: ShieldQuestion,
   },
 ];
 
-const buyerGuides = [
-  {
-    title: 'How to Verify a Supplier\'s "EUDR-Ready" Claim',
-    href: '/blog/how-to-verify-supplier-eudr-claims',
-  },
-  {
-    title: 'How to Verify a Nigerian Exporter Before You Pay',
-    href: '/blog/verify-nigerian-exporter-legitimacy',
-  },
-  {
-    title: 'Importing Food Into Dubai: The FIRS Walkthrough',
-    href: '/blog/dubai-food-import-firs-registration-guide',
-  },
-  {
-    title: 'Re-Exporting From Dubai to the EU? You Inherit the EU\'s Rules',
-    href: '/blog/dubai-reexport-eu-rules-african-commodities',
-  },
+const buyerGuideSlugs = [
+  'how-to-verify-supplier-eudr-claims',
+  'verify-nigerian-exporter-legitimacy',
+  'dubai-food-import-firs-registration-guide',
+  'dubai-reexport-eu-rules-african-commodities',
 ];
 
 /* ─── PAGE ──────────────────────────────────────────────────────────── */
 
 export default function ImportersPage() {
+  const buyerGuidePosts = buyerGuideSlugs
+    .map((slug) => getPostBySlug(slug))
+    .filter((post): post is NonNullable<typeof post> => post !== undefined);
+
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
@@ -242,18 +244,72 @@ export default function ImportersPage() {
           className="section-spacing"
           style={{ background: 'var(--color--gray-7)', borderRadius: '2rem 2rem 0 0', marginTop: '-2rem', position: 'relative', zIndex: 1 }}
         >
-          <div className="mk-container-lg">
-            <div className="solutions-field-header" style={{ marginBottom: '2.5rem' }}>
-              <div>
-                <span className="pre-title" style={{ marginBottom: '0.75rem', display: 'inline-block' }}>The Buyer&apos;s Problem</span>
-                <h2 className="text-display-lg" style={{ marginTop: '0.75rem' }}>
-                  Every supplier says they&apos;re compliant. You&apos;re the one who pays if they aren&apos;t.
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="section-header">
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 36 36"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="margin-bottom margin-medium"
+                  aria-hidden
+                  style={{ color: 'var(--mk-text-muted)' }}
+                >
+                  <circle cx="18" cy="18" r="5" stroke="currentColor" strokeWidth="1.5" />
+                  <line x1="18" y1="2"  x2="18" y2="7"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="18" y1="29" x2="18" y2="34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="2"  y1="18" x2="7"  y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29" y1="18" x2="34" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="6.34"  y1="6.34"  x2="9.87"  y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="26.13" y1="26.13" x2="29.66" y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29.66" y1="6.34"  x2="26.13" y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="9.87"  y1="26.13" x2="6.34"  y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+
+                <span className="pre-title margin-bottom margin-medium">The Buyer&apos;s Problem</span>
+
+                <h2 className="text-display-lg section-header__title" style={{ maxWidth: '28ch' }}>
+                  Every supplier says they&apos;re{' '}
+                  <span className="text-mk-muted">compliant.</span>{' '}
+                  You&apos;re the one who pays if{' '}
+                  <span className="text-mk-brand">they aren&apos;t.</span>
                 </h2>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <p style={{ fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75 }}>
-                  Rejected consignments bill the importer of record. Regulators fine the first operator placing goods on the market — not the exporter. And a forged certificate looks exactly like a real one in a PDF. The only durable answer is standing visibility into your supply chain at origin: records that accumulate as your supplier operates, instead of a data pack assembled the week you asked for it.
+
+                <p className="section-header__body">
+                  Rejected consignments bill the importer of record. Regulators fine the first
+                  operator placing goods on the market — not the exporter. And a forged certificate
+                  looks exactly like a real one in a PDF. The only durable answer is standing
+                  visibility into your supply chain at origin: records that accumulate as your
+                  supplier operates, instead of a data pack assembled the week you asked for it.
                 </p>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* 3-column image grid — matches the homepage's Problem We Solve treatment */}
+          <div className="mk-container-lg" style={{ marginTop: '3rem' }}>
+            <div className="hidden md:grid" style={{
+              gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem',
+              alignItems: 'center', marginBottom: '3rem',
+            }}>
+              <FadeIn delay={0.1} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-1427107.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.22} direction="up">
+                <div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.34} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+            </div>
+
+            <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-1427107.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-tomfisk-2231744.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
               </div>
             </div>
           </div>
@@ -301,52 +357,85 @@ export default function ImportersPage() {
             <FadeIn>
               <div className="section-header--left margin-bottom margin-xlarge">
                 <span className="pre-title margin-bottom margin-medium">Escrow Payments</span>
-                <h2 className="text-display-lg">Pay on proof, not promises.</h2>
+                <h2 className="text-display-lg" style={{ maxWidth: '30ch' }}>How your payment actually moves.</h2>
+                <p style={{ marginTop: '1rem', fontSize: '1rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75, maxWidth: '46ch' }}>
+                  Not a black box, and not a substitute for a letter of credit — a mechanism you can
+                  see the logic of. Four steps, each one gated on something a carrier confirmed, not
+                  something a supplier claimed.
+                </p>
               </div>
             </FadeIn>
 
-            <div className="mk-grid-2 mk-gap-md">
-              {escrowPoints.map((point, i) => (
-                <FadeIn key={i} delay={i * 0.1}>
-                  <div className="mk-card" style={{ padding: '2rem' }}>
-                    <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
-                      <Banknote className="w-5 h-5" />
+            {/* Connected step flow */}
+            <div style={{ position: 'relative' }}>
+              <div
+                className="hidden md:block"
+                aria-hidden
+                style={{ position: 'absolute', top: '28px', left: 'calc(12.5% + 28px)', right: 'calc(12.5% + 28px)', height: '1px', background: 'var(--mk-border)', zIndex: 0 }}
+              />
+              <div className="mk-grid-4 mk-gap-md" style={{ position: 'relative', zIndex: 1 }}>
+                {escrowSteps.map((step, i) => (
+                  <FadeIn key={step.number} delay={i * 0.1}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <div
+                        style={{
+                          width: '56px', height: '56px', borderRadius: '50%',
+                          background: '#fff', border: '1px solid var(--mk-border)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', flexShrink: 0,
+                        }}
+                      >
+                        <step.icon className="w-5 h-5" style={{ color: 'var(--mk-green)' }} />
+                      </div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--mk-text-muted)', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                        STEP {step.number}
+                      </span>
+                      <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, marginBottom: '0.625rem', color: 'var(--mk-text-primary)', lineHeight: 1.35 }}>
+                        {step.title}
+                      </h3>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
+                        {step.body}
+                      </p>
                     </div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--mk-text-primary)' }}>
-                      {point.title}
-                    </h3>
-                    <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
-                      {point.body}
-                    </p>
-                  </div>
-                </FadeIn>
-              ))}
+                  </FadeIn>
+                ))}
+              </div>
             </div>
+
+            {/* Positioning callout — why suppliers prioritize this over an LC */}
+            <FadeIn delay={0.4}>
+              <div
+                style={{
+                  marginTop: '3rem', padding: '2rem 2.25rem', borderRadius: '1.25rem',
+                  background: 'var(--mk-green-pale, rgba(46,125,107,0.06))',
+                  border: '1px solid rgba(46,125,107,0.16)',
+                  display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                }}
+              >
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--mk-green)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Skip the LC paperwork, not the LC-level trust
+                </span>
+                <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.75, maxWidth: '64ch' }}>
+                  Your best suppliers already deal with buyers who ask for 90-day letter-of-credit
+                  terms and the documentary back-and-forth that comes with them. A buyer whose money
+                  moves against verified milestones — not months later, and not against a discrepant
+                  document — is the contract they take first.
+                </p>
+              </div>
+            </FadeIn>
           </div>
         </section>
 
-        {/* ── SECTION 6: Buyer guides ── */}
-        <section className="section-spacing section-white">
+        {/* ── SECTION 6: Buyer guides — same carousel treatment as the homepage blog section ── */}
+        <section className="section-spacing-sm section-white mk-blog-section">
           <div className="mk-container-lg">
-            <FadeIn>
-              <div className="section-header--left margin-bottom margin-xlarge">
-                <span className="pre-title margin-bottom margin-medium">Buyer Guides</span>
-                <h2 className="text-display-lg">Do the homework before the contract.</h2>
-              </div>
-            </FadeIn>
-
-            <div className="mk-grid-2 mk-gap-md">
-              {buyerGuides.map((guide, i) => (
-                <FadeIn key={i} delay={i * 0.05}>
-                  <Link href={guide.href} className="mk-card" style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--mk-text-primary)', lineHeight: 1.5 }}>
-                      {guide.title}
-                    </span>
-                    <ChevronRight className="h-5 w-5 shrink-0" style={{ color: 'var(--mk-green)' }} />
-                  </Link>
-                </FadeIn>
-              ))}
-            </div>
+            <BlogCarousel
+              posts={buyerGuidePosts}
+              eyebrow="Buyer Guides"
+              heading={<>Do the{' '}<span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>homework</span>{' '}before the contract</>}
+              viewAllHref="/blog"
+              viewAllLabel="Read All Buyer Guides"
+            />
           </div>
         </section>
 
