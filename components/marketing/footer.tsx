@@ -68,7 +68,7 @@ export function MarketingFooter() {
         className="mk-footer__bg"
         style={{ objectFit: 'cover' }}
       >
-        <source src="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" type="video/mp4" />
+        <source src="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" type="video/mp4" />
       </video>
       <div className="mk-footer__overlay" aria-hidden />
 

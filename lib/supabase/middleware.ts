@@ -170,7 +170,7 @@ export async function updateSession(request: NextRequest) {
   const isSuperadminLogin = pathname === '/superadmin/login';
   const isResetPasswordPage = pathname === '/auth/reset-password';
   const isPublicPage =
-    ['/', '/solutions', '/pedigree', '/demo', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
+    ['/', '/solutions', '/pedigree', '/demo', '/importers', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/compliance') ||
     pathname.startsWith('/industries') ||

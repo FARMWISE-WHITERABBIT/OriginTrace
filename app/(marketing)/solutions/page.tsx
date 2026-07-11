@@ -161,7 +161,7 @@ export default function SolutionsPage() {
             1. HERO — full-bleed background, headline left, stats card
             ══════════════════════════════════════════════════════════ */}
         <section className="mk-hero mk-hero--solutions">
-          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <HeroBackground videoSrc="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" />
           <div className="mk-hero__overlay mk-hero__overlay--solutions" />
 
           <div className="mk-hero__content mk-hero__content--solutions">
