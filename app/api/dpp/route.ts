@@ -141,14 +141,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: pedigree } = await supabaseAdmin
-      .from('pedigree_verification')
+      .from('pedigree_verification_records')
       .select('*')
       .eq('finished_good_id', finished_good_id)
       .single();
 
     const chainOfCustody = [];
     if (pedigree?.source_farms && Array.isArray(pedigree.source_farms)) {
-      for (const farm of pedigree.source_farms) {
+      for (const farm of pedigree.source_farms as any[]) {
         chainOfCustody.push({
           stage: 'collection',
           actor: farm.farmer_name,

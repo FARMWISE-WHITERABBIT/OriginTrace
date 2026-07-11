@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const areaHectares = farm.area_hectares || 1;
 
     const { data: cropStandard } = await supabaseAdmin
-      .from('crop_standards')
+      .from('yield_benchmarks')
       .select('avg_yield_per_hectare')
       .eq('commodity', farmCommodity.toLowerCase())
       .eq('region', 'nigeria')
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     const { data: cropStandards } = await supabaseAdmin
-      .from('crop_standards')
+      .from('yield_benchmarks')
       .select('*')
       .eq('region', 'nigeria');
 

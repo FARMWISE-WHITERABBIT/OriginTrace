@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
         const paymentByCurrency: Record<string, number> = {};
         for (const p of paymentData || []) {
           const cur = p.currency || 'NGN';
-          paymentByCurrency[cur] = (paymentByCurrency[cur] || 0) + (parseFloat(p.amount) || 0);
+          paymentByCurrency[cur] = (paymentByCurrency[cur] || 0) + (parseFloat(String(p.amount)) || 0);
         }
 
         const { count: dppCount } = await supabase
@@ -353,10 +353,10 @@ export async function GET(request: NextRequest) {
         }
         
         // Fetch users and orgs for mapping
-        const { data: allUsers } = await supabase.from('profiles').select('id, full_name, email, role');
+        const { data: allUsers } = await supabase.from('profiles').select('id, full_name, role');
         const { data: allOrgs } = await supabase.from('organizations').select('id, name');
-        
-        const userMap = new Map((allUsers || []).map(u => [u.id, { id: u.id, full_name: u.full_name || u.email || 'Unknown', role: u.role }]));
+
+        const userMap = new Map((allUsers || []).map(u => [u.id, { id: u.id, full_name: u.full_name || 'Unknown', role: u.role }]));
         const orgMap = new Map((allOrgs || []).map(o => [o.id, { id: o.id, name: o.name }]));
         
         const enrichedStatus = (syncStatus || []).map(s => ({

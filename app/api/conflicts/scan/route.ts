@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     // 2. Build geom array — skip farms with invalid/missing boundary rings
     const farmGeoms: FarmGeom[] = [];
     for (const farm of farms) {
-      const ring = farm.boundary?.coordinates?.[0];
+      const boundary = farm.boundary as { coordinates?: [number, number][][] } | null;
+      const ring = boundary?.coordinates?.[0];
       if (!ring || ring.length < 3) continue;
       farmGeoms.push({ id: farm.id, farmer_name: farm.farmer_name, ring });
     }
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
         .insert({
           farm_a_id: conflict.farm_a_id,
           farm_b_id: conflict.farm_b_id,
+          org_id: profile.org_id,
           overlap_ratio: conflict.overlap_ratio,
           severity,
           status: 'pending',

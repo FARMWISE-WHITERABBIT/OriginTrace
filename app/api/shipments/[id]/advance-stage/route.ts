@@ -27,6 +27,8 @@ import {
   type ShipmentForGate,
 } from '@/lib/services/shipment-stages';
 import { getEscrowStatus } from '@/lib/services/escrow';
+import { subscribeShipmentToTerminal49 } from '@/lib/services/terminal49';
+import type { Json } from '@/lib/supabase/database.types';
 
 const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
 
@@ -68,7 +70,6 @@ export async function POST(
         id, current_stage, stage_data, stage_history,
         compliance_profile_id, purchase_order_number,
         inspection_body, inspection_result,
-        doc_status,
         clearing_agent_name, customs_declaration_number, exit_certificate_number,
         freight_forwarder_name, vessel_name, etd, eta,
         container_number, container_seal_number,
@@ -77,7 +78,7 @@ export async function POST(
         target_regulations,
         readiness_score, readiness_decision,
         buyer_company, buyer_contact,
-        shipment_code
+        shipment_code, doc_status
       `)
       .eq('id', shipmentId)
       .eq('org_id', profile.org_id)
@@ -98,8 +99,9 @@ export async function POST(
     }
 
     // ── Validate gate conditions ───────────────────────────────────────────────
-    const stageGate = validateStageGate(shipment as ShipmentForGate, targetStage);
-    const readinessGate = validateReadinessHardGate(shipment as ShipmentForGate, targetStage);
+    const shipmentForGate = { ...shipment, doc_status: shipment.doc_status ?? {} } as unknown as ShipmentForGate;
+    const stageGate = validateStageGate(shipmentForGate, targetStage);
+    const readinessGate = validateReadinessHardGate(shipmentForGate, targetStage);
 
     // Check for escrow dispute hold
     const escrowStatus = await getEscrowStatus(shipmentId);
@@ -143,8 +145,8 @@ export async function POST(
       .from('shipments')
       .update({
         current_stage: targetStage,
-        stage_data: updatedStageData,
-        stage_history: updatedStageHistory,
+        stage_data: updatedStageData as unknown as Json,
+        stage_history: updatedStageHistory as unknown as Json,
         status: newLegacyStatus,
         updated_at: new Date().toISOString(),
       })
@@ -156,6 +158,26 @@ export async function POST(
     if (updateError) {
       console.error('Error advancing shipment stage:', updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // ── Container tracking (best-effort, non-blocking) ─────────────────────────
+    // Completing stage 6 (Container Stuffing) means container_number is now
+    // confirmed — start Terminal49 tracking for visibility. Fire-and-forget,
+    // same discipline as dispatchWebhookEvent: any failure (missing API key,
+    // network, provider error) is logged inside subscribeShipmentToTerminal49
+    // and never blocks the stage advancement. This creates tracking only;
+    // escrow auto-release stays opt-in via POST /api/shipments/[id]/tracking.
+    if (currentStage === 6) {
+      void subscribeShipmentToTerminal49({
+        shipmentId,
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        containerNumber: shipment.container_number,
+        billOfLadingNumber: shipment.bill_of_lading_number,
+      }).catch((err) =>
+        console.error('[terminal49] subscribe rejected (non-blocking):', err)
+      );
     }
 
     // ── Audit log ─────────────────────────────────────────────────────────────

@@ -56,7 +56,7 @@ CREATE POLICY "shipment_templates_org_access"
   ON shipment_templates
   FOR ALL
   USING (org_id = (
-    SELECT org_id FROM profiles WHERE id = auth.uid()
+    SELECT org_id FROM profiles WHERE user_id = auth.uid()
   ));
 
 CREATE INDEX IF NOT EXISTS idx_shipment_templates_org

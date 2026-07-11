@@ -37,8 +37,8 @@ export async function GET(
 
     const score = shipment.readiness_score ?? 0;
     const decision = shipment.readiness_decision ?? 'pending';
-    const breakdown: Array<{ name: string; score: number; weight: number }> = shipment.score_breakdown || [];
-    const riskFlags: Array<{ type: string; message: string; severity: string }> = shipment.risk_flags || [];
+    const breakdown: Array<{ name: string; score: number; weight: number }> = (shipment.score_breakdown as unknown as Array<{ name: string; score: number; weight: number }>) || [];
+    const riskFlags: Array<{ type: string; message: string; severity: string }> = (shipment.risk_flags as unknown as Array<{ type: string; message: string; severity: string }>) || [];
     const regulations: string[] = shipment.target_regulations || [];
 
     const decisionColor = decision === 'GO' ? '#16a34a' : decision === 'CONDITIONAL' ? '#d97706' : decision === 'NO_GO' ? '#dc2626' : '#6b7280';

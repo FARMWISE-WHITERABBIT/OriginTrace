@@ -48,18 +48,38 @@ export async function POST(request: NextRequest) {
     const orgName = org?.name ?? 'Unknown Organisation';
 
     // ── Fetch farms ─────────────────────────────────────────────────────────
-    const { data: farms } = await supabase
+    const { data: farmRows } = await supabase
       .from('farms')
-      .select('id, farmer_name, community, state, boundary_geo, deforestation_check, consent_timestamp, compliance_status')
+      .select('id, farmer_name, community, states(name), boundary_geo, deforestation_check, consent_timestamp, compliance_status')
       .eq('org_id', orgId);
 
+    const farms = (farmRows ?? []).map((f) => ({
+      id: f.id,
+      farmer_name: f.farmer_name,
+      community: f.community,
+      state: f.states?.name ?? '',
+      boundary_geo: f.boundary_geo !== null,
+      deforestation_check: f.deforestation_check,
+      consent_timestamp: f.consent_timestamp,
+      compliance_status: f.compliance_status,
+    }));
+
     // ── Fetch batches ───────────────────────────────────────────────────────
-    const { data: batches } = await supabase
+    const { data: batchRows } = await supabase
       .from('collection_batches')
-      .select('id, batch_code, total_weight, bag_count, collection_date, farmer_name')
+      .select('id, batch_code, total_weight, bag_count, collected_at, farms(farmer_name)')
       .eq('org_id', orgId)
-      .gte('collection_date', from)
-      .lte('collection_date', to);
+      .gte('collected_at', from)
+      .lte('collected_at', to);
+
+    const batches = (batchRows ?? []).map((b) => ({
+      id: b.id,
+      batch_code: b.batch_code,
+      total_weight: b.total_weight,
+      bag_count: b.bag_count,
+      collection_date: b.collected_at,
+      farmer_name: b.farms?.farmer_name,
+    }));
 
     // ── Fetch lab results ───────────────────────────────────────────────────
     const { data: labResults } = await supabase
@@ -91,7 +111,7 @@ export async function POST(request: NextRequest) {
         ddsSubmissions.push({
           id:                    r.id,
           shipment_id:           r.id,
-          prenotif_eu_traces:    r.prenotif_eu_traces,
+          prenotif_eu_traces:    r.prenotif_eu_traces!,
           prenotif_eu_traces_ref: r.prenotif_eu_traces_ref ?? undefined,
         });
       });
@@ -107,7 +127,14 @@ export async function POST(request: NextRequest) {
         .gte('payment_date', from)
         .lte('payment_date', to)
         .order('payment_date', { ascending: true });
-      payments = paymentRows ?? [];
+      payments = (paymentRows ?? []).map((p) => ({
+        id: p.id,
+        payee_name: p.payee_name,
+        amount: p.amount,
+        currency: p.currency ?? 'NGN',
+        payment_date: p.payment_date,
+        status: p.status ?? 'unknown',
+      }));
     }
 
     // ── Fetch audit readiness score ─────────────────────────────────────────

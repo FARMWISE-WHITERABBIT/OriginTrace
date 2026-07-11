@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
+import type { Json } from '@/lib/supabase/database.types';
 
 /**
  * POST /api/shipments/[id]/recalculate
@@ -57,8 +58,8 @@ export async function POST(
       .update({
         readiness_score: Math.round(readiness.overall_score),
         readiness_decision: readiness.decision,
-        risk_flags: readiness.risk_flags,
-        score_breakdown: readiness.dimensions,
+        risk_flags: readiness.risk_flags as unknown as Json,
+        score_breakdown: readiness.dimensions as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

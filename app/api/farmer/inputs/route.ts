@@ -30,7 +30,7 @@ export async function GET() {
       .eq('user_id', user.id)
       .single();
 
-    if (!farmerAccount) {
+    if (!farmerAccount || !farmerAccount.farm_id) {
       return NextResponse.json({ error: 'Farmer account not found' }, { status: 404 });
     }
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    if (!farmerAccount) {
+    if (!farmerAccount || !farmerAccount.farm_id) {
       return NextResponse.json({ error: 'Farmer account not found' }, { status: 404 });
     }
 

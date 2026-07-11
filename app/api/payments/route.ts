@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
         payment_method,
         reference_number: reference_number || null,
         linked_entity_type: linked_entity_type || null,
-        linked_entity_id: linked_entity_id || null,
+        linked_entity_id: linked_entity_id != null ? String(linked_entity_id) : null,
         payment_date: payment_date || new Date().toISOString().split('T')[0],
         notes: notes || null,
         status: 'completed',

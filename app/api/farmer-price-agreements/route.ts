@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (commodity) query = query.eq('commodity', commodity);
-    if (farmId) query = query.eq('farm_id', parseInt(farmId));
+    if (farmId) query = query.eq('farm_id', farmId);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       .from('farmer_price_agreements')
       .insert({
         org_id: profile.org_id,
-        farm_id: parsed.data.farm_id ?? null,
+        farm_id: parsed.data.farm_id != null ? String(parsed.data.farm_id) : null,
         commodity: parsed.data.commodity,
         price_per_kg: parsed.data.price_per_kg,
         currency: parsed.data.currency,

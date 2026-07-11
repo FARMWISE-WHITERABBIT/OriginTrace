@@ -11,12 +11,12 @@ interface Farm {
   id: string;
   farmer_name: string;
   community: string;
-  compliance_status: 'pending' | 'approved' | 'flagged';
+  compliance_status: string | null;
   boundary: {
     type: string;
     coordinates: number[][][];
   } | null;
-  area_hectares?: number;
+  area_hectares?: number | null;
 }
 
 function MapContent({ farms }: { farms: Farm[] }) {
@@ -79,8 +79,8 @@ function MapContent({ farms }: { farms: Farm[] }) {
             <Polygon 
               key={farm.id} 
               positions={positions}
-              pathOptions={{ 
-                color: getStatusColor(farm.compliance_status),
+              pathOptions={{
+                color: getStatusColor(farm.compliance_status || 'pending'),
                 fillOpacity: 0.4,
                 weight: 2
               }}
@@ -94,9 +94,9 @@ function MapContent({ farms }: { farms: Farm[] }) {
                   )}
                   <span 
                     className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium"
-                    style={{ 
-                      backgroundColor: getStatusColor(farm.compliance_status) + '20',
-                      color: getStatusColor(farm.compliance_status),
+                    style={{
+                      backgroundColor: getStatusColor(farm.compliance_status || 'pending') + '20',
+                      color: getStatusColor(farm.compliance_status || 'pending'),
                     }}
                   >
                     {farm.compliance_status}
@@ -125,11 +125,11 @@ export function LiveSupplyMap() {
         const { data, error } = await supabase
           .from('farms')
           .select('id, farmer_name, community, compliance_status, boundary, area_hectares')
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .not('boundary', 'is', null);
 
         if (!error && data) {
-          setFarms(data);
+          setFarms(data as unknown as Farm[]);
         }
       } catch (error) {
         console.error('Failed to fetch farms:', error);

@@ -358,7 +358,7 @@ export async function GET(request: NextRequest) {
           const breakdown = s.score_breakdown as any;
           return {
             id: s.id,
-            name: `${s.destination_country || 'Unknown'} - ${new Date(s.created_at).toLocaleDateString()}`,
+            name: `${s.destination_country || 'Unknown'} - ${s.created_at ? new Date(s.created_at).toLocaleDateString() : 'Unknown date'}`,
             traceability: breakdown?.traceability?.score ?? 0,
             contamination: breakdown?.chemical?.score ?? breakdown?.contamination?.score ?? 0,
             documentation: breakdown?.documentation?.score ?? 0,

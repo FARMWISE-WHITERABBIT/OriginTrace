@@ -9,6 +9,24 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import type { EscrowAccount, EscrowDispute, EscrowMilestone, EscrowStatusResult } from '@/lib/types/escrow';
+import type { Json } from '@/lib/supabase/database.types';
+
+/**
+ * Thrown when a milestone release loses an optimistic-concurrency race: the
+ * escrow row was modified between our read and our guarded UPDATE, so the
+ * UPDATE matched 0 rows and NO ledger row / webhook / audit event was written.
+ * Callers should treat this as retryable (re-read and retry, or surface a
+ * "try again" message) — it is never a permanent failure.
+ */
+export class EscrowConcurrencyError extends Error {
+  constructor(escrowId: string) {
+    super(
+      `concurrent_release_conflict: escrow ${escrowId} was modified concurrently; ` +
+        'release aborted before any ledger write'
+    );
+    this.name = 'EscrowConcurrencyError';
+  }
+}
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
@@ -76,7 +94,7 @@ export async function createEscrow(params: CreateEscrowParams): Promise<EscrowAc
       held_amount: params.totalAmount,
       released_amount: 0,
       status: 'active',
-      milestone_config: params.milestones ?? null,
+      milestone_config: (params.milestones ?? null) as unknown as Json,
       created_by: params.createdBy,
     })
     .select()
@@ -130,6 +148,16 @@ export interface ReleaseMilestoneParams {
 
 /**
  * Releases funds for a specific milestone. Blocked if an open dispute exists.
+ *
+ * Concurrency: read-then-write is guarded with optimistic locking on
+ * escrow_accounts.updated_at (a BEFORE UPDATE trigger bumps it on every
+ * write — see 20260403_escrow_foundations.sql). The UPDATE carries
+ * .eq('updated_at', <read value>), so if a concurrent writer (e.g. two
+ * stage-7 shipping events racing, or a webhook retry racing the cron sweep)
+ * commits between our read and our write, our UPDATE matches 0 rows and we
+ * throw EscrowConcurrencyError BEFORE inserting the escrow_transactions
+ * ledger row or firing the 'escrow.released' webhook. No double-counted
+ * ledger entries; the loser simply retries against fresh state.
  */
 export async function releaseMilestone(params: ReleaseMilestoneParams): Promise<void> {
   const supabase = createAdminClient();
@@ -143,7 +171,7 @@ export async function releaseMilestone(params: ReleaseMilestoneParams): Promise<
   if (escrow.status === 'disputed') throw new Error('Release blocked: escrow has an active dispute');
   if (escrow.status !== 'active') throw new Error(`Escrow is ${escrow.status} — no release possible`);
 
-  const milestones: EscrowMilestone[] = escrow.milestone_config ?? [];
+  const milestones: EscrowMilestone[] = (escrow.milestone_config as unknown as EscrowMilestone[]) ?? [];
   const milestone = milestones.find((m) => m.milestone_id === params.milestoneId);
   if (!milestone) throw new Error(`Milestone ${params.milestoneId} not found in escrow config`);
   if (milestone.released_at) throw new Error(`Milestone ${params.milestoneId} has already been released`);
@@ -160,15 +188,31 @@ export async function releaseMilestone(params: ReleaseMilestoneParams): Promise<
       : m
   );
 
-  await supabase
+  // Optimistic-concurrency guard: only apply the release if the row is still
+  // exactly the version we read. updated_at is also set explicitly so the
+  // token changes even in environments without the DB trigger.
+  const { data: updatedEscrow, error: updateError } = await supabase
     .from('escrow_accounts')
     .update({
       held_amount: newHeldAmount,
       released_amount: newReleasedAmount,
       status: allReleased ? 'completed' : 'active',
-      milestone_config: updatedMilestones,
+      milestone_config: updatedMilestones as unknown as Json,
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', params.escrowId).eq('org_id', params.orgId);
+    .eq('id', params.escrowId)
+    .eq('org_id', params.orgId)
+    .eq('updated_at', escrow.updated_at)
+    .select()
+    .maybeSingle();
+
+  if (updateError) {
+    throw new Error(`Escrow release update failed: ${updateError.message}`);
+  }
+  if (!updatedEscrow) {
+    // 0 rows matched — a concurrent writer won the race. Nothing was written.
+    throw new EscrowConcurrencyError(params.escrowId);
+  }
 
   await supabase.from('escrow_transactions').insert({
     escrow_id: params.escrowId,

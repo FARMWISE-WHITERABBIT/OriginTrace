@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     const totalBatches = batchRows?.length ?? 0;
     const completeBatches = (batchRows ?? []).filter(
-      (b) => b.total_weight > 0 && b.bag_count > 0 && b.farm_id !== null
+      (b) => (b.total_weight ?? 0) > 0 && (b.bag_count ?? 0) > 0 && b.farm_id !== null
     ).length;
 
     const batchRecordQuality: AuditReadinessComponent = {

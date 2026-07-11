@@ -60,11 +60,11 @@ export const config = {
      *
      * Excluded:
      *   Static/infra : _next, monitoring, favicon, robots.txt, sitemap.xml, assets
-     *   Marketing    : /solutions, /pedigree, /processors, /demo, /api-docs
+     *   Marketing    : /solutions, /pedigree, /processors, /demo, /importers, /api-docs
      *                  /compliance(/*), /industries(/*), /legal(/*)
      *                  /blog(/*) — all blog posts
      *   Public tools : /verify(/*)
      */
-    '/((?!monitoring|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|api-docs|compliance|industries|legal|verify|blog|events).*)',
+    '/((?!monitoring|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|importers|api-docs|compliance|industries|legal|verify|blog|events).*)',
   ],
 };

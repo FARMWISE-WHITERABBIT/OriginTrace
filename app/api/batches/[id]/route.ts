@@ -153,9 +153,11 @@ export async function PATCH(
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
+    // TODO(schema-drift): 'collection_batches' has no 'updated_at' column — dropped from
+    // this update; no equivalent last-modified column exists on this table.
     const { error } = await supabase
       .from('collection_batches')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...updates })
       .eq('id', id)
       .eq('org_id', profile.org_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

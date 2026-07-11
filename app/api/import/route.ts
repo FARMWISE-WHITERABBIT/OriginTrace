@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!profile?.org_id) return NextResponse.json({ error: 'No organisation found' }, { status: 403 });
-    const roleErr = requireRole(profile.role, ['admin', 'aggregator']);
+    const roleErr = requireRole(profile, ['admin', 'aggregator']);
     if (roleErr) return roleErr;
 
     const formData = await request.formData();

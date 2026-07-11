@@ -79,21 +79,23 @@ export async function POST(
       .eq('file_type', fileType)
       .single();
 
+    // TODO(schema-drift): 'verification_status' was previously tracked on compliance_files but no
+    // longer exists in the live DB — needs product decision (re-add migration or drop the concept).
     let fileRecord;
     if (existing) {
       const { data: updated } = await supabase
         .from('compliance_files')
-        .update({ file_url: publicUrl, verification_status: 'pending', updated_at: new Date().toISOString() })
+        .update({ file_path: publicUrl })
         .eq('id', existing.id)
         .eq('org_id', profile.org_id)
-        .select('id, file_type, file_url, verification_status, created_at')
+        .select('id, file_type, file_path, created_at')
         .single();
       fileRecord = updated;
     } else {
       const { data: inserted } = await supabase
         .from('compliance_files')
-        .insert({ farm_id: farmId, org_id: profile.org_id, file_type: fileType, file_url: publicUrl, uploaded_by: profile.user_id, verification_status: 'pending' })
-        .select('id, file_type, file_url, verification_status, created_at')
+        .insert({ farm_id: farmId, org_id: profile.org_id, file_type: fileType, file_name: file.name, file_path: publicUrl, uploaded_by: profile.user_id })
+        .select('id, file_type, file_path, created_at')
         .single();
       fileRecord = inserted;
     }

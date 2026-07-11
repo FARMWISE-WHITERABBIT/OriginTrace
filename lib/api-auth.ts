@@ -65,7 +65,7 @@ export async function getAuthenticatedProfile(request?: NextRequest) {
  * This function is retained for legacy callers only and now delegates to the
  * canonical tier policy (modules/identity-access/domain/tier-policy.ts).
  */
-export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: number): Promise<boolean> {
+export async function checkTierAccess(supabase: ReturnType<typeof createServiceClient>, orgId: string): Promise<boolean> {
   const { data: org } = await supabase
     .from('organizations')
     .select('subscription_tier, settings')

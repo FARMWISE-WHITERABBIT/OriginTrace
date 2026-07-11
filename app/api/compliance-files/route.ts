@@ -54,10 +54,14 @@ export async function POST(request: NextRequest) {
       .insert({
         org_id: profile.org_id,
         farm_id,
+        // TODO(schema-drift): 'file_name' is NOT NULL on 'compliance_files' but the request body
+        // never supplies one — using file_type as a stand-in until callers are updated to send a real name.
+        file_name: file_type,
+        file_path: file_url,
         file_type,
-        file_url,
         uploaded_by: profile.user_id,
-        verification_status: verification_status || 'pending',
+        // TODO(schema-drift): 'verification_status' column no longer exists on 'compliance_files' —
+        // needs product decision (add the column back, or drop status tracking for this endpoint).
       })
       .select('id')
       .single();

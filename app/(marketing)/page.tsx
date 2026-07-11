@@ -189,7 +189,7 @@ export default function HomePage() {
             1. HERO
             ═══════════════════════════════════════════════════════ */}
         <section className="mk-hero">
-          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <HeroBackground videoSrc="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" />
           <div className="mk-hero__overlay" />
 
           <div className="mk-hero__content">
@@ -227,6 +227,23 @@ export default function HomePage() {
                         See How It Works
                       </Link>
                     </div>
+                  </FadeIn>
+
+                  <FadeIn delay={0.35}>
+                    <Link
+                      href="/importers"
+                      data-testid="link-hero-buyer-routing"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        marginTop: '1.25rem',
+                        fontSize: '0.875rem',
+                        color: 'rgba(255,255,255,0.62)',
+                      }}
+                    >
+                      I&apos;m a buyer / importer <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
                   </FadeIn>
                 </div>
 

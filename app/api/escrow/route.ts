@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { createEscrow } from '@/lib/services/escrow';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { SHIPPING_EVENT_CODES } from '@/lib/services/shipping-events';
 
 const ALLOWED_ROLES = ['admin', 'aggregator'];
 
@@ -52,6 +53,13 @@ const createEscrowSchema = z.object({
         stage: z.number().int().min(1).max(9),
         amount: z.number().positive(),
         description: z.string().min(1),
+        // Optional: restrict auto-release matching for this milestone to
+        // specific shipping-event code(s) (e.g. 'DEPA' so a LOAD event can't
+        // release a "vessel departed" tranche). Omitted = legacy stage-only
+        // matching.
+        trigger_event_code: z
+          .union([z.enum(SHIPPING_EVENT_CODES), z.array(z.enum(SHIPPING_EVENT_CODES)).min(1)])
+          .optional(),
       })
     )
     .optional(),

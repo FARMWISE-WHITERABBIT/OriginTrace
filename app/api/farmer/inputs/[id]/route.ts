@@ -29,7 +29,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const farmer = await getFarmerAccount();
-    if (!farmer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!farmer || !farmer.farm_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
     const parsed = patchSchema.safeParse(body);
@@ -70,7 +70,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const farmer = await getFarmerAccount();
-    if (!farmer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!farmer || !farmer.farm_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabase = createAdminClient();
     const { data: existing } = await supabase

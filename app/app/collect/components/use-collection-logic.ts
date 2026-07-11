@@ -213,12 +213,12 @@ export function useCollectionLogic() {
         const { data, error } = await supabase
           .from('farms')
           .insert({
-            org_id: organization.id,
+            org_id: String(organization.id),
             farmer_name: quickName.trim(),
             phone: quickPhone || null,
             community: quickCommunity || community || 'Unknown',
             compliance_status: 'pending',
-            registered_by: profile.user_id,
+            created_by: profile.user_id,
           })
           .select('id, farmer_name, community, compliance_status')
           .single();

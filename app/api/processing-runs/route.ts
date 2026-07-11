@@ -14,8 +14,8 @@ const processingRunCreateSchema = z.object({
   output_weight_kg: z.number().positive().optional(),
   processed_at: z.string().optional(),
   notes: z.string().optional(),
-  source_batch_ids: z.array(z.number()).optional(),
-  batch_ids: z.array(z.number()).optional(),
+  source_batch_ids: z.array(z.string()).optional(),
+  batch_ids: z.array(z.string()).optional(),
   compliance_attestations: z.record(z.boolean()).optional(),
 });
 

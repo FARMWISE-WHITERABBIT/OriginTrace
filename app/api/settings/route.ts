@@ -22,13 +22,13 @@ const settingsPatchSchema = z.object({
 
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
 
-async function getImpersonatedOrgId(): Promise<number | null> {
+async function getImpersonatedOrgId(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
     if (!impersonationCookie) return null;
     // Cookie is HMAC-signed — must use verifyCookiePayload, not JSON.parse
-    const data = await verifyCookiePayload<{ org_id: number; expires_at: string }>(impersonationCookie.value);
+    const data = await verifyCookiePayload<{ org_id: string; expires_at: string }>(impersonationCookie.value);
     if (data && new Date(data.expires_at) > new Date()) {
       return data.org_id;
     }
@@ -198,7 +198,7 @@ export async function PATCH(request: NextRequest) {
         .eq('id', orgId)
         .single();
       
-      updates.settings = { ...(currentOrg?.settings || {}), ...settings };
+      updates.settings = { ...((currentOrg?.settings as Record<string, unknown>) || {}), ...settings };
     }
     
     if (active_lgas !== undefined) {

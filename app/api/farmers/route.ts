@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);
 
-    const { data: rpcFarmers, error: rpcError } = await supabaseAdmin.rpc('get_org_farmers', {
+    // TODO(schema-drift): the 'get_org_farmers' RPC no longer exists in the live DB (not in the
+    // generated types' Functions list) — this call always errors and falls through to the
+    // farmer_performance_ledger / farms fallbacks below (working as designed, but the RPC should
+    // either be restored via migration or this dead code path removed).
+    const { data: rpcFarmers, error: rpcError } = await supabaseAdmin.rpc('get_org_farmers' as any, {
       p_org_id: profile.org_id
     });
 

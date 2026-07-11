@@ -18,45 +18,58 @@
 
 | Layer | Choice |
 |-------|--------|
-| Framework | Next.js 16.1.6, App Router, Turbopack |
+| Framework | Next.js 16.2.6, App Router, Turbopack (check `package.json` for exact pin) |
 | Language | TypeScript (strict) |
-| Database | Supabase (Postgres + RLS) |
+| Database | Supabase (Postgres + RLS) — clients typed with generated `Database` types (see Database Migrations for the one still-open schema gap, `virtual_accounts`) |
 | Auth | Supabase Auth + `getAuthenticatedProfile()` |
+| Validation | `zod` (used in ~63 API routes) |
 | UI | shadcn/ui + Tailwind CSS |
 | State | React context (`useOrg()`, `useToast()`) |
+| i18n | `next-intl` — see `i18n.ts` + `messages/` (partially adopted) |
 | PDF | jspdf |
 | PWA | next-pwa |
+| CRM | `@hubspot/api-client` (marketing/lead sync) |
+| Testing | Vitest (unit, `tests/*.test.ts`) + Playwright (E2E, `tests/e2e/*.spec.ts`) |
 | Error tracking | Sentry |
 
 ---
 
 ## Repository Structure
 
+This tree is illustrative, not exhaustive — `app/api/` has ~70 route groups and `app/app/` has ~40 page dirs. Run `ls` to see the current set; the ones below are just the load-bearing ones plus areas the short tree used to omit.
+
 ```
 app/
-  api/           # Next.js API routes (server-side, uses Supabase admin client)
-  app/           # App Router pages (client components)
-    audit/       # Audit log
-    batches/     # Collection batch management
-    dispatch/    # Dispatch workflow + details
-    farmers/     # Farmer profiles
-    inventory/   # Inventory + bulk dispatch
-    payments/    # Wallet, disbursements, transactions
-    shipments/   # Shipment management
-    ...
-components/      # Shared UI components
+  (marketing)/   # Public marketing site (own layout + design system — see below)
+  api/           # ~178 route.ts handlers across ~70 groups (server-side)
+    v1/          # Public/versioned API (API-key auth, not getAuthenticatedProfile)
+    cron/        # Scheduled jobs (Bearer CRON_SECRET auth, not profile auth)
+    webhooks/    # Inbound provider webhooks (paystack, grey, blockradar, calcom)
+    superadmin/  # Cross-tenant admin endpoints
+  app/           # App Router pages (client components) — ~40 domain dirs incl.
+    batches/ dispatch/ farmers/ inventory/ payments/ shipments/ farms/
+    compliance/ dds/ dpp/ pedigree/ traceability/ buyer/ tenders/ team/
+    settings/ audit/ sync/ evidence/ conflicts/ processing/ ...
+  superadmin/    # Superadmin console (separate from app/app)
+  farmer/  buyer/  events/  verify/  auth/   # Standalone portals/flows
 lib/
-  contexts/      # React contexts (org-context)
-  config/        # Navigation, tier config
-  supabase/      # Supabase client + admin
-  services/      # Business logic (disbursement calculator, etc.)
-  totp.ts        # RFC 6238 TOTP (2FA)
+  rbac.ts        # ★ Role source of truth: AppRole union, ROLES, requireRole, route→role map
+  api-auth.ts    # getAuthenticatedProfile()
   audit.ts       # Audit logging
-  webhooks.ts    # Webhook dispatch
-supabase/
-  migrations/    # SQL migrations (apply via Supabase SQL editor)
-public/
-  images/        # logo-white.png, icon-green.png (192×192 for PWA)
+  contexts/      # React contexts (org-context)
+  config/        # navigation.ts (role/tier-gated nav), tier-gating.ts
+  api/           # tier-guard.ts (enforceTier)
+  supabase/      # admin.ts (service-role), client/server/middleware
+  services/      # Business logic (disbursement calculator, etc.)
+modules/         # Feature modules (business logic outside lib/)
+supabase/migrations/  # 56 SQL migrations — canonical location
+migrations/      # ⚠ LEGACY (2 files) — do NOT add here; scripts/check-migrations.ts fails on it
+tests/           # Vitest unit specs + tests/e2e/ Playwright specs
+messages/        # next-intl translation catalogs
+content/         # Blog/marketing content
+scripts/         # seed-*, check-db, check-migrations, apply-migrations, toggle-tier, ...
+.agents/skills/  # ★ 22 project skills (SKILL.md files) catalogued in agents.md — see Skills below
+public/images/   # logo-white.png, icon-green.png (192×192 for PWA)
 ```
 
 ---
@@ -64,10 +77,12 @@ public/
 ## Key Patterns
 
 ### Authentication
-All API routes use `getAuthenticatedProfile(request)` from `lib/api-auth.ts`. Never skip this. Always check `profile.org_id` and `profile.role`.
+Tenant-scoped API routes use `getAuthenticatedProfile(request)` from `lib/api-auth.ts` (~128 of 178 routes), then check `profile.org_id` / role. **Do not blindly add it everywhere** — these route families authenticate differently by design: `app/api/v1/*` (public API key), `app/api/cron/*` (Bearer `CRON_SECRET`), `app/api/webhooks/*` (provider signature), `app/api/auth/*` and `app/api/public/*` (pre-login). Match the pattern already used by sibling routes in the same folder.
 
-### Role Hierarchy
-`admin` > `aggregator` > `logistics_coordinator` > `compliance_officer` > `viewer`
+### Roles (source of truth: `lib/rbac.ts`)
+`AppRole` = `admin` · `aggregator` · `agent` · `quality_manager` · `logistics_coordinator` · `compliance_officer` · `warehouse_supervisor` · `buyer` · `farmer` (9 roles, **not** a strict linear hierarchy — access is per-route/per-feature).
+- Gate access with `requireRole()` / the route→roles map in `lib/rbac.ts`; nav visibility uses `allowedRoles` in `lib/config/navigation.ts`. Do **not** hand-roll `profile.role === 'admin'` string checks — grep first for an existing helper.
+- `buyer` and `farmer` use separate portals (`app/buyer`, `app/farmer`), not the main `app/app` console.
 
 ### Org Context (client)
 ```typescript
@@ -99,18 +114,38 @@ await logAuditEvent({ orgId, actorId, actorEmail, action: 'entity.action', resou
 
 ## Development Branch
 
-Active feature branch: `claude/implement-planned-features-LMqz5`
-
-Always develop on this branch. Never push to `main` without explicit approval.
+Develop on the branch assigned to your current task (the harness names it per-session). Never push to `main` without explicit approval. Do not hard-code a "current" branch here — the previous pin (`claude/implement-planned-features-LMqz5`) no longer exists and multiple agents (`Anthony`, `codex/*`, `claude/*`) work this repo in parallel.
 
 ---
 
 ## Database Migrations
 
-Migrations live in `supabase/migrations/`. They must be applied manually via the Supabase SQL editor or `supabase db push`. Check existing migrations before adding columns that may already exist.
+Migrations live in **`supabase/migrations/`** (58 files as of 2026-07-09). Historically they were applied manually via the Supabase SQL editor rather than `supabase db push` — Supabase's own migration-tracking table only recorded 2 of them before 2026-07-09, even though dozens more were live. This caused real drift: several migration files existed in the repo but were **never actually run against the live DB**, so code referencing their tables/columns compiled but 500'd in production (or, worse, failed silently). All known cases of this were found and resolved on 2026-07-09 — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for the full list, including two RPC functions (`create_shipment_atomic`, `sync_batches_atomic`) that had to be rewritten (not just applied) because they were written against a pre-UUID schema.
 
-Pending migration (not yet applied):
-- `20260407_org_totp_2fa.sql` — adds `totp_secret`, `totp_enabled`, `totp_pending_secret` to `organizations`
+Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. `lib/supabase/database.types.ts` **is generated and committed**, and all 4 client factories (`lib/supabase/{client,server,admin,middleware}.ts`) are typed with `createClient<Database>(...)` — a wrong column name now fails `npm run check`, not just production.
+
+- Regenerate with **`SUPABASE_PROJECT_ID=gnvcvvsnnesieugnzmrz npm run gen:types`** (OriginTrace project ref) after any schema change → rewrites `lib/supabase/database.types.ts`. ⚠ The OriginTrace DB has `farms`/`collection_batches`/`shipments`/`profiles`; it is **not** the "FarmWise" Supabase project (a different product) — `gen:types` refuses to write if the signature tables are absent.
+- Applying a migration by hand (Supabase MCP `apply_migration` or the dashboard SQL editor)? **Review it against the live schema first** — several past migration files assumed a schema shape (BIGINT ids, columns like `gps_lat`/`estimated_bags`) that no longer matches reality. Check column types via `information_schema.columns`, and for anything with an RLS policy, verify the policy actually references `profiles.user_id = auth.uid()` (not `profiles.id`) — two migrations were found with that exact bug, which would have made the table silently unreadable despite RLS "working."
+- ⚠ **`virtual_accounts` is still genuinely missing** — no migration defines it at all (only an unverified `grey_virtual_accounts` JSONB column on `organizations`). SWIFT payment instructions are broken pending a product decision on the real shape. `app/api/farmers/[id]/files/route.ts`'s `compliance_files.file_name` NOT NULL constraint with no populating caller is also still open.
+- ⚠ **Two migration dirs exist.** `supabase/migrations/` is canonical; the top-level `migrations/` is legacy and `scripts/check-migrations.ts` fails CI on any SQL left there. Never add migrations to the root.
+- Filename convention: `YYYYMMDD_<description>.sql`; no duplicate date prefixes (the check script enforces both).
+
+---
+
+## Running & Verifying
+
+- Dev server: `npm run dev` (port **5000**, host `0.0.0.0`).
+- Type check: `npm run check` (`tsc`). Unit tests: `npm test` (Vitest). E2E: `npm run test:e2e` (Playwright, needs the dev server + seeded users).
+- Seed data: `npm run seed:demo` / `seed:qa` / `seed:gacon` (see `scripts/seed-*`). Toggle a tenant's tier with `scripts/toggle-tier.ts`.
+- **CI** (`.github/workflows/ci.yml`) runs typecheck + Vitest, then a build + E2E smoke lane. **App Router / Vercel traps that have repeatedly broken the Vercel build — check before pushing:** no function props passed Server→Client component; wrap `useSearchParams()` pages in `<Suspense>`; keep middleware in `proxy.ts` (Next 16 rename); Vercel Hobby allows limited cron. Run `npm run check` **and** `npm run build` locally before pushing marketing or events work.
+
+---
+
+## Skills Registry (`.agents/skills/` + `agents.md`)
+
+This repo ships **22 project-specific skills** as `SKILL.md` files under `.agents/skills/` (api-routes, rbac, multi-tenancy, supabase-migrations, geospatial, compliance-regulations, offline-sync, playwright-tester, seed-data, deployment, i18n, ocr, security, testing, ui-components, release-notes, shipment-scoring, …), catalogued with trigger keywords in `agents.md`. Consult `agents.md` and the relevant `SKILL.md` before working in that domain — they encode the hard-won conventions.
+
+> Note: these live in `.agents/skills/`, so Claude Code does not auto-load them as native `/skills`. The API-routes skill prescribes a `withErrorHandling` + `ApiError` "gold standard" (`lib/api/errors.ts`) that is currently used by only ~3 of 178 routes — treat it as the target pattern for new/edited routes, but expect most existing routes to use ad-hoc `try/catch` + `NextResponse.json({ error })`.
 
 ---
 
