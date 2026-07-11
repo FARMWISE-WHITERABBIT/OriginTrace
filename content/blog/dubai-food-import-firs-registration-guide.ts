@@ -101,7 +101,7 @@ export const post: BlogPost = {
       heading: 'One Data Pack for Dubai, the GCC, and the EU — See It Live',
       text: 'OriginTrace gives your suppliers one place to load origin data, CoAs, label files, and batch records — so every consignment arrives with paperwork that already matches what\'s registered. Book a 30-minute walkthrough with your own products.',
       buttonText: 'Book a Free Demo',
-      href: '/demo',
+      href: '/demo?role=buyer',
     },
     {
       type: 'h2',
@@ -163,7 +163,7 @@ export const post: BlogPost = {
       heading: 'Stop Paying Storage on Preventable Holds',
       text: 'The importers who clear Jebel Ali fastest put their suppliers on OriginTrace and make the data pack a condition of the order — origin records, CoAs, labels, and shipment tracking, complete before the container moves, reusable for Dubai, the GCC, and the EU.',
       buttonText: 'Get Your Suppliers On Board',
-      href: '/demo',
+      href: '/importers',
     },
     {
       type: 'references',

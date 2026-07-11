@@ -31,12 +31,13 @@ Write like a knowledgeable trade-compliance friend explaining something over cof
 - **Two CTAs per post, persona-matched**, using the `cta` section type:
   - One **mid-article**, right after the pain is most vivid (e.g. after the rejection-costs section).
   - One at the end.
-- CTA copy by persona (vary wording, keep the promise):
+- CTA copy by persona (vary wording, keep the promise) — **endpoints below reflect the P1 funnel fix (docs/IMPORTER-FUNNEL-PLAN.md), not `/demo` for every persona:**
   - **Exporters**: "See how ready your next shipment is" / "Get your farms mapped and your documents in one place" → `/demo`
-  - **EU importers**: two-step funnel — mid-article: "Verify a supplier before you commit — request a supplier risk snapshot"; end: **the onboarding play** — "Bring your suppliers onto OriginTrace" (importers onboard their exporters and make on-platform documentation part of the order: farm records, lab tests, compliance docs, shipment tracking, visible from the buyer workspace). Verification is the hook; onboarding is the product motion.
-  - **UAE importers/re-exporters**: mid: "One data pack for Dubai, the GCC, and the EU — see it live"; end: "Onboard your origin suppliers" (same onboarding play, re-export framing)
+  - **EU/UK/USA/China/UAE importers & buyers**: two-step funnel — mid-article: "Verify a supplier before you commit — request a supplier risk snapshot" → `/demo?role=buyer` (buyer-aware demo variant: persona-matched hero, benefit copy, and form fields — never the bare exporter-voiced `/demo`); end: **the onboarding play** — "Bring your suppliers onto OriginTrace" (importers onboard their exporters and make on-platform documentation part of the order: farm records, lab tests, compliance docs, shipment tracking, visible from the buyer workspace) → `/importers`, not `/demo` — self-serve buyer registration doesn't exist (`app/auth/buyer-register` redirects to login), so the end CTA routes to the persona landing page, and the buyer-aware demo is where a real lead actually gets captured. Verification is the hook; onboarding is the product motion.
+  - **UAE importers/re-exporters**: mid: "One data pack for Dubai, the GCC, and the EU — see it live" → `/demo?role=buyer`; end: "Onboard your origin suppliers" (same onboarding play, re-export framing) → `/importers`
 - CTA text sells the outcome, never the feature. "Stop losing containers at Rotterdam" beats "Explore our compliance module."
 - **Link the money page early**: a natural in-text link to the relevant `/compliance/*` page within the first third of the post, plus 1–2 links to related posts. Not just the bottom CTA.
+- **Escrow narrative rule**: any post that mentions payment/escrow follows docs/IMPORTER-FUNNEL-PLAN.md §3 exactly — never claim escrow is "LC-grade" or a credit substitute (an LC substitutes the issuing bank's credit for the buyer's own; our escrow requires the buyer to fund it before anything ships, which is closer to secured prepayment). Lead with cost/friction/settlement-speed vs. an LC's paperwork and discrepancy-rejection risk, not a payment-speed superiority claim over a sight LC. Any specific wait-time or fee figure needs a real source before it ships — no restating the unsourced "3–4 months" / "90–120-day" numbers from the pre-correction draft.
 
 ## Accuracy rules (non-negotiable)
 

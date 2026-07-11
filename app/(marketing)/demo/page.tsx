@@ -15,7 +15,7 @@ const stats = [
   { label: 'Active pilot region', value: 'West Africa' },
 ];
 
-const demoFeatures = [
+const exporterFeatures = [
   {
     Icon: Shield,
     title: 'Compliance Assessment',
@@ -33,16 +33,50 @@ const demoFeatures = [
   },
 ];
 
-const bullets = [
+const buyerFeatures = [
+  {
+    Icon: Shield,
+    title: 'Supplier Risk Assessment',
+    body: 'We review a real supplier relationship of yours against EUDR, FSMA 204, UK, China GACC, and UAE ESMA — and show you exactly what evidence is missing today.',
+  },
+  {
+    Icon: MapPin,
+    title: 'Live Platform Walkthrough',
+    body: 'You see the traceability record, the compliance score, and the document output your supplier would produce on OriginTrace — not a scripted demo.',
+  },
+  {
+    Icon: FileText,
+    title: 'Buyer Onboarding',
+    body: "If it's a fit, we scope how you bring suppliers onto OriginTrace and what your buyer workspace looks like from day one.",
+  },
+];
+
+const exporterBullets = [
   "No sales pressure — if it's not the right fit, we'll say so",
   'We cover agriculture and mineral supply chains',
   'Pilot spots are limited to West Africa for now',
   'Sessions run Mon–Fri, 9am–6pm WAT',
 ];
 
+const buyerBullets = [
+  "No sales pressure — if it's not the right fit, we'll say so",
+  'We cover agriculture and mineral supply chains',
+  'Active on West Africa, UAE, and China-bound trade lanes',
+  'Sessions run Mon–Fri, 9am–6pm WAT',
+];
+
 /* ─── PAGE ─────────────────────────────────────────────────────────── */
 
-export default function DemoPage() {
+export default async function DemoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
+  const { role } = await searchParams;
+  const isBuyer = role === 'buyer';
+  const demoFeatures = isBuyer ? buyerFeatures : exporterFeatures;
+  const bullets = isBuyer ? buyerBullets : exporterBullets;
+
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <MarketingNav />
@@ -53,7 +87,7 @@ export default function DemoPage() {
             1. HERO
             ══════════════════════════════════════════════════════════ */}
         <section className="mk-hero mk-hero--solutions">
-          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <HeroBackground videoSrc="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" />
           <div className="mk-hero__overlay mk-hero__overlay--solutions" />
           <div className="mk-hero__content mk-hero__content--solutions">
             <div className="mk-container-lg" style={{ width: '100%' }}>
@@ -64,21 +98,26 @@ export default function DemoPage() {
                 {/* LEFT */}
                 <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
                   <FadeIn direction="right">
-                    <span className="pre-title margin-bottom margin-medium">Book a Walkthrough</span>
+                    <span className="pre-title margin-bottom margin-medium">
+                      {isBuyer ? 'Book a Buyer Walkthrough' : 'Book a Walkthrough'}
+                    </span>
                     <h1
                       className="text-display-xl margin-bottom margin-medium"
                       style={{ color: 'var(--mk-text-on-dark)' }}
                     >
-                      See OriginTrace working against your actual export operation.
+                      {isBuyer
+                        ? "See how your suppliers' compliance actually holds up."
+                        : 'See OriginTrace working against your actual export operation.'}
                     </h1>
                     <p
                       className="margin-bottom margin-xlarge"
                       style={{ color: 'var(--mk-text-on-dark-2)', fontSize: '1.0625rem', lineHeight: 1.7 }}
                     >
-                      We don&apos;t do generic demos. In 30 minutes we map your commodity, your markets,
-                      and your current workflow — then show you exactly where OriginTrace closes the gaps.
+                      {isBuyer
+                        ? "We don't do generic demos. In 30 minutes we walk through a real supplier's traceability record, compliance score, and document trail — and show you what verification looks like before you sign the next contract."
+                        : "We don't do generic demos. In 30 minutes we map your commodity, your markets, and your current workflow — then show you exactly where OriginTrace closes the gaps."}
                     </p>
-                    <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                    <Link href={isBuyer ? '/demo?role=buyer' : '/demo'} className="btn-mk-primary btn-mk-lg">
                       Book your 30-minute walkthrough
                       <ArrowRight className="h-4 w-4" />
                     </Link>
@@ -187,7 +226,7 @@ export default function DemoPage() {
 
               {/* RIGHT: form */}
               <FadeIn delay={0.2} direction="up">
-                <DemoFormWidget />
+                <DemoFormWidget initialPersona={isBuyer ? 'buyer' : 'exporter'} />
               </FadeIn>
             </div>
           </div>
@@ -203,18 +242,19 @@ export default function DemoPage() {
                 <h2
                   className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
                 >
-                  Not ready for a call? Start with the compliance check.
+                  {isBuyer ? 'Not ready for a call? See how buyer verification works.' : 'Not ready for a call? Start with the compliance check.'}
                 </h2>
                 <p
                   className="margin-bottom margin-xlarge-2"
                   style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
                 >
-                  Tell us your commodity and target market. We&apos;ll score your shipment and send you
-                  a gap report within 24 hours — no call required.
+                  {isBuyer
+                    ? 'See the workflow, the market-by-market compliance coverage, and how escrow releases against verified shipping events — no call required.'
+                    : "Tell us your commodity and target market. We'll score your shipment and send you a gap report within 24 hours — no call required."}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/solutions" className="btn-mk-primary btn-mk-lg">
-                    Check your compliance status
+                  <Link href={isBuyer ? '/importers' : '/solutions'} className="btn-mk-primary btn-mk-lg">
+                    {isBuyer ? 'See how it works' : 'Check your compliance status'}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a href="mailto:hello@origintrace.trade" className="btn-mk-ghost btn-mk-lg">

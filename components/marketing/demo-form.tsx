@@ -131,13 +131,52 @@ function SubmittedState({ name }: { name: string }) {
   );
 }
 
-export function DemoFormWidget() {
+const exporterOrgTypes = [
+  { value: 'exporter', label: 'Exporter' },
+  { value: 'processor', label: 'Processor / Crusher' },
+  { value: 'both', label: 'Both Exporter & Processor' },
+  { value: 'aggregator', label: 'Aggregator / Trader' },
+  { value: 'cooperative', label: 'Cooperative' },
+  { value: 'other', label: 'Other' },
+];
+
+const buyerOrgTypes = [
+  { value: 'importer', label: 'Importer' },
+  { value: 'trading_house', label: 'Trading House / Distributor' },
+  { value: 'manufacturer', label: 'Food & Beverage Manufacturer' },
+  { value: 'retailer', label: 'Retailer' },
+  { value: 'other', label: 'Other' },
+];
+
+const exporterConcerns = [
+  { value: 'farm_mapping', label: 'Farm polygon mapping' },
+  { value: 'traceability', label: 'Bag-level traceability' },
+  { value: 'documentation', label: 'DDS documentation' },
+  { value: 'processing', label: 'Processing mass balance' },
+  { value: 'audits', label: 'Audit preparation' },
+  { value: 'all', label: 'All of the above' },
+];
+
+const buyerConcerns = [
+  { value: 'supplier_verification', label: "Verifying suppliers' compliance claims" },
+  { value: 'counterparty_risk', label: 'Payment / counterparty risk' },
+  { value: 'documentation', label: 'Traceability documentation (DDS/EUDR)' },
+  { value: 'facility_registration', label: 'Facility & registration verification (e.g. GACC)' },
+  { value: 'all', label: 'All of the above' },
+];
+
+export function DemoFormWidget({
+  initialPersona = 'exporter',
+}: {
+  initialPersona?: 'exporter' | 'buyer';
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    persona: initialPersona,
     full_name: '',
     company: '',
     role: '',
@@ -150,6 +189,10 @@ export function DemoFormWidget() {
     phone: '',
     message: '',
   });
+
+  const isBuyer = formData.persona === 'buyer';
+  const orgTypeOptions = isBuyer ? buyerOrgTypes : exporterOrgTypes;
+  const concernOptions = isBuyer ? buyerConcerns : exporterConcerns;
 
   const handleNext = () => {
     if (step === 1) {
@@ -248,6 +291,29 @@ export function DemoFormWidget() {
                 </p>
                 <div className="space-y-4">
                   <div>
+                    <Label htmlFor="persona">I am a…</Label>
+                    <Select
+                      value={formData.persona}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          persona: value as 'exporter' | 'buyer',
+                          // Selected org type / concern may not exist in the other persona's list.
+                          organization_type: '',
+                          biggest_concern: '',
+                        })
+                      }
+                    >
+                      <SelectTrigger data-testid="select-persona">
+                        <SelectValue placeholder="Select one" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="exporter" data-testid="option-persona-exporter">Exporter / Producer</SelectItem>
+                        <SelectItem value="buyer" data-testid="option-persona-buyer">Buyer / Importer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label htmlFor="full_name">Full Name *</Label>
                     <Input
                       id="full_name"
@@ -336,7 +402,9 @@ export function DemoFormWidget() {
                     Back
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6">Help us understand your supply chain.</p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {isBuyer ? 'Help us understand what and how you buy.' : 'Help us understand your supply chain.'}
+                </p>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="organization_type">Organization Type *</Label>
@@ -348,18 +416,15 @@ export function DemoFormWidget() {
                         <SelectValue placeholder="Select organization type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="exporter">Exporter</SelectItem>
-                        <SelectItem value="processor">Processor / Crusher</SelectItem>
-                        <SelectItem value="both">Both Exporter & Processor</SelectItem>
-                        <SelectItem value="aggregator">Aggregator / Trader</SelectItem>
-                        <SelectItem value="cooperative">Cooperative</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {orgTypeOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="commodity">Primary Commodity</Label>
+                      <Label htmlFor="commodity">{isBuyer ? 'Primary Commodity You Buy' : 'Primary Commodity'}</Label>
                       <Select
                         value={formData.commodity}
                         onValueChange={(value) => setFormData({ ...formData, commodity: value })}
@@ -392,19 +457,23 @@ export function DemoFormWidget() {
                       />
                     </div>
                   </div>
+                  {!isBuyer && (
+                    <div>
+                      <Label htmlFor="farmer_count">Number of Farmers</Label>
+                      <Input
+                        id="farmer_count"
+                        type="number"
+                        value={formData.farmer_count}
+                        onChange={(e) => setFormData({ ...formData, farmer_count: e.target.value })}
+                        placeholder="e.g., 2500"
+                        data-testid="input-farmer-count"
+                      />
+                    </div>
+                  )}
                   <div>
-                    <Label htmlFor="farmer_count">Number of Farmers</Label>
-                    <Input
-                      id="farmer_count"
-                      type="number"
-                      value={formData.farmer_count}
-                      onChange={(e) => setFormData({ ...formData, farmer_count: e.target.value })}
-                      placeholder="e.g., 2500"
-                      data-testid="input-farmer-count"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="biggest_concern">Biggest Compliance Challenge</Label>
+                    <Label htmlFor="biggest_concern">
+                      {isBuyer ? 'Biggest Sourcing Challenge' : 'Biggest Compliance Challenge'}
+                    </Label>
                     <Select
                       value={formData.biggest_concern}
                       onValueChange={(value) => setFormData({ ...formData, biggest_concern: value })}
@@ -413,12 +482,9 @@ export function DemoFormWidget() {
                         <SelectValue placeholder="Select challenge" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="farm_mapping">Farm polygon mapping</SelectItem>
-                        <SelectItem value="traceability">Bag-level traceability</SelectItem>
-                        <SelectItem value="documentation">DDS documentation</SelectItem>
-                        <SelectItem value="processing">Processing mass balance</SelectItem>
-                        <SelectItem value="audits">Audit preparation</SelectItem>
-                        <SelectItem value="all">All of the above</SelectItem>
+                        {concernOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

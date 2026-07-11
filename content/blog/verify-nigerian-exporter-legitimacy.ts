@@ -163,7 +163,7 @@ export const post: BlogPost = {
       heading: 'Not Sure About a Supplier?',
       text: 'Verify a supplier before you commit. OriginTrace can pull together a supplier risk snapshot — registration signals, document consistency, and farm-level traceability — before you wire anything.',
       buttonText: 'Request a Supplier Risk Snapshot',
-      href: '/demo',
+      href: '/demo?role=buyer',
     },
     {
       type: 'h2',
@@ -229,7 +229,7 @@ export const post: BlogPost = {
       heading: 'Commit With Evidence, Not Hope',
       text: 'Documents prove a company exists — traceability proves the goods do. The buyers who stop worrying about this altogether onboard their exporters onto OriginTrace and make on-platform documentation part of the order: farm records, lab tests, compliance documents, and shipment tracking, all in one place you can see.',
       buttonText: 'Onboard Your First Supplier',
-      href: '/demo',
+      href: '/importers',
     },
     {
       type: 'references',

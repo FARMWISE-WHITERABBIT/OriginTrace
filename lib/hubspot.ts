@@ -53,6 +53,8 @@ export interface HubSpotLeadData {
   phone?: string;
   company?: string;
   role?: string;
+  /** 'exporter' | 'buyer' — which side of the marketplace this lead identified as. */
+  persona?: string;
   organization_type?: string;
   commodity?: string;
   monthly_tonnage?: string;
@@ -69,6 +71,7 @@ function splitName(full_name: string): { firstname: string; lastname: string } {
 
 function buildNoteBody(data: HubSpotLeadData): string {
   const lines = [`OriginTrace lead — submitted via ${data.source === 'calculator' ? 'compliance calculator' : 'demo request form'}.`];
+  if (data.persona) lines.push(`Persona: ${data.persona === 'buyer' ? 'Buyer / Importer' : 'Exporter / Producer'}`);
   if (data.organization_type) lines.push(`Organization type: ${data.organization_type}`);
   if (data.commodity)         lines.push(`Commodity: ${data.commodity}`);
   if (data.monthly_tonnage)   lines.push(`Monthly volume: ${data.monthly_tonnage} MT`);

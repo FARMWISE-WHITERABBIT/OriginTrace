@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      full_name, email, phone, company, role,
+      full_name, email, phone, company, role, persona,
       organization_type, commodity, monthly_tonnage,
       farmer_count, biggest_concern, message, source,
     } = body;
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         ${company ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Company</td><td style="padding:8px;border-bottom:1px solid #eee">${company}</td></tr>` : ''}
         ${phone ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Phone</td><td style="padding:8px;border-bottom:1px solid #eee">${phone}</td></tr>` : ''}
         ${role ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Role</td><td style="padding:8px;border-bottom:1px solid #eee">${role}</td></tr>` : ''}
+        ${persona ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Persona</td><td style="padding:8px;border-bottom:1px solid #eee">${persona === 'buyer' ? 'Buyer / Importer' : 'Exporter / Producer'}</td></tr>` : ''}
         ${organization_type ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Org Type</td><td style="padding:8px;border-bottom:1px solid #eee">${organization_type}</td></tr>` : ''}
         ${commodity ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Commodity</td><td style="padding:8px;border-bottom:1px solid #eee">${commodity}</td></tr>` : ''}
         ${monthly_tonnage ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Monthly Volume</td><td style="padding:8px;border-bottom:1px solid #eee">${monthly_tonnage} MT</td></tr>` : ''}
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     let hubspotDealId: string | null = null;
     try {
       const result = await upsertHubSpotContact({
-        full_name, email, phone, company, role, organization_type,
+        full_name, email, phone, company, role, persona, organization_type,
         commodity, monthly_tonnage, farmer_count, biggest_concern, message, source,
       });
       hubspotDealId = result.dealId;

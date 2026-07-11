@@ -102,7 +102,7 @@ export const post: BlogPost = {
       heading: 'Verify a Supplier Before You Commit',
       text: 'OriginTrace runs these checks for you — plot geometry, satellite cross-reference, batch-to-plot consistency — and turns them into a supplier risk snapshot you can act on before the contract is signed.',
       buttonText: 'Request a Supplier Risk Snapshot',
-      href: '/demo',
+      href: '/demo?role=buyer',
     },
     {
       type: 'h2',
@@ -187,7 +187,7 @@ export const post: BlogPost = {
       heading: 'Six Months Is Enough — If You Start Now',
       text: 'Verification is step one. Step two is bringing your suppliers onto OriginTrace, so every future lot arrives with plot geometry, batch traceability, and DDS-ready evidence attached by default — maintained by the exporter, visible to you. Book a demo and see the importer workspace with a real supply chain in it.',
       buttonText: 'Bring Your Suppliers Onto OriginTrace',
-      href: '/demo',
+      href: '/importers',
     },
     {
       type: 'references',

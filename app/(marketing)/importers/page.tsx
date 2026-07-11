@@ -6,6 +6,8 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { SimpleFAQList } from '@/components/marketing/faq-accordion';
+import { FAQSchema } from '@/components/marketing/faq-schema';
 import { ChevronRight, ShieldCheck, Banknote, FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -61,16 +63,51 @@ const marketCards = [
     linkLabel: 'EUDR compliance',
   },
   {
-    title: 'UAE Importers & Re-Exporters',
-    body: 'Clear Dubai Municipality inspection with a complete, consistent data pack — and keep the EU channel open on re-export. Origin follows the goods: the same supplier record that clears FIRS in Dubai satisfies due diligence in Rotterdam.',
-    href: '/compliance/uae',
-    linkLabel: 'UAE compliance',
+    title: 'UK Importers',
+    body: 'The UK Environment Act 2021 prohibits larger businesses from using forest-risk commodities unless due diligence proves legal harvest — a due diligence system you must establish and report on annually. OriginTrace gives you the farm-level evidence trail: legal land status, verified identity, and a source-to-shipment record your supplier maintains as they operate.',
+    href: '/compliance/uk',
+    linkLabel: 'UK due diligence',
+  },
+  {
+    title: 'US Importers',
+    body: "The Lacey Act prohibits trading commodities harvested in violation of the country of origin's laws, and requires a customs declaration stating species, quantity, and harvest origin — false declarations are a federal offence. USDA NOP adds documented chain-of-custody on top. OriginTrace captures the GPS coordinates, verified identity, and legal land status your declaration and organic certification both need.",
+    href: '/compliance/usa',
+    linkLabel: 'Lacey Act & USDA NOP compliance',
   },
   {
     title: 'Buyers Sourcing for China',
     body: 'GACC enforcement is live: unregistered facilities are refused at Chinese ports. Verify that your supplier\'s facility registration, traceability records, and documentation hold up before the contract is signed.',
     href: '/compliance/china',
     linkLabel: 'China GACC compliance',
+  },
+  {
+    title: 'UAE Importers & Re-Exporters',
+    body: 'Clear Dubai Municipality inspection with a complete, consistent data pack — and keep the EU channel open on re-export. Origin follows the goods: the same supplier record that clears FIRS in Dubai satisfies due diligence in Rotterdam.',
+    href: '/compliance/uae',
+    linkLabel: 'UAE compliance',
+  },
+];
+
+const importerFaqs = [
+  {
+    question: "How is this different from just asking my supplier for documents directly?",
+    answer: "Documents assembled the week you ask for them can be forged, outdated, or simply wrong — a fabricated certificate looks exactly like a real one in a PDF. OriginTrace records accumulate continuously as your supplier operates (farm registration, GPS mapping, collection events, lab results) and are cross-checked against satellite deforestation data, not assembled retroactively for your review.",
+  },
+  {
+    question: "What happens if a supplier's data doesn't hold up?",
+    answer: "You see the compliance score and the gaps directly from your buyer workspace — before the contract is signed or the shipment books freight, not after it's rejected at a border.",
+  },
+  {
+    question: "Does escrow release automatically, without my confirmation?",
+    answer: "No. Milestones release only against carrier-confirmed shipping events — gate-in, loaded on board, discharge — never on an estimate or your supplier's word. The final tranche always requires your explicit confirmation, and any dispute freezes every release until it's resolved.",
+  },
+  {
+    question: "Which regulatory regimes does OriginTrace cover?",
+    answer: "EU EUDR, UK Environment Act due diligence, US Lacey Act & USDA NOP, China GACC, and UAE/Dubai Municipality import requirements — one supplier record scored against all five simultaneously.",
+  },
+  {
+    question: "Do my suppliers need to already be on OriginTrace?",
+    answer: "No — you invite them as part of onboarding and make on-platform documentation part of the order. They maintain the record at origin; you see it from your buyer workspace without chasing PDFs before every contract.",
   },
 ];
 
@@ -86,6 +123,10 @@ const escrowPoints = [
   {
     title: 'You confirm the final tranche',
     body: 'Delivery is never automated. The last payment releases only when both sides confirm — and any dispute freezes everything until it\'s resolved.',
+  },
+  {
+    title: 'It makes you the buyer suppliers prioritize',
+    body: 'Your best suppliers already deal with buyers who ask for 90-day letter-of-credit terms and the paperwork that comes with them. A buyer whose money releases at verified milestones, not months later, is the contract they take first.',
   },
 ];
 
@@ -118,7 +159,7 @@ export default function ImportersPage() {
       <main>
         {/* ── HERO ── */}
         <section className="mk-hero mk-hero--solutions">
-          <HeroBackground videoSrc="https://sjpnqhlohgyyndxyfgvh.supabase.co/storage/v1/object/public/media/0607%20(2)(1).mp4" />
+          <HeroBackground videoSrc="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" />
           <div className="mk-hero__overlay mk-hero__overlay--solutions" />
           <div className="mk-hero__content mk-hero__content--solutions">
             <div className="mk-container-lg" style={{ width: '100%' }}>
@@ -153,7 +194,7 @@ export default function ImportersPage() {
                   </FadeIn>
                   <FadeIn delay={0.3}>
                     <div className="flex gap-4" style={{ flexWrap: 'wrap' }}>
-                      <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                      <Link href="/demo?role=buyer" className="btn-mk-primary btn-mk-lg">
                         Request a supplier risk snapshot <ChevronRight className="h-5 w-5" />
                       </Link>
                     </div>
@@ -264,7 +305,7 @@ export default function ImportersPage() {
               </div>
             </FadeIn>
 
-            <div className="mk-grid-3 mk-gap-md">
+            <div className="mk-grid-2 mk-gap-md">
               {escrowPoints.map((point, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="mk-card" style={{ padding: '2rem' }}>
@@ -309,6 +350,20 @@ export default function ImportersPage() {
           </div>
         </section>
 
+        {/* ── SECTION 7: FAQ ── */}
+        <section className="section-spacing section-white">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div className="section-header--left margin-bottom margin-xlarge">
+                <span className="pre-title margin-bottom margin-medium">FAQ</span>
+                <h2 className="text-display-lg">Questions buyers ask before the first contract.</h2>
+              </div>
+            </FadeIn>
+            <SimpleFAQList items={importerFaqs} testIdPrefix="importer-faq" />
+          </div>
+        </section>
+        <FAQSchema faqs={importerFaqs} />
+
         {/* ── FINAL CTA ── */}
         <section className="section-spacing section-dark">
           <div className="mk-container-sm">
@@ -325,7 +380,7 @@ export default function ImportersPage() {
                   Make on-platform documentation part of the order — supply chain, compliance evidence, lab tests, and shipment tracking, maintained at origin and visible from your workspace. Start with a supplier risk snapshot on a real counterparty.
                 </p>
                 <div className="flex gap-4" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <Link href="/demo" className="btn-mk-primary btn-mk-lg">
+                  <Link href="/demo?role=buyer" className="btn-mk-primary btn-mk-lg">
                     Book a demo <ChevronRight className="h-5 w-5" />
                   </Link>
                   <Link href="/blog" className="btn-mk-ghost btn-mk-lg">

@@ -66,7 +66,7 @@ Every surface the importer funnel + escrow narrative touches. "Phase" refers to 
 | T12 | docs (CONTENT-STRATEGY §4, BLOG-STYLE-GUIDE CTA table) | CTA guidance predates D1 | Update importer CTA endpoints + add escrow-narrative rules | P1 |
 | T13 | Tests | No `/importers` coverage | Playwright smoke: `/importers` renders, nav link works, demo form persona selector submits (structural/`data-testid` assertions only — no copy assertions) | P1 |
 | T14 | Analytics/measurement | GSC per-geo targets defined | Add: `/importers` sessions by geo, demo submissions by persona (HubSpot property), blog→importers→demo path | P3 |
-| T15 | Superadmin buyer-provisioning runbook | Implicit | One-pager: what happens after a buyer demo request (who provisions, SLA) — else the funnel dead-ends operationally | P1 |
+| T15 | Superadmin buyer-provisioning runbook | Implicit | One-pager: what happens after a buyer demo request (who provisions, SLA) — else the funnel dead-ends operationally. **Done: `docs/BUYER-PROVISIONING-RUNBOOK.md`.** | P1 |
 
 ## 5. Phases & gates
 

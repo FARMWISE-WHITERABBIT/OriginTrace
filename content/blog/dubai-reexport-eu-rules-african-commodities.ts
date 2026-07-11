@@ -101,7 +101,7 @@ export const post: BlogPost = {
       heading: 'One Data Pack for Dubai, the GCC, and the EU — See It Live',
       text: 'OriginTrace links your African supply to farm records, lot-level traceability, and lab documents — so the same consignment can clear FIRS in Dubai and due diligence in Rotterdam. See what an origin-complete data pack looks like on a real shipment.',
       buttonText: 'Request a Demo',
-      href: '/demo',
+      href: '/demo?role=buyer',
     },
     {
       type: 'h2',
@@ -168,7 +168,7 @@ export const post: BlogPost = {
       heading: 'Stop Selling EU-Grade Goods at Re-Export Prices',
       text: 'If your African supply arrives with farm records, lot traceability, and a lab trail already attached, every market is open to you. Onboard your origin suppliers onto OriginTrace and that data pack builds itself, shipment after shipment — maintained at origin, visible in Dubai.',
       buttonText: 'Onboard Your Origin Suppliers',
-      href: '/demo',
+      href: '/importers',
     },
     {
       type: 'references',
