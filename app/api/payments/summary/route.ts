@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     for (const p of allPayments) {
-      const amt = parseFloat(p.amount) || 0;
+      const amt = Number(p.amount) || 0;
+      const currencyKey = p.currency ?? 'unknown';
 
-      byCurrency[p.currency] = (byCurrency[p.currency] || 0) + amt;
+      byCurrency[currencyKey] = (byCurrency[currencyKey] || 0) + amt;
 
       if (!byPayeeType[p.payee_type]) {
         byPayeeType[p.payee_type] = { total: 0, count: 0 };
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const totalAmount = allPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const totalAmount = allPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalCount = allPayments.length;
     const averageAmount = totalCount > 0 ? totalAmount / totalCount : 0;
 

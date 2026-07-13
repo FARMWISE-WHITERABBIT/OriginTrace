@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function buildPeriodPerformance(supabase: any, orgId: number, start: string, end: string, period: string) {
+async function buildPeriodPerformance(supabase: any, orgId: string, start: string, end: string, period: string) {
   const [batchesRes, farmsRes, paymentsRes, docsRes] = await Promise.all([
     supabase.from('collection_batches').select('id, total_weight, bag_count, commodity, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
     supabase.from('farms').select('id, compliance_status, commodity, area_hectares').eq('org_id', orgId),
@@ -129,7 +129,7 @@ async function buildPeriodPerformance(supabase: any, orgId: number, start: strin
   };
 }
 
-async function buildShipmentDDS(supabase: any, orgId: number, start: string, end: string) {
+async function buildShipmentDDS(supabase: any, orgId: string, start: string, end: string) {
   const { data: shipments } = await supabase
     .from('shipments')
     .select('id, destination_country, commodity, status, shipment_score, compliance_score, documentation_score, quality_score, logistics_score, created_at, decision')
@@ -186,7 +186,7 @@ async function buildShipmentDDS(supabase: any, orgId: number, start: string, end
   };
 }
 
-async function buildSupplierAudit(supabase: any, orgId: number, start: string, end: string) {
+async function buildSupplierAudit(supabase: any, orgId: string, start: string, end: string) {
   const [farmsRes, batchesRes] = await Promise.all([
     supabase.from('farms').select('id, farmer_name, community, compliance_status, boundary_geo, area_hectares, commodity, created_at, updated_at').eq('org_id', orgId),
     supabase.from('collection_batches').select('id, farm_id, total_weight, bag_count, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
@@ -240,7 +240,7 @@ async function buildSupplierAudit(supabase: any, orgId: number, start: string, e
   };
 }
 
-async function buildRegulatoryReadiness(supabase: any, orgId: number, start: string, end: string) {
+async function buildRegulatoryReadiness(supabase: any, orgId: string, start: string, end: string) {
   const [farmsRes, shipmentsRes, docsRes, profilesRes] = await Promise.all([
     supabase.from('farms').select('id, compliance_status, boundary_geo, deforestation_check, area_hectares').eq('org_id', orgId),
     supabase.from('shipments').select('id, compliance_score, shipment_score, decision, compliance_profile_id, destination_country, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),
@@ -316,7 +316,7 @@ async function buildRegulatoryReadiness(supabase: any, orgId: number, start: str
   };
 }
 
-async function buildBuyerIntelligence(supabase: any, orgId: number, start: string, end: string) {
+async function buildBuyerIntelligence(supabase: any, orgId: string, start: string, end: string) {
   const [contractsRes, shipmentsRes, docsRes] = await Promise.all([
     supabase.from('contracts').select('id, buyer_org_id, status, total_value, currency, commodity, created_at').eq('exporter_org_id', orgId),
     supabase.from('shipments').select('id, destination_country, commodity, status, shipment_score, decision, created_at').eq('org_id', orgId).gte('created_at', start).lte('created_at', end),

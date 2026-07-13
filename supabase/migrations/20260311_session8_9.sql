@@ -2,6 +2,26 @@
 -- Migration: JWT custom claims + shipment/sync transaction RPCs
 -- Sessions 8 + 9 — OriginTrace audit remediation
 -- Run once against your Supabase project.
+--
+-- CORRECTED 2026-07-09: the original version of this file was written against
+-- a pre-UUID schema (BIGINT org/farm/batch/contract/document ids). It was
+-- never applied to the live DB. Live schema uses UUID for all of these. This
+-- version also fixes two real column mismatches found while correcting types:
+--   - collection_batches has no gps_lat/gps_lng/estimated_bags/estimated_weight
+--     columns, and its client-supplied code column is 'batch_code', not
+--     'batch_id'. GPS lat/lng have no destination column in the live schema —
+--     only a boolean 'has_gps' flag exists, which this version now sets
+--     faithfully instead of discarding the signal entirely.
+--   - the bags UPDATE joined on b.id::TEXT = bag->>'serial', but 'id' is now
+--     a UUID and bags has a dedicated 'serial' TEXT column — the join must be
+--     b.serial = bag->>'serial'.
+--   - batch_contributions has no org_id column at all (org-scoped indirectly
+--     via batch_id -> collection_batches.org_id) — dropped from the insert.
+-- Verified live via BEGIN/ROLLBACK test calls against both RPCs (2026-07-09).
+-- Also fixed two callers that passed the wrong id: app/api/shipments/route.ts
+-- was passing profiles.id as p_created_by (shipments.created_by FKs to
+-- auth.users, needs user.id); app/api/sync/route.ts was passing user.id as
+-- p_user_id (collection_batches.agent_id FKs to profiles.id, needs profile.id).
 -- =============================================================================
 
 
@@ -14,10 +34,18 @@
 -- The hook fires on every token refresh and sign-in, keeping claims fresh.
 -- Middleware reads: request.auth.user.app_metadata (from the JWT cookie).
 -- No DB query required — zero round-trips per page load.
+--
+-- NOTE: creating this function is necessary but not sufficient — it must also
+-- be wired up in Supabase Dashboard → Authentication → Hooks → Custom Access
+-- Token Hook → Function: custom_access_token_hook. That's a dashboard/Auth
+-- config step, not something a SQL migration can do. Until that's done,
+-- middleware.ts's JWT-claims fast path stays inactive and it keeps using its
+-- existing DB-fallback path (fetchClaimsFromDb) — which already works
+-- correctly, just with the extra round-trips this hook was meant to remove.
 
 -- ─── Helper: resolve org tier ────────────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION get_org_tier(p_org_id BIGINT)
+CREATE OR REPLACE FUNCTION get_org_tier(p_org_id UUID)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -58,7 +86,7 @@ AS $$
 DECLARE
   v_user_id     UUID;
   v_role        TEXT;
-  v_org_id      BIGINT;
+  v_org_id      UUID;
   v_tier        TEXT;
   v_superadmin  BOOLEAN := FALSE;
   v_claims      JSONB;
@@ -103,10 +131,10 @@ $$;
 
 -- Grant to supabase_auth_admin so the hook can fire
 GRANT EXECUTE ON FUNCTION custom_access_token_hook(JSONB) TO supabase_auth_admin;
-GRANT EXECUTE ON FUNCTION get_org_tier(BIGINT) TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION get_org_tier(UUID) TO supabase_auth_admin;
 REVOKE EXECUTE ON FUNCTION custom_access_token_hook(JSONB) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION get_org_tier(BIGINT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION get_org_tier(BIGINT) TO service_role;
+REVOKE EXECUTE ON FUNCTION get_org_tier(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_org_tier(UUID) TO service_role;
 
 -- Also grant SELECT on the tables the hook reads
 GRANT SELECT ON profiles TO supabase_auth_admin;
@@ -123,8 +151,8 @@ GRANT SELECT ON system_admins TO supabase_auth_admin;
 -- contract link silently dropped on error).
 
 CREATE OR REPLACE FUNCTION create_shipment_atomic(
-  p_org_id              BIGINT,
-  p_created_by          BIGINT,
+  p_org_id              UUID,
+  p_created_by          UUID,
   p_shipment_code       TEXT,
   p_destination_country TEXT,
   p_commodity           TEXT,
@@ -134,9 +162,9 @@ CREATE OR REPLACE FUNCTION create_shipment_atomic(
   p_destination_port    TEXT        DEFAULT NULL,
   p_notes               TEXT        DEFAULT NULL,
   p_estimated_ship_date DATE        DEFAULT NULL,
-  p_compliance_profile_id BIGINT    DEFAULT NULL,
-  p_contract_id         BIGINT      DEFAULT NULL,
-  p_document_ids        BIGINT[]    DEFAULT NULL
+  p_compliance_profile_id UUID      DEFAULT NULL,
+  p_contract_id         UUID        DEFAULT NULL,
+  p_document_ids        UUID[]      DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -144,8 +172,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_shipment  JSONB;
-  v_ship_id   BIGINT;
-  v_doc_id    BIGINT;
+  v_ship_id   UUID;
 BEGIN
   -- 1. Insert shipment
   INSERT INTO shipments (
@@ -164,7 +191,7 @@ BEGIN
   )
   RETURNING to_jsonb(shipments.*) INTO v_shipment;
 
-  v_ship_id := (v_shipment->>'id')::BIGINT;
+  v_ship_id := (v_shipment->>'id')::UUID;
 
   -- 2. Link to contract (optional)
   IF p_contract_id IS NOT NULL THEN
@@ -187,8 +214,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION create_shipment_atomic(BIGINT,BIGINT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT,TEXT,DATE,BIGINT,BIGINT,BIGINT[]) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION create_shipment_atomic(BIGINT,BIGINT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT,TEXT,DATE,BIGINT,BIGINT,BIGINT[]) TO service_role;
+REVOKE ALL ON FUNCTION create_shipment_atomic(UUID,UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT,TEXT,DATE,UUID,UUID,UUID[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION create_shipment_atomic(UUID,UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT,TEXT,DATE,UUID,UUID,UUID[]) TO service_role;
 
 
 -- =============================================================================
@@ -202,7 +229,7 @@ GRANT EXECUTE ON FUNCTION create_shipment_atomic(BIGINT,BIGINT,TEXT,TEXT,TEXT,TE
 -- The function is idempotent on local_id (duplicate syncs skip cleanly).
 
 CREATE OR REPLACE FUNCTION sync_batches_atomic(
-  p_org_id  BIGINT,
+  p_org_id  UUID,
   p_user_id UUID,
   p_batches JSONB   -- array of batch objects
 )
@@ -213,14 +240,13 @@ AS $$
 DECLARE
   v_batch       JSONB;
   v_local_id    TEXT;
-  v_existing_id BIGINT;
-  v_new_id      BIGINT;
-  v_contrib     JSONB;
-  v_bag         JSONB;
+  v_existing_id UUID;
+  v_new_id      UUID;
   v_results     JSONB := '[]'::JSONB;
   v_total_weight NUMERIC;
   v_bag_count   INTEGER;
-  v_farm_id     BIGINT;
+  v_farm_id     UUID;
+  v_has_gps     BOOLEAN;
 BEGIN
   FOR v_batch IN SELECT jsonb_array_elements(p_batches) LOOP
     v_local_id := v_batch->>'local_id';
@@ -261,27 +287,33 @@ BEGIN
       FROM jsonb_array_elements(COALESCE(v_batch->'bags', '[]'::JSONB)) bag;
     END IF;
 
-    v_farm_id := NULLIF((v_batch->>'farm_id')::TEXT, 'unknown')::BIGINT;
+    -- farm_id: 'unknown' / 'temp-*' offline sentinels have no UUID equivalent —
+    -- leave NULL rather than invent one; collection_batches.farm_id is NOT NULL,
+    -- so an unresolvable farm_id surfaces as a per-batch sync error below
+    -- (caught by the EXCEPTION block), not a silent bad write.
+    v_farm_id := NULLIF(NULLIF(v_batch->>'farm_id', 'unknown'), '')::UUID;
+
+    -- collection_batches has no gps_lat/gps_lng columns to store precise
+    -- coordinates in — only a boolean 'has_gps' flag. Preserve that signal
+    -- rather than silently dropping GPS capture entirely.
+    v_has_gps := (v_batch->>'gps_lat' IS NOT NULL AND v_batch->>'gps_lng' IS NOT NULL);
 
     -- Insert batch
     BEGIN
       INSERT INTO collection_batches (
-        org_id, farm_id, agent_id, batch_id, status,
-        commodity, gps_lat, gps_lng,
-        estimated_bags, estimated_weight, total_weight, bag_count,
+        org_id, farm_id, agent_id, batch_code, status,
+        commodity, has_gps,
+        total_weight, bag_count,
         notes, local_id, synced_at
       )
       VALUES (
         p_org_id,
-        COALESCE(v_farm_id, 0),
+        v_farm_id,
         p_user_id,
         NULLIF(v_batch->>'batch_id', ''),
         'collecting',
         NULLIF(v_batch->>'commodity', ''),
-        NULLIF(v_batch->>'gps_lat', '')::NUMERIC,
-        NULLIF(v_batch->>'gps_lng', '')::NUMERIC,
-        v_bag_count,
-        NULLIF(v_total_weight, 0),
+        v_has_gps,
         v_total_weight,
         v_bag_count,
         NULLIF(v_batch->>'notes', ''),
@@ -298,21 +330,21 @@ BEGIN
       CONTINUE;
     END;
 
-    -- Insert contributors (bulk)
+    -- Insert contributors (bulk) — batch_contributions has no org_id column;
+    -- it's org-scoped indirectly via batch_id -> collection_batches.org_id.
     IF jsonb_array_length(COALESCE(v_batch->'contributors', '[]'::JSONB)) > 0 THEN
-      INSERT INTO batch_contributions (batch_id, farm_id, farmer_name, weight_kg, bag_count, org_id)
+      INSERT INTO batch_contributions (batch_id, farm_id, farmer_name, weight_kg, bag_count)
       SELECT
         v_new_id,
-        NULLIF((c->>'farm_id')::TEXT, '')::BIGINT,
+        NULLIF(c->>'farm_id', '')::UUID,
         c->>'farmer_name',
         (c->>'weight_kg')::NUMERIC,
-        (c->>'bag_count')::INTEGER,
-        p_org_id
+        (c->>'bag_count')::INTEGER
       FROM jsonb_array_elements(v_batch->'contributors') c
       WHERE COALESCE((c->>'bag_count')::INTEGER, 0) > 0;
     END IF;
 
-    -- Update bags (bulk)
+    -- Update bags (bulk) — join on the dedicated 'serial' column, not id
     IF jsonb_array_length(COALESCE(v_batch->'bags', '[]'::JSONB)) > 0 THEN
       UPDATE bags b
       SET
@@ -321,7 +353,7 @@ BEGIN
         grade               = bag->>'grade',
         status              = 'collected'
       FROM jsonb_array_elements(v_batch->'bags') bag
-      WHERE b.id::TEXT = bag->>'serial'
+      WHERE b.serial   = bag->>'serial'
         AND b.org_id   = p_org_id
         AND bag->>'serial' IS NOT NULL;
     END IF;
@@ -337,5 +369,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION sync_batches_atomic(BIGINT, UUID, JSONB) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION sync_batches_atomic(BIGINT, UUID, JSONB) TO service_role;
+REVOKE ALL ON FUNCTION sync_batches_atomic(UUID, UUID, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION sync_batches_atomic(UUID, UUID, JSONB) TO service_role;

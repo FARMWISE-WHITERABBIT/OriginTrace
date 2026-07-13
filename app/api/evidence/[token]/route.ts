@@ -64,9 +64,13 @@ export async function GET(
       .single();
 
     // ── Fetch batches and farms ──────────────────────────────────────────────
+    // TODO(schema-drift): 'collection_batches' has no 'shipment_id' column — batches now link to
+    // shipments indirectly via shipment_items/shipment_lot_items (batch_id → lot/item → shipment_id).
+    // This .eq('shipment_id', ...) filter cannot match anything against the live schema; needs a
+    // product decision on which junction path is canonical before this can be fixed properly.
     const { data: batches } = await supabase
       .from('collection_batches')
-      .select('id, batch_code, collection_date, total_weight, bag_count, farmer_name, farm_id')
+      .select('id, batch_code, collected_at, total_weight, bag_count, farm_id')
       .eq('org_id', pkg.org_id)
       .eq('shipment_id', pkg.shipment_id);
 
@@ -75,10 +79,18 @@ export async function GET(
     if (farmIds.length > 0) {
       const { data: farmRows } = await supabase
         .from('farms')
-        .select('id, farmer_name, community, state, compliance_status, boundary_geo')
+        .select('id, farmer_name, community, state_id, states(name), compliance_status, boundary_geo')
         .in('id', farmIds);
-      farms = farmRows ?? [];
+      farms = (farmRows ?? []).map((f) => ({
+        id: f.id,
+        farmer_name: f.farmer_name,
+        community: f.community,
+        state: f.states?.name,
+        compliance_status: f.compliance_status,
+        boundary_geo: f.boundary_geo,
+      }));
     }
+    const farmerNameByFarmId = new Map(farms.map((f) => [f.id, f.farmer_name]));
 
     // ── Fetch lab results ────────────────────────────────────────────────────
     const { data: labResults } = await supabase
@@ -90,19 +102,31 @@ export async function GET(
     // ── Fetch compliance documents ───────────────────────────────────────────
     const { data: documents } = await supabase
       .from('documents')
-      .select('doc_type, file_name, status, expiry_date')
+      .select('document_type, file_name, status, expiry_date')
       .eq('org_id', pkg.org_id)
-      .eq('entity_type', 'shipment')
-      .eq('entity_id', pkg.shipment_id)
+      .eq('linked_entity_type', 'shipment')
+      .eq('linked_entity_id', pkg.shipment_id)
       .neq('status', 'archived');
 
     return NextResponse.json({
       orgName:    org?.name ?? 'Unknown Organisation',
       shipment,
       farms,
-      batches:    batches ?? [],
+      batches:    (batches ?? []).map((b) => ({
+        id: b.id,
+        batch_code: b.batch_code,
+        collection_date: b.collected_at,
+        total_weight: b.total_weight,
+        bag_count: b.bag_count,
+        farmer_name: b.farm_id ? farmerNameByFarmId.get(b.farm_id) : undefined,
+      })),
       labResults: labResults ?? [],
-      documents:  documents ?? [],
+      documents:  (documents ?? []).map((d) => ({
+        doc_type: d.document_type,
+        file_name: d.file_name,
+        status: d.status,
+        expiry_date: d.expiry_date,
+      })),
       package: {
         token,
         expiresAt: pkg.expires_at,

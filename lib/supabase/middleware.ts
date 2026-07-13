@@ -33,6 +33,7 @@ import { hasAccess, type AppRole } from '@/lib/rbac';
 import { checkRouteAccess } from '@/lib/config/tier-gating';
 import { createClient } from '@supabase/supabase-js';
 import { verifyCookiePayload } from '@/lib/security/signed-cookie';
+import type { Database } from './database.types';
 
 // ---------------------------------------------------------------------------
 // JWT claim helpers
@@ -66,7 +67,7 @@ function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
-  return createClient(url, key, {
+  return createClient<Database>(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
@@ -137,7 +138,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -169,7 +170,7 @@ export async function updateSession(request: NextRequest) {
   const isSuperadminLogin = pathname === '/superadmin/login';
   const isResetPasswordPage = pathname === '/auth/reset-password';
   const isPublicPage =
-    ['/', '/solutions', '/pedigree', '/demo', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
+    ['/', '/solutions', '/pedigree', '/demo', '/importers', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/compliance') ||
     pathname.startsWith('/industries') ||

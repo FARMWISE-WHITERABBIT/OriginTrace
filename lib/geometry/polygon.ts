@@ -94,14 +94,14 @@ function bboxOverlap(a: [number,number,number,number], b: [number,number,number,
 // ─── Public detection API ─────────────────────────────────────────────────────
 
 export interface FarmGeom {
-  id: number;
+  id: string;
   farmer_name: string;
   ring: Coord[];
 }
 
 export interface DetectedConflict {
-  farm_a_id: number;
-  farm_b_id: number;
+  farm_a_id: string;
+  farm_b_id: string;
   overlap_ratio: number;
 }
 

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    let links = [];
+    let links: any[] = [];
 
     if (buyerProfile) {
       const { data } = await supabaseAdmin

@@ -40,7 +40,14 @@ export async function GET(request: NextRequest) {
         .lt('updated_at', fourteenDaysAgo),
 
       // Escrow accounts with < 10% of target funded (partially_funded or awaiting_payment)
-      supabase
+      // TODO(schema-drift): 'escrow_accounts' now exists (migration applied), but this query's
+      // columns/status values don't match its real schema: real columns are total_amount/
+      // held_amount/released_amount, and status is one of active/completed/disputed/cancelled
+      // — there is no 'partially_funded'/'awaiting_payment' status or amount_usd/
+      // funded_amount_usd column. The applied schema also holds the full amount at creation
+      // (held_amount = total_amount in createEscrow), so "% funded" isn't a concept this schema
+      // supports as designed. Needs a product decision on what this alert should actually measure.
+      (supabase as any)
         .from('escrow_accounts')
         .select('id, amount_usd, funded_amount_usd, status')
         .eq('org_id', orgId)

@@ -6,6 +6,7 @@ import { enforceTier } from '@/lib/api/tier-guard';
 import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { requireRole, ROLES } from '@/lib/rbac';
 import { analyzeBoundaryAuthenticity } from '@/lib/services/boundary-analysis';
+import type { Json } from '@/lib/supabase/database.types';
 
 const coordinateSchema = z.tuple([z.number(), z.number()]);
 
@@ -71,7 +72,7 @@ export async function PATCH(
       .update({
         boundary,
         area_hectares: area_hectares ?? null,
-        boundary_analysis: boundaryAnalysis,
+        boundary_analysis: boundaryAnalysis as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

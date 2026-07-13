@@ -56,7 +56,17 @@ export async function POST(request: NextRequest) {
     const keyPrefix = rawKey.substring(0, 8);
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
 
-    const insertData: Record<string, unknown> = {
+    const insertData: {
+      org_id: string;
+      key_hash: string;
+      key_prefix: string;
+      name: string;
+      scopes: string[];
+      created_by: string;
+      status: string;
+      rate_limit_per_hour?: number;
+      expires_at?: string;
+    } = {
       org_id: profile.org_id,
       key_hash: keyHash,
       key_prefix: keyPrefix,

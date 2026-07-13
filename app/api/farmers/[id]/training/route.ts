@@ -4,6 +4,9 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { z } from 'zod';
 import { emptyAsNull } from '@/lib/api/validation';
+import type { Database } from '@/lib/supabase/database.types';
+
+type FarmerTrainingInsert = Database['public']['Tables']['farmer_training']['Insert'];
 
 const MODULE_TYPES = ['gap', 'safety', 'sustainability', 'organic', 'child_labor', 'eudr_awareness'] as const;
 const STATUSES = ['not_started', 'in_progress', 'completed'] as const;
@@ -51,7 +54,7 @@ export async function POST(
       return NextResponse.json({ error: 'Validation failed', fields: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const insertData: Record<string, any> = {
+    const insertData: FarmerTrainingInsert = {
       farm_id: farmId,
       org_id: profile.org_id,
       module_name: parsed.data.module_name,

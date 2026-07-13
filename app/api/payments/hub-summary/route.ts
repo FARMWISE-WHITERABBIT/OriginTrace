@@ -22,14 +22,14 @@ export async function GET(request: NextRequest) {
       // USDC wallet balance
       supabase
         .from('organizations')
-        .select('wallet_id, wallet_balance_usdc')
+        .select('blockradar_wallet_id, usdc_balance')
         .eq('id', orgId)
         .single(),
 
-      // Sum of active escrow amounts
+      // Sum of active escrow amounts (held_amount = still locked, not yet released)
       supabase
         .from('escrow_accounts')
-        .select('amount_usd')
+        .select('held_amount')
         .eq('org_id', orgId)
         .in('status', ['active', 'disputed']),
 
@@ -43,13 +43,13 @@ export async function GET(request: NextRequest) {
 
     let wallet_balance_usdc = 0;
     if (walletRes.status === 'fulfilled' && walletRes.value.data) {
-      wallet_balance_usdc = Number(walletRes.value.data.wallet_balance_usdc ?? 0);
+      wallet_balance_usdc = Number(walletRes.value.data.usdc_balance ?? 0);
     }
 
     let pending_escrow_usd = 0;
     if (escrowRes.status === 'fulfilled' && escrowRes.value.data) {
       pending_escrow_usd = escrowRes.value.data.reduce(
-        (sum, row) => sum + Number(row.amount_usd ?? 0),
+        (sum, row) => sum + Number(row.held_amount ?? 0),
         0,
       );
     }

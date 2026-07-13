@@ -90,15 +90,15 @@ export function QualityManagerDashboard() {
           totalBagsRes,
           flaggedBatchesRes,
         ] = await Promise.all([
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'approved'),
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'pending'),
-          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('compliance_status', 'rejected'),
-          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).not('yield_flag_reason', 'is', null),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('grade', 'A'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('grade', 'B'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id).eq('grade', 'C'),
-          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-          supabase.from('collection_batches').select('id, total_weight, yield_flag_reason, created_at').eq('org_id', organization.id).not('yield_flag_reason', 'is', null).order('created_at', { ascending: false }).limit(5),
+          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('compliance_status', 'approved'),
+          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('compliance_status', 'pending'),
+          supabase.from('farms').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('compliance_status', 'rejected'),
+          supabase.from('collection_batches').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).not('yield_flag_reason', 'is', null),
+          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('grade', 'A'),
+          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('grade', 'B'),
+          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)).eq('grade', 'C'),
+          supabase.from('bags').select('id', { count: 'exact', head: true }).eq('org_id', String(organization.id)),
+          supabase.from('collection_batches').select('id, total_weight, yield_flag_reason, created_at').eq('org_id', String(organization.id)).not('yield_flag_reason', 'is', null).order('created_at', { ascending: false }).limit(5),
         ]);
 
         setStats({

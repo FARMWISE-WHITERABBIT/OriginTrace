@@ -79,3 +79,4 @@ vite.config.ts.*
 tests/e2e/.auth/
 playwright-report/
 test-results/
+.env*

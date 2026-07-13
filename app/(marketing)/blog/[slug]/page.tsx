@@ -80,11 +80,30 @@ const CATEGORY_COLORS: Record<string, string> = {
   Compliance: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
 };
 
+// ── Inline markdown links ─────────────────────────────────────────────────────
+// Paragraph/bullet/callout text supports [label](url). Internal urls (/...) use
+// next/link; external open in a new tab. Everything else renders as plain text.
+function renderInlineText(text: string): React.ReactNode {
+  const parts = text.split(/(\[[^\]]+\]\([^)\s]+\))/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    const m = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (!m) return part;
+    const [, label, href] = m;
+    const cls = 'text-emerald-600 dark:text-emerald-400 font-medium hover:underline';
+    return href.startsWith('/') ? (
+      <Link key={i} href={href} className={cls}>{label}</Link>
+    ) : (
+      <a key={i} href={href} target="_blank" rel="noopener noreferrer" className={cls}>{label}</a>
+    );
+  });
+}
+
 // ── Content section renderer ──────────────────────────────────────────────────
 function RenderSection({ section }: { section: BlogSection }) {
   switch (section.type) {
     case 'paragraph':
-      return <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{section.text}</p>;
+      return <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{renderInlineText(section.text)}</p>;
 
     case 'h2':
       return <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-10 mb-4">{section.text}</h2>;
@@ -100,7 +119,7 @@ function RenderSection({ section }: { section: BlogSection }) {
             {section.items.map((item, i) => (
               <li key={i} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="leading-relaxed">{item}</span>
+                <span className="leading-relaxed">{renderInlineText(item)}</span>
               </li>
             ))}
           </ul>
@@ -117,7 +136,7 @@ function RenderSection({ section }: { section: BlogSection }) {
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   {i + 1}
                 </span>
-                <span className="leading-relaxed">{item}</span>
+                <span className="leading-relaxed">{renderInlineText(item)}</span>
               </li>
             ))}
           </ol>
@@ -133,7 +152,7 @@ function RenderSection({ section }: { section: BlogSection }) {
             <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${cfg.icon_color}`} />
             <div>
               <p className={`font-semibold mb-1 ${cfg.title_color}`}>{section.title}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{section.text}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{renderInlineText(section.text)}</p>
             </div>
           </div>
         </div>
@@ -203,6 +222,26 @@ function RenderSection({ section }: { section: BlogSection }) {
         </div>
       );
 
+    case 'faq':
+      return (
+        <div className="my-8">
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-5">
+            {section.title || 'Frequently Asked Questions'}
+          </h2>
+          <div className="space-y-4">
+            {section.items.map((item, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-5"
+              >
+                <p className="font-semibold text-slate-900 dark:text-white mb-2">{item.q}</p>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{renderInlineText(item.a)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
     case 'references':
       return (
         <div className="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
@@ -249,7 +288,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     headline: post.title,
     description: post.description,
     datePublished: post.dateISO,
-    dateModified: post.dateISO,
+    dateModified: post.dateModifiedISO || post.dateISO,
     author: { '@type': 'Organization', name: post.author },
     publisher: {
       '@type': 'Organization',
@@ -260,9 +299,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     keywords: post.tags.join(', '),
   };
 
+  const faqItems = post.content.flatMap(s => (s.type === 'faq' ? s.items : []));
+  const faqSchema = faqItems.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map(item => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
       <MarketingNav />
 
       <main className="pt-24 pb-20 md:pb-28">

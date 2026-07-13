@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     let farmQuery = supabase
       .from('farms')
-      .select('id, farmer_name, community, state, country, commodity, area_hectares, boundary, compliance_status, deforestation_check, created_at')
+      .select('id, farmer_name, community, state_id, states(name), commodity, area_hectares, boundary, compliance_status, deforestation_check, created_at')
       .eq('org_id', orgId)
       .eq('compliance_status', 'approved');
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     if (shipmentId) {
       const { data: shipment } = await supabase
         .from('shipments')
-        .select('id, destination_country, commodity, status, shipment_score, compliance_score, decision, created_at')
+        .select('id, destination_country, commodity, status, readiness_score, readiness_decision, created_at')
         .eq('id', shipmentId)
         .eq('org_id', orgId)
         .single();
@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
 
       commodity: commodity && commodity !== 'all' ? commodity : farmList.map(f => f.commodity).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || 'Not specified',
 
-      country_of_origin: farmList.map(f => f.country || f.state).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
+      // TODO(schema-drift): 'country' no longer exists on 'farms' — this app is Nigeria-only, so we fall back to state name.
+      country_of_origin: farmList.map(f => f.states?.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
 
       geolocation: {
         total_plots: farmList.length,
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
         plots: farmsWithBoundaries.map(f => ({
           plot_id: f.id,
           community: f.community,
-          state: f.state,
+          state: f.states?.name,
           area_hectares: f.area_hectares,
           coordinates: f.boundary,
         })),
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
         statement: 'The commodities covered by this due diligence statement have been produced on land that has not been subject to deforestation after 31 December 2020, in accordance with EU Regulation 2023/1115.',
         total_farms_checked: farmList.filter(f => f.deforestation_check).length,
         farms_deforestation_free: farmList.filter(f => {
-          const check = f.deforestation_check;
+          const check = f.deforestation_check as { deforestation_free?: boolean; risk_level?: string } | null;
           return check && (check.deforestation_free === true || check.risk_level === 'low');
         }).length,
         farms_pending_check: farmList.filter(f => !f.deforestation_check).length,
@@ -100,9 +101,10 @@ export async function GET(request: NextRequest) {
         id: shipmentData.id,
         destination_country: shipmentData.destination_country,
         commodity: shipmentData.commodity,
-        readiness_score: shipmentData.shipment_score,
-        compliance_score: shipmentData.compliance_score,
-        decision: shipmentData.decision,
+        readiness_score: shipmentData.readiness_score,
+        // TODO(schema-drift): 'compliance_score' no longer exists on 'shipments' — needs product decision (was this merged into readiness_score/score_breakdown?).
+        compliance_score: null,
+        decision: shipmentData.readiness_decision,
       } : null,
 
       date_of_statement: new Date().toISOString().split('T')[0],
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
           properties: {
             plot_id: f.id,
             community: f.community,
-            state: f.state,
+            state: f.states?.name,
             commodity: f.commodity,
             area_hectares: f.area_hectares,
             compliance_status: f.compliance_status,

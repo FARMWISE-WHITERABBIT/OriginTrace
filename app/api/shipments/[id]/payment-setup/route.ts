@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { createEscrow } from '@/lib/services/escrow';
+import { SHIPPING_EVENT_CODES } from '@/lib/services/shipping-events';
 import { z } from 'zod';
 
 const paymentSetupSchema = z.object({
@@ -11,6 +13,11 @@ const paymentSetupSchema = z.object({
       stage: z.string(),
       amount: z.number().positive(),
       description: z.string().min(1),
+      // Optional: restrict auto-release matching to specific shipping-event
+      // code(s). Omitted = legacy stage-only matching (backward compatible).
+      trigger_event_code: z
+        .union([z.enum(SHIPPING_EVENT_CODES), z.array(z.enum(SHIPPING_EVENT_CODES)).min(1)])
+        .optional(),
     })
   ).optional(),
 });
@@ -61,28 +68,29 @@ export async function POST(
       stage: m.stage,
       amount: m.amount,
       description: m.description,
+      ...('trigger_event_code' in m && m.trigger_event_code
+        ? { trigger_event_code: m.trigger_event_code }
+        : {}),
     }));
 
     // Create escrow account if USDC method
     let escrowId: string | null = null;
     if (payment_method === 'escrow_usdc') {
-      const { data: escrow, error: escrowErr } = await supabase
-        .from('escrow_accounts')
-        .insert({
-          org_id: profile.org_id,
-          shipment_id: shipmentId,
-          amount_usd,
-          status: 'active',
-          milestone_config: milestoneConfig,
-        })
-        .select('id')
-        .single();
-
-      if (escrowErr) {
-        console.error('Escrow creation error:', escrowErr.message);
+      try {
+        const escrow = await createEscrow({
+          orgId: profile.org_id,
+          shipmentId,
+          currency: 'USD',
+          totalAmount: amount_usd,
+          milestones: milestoneConfig,
+          createdBy: user.id,
+          actorEmail: user.email,
+        });
+        escrowId = escrow.id;
+      } catch (escrowErr) {
+        console.error('Escrow creation error:', escrowErr instanceof Error ? escrowErr.message : escrowErr);
         return NextResponse.json({ error: 'Failed to create escrow account' }, { status: 500 });
       }
-      escrowId = escrow.id;
     }
 
     // Update shipment payment fields

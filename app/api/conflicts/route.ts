@@ -41,9 +41,7 @@ export async function GET(request: NextRequest) {
         id,
         overlap_ratio,
         status,
-        resolution_notes,
         created_at,
-        resolved_at,
         farm_a:farm_a_id (
           id,
           farmer_name,
@@ -52,10 +50,7 @@ export async function GET(request: NextRequest) {
           area_hectares,
           boundary,
           compliance_status,
-          created_at,
-          gps_accuracy,
-          synced_at,
-          agent:profiles!farms_created_by_fkey (full_name, user_id)
+          created_at
         ),
         farm_b:farm_b_id (
           id,
@@ -65,10 +60,7 @@ export async function GET(request: NextRequest) {
           area_hectares,
           boundary,
           compliance_status,
-          created_at,
-          gps_accuracy,
-          synced_at,
-          agent:profiles!farms_created_by_fkey (full_name, user_id)
+          created_at
         )
       `)
       .eq('status', 'pending')
@@ -176,6 +168,7 @@ export async function POST(request: NextRequest) {
       .insert({
         farm_a_id,
         farm_b_id,
+        org_id: profile.org_id,
         overlap_ratio: overlap_ratio || 0,
         status: 'pending',
       })
@@ -285,8 +278,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verify the conflict belongs to the admin's organization
-    const farmA = conflict.farm_a as { org_id?: number } | null;
-    const farmB = conflict.farm_b as { org_id?: number } | null;
+    const farmA = conflict.farm_a as { org_id?: string } | null;
+    const farmB = conflict.farm_b as { org_id?: string } | null;
     if (!farmA || !farmB || farmA.org_id !== profile.org_id || farmB.org_id !== profile.org_id) {
       return NextResponse.json({ error: 'Conflict not found' }, { status: 404 });
     }

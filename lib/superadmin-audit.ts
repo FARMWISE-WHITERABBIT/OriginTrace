@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Json } from '@/lib/supabase/database.types';
 import { NextRequest } from 'next/server';
 
 export type SuperadminTargetType =
@@ -37,9 +38,9 @@ export async function logSuperadminAction(params: SuperadminAuditParams): Promis
       target_type:   params.targetType,
       target_id:     params.targetId,
       target_label:  params.targetLabel,
-      before_state:  params.beforeState,
-      after_state:   params.afterState,
-      metadata:      params.metadata || {},
+      before_state:  params.beforeState as Json | undefined,
+      after_state:   params.afterState as Json | undefined,
+      metadata:      (params.metadata || {}) as Json,
       ip_address:    ip,
     });
   } catch (err) {

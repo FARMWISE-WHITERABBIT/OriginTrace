@@ -2,12 +2,13 @@ import type { BlogPost } from '@/lib/blog';
 
 export const post: BlogPost = {
   slug: 'eudr-regulation-complete-guide',
-  title: 'EUDR Regulation: The Complete Guide for Exporters',
-  description: 'The EU Deforestation Regulation is the most significant change to agricultural trade with Europe in a generation. This complete guide covers what EUDR is, which commodities and companies it affects, what compliance looks like end-to-end, and how exporters can build the systems to meet its requirements.',
+  title: 'EUDR Regulation: Complete 2026 Guide (New December Deadline)',
+  description: 'EUDR was delayed again — the new deadline is 30 December 2026. Who files a DDS, what geolocation data you need, and how to get compliant in time.',
   date: 'March 29, 2026',
   dateISO: '2026-03-29',
+  dateModifiedISO: '2026-07-09',
   category: 'EUDR',
-  readingTime: '11 min read',
+  readingTime: '12 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
   coverImage: '/images/pexels-tomfisk-2231744.jpg',
@@ -21,7 +22,32 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Unlike previous sustainability frameworks that operated on a voluntary basis or relied on industry self-certification, EUDR is mandatory, legally enforced, and backed by penalties that include fines of up to 4% of annual EU turnover and temporary exclusion from the EU market. This guide provides a complete overview: what the regulation is, where it came from, who it affects, what compliance requires, and how exporters can build the systems to meet it.',
+      text: 'Unlike previous sustainability frameworks that operated on a voluntary basis or relied on industry self-certification, EUDR is mandatory, legally enforced, and backed by penalties that include maximum fines of at least 4% of annual EU-wide turnover and temporary exclusion from the EU market. This guide provides a complete overview: what the regulation is, where it came from, who it affects, what compliance requires, and how exporters can build the systems to meet it.',
+    },
+    {
+      type: 'h2',
+      text: 'What Changed in the December 2025 Revision',
+    },
+    {
+      type: 'paragraph',
+      text: 'Before anything else: the dates you may have read elsewhere are stale. Regulation (EU) 2025/2650, published in the Official Journal on 23 December 2025, postponed EUDR for a second time. Large and medium operators now comply from 30 December 2026. Micro and small enterprises get until 30 June 2027. As of mid-2026, that leaves large and medium supply chains roughly six months.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The revision also simplified how compliance works. Only the first operator placing a product on the EU market files a due diligence statement (DDS) — downstream operators and traders simply pass the DDS reference number along instead of filing their own. A DDS can now be submitted annually to cover expected volumes, rather than one per shipment. And a new "micro and small primary operator" category may use a postal address instead of GPS coordinates — but only in countries classified as low risk. Nigeria is standard risk, so that relief doesn\'t reach Nigerian farmers; their plots still need real coordinates.',
+    },
+    {
+      type: 'callout',
+      variant: 'deadline',
+      title: 'The Current EUDR Dates',
+      text: '30 December 2026: large and medium operators must comply. 30 June 2027: micro and small enterprises. Set by Regulation (EU) 2025/2650 — the second postponement. Treat December 2026 as final.',
+    },
+    {
+      type: 'cta',
+      heading: 'Every EUDR Requirement, Mapped Step by Step',
+      text: 'Our EUDR compliance hub breaks down the geolocation, traceability, and documentation requirements — and shows how OriginTrace covers each one.',
+      buttonText: 'Open the EUDR Compliance Hub',
+      href: '/compliance/eudr',
     },
     {
       type: 'h2',
@@ -46,11 +72,11 @@ export const post: BlogPost = {
         ['November 2021', 'European Commission publishes legislative proposal for the EU Deforestation Regulation'],
         ['April 2023', 'Regulation adopted by European Parliament'],
         ['June 2023', 'Regulation enters into force (Regulation (EU) 2023/1115)'],
-        ['June 2023 – December 2024', 'Transition period for large operators and traders'],
-        ['December 2024', 'Original enforcement deadline for large operators (subsequently delayed)'],
-        ['January 2025', 'Country benchmarking system established by European Commission'],
-        ['January 2026', 'Full enforcement applies to all operators, including SMEs'],
-        ['2026 onwards', 'Active enforcement by EU Member State competent authorities; escalating inspection intensity'],
+        ['December 2024', 'First postponement (Regulation (EU) 2024/3234): application moved from 30 December 2024 to 30 December 2025 (large operators) and 30 June 2026 (SMEs)'],
+        ['22 May 2025', 'Country benchmarking published (CIR (EU) 2025/1093): Ghana rated low risk; Nigeria and Côte d\'Ivoire standard risk'],
+        ['23 December 2025', 'Second postponement plus simplification (Regulation (EU) 2025/2650): first-operator-only DDS, annual DDS option, new dates below'],
+        ['30 December 2026', 'EUDR applies to large and medium operators'],
+        ['30 June 2027', 'EUDR applies to micro and small enterprises'],
       ],
     },
     {
@@ -87,11 +113,11 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: '**Operators** are businesses that place covered commodities and products on the EU market for the first time (importers) or export them from the EU market. Operators bear the full due diligence obligation: they must collect information, assess risk, mitigate risk, and submit a due diligence statement (DDS) for each shipment. For exporters in producing countries, the direct obligation under EUDR falls on the EU-based importer — but that importer will require verified data from the exporter to fulfil their compliance obligation.',
+      text: 'Operators are businesses that place covered commodities and products on the EU market for the first time (importers) or export them from the EU market. Under the December 2025 revision, the full due diligence obligation — collect information, assess risk, mitigate risk, submit the due diligence statement (DDS) — sits with the first operator placing the product on the market. For exporters in producing countries, that\'s almost always your EU-based importer. But that importer can\'t complete their DDS without verified data from you.',
     },
     {
       type: 'paragraph',
-      text: '**Traders** are businesses that make covered products available on the EU market without being the first importer. Traders can rely on the due diligence statements of their upstream operators in many cases, but they bear responsibility for ensuring they only source from operators who have submitted compliant DDS references.',
+      text: 'Traders and downstream operators — businesses handling covered products after that first placement — no longer file their own DDS. They pass the upstream DDS reference number along the chain, and they\'re responsible for only sourcing from operators who hold compliant references.',
     },
     {
       type: 'paragraph',
@@ -107,13 +133,13 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Proving non-deforestation requires GPS-based geographic data that can be checked against satellite deforestation maps. The standard requires GPS coordinates for every plot of land from which the commodity was sourced. For plots of 4 hectares or less, a single GPS point (latitude and longitude) is sufficient. For plots above 4 hectares, a polygon — a set of GPS coordinates defining the perimeter of the plot — is required. General regional or country-level origin claims are not sufficient.',
+      text: 'Proving non-deforestation requires GPS-based geographic data that can be checked against satellite deforestation maps. The standard requires GPS coordinates for every plot of land from which the commodity was sourced. For plots under 4 hectares, a single GPS point (latitude and longitude) is sufficient. For plots of 4 hectares or more, a polygon — a set of GPS coordinates defining the perimeter of the plot — is required. General regional or country-level origin claims are not sufficient.',
     },
     {
       type: 'callout',
       variant: 'deadline',
-      title: 'EUDR Enforcement Is Live',
-      text: 'EUDR enforcement is active for all operators as of January 2026. There is no longer a grace period for any size of business. All importers placing covered commodities on the EU market must have a functioning due diligence system, and must submit a due diligence statement (DDS) to EU TRACES NT for each shipment.',
+      title: 'Roughly Six Months to Go',
+      text: 'EUDR applies from 30 December 2026 for large and medium operators, and from 30 June 2027 for micro and small enterprises (Regulation (EU) 2025/2650). Farm mapping is the slowest part of compliance — as of mid-2026, supply chains that haven\'t started are already tight on time.',
     },
     {
       type: 'h2',
@@ -141,7 +167,11 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Each DDS includes: the commodity and HS code, the country of origin, geolocation data for source plots, the quantity, the supply chain entities involved, and the operator\'s attestation that due diligence was completed. The DDS must be submitted before the product arrives at the EU border — it cannot be submitted retroactively.',
+      text: 'Each DDS includes: the commodity and HS code, the country of origin, geolocation data for source plots, the quantity, the supply chain entities involved, and the operator\'s attestation that due diligence was completed. The DDS must be submitted before the product is placed on the market — it cannot be submitted retroactively. Since the December 2025 revision, a DDS can also be filed annually to cover expected volumes, rather than one per shipment.',
+    },
+    {
+      type: 'paragraph',
+      text: 'One practical caveat: the EUDR Information System reportedly paused new DDS submissions from around February 2026 while the Commission rebuilt it around the simplified rules, with a relaunch expected around June 2026. Check the Commission\'s Green Forum for the current submission status before you plan around it.',
     },
     {
       type: 'h2',
@@ -149,15 +179,15 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The European Commission has established a country benchmarking system that classifies producing countries into three risk tiers. The tier determines how intensive the due diligence requirement is for products from that country:',
+      text: 'The European Commission published its country benchmarking on 22 May 2025 (Commission Implementing Regulation (EU) 2025/1093), classifying producing countries into three risk tiers. The tier determines how intensive due diligence must be — and what share of operators the authorities check each year:',
     },
     {
       type: 'table',
-      headers: ['Risk Tier', 'Due Diligence Required', 'Implications for Exporters'],
+      headers: ['Risk Tier', 'Due Diligence Required', 'Minimum Check Rate', 'West African Examples'],
       rows: [
-        ['Low risk', 'Simplified due diligence — reduced data collection requirements', 'Currently no major African, Asian, or Latin American commodity-producing countries at low risk for covered commodities'],
-        ['Standard risk', 'Full due diligence — GPS data, DDS, complete deforestation and legality check', 'Nigeria, Ghana, Ivory Coast, Cameroon, Uganda, Ethiopia, Indonesia, Vietnam, Brazil at standard risk for respective covered commodities'],
-        ['High risk', 'Enhanced due diligence — additional scrutiny, possible on-site verification, heightened customs checks', 'Countries with active deforestation trends for covered commodities; list evolves based on Commission monitoring'],
+        ['Low risk', 'Simplified due diligence — reduced data collection requirements', '1% of operators', 'Ghana'],
+        ['Standard risk', 'Full due diligence — GPS data, DDS, complete deforestation and legality check', '3% of operators', 'Nigeria, Côte d\'Ivoire'],
+        ['High risk', 'Enhanced due diligence — additional scrutiny, possible on-site verification', '9% of operators', 'No West African producer countries currently listed'],
       ],
     },
     {
@@ -171,12 +201,19 @@ export const post: BlogPost = {
     {
       type: 'bullets',
       items: [
-        'Fines: Member States must impose fines of at least 4% of the operator\'s total annual EU turnover for serious violations, proportionate to the environmental damage caused',
+        'Fines: for the most serious violations, Article 25 requires the maximum fine to be set at no less than 4% of the operator\'s total annual EU-wide turnover, proportionate to the environmental damage caused',
         'Confiscation: non-compliant products and revenues derived from their sale can be confiscated',
         'Temporary exclusion from EU procurement: operators found in serious breach can be excluded from public procurement contracts',
         'Import bans: Member State authorities can prohibit the placing on the market or export of non-compliant products',
         'Reputational publication: decisions finding violations must be made public, including the identity of the operator and the nature of the violation',
       ],
+    },
+    {
+      type: 'cta',
+      heading: 'See How Ready Your Next Shipment Is',
+      text: 'Those penalties land on your EU buyer — and buyers facing 4% fines drop suppliers who can\'t produce clean data. Get your farms mapped and your documents in one place before December.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
     {
       type: 'h2',
@@ -198,21 +235,56 @@ export const post: BlogPost = {
       type: 'numbered',
       items: [
         'Map your covered commodity exposure: identify which of your export products fall under the seven EUDR categories and which EU markets you are shipping to',
-        'Audit your current GPS coverage: what percentage of your sourcing farms have GPS data? For farms above 4 hectares, do you have polygons or only points?',
+        'Audit your current GPS coverage: what percentage of your sourcing farms have GPS data? For farms of 4 hectares or more, do you have polygons or only points?',
         'Build your farmer registry: ensure all farms in your supply chain are registered with a unique identifier, linked to GPS data and a named farmer identity',
         'Implement lot tracking through processing: establish the data trail that links incoming raw material lots (with GPS farm data) to outgoing processed and export lots',
         'Organise your compliance document library: ensure certificates of origin, phytosanitary certificates, legality evidence, and test certificates are stored digitally, linked to specific lots, and tracked for expiry',
         'Set up an EU TRACES NT account: your EU buyer will need this to submit DDS, but you should be familiar with the data it requires so your data package is ready',
         'Engage your EU buyers: understand exactly what data format they need to complete their DDS — coordinates, document references, supply chain entity information',
-        'Run a compliance test shipment: before full-scale EUDR compliance is required for all your shipments, test the full process with a single consignment to identify and resolve gaps before they cause a customs hold',
+        'Run a compliance test shipment: before the 30 December 2026 deadline makes it mandatory, test the full process with a single consignment to identify and resolve gaps before they cause a customs hold',
+      ],
+    },
+    {
+      type: 'faq',
+      items: [
+        {
+          q: 'Is EUDR delayed again?',
+          a: 'Yes — twice now. Regulation (EU) 2024/3234 pushed the original December 2024 date back a year, and Regulation (EU) 2025/2650 (published 23 December 2025) pushed it again. The current dates are 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises. There\'s no indication of a third delay — plan for December 2026.',
+        },
+        {
+          q: 'When does EUDR apply?',
+          a: 'From 30 December 2026 if you\'re a large or medium operator (or supply one — most EU importers are), and from 30 June 2027 if you\'re a micro or small enterprise placing product on the EU market yourself.',
+        },
+        {
+          q: 'Does EUDR apply to my product?',
+          a: 'EUDR covers seven commodities — cattle, cocoa, coffee, oil palm, rubber, soya, and wood — plus derived products listed by HS code in Annex I: chocolate, leather, tyres, paper, furniture, and more. Sesame, ginger, cashew, and shea are not covered. Check your product\'s HS code against Annex I to be sure.',
+        },
+        {
+          q: 'What is a DDS?',
+          a: 'A due diligence statement — a formal declaration, submitted through the EU\'s Information System, that due diligence was carried out and the product is deforestation-free and legally produced. It carries the geolocation data for every source plot. Since December 2025, only the first operator placing the product on the EU market files it; everyone downstream passes the reference number along, and it can be filed annually rather than per shipment.',
+        },
+        {
+          q: 'Is Nigeria or Ghana high risk under EUDR?',
+          a: 'Neither. Under CIR (EU) 2025/1093, Ghana is low risk (simplified due diligence, 1% check rate) and Nigeria and Côte d\'Ivoire are standard risk (full due diligence, 3% check rate). No West African producer country is currently on the high-risk list.',
+        },
       ],
     },
     {
       type: 'cta',
       heading: 'Assess Your EUDR Readiness',
-      text: 'Use OriginTrace\'s EUDR compliance tools to assess your GPS coverage, traceability chain, and documentation readiness — and see exactly what needs to be in place for your next shipment to the EU.',
-      buttonText: 'Explore EUDR Compliance',
-      href: '/compliance/eudr',
+      text: 'See how ready your next shipment is. OriginTrace assesses your GPS coverage, traceability chain, and documentation — and shows exactly what to fix before December 2026.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
+      type: 'references',
+      items: [
+        { label: 'Regulation (EU) 2023/1115 — EU Deforestation Regulation', url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1115', publisher: 'EUR-Lex' },
+        { label: 'Regulation (EU) 2024/3234 — first postponement of EUDR application dates', url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024R3234', publisher: 'EUR-Lex' },
+        { label: 'Regulation (EU) 2025/2650 — second postponement and simplification of EUDR application dates', url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32025R2650', publisher: 'EUR-Lex' },
+        { label: 'Commission Implementing Regulation (EU) 2025/1093 — EUDR country benchmarking', url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32025R1093', publisher: 'EUR-Lex' },
+        { label: 'European Commission — EUDR implementation and Green Forum updates', url: 'https://green-business.ec.europa.eu/deforestation-regulation_en', publisher: 'European Commission' },
+      ],
     },
   ],
 };

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           payment_method:     'bank_transfer',
           reference_number:   reference,
           linked_entity_type: linked_entity_type ?? null,
-          linked_entity_id:   linked_entity_id ?? null,
+          linked_entity_id:   linked_entity_id != null ? String(linked_entity_id) : null,
           payment_date:       new Date().toISOString().split('T')[0],
           notes:              notes
             ? `${notes} | Provider: paystack_transfer | Transfer: ${transfer.transferCode}`
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         payment_method: 'mobile_money',
         reference_number: reference,
         linked_entity_type: linked_entity_type || null,
-        linked_entity_id: linked_entity_id || null,
+        linked_entity_id: linked_entity_id != null ? String(linked_entity_id) : null,
         payment_date: new Date().toISOString().split('T')[0],
         notes: notes ? `${notes} | Provider: ${providerName} | TxID: ${result.transactionId}` : `Provider: ${providerName} | TxID: ${result.transactionId}`,
         status: result.status === 'completed' ? 'completed' : 'pending',

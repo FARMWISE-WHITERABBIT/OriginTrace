@@ -24,11 +24,11 @@ export async function GET() {
 
     const { data: batches } = await supabase
       .from('collection_batches')
-      .select('commodity, total_weight_kg, collection_date')
+      .select('commodity, total_weight, collected_at')
       .eq('org_id', farmerAccount.org_id)
-      .order('collection_date', { ascending: false });
+      .order('collected_at', { ascending: false });
 
-    const totalWeight = (batches || []).reduce((sum, b) => sum + (b.total_weight_kg || 0), 0);
+    const totalWeight = (batches || []).reduce((sum, b) => sum + (b.total_weight || 0), 0);
     const farmArea = (farmerAccount.farms as any)?.area_hectares || 1;
     const actualYield = totalWeight / farmArea;
 
@@ -48,8 +48,8 @@ export async function GET() {
       mainCommodity,
       benchmarks: benchmarks || [],
       seasonalData: (batches || []).slice(0, 12).map(b => ({
-        date: b.collection_date,
-        weight: b.total_weight_kg,
+        date: b.collected_at,
+        weight: b.total_weight,
         commodity: b.commodity,
       })),
     });

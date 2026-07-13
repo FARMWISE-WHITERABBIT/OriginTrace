@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
         // Find matching payment_link and mark as paid
         const { data: link } = await supabase
           .from('payment_links')
-          .select('id, org_id, amount, metadata')
-          .eq('reference', reference)
+          .select('id, org_id, metadata')
+          .eq('paystack_reference', reference)
           .maybeSingle();
 
         if (link) {

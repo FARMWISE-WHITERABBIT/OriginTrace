@@ -6,8 +6,9 @@ export const post: BlogPost = {
   description: 'A plain-language guide to the tools, data, and processes cocoa exporters need to meet EU Deforestation Regulation requirements. From GPS polygon mapping to due diligence statements — explained step by step.',
   date: 'February 28, 2026',
   dateISO: '2026-02-28',
+  dateModifiedISO: '2026-07-09',
   category: 'EUDR',
-  readingTime: '10 min read',
+  readingTime: '11 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
   coverImage: '/images/pexels-zeal-creative-studios-58866141-31283908.jpg',
@@ -17,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'The EU Deforestation Regulation (EUDR) is now in effect for large companies and will apply to all operators from January 2026. For cocoa exporters — particularly those sourcing from West Africa — this regulation represents the most significant change to export compliance in a generation. The question most exporters are asking is not "do I need to comply?" but "how do I actually do it?" This guide answers that question practically.',
+      text: 'The EU Deforestation Regulation (EUDR) applies from 30 December 2026 for large and medium operators, and from 30 June 2027 for micro and small ones — both dates pushed back a year by the second delay, Regulation (EU) 2025/2650, adopted in December 2025. For cocoa exporters — particularly those sourcing from West Africa — the extra time changes the deadline, not the destination: this regulation is still the most significant change to export compliance in a generation. The question most exporters are asking is not "do I need to comply?" but "how do I actually do it?" This guide answers that question practically.',
     },
     {
       type: 'callout',
@@ -49,7 +50,7 @@ export const post: BlogPost = {
       type: 'numbered',
       items: [
         'Geolocation data for every plot of land where the cocoa was produced. For plots larger than 4 hectares, a GPS polygon (boundary coordinates) is required — not just a single point. For plots under 4 hectares, a single GPS point is acceptable, but polygon mapping is still best practice.',
-        'A due diligence statement submitted to the EU Information System (EU TRACES) before each shipment is placed on the EU market. This statement attests that the cocoa is deforestation-free and legally produced.',
+        'A due diligence statement (DDS) submitted to the EU Information System (EU TRACES) before the cocoa is placed on the EU market. Only the first operator placing the product on the market files the DDS — for most West African exporters, that is your EU importer — but the geolocation and traceability data behind it comes from you. Since the 2025 amendment, an annual DDS covering recurring shipments is also possible.',
         'Risk assessment documentation showing that you have evaluated the risk of deforestation and have mitigation measures in place. This includes documentation of your supply chain, your data collection process, and how you verify the GPS data.',
       ],
     },
@@ -114,7 +115,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The final step is generating and submitting the actual due diligence statement to EU TRACES. This requires exporting your supply chain data — GPS polygons, farmer identifiers, collection volumes, batch references — in the structured format the EU system accepts. A DDS export tool that produces a GeoJSON file with the correct field structure saves significant time and reduces the risk of submission errors.',
+      text: 'The final step is producing the data behind the due diligence statement. Whether you file the DDS yourself (because you place the cocoa on the EU market directly) or your EU importer files it as the first operator placing it on the market, someone has to export your supply chain data — GPS polygons, farmer identifiers, collection volumes, batch references — in the structured format the EU system accepts. A DDS export tool that produces a GeoJSON file with the correct field structure saves significant time and reduces the risk of submission errors.',
     },
     {
       type: 'h2',
@@ -129,7 +130,7 @@ export const post: BlogPost = {
         'At the warehouse: incoming batches are logged and linked to their farm-level origin data. The system maintains the chain of custody even when cocoa from different farmers is combined in storage.',
         'Pre-shipment: when you are ready to ship, compile the batches that will go into the container. Run a deforestation check on all farm polygons associated with those batches.',
         'Compliance scoring: review the pre-shipment compliance score. The system will flag any farms that lack polygons, any polygons that overlap with deforested areas, and any missing documentation.',
-        'DDS submission: once all checks pass, generate the GeoJSON DDS export and submit it to EU TRACES. The system gives you a DDS reference number to attach to your shipping documents.',
+        'DDS data pack: once all checks pass, generate the GeoJSON export with the farm polygons and batch references behind the shipment. If you place the cocoa on the EU market yourself, you submit the DDS to EU TRACES; otherwise your EU importer files it as the first operator — using your data pack. Either way, the DDS reference number travels with your shipping documents.',
       ],
     },
     {
@@ -166,6 +167,23 @@ export const post: BlogPost = {
         'Plan a mapping campaign for the current season. Determine which agents will map which areas, what mobile tools they will use, and how data will be synced and verified.',
         'Review your traceability chain from collection batch to DDS. Can you currently generate a GeoJSON export that links a specific shipment to specific GPS-mapped farms?',
         'Contact your European buyers to understand their specific documentation requirements — some have additional fields they require beyond the minimum EUDR standard.',
+      ],
+    },
+    {
+      type: 'faq',
+      items: [
+        {
+          q: 'When does EUDR actually apply?',
+          a: 'Large and medium operators must comply from 30 December 2026; micro and small operators from 30 June 2027. These dates reflect the second delay, adopted as Regulation (EU) 2025/2650 in December 2025.',
+        },
+        {
+          q: 'Do small cocoa farms need GPS polygons?',
+          a: 'Plots of 4 hectares or more need a polygon (boundary coordinates); plots under 4 hectares can use a single GPS point, though polygon mapping is still best practice. Note that EUDR\'s size-based relief applies to small operators, not small farms — smallholder farms in a larger exporter\'s supply chain are still fully covered.',
+        },
+        {
+          q: 'Who files the due diligence statement?',
+          a: 'The first operator placing the cocoa on the EU market — for most West African exporters, that is the EU importer. As the exporter, you supply the geolocation and batch data the DDS is built on, and buyers increasingly will not contract without it.',
+        },
       ],
     },
     {

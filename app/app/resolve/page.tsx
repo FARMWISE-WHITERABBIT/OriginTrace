@@ -33,12 +33,10 @@ interface Bag {
 }
 
 interface Batch {
-  id: number;
+  id: string;
   batch_code: string | null;
   status: string;
   commodity: string;
-  estimated_bags: number;
-  estimated_weight: number;
   total_weight: number;
   bag_count: number;
   farm: {
@@ -91,8 +89,6 @@ function ResolveBatchContent() {
             batch_code,
             status,
             commodity,
-            estimated_bags,
-            estimated_weight,
             total_weight,
             bag_count,
             farm:farms!farm_id (
@@ -101,7 +97,7 @@ function ResolveBatchContent() {
               compliance_status
             )
           `)
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .eq('id', batchIdParam)
           .single();
 
@@ -110,15 +106,14 @@ function ResolveBatchContent() {
         const farmData = Array.isArray(batchData.farm) ? batchData.farm[0] : batchData.farm;
         setBatch({
           ...batchData,
-          estimated_weight: parseFloat(batchData.estimated_weight) || 0,
-          total_weight: parseFloat(batchData.total_weight) || 0,
+          total_weight: batchData.total_weight || 0,
           farm: farmData || { farmer_name: 'Unknown', community: 'Unknown', compliance_status: 'pending' }
         } as Batch);
 
         const { data: bagsData, error: bagsError } = await supabase
           .from('bags')
           .select('id, serial, weight_kg, grade, status')
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .eq('collection_batch_id', batchIdParam);
 
         if (bagsError) throw bagsError;
@@ -126,9 +121,9 @@ function ResolveBatchContent() {
         setBags((bagsData || []).map(b => ({
           id: b.id,
           bag_id: b.serial || b.id,
-          weight: parseFloat(b.weight_kg) || 0,
+          weight: b.weight_kg || 0,
           grade: b.grade || 'B',
-          status: b.status,
+          status: b.status || 'pending',
           selected: true
         })));
       } catch (error) {
@@ -170,7 +165,7 @@ function ResolveBatchContent() {
         .update({
           status: 'resolved',
           bag_count: selectedBags.length,
-          total_weight: totalWeight.toString(),
+          total_weight: totalWeight,
           completed_at: new Date().toISOString()
         })
         .eq('id', batch.id);
@@ -196,8 +191,11 @@ function ResolveBatchContent() {
   };
 
   const hasComplianceIssues = batch?.farm?.compliance_status !== 'verified';
-  const weightMismatch = batch?.estimated_weight && Math.abs(totalWeight - batch.estimated_weight) > (batch.estimated_weight * 0.1);
-  const bagCountMismatch = batch?.estimated_bags && selectedBags.length !== batch.estimated_bags;
+  // 'estimated_weight'/'estimated_bags' don't exist as separate columns on collection_batches —
+  // the batch's originally recorded total_weight/bag_count (loaded once, before resolve overwrites
+  // them below) serve as the pre-resolve estimate to compare against the physically counted bags.
+  const weightMismatch = batch?.total_weight && Math.abs(totalWeight - batch.total_weight) > (batch.total_weight * 0.1);
+  const bagCountMismatch = batch?.bag_count && selectedBags.length !== batch.bag_count;
 
   if (isLoading) {
     return (
@@ -274,12 +272,12 @@ function ResolveBatchContent() {
             )}
             {bagCountMismatch && (
               <p className="text-sm text-orange-700 dark:text-orange-400">
-                Bag count ({selectedBags.length}) differs from estimate ({batch.estimated_bags}).
+                Bag count ({selectedBags.length}) differs from estimate ({batch.bag_count}).
               </p>
             )}
             {weightMismatch && (
               <p className="text-sm text-orange-700 dark:text-orange-400">
-                Weight ({totalWeight.toFixed(1)} kg) differs significantly from estimate ({batch.estimated_weight} kg).
+                Weight ({totalWeight.toFixed(1)} kg) differs significantly from estimate ({batch.total_weight} kg).
               </p>
             )}
           </CardContent>

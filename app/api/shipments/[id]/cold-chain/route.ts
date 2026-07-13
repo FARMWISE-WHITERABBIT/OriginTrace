@@ -143,9 +143,16 @@ export async function POST(
     if (body.location !== undefined) insertData.location = body.location;
     if (body.recorded_at !== undefined) insertData.recorded_at = body.recorded_at;
 
+    // TODO(schema-drift): the live 'cold_chain_logs' table has a fixed-column schema
+    // (temperature_celsius, humidity_percent, alert_reason, is_alert, location, recorded_at)
+    // with no 'log_type' / 'value' / 'unit' / 'threshold_min' / 'threshold_max' /
+    // 'alert_message' / 'recorded_by' columns. This code assumes a generic key/value log
+    // model that does not match the live schema — mapping log_type -> the correct fixed
+    // column (temperature_celsius vs humidity_percent) requires a product decision, so it is
+    // left as-is rather than guessed at here.
     const { data: log, error: insertError } = await supabase
       .from('cold_chain_logs')
-      .insert(insertData)
+      .insert(insertData as any)
       .select()
       .single();
 

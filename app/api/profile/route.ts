@@ -14,7 +14,7 @@ async function readImpersonationState() {
     if (!impersonationCookie) return { isImpersonating: false };
 
     const payload = await verifyCookiePayload<{
-      org_id?: number;
+      org_id?: string;
       org_name?: string;
       original_admin_id?: string;
       expires_at?: string;
@@ -105,8 +105,11 @@ export async function GET(request: NextRequest) {
 
     const isSystemAdmin = !!systemAdminResult.data;
     const impersonation = await readImpersonationState();
-    let profile = profileResult.data;
-    let organization = profile?.organizations || null;
+    // `profile` can hold either a profiles+organizations row or a normalized buyer
+    // profile shape (see normalizeBuyerProfile) — these are structurally different,
+    // hence the loose typing here.
+    let profile: any = profileResult.data;
+    let organization: any = profile?.organizations || null;
 
     if (!profile && !isSystemAdmin) {
       const { data: buyerProfile, error: buyerProfileError } = await supabaseAdmin

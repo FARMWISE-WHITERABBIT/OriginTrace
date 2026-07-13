@@ -15,7 +15,7 @@ export async function enforceTier(orgId: number | string, feature: TierFeature):
     const { data: org } = await supabase
       .from('organizations')
       .select('subscription_tier')
-      .eq('id', orgId)
+      .eq('id', String(orgId))
       .single();
 
     // Org not found → fail-closed (ADR-002: genuine auth error, return 403)

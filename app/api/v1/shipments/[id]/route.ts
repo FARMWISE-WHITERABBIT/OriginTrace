@@ -49,10 +49,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const supabase = createAdminClient();
 
-    const shipmentId = parseInt(id);
-    if (isNaN(shipmentId)) {
-      return NextResponse.json({ error: 'Invalid shipment ID' }, { status: 400 });
-    }
+    const shipmentId = id;
 
     const { data: existing } = await supabase
       .from('shipments')

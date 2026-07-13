@@ -6,6 +6,7 @@ import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
 import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
+import type { Json, TablesInsert } from '@/lib/supabase/database.types';
 
 const shipmentPatchSchema = z.object({
   // ── Original fields ────────────────────────────────────────────────────────
@@ -164,10 +165,14 @@ export async function GET(
           .in('id', batchIds)
       : Promise.resolve({ data: [] });
 
+    // TODO(schema-drift): column 'farm_id' does not exist on 'bags' (bags link to a farm only
+    // indirectly, via their collection_batch's farm_id) — removed from the select below since
+    // selecting it fails the whole query. bags_with_farm_link below already tolerated a missing
+    // farm_id (falls back to 0), so this preserves existing behavior while fixing the query.
     const bulkBagsPromise = batchIds.length > 0
       ? supabase
           .from('bags')
-          .select('id, farm_id, collection_batch_id')
+          .select('id, collection_batch_id')
           .in('collection_batch_id', batchIds)
       : Promise.resolve({ data: [] });
 
@@ -387,8 +392,12 @@ export async function GET(
         id: shipment.id,
         destination_country: shipment.destination_country || null,
         target_regulations: shipment.target_regulations || [],
-        doc_status: shipment.doc_status || {},
-        storage_controls: shipment.storage_controls || {},
+        // TODO(schema-drift): columns 'doc_status' / 'storage_controls' do not exist on the
+        // live 'shipments' table — the migration
+        // (supabase/migrations/20260520_add_shipment_readiness_json.sql) that adds them has
+        // not been applied, so these are always empty at runtime today.
+        doc_status: ((shipment as unknown as Record<string, unknown>).doc_status as Record<string, boolean> | undefined) || {},
+        storage_controls: ((shipment as unknown as Record<string, unknown>).storage_controls as Record<string, boolean> | undefined) || {},
         estimated_ship_date: shipment.estimated_ship_date || null,
       },
       items: scoreItemsWithFarmIds,
@@ -406,14 +415,14 @@ export async function GET(
 
     // Auto-persist score if null or shipment is recent (within 7 days = stale demo data)
     const isStale = !shipment.readiness_score ||
-      (new Date().getTime() - new Date(shipment.created_at).getTime() < 7 * 24 * 60 * 60 * 1000 &&
+      (new Date().getTime() - new Date(shipment.created_at ?? 0).getTime() < 7 * 24 * 60 * 60 * 1000 &&
        shipment.readiness_score !== Math.round(readiness.overall_score));
     if (isStale) {
       supabase.from('shipments').update({
         readiness_score: Math.round(readiness.overall_score),
         readiness_decision: readiness.decision,
-        risk_flags: readiness.risk_flags,
-        score_breakdown: readiness.dimensions,
+        risk_flags: readiness.risk_flags as unknown as Json,
+        score_breakdown: readiness.dimensions as unknown as Json,
         updated_at: new Date().toISOString(),
       }).eq('id', shipment.id).then(() => {/* fire-and-forget */});
     }
@@ -540,7 +549,7 @@ export async function PATCH(
           const { data: batch } = await supabase
             .from('collection_batches')
             .select('*, farm:farms(id, farmer_name, community)')
-            .eq('id', addItem.batch_id)
+            .eq('id', String(addItem.batch_id))
             .eq('org_id', profile.org_id)
             .single();
 
@@ -556,12 +565,15 @@ export async function PATCH(
           const { data: fg } = await supabase
             .from('finished_goods')
             .select('*')
-            .eq('id', addItem.finished_good_id)
+            .eq('id', String(addItem.finished_good_id))
             .single();
 
           if (fg) {
             itemInsert.weight_kg = fg.weight_kg || 0;
-            itemInsert.farm_count = fg.farm_count || 0;
+            // TODO(schema-drift): column 'farm_count' does not exist on 'finished_goods' — no
+            // equivalent column exists, so this always falls back to 0 (same as before this
+            // typed-client migration, when the property access was silently 'undefined').
+            itemInsert.farm_count = ((fg as unknown as Record<string, unknown>).farm_count as number | undefined) || 0;
             itemInsert.traceability_complete = !!fg.pedigree_verified;
             itemInsert.compliance_status = fg.pedigree_verified ? 'approved' : 'pending';
           }
@@ -569,7 +581,7 @@ export async function PATCH(
 
         const { error: insertError } = await supabase
           .from('shipment_items')
-          .insert(itemInsert);
+          .insert(itemInsert as TablesInsert<'shipment_items'>);
 
         if (insertError) {
           console.error('Error adding shipment item:', insertError);
@@ -583,7 +595,7 @@ export async function PATCH(
       const { error: deleteError } = await supabase
         .from('shipment_items')
         .delete()
-        .in('id', remove_items)
+        .in('id', remove_items.map(String))
         .eq('shipment_id', id);
 
       if (deleteError) {
@@ -627,8 +639,10 @@ export async function PATCH(
         id: updatedShipment.id,
         destination_country: updatedShipment.destination_country,
         target_regulations: updatedShipment.target_regulations || [],
-        doc_status: updatedShipment.doc_status || {},
-        storage_controls: updatedShipment.storage_controls || {},
+        // TODO(schema-drift): columns 'doc_status' / 'storage_controls' do not exist on the
+        // live 'shipments' table — see note above in GET.
+        doc_status: ((updatedShipment as unknown as Record<string, unknown>).doc_status as Record<string, boolean> | undefined) || {},
+        storage_controls: ((updatedShipment as unknown as Record<string, unknown>).storage_controls as Record<string, boolean> | undefined) || {},
         estimated_ship_date: updatedShipment.estimated_ship_date,
       },
       items: (currentItems || []).map((item: any) => ({
@@ -648,9 +662,9 @@ export async function PATCH(
       .update({
         readiness_score: Math.round(readinessResult.overall_score),
         readiness_decision: readinessResult.decision,
-        risk_flags: readinessResult.risk_flags,
+        risk_flags: readinessResult.risk_flags as unknown as Json,
         remediation_items: readinessResult.remediation_items,
-        score_breakdown: readinessResult.dimensions,
+        score_breakdown: readinessResult.dimensions as unknown as Json,
       })
       .eq('id', id)
       .eq('org_id', profile.org_id);

@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
     const { data: org } = await supabaseAdmin.from('organizations').select('id, name, subscription_tier').eq('id', org_id).single();
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
 
-    const { data: adminProfile } = await supabaseAdmin.from('profiles').select('email, full_name').eq('org_id', org_id).eq('role', 'admin').limit(1).single();
-    const adminEmail = adminProfile?.email || '';
+    const { data: adminProfile } = await supabaseAdmin.from('profiles').select('user_id, full_name').eq('org_id', org_id).eq('role', 'admin').limit(1).single();
+    const adminEmail = adminProfile ? (await supabaseAdmin.auth.admin.getUserById(adminProfile.user_id)).data?.user?.email || '' : '';
     const reference  = generateReference(org_id, tier);
     const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
 

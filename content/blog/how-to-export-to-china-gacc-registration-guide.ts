@@ -2,12 +2,13 @@ import type { BlogPost } from '@/lib/blog';
 
 export const post: BlogPost = {
   slug: 'how-to-export-to-china-gacc-registration-guide',
-  title: 'How to Export to China: A Step-by-Step GACC Registration Guide',
-  description: 'Exporting food and agricultural products to China requires GACC registration. This step-by-step guide covers the full registration process, documentation requirements, labelling rules, and how to stay compliant after registration.',
+  title: 'GACC Registration 2026: Ship to China Without Port Refusals',
+  description: 'No GACC number means your cargo gets refused at Chinese ports. Here\'s the full 2026 registration process, documents, and timelines — step by step.',
   date: 'March 29, 2026',
   dateISO: '2026-03-29',
+  dateModifiedISO: '2026-07-09',
   category: 'Compliance',
-  readingTime: '12 min read',
+  readingTime: '13 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
   coverImage: '/images/pexels-rafael-de-campos-2705062-4256976.jpg',
@@ -17,11 +18,11 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'China is the world\'s largest importer of agricultural commodities — from sesame and soybeans to cocoa, coffee, and seafood. For exporters in West Africa, East Africa, Southeast Asia, and Latin America, Chinese market access represents a transformative revenue opportunity. But it also comes with one of the most structured compliance regimes in global trade. At the centre of that regime is GACC — the General Administration of Customs of China.',
+      text: 'China is the world\'s largest importer of agricultural commodities — sesame, soybeans, cocoa, coffee, seafood. If you export from West Africa, East Africa, Southeast Asia, or Latin America, the Chinese market can transform your revenue. But it comes with one of the most structured compliance regimes in global trade, and at the centre of it sits GACC — the General Administration of Customs of China.',
     },
     {
       type: 'paragraph',
-      text: 'Since 2022, GACC has enforced mandatory pre-registration for all overseas food production and processing enterprises seeking to export to China. Without a valid GACC registration number, your goods will be refused entry at Chinese ports — regardless of whether they meet quality standards. This guide walks you through the entire registration process, from determining whether you need to register to maintaining compliance after your approval.',
+      text: 'Since 2022, GACC has required every overseas food production and processing enterprise to register before exporting to China. No valid GACC registration number, no entry — your goods get refused at the port, no matter how good they are. This guide walks you through the whole process: working out whether you need to register, how to do it, and how to stay compliant once you\'re approved.',
     },
     {
       type: 'callout',
@@ -40,6 +41,13 @@ export const post: BlogPost = {
     {
       type: 'paragraph',
       text: 'The intent behind the regulation is clear: China wants to know who is producing the food entering its market, under what conditions, and with what oversight. Traceability — the ability to trace a product from its origin through each step of processing to the final shipment — is now a central pillar of China\'s import food safety framework.',
+    },
+    {
+      type: 'cta',
+      heading: 'The condensed version, on one page',
+      text: 'Registration, labelling, GB standards, traceability — the OriginTrace China GACC compliance page summarises everything China requires from exporters in one place.',
+      buttonText: 'See China GACC Requirements',
+      href: '/compliance/china',
     },
     {
       type: 'h2',
@@ -193,6 +201,13 @@ export const post: BlogPost = {
       ],
     },
     {
+      type: 'cta',
+      heading: 'See how ready your next shipment is',
+      text: 'OriginTrace maps your farms, tracks every lot from collection to export, and keeps your certificates in one place — so your GACC application and every China shipment stand up to scrutiny.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
       type: 'h2',
       text: 'After Registration: Staying Compliant',
     },
@@ -203,6 +218,31 @@ export const post: BlogPost = {
     {
       type: 'paragraph',
       text: 'China\'s import inspection system also operates a "red, yellow, green" risk-based inspection model. Enterprises with strong compliance records and clean inspection histories are assigned to lower-frequency inspection channels. Enterprises with incidents, non-conformances, or label violations are escalated to heightened scrutiny — with some violations triggering temporary suspension of import clearance. Maintaining clean records, consistent product quality, and robust traceability is therefore not just a regulatory obligation; it is a commercial necessity for sustained market access.',
+    },
+    {
+      type: 'faq',
+      items: [
+        {
+          q: 'How long does GACC registration take?',
+          a: 'GACC\'s standard review is 20 to 60 business days from the point your competent authority submits the application. Add your own document preparation and the authority\'s review and endorsement on top, and a realistic end-to-end budget is three to six months — longer for high-risk categories that require facility inspection.',
+        },
+        {
+          q: 'Do I need an agent to register with GACC?',
+          a: 'Not legally. For the food categories listed in Decree 248, your national competent authority (NAFDAC in Nigeria, the FDA in Ghana, KEPHIS or KEBS in Kenya) routes the application to GACC on your behalf. That said, the CIFER portal is in Chinese, so many exporters use a trade consultant or their Chinese importer for translation and submission support.',
+        },
+        {
+          q: 'What is a GACC registration number?',
+          a: 'A unique identifier GACC issues to your enterprise on approval. It must appear on the packaging and export documentation of every shipment to China, and it\'s what customs officers check at the port. Registration is valid for five years and must be renewed before it expires.',
+        },
+        {
+          q: 'How do I check my GACC registration status?',
+          a: 'Check your application status in the CIFER system, or ask your national competent authority, which submitted on your behalf. GACC also publishes lists of approved overseas enterprises — your Chinese importer can verify your number appears before your first shipment moves.',
+        },
+        {
+          q: 'What happens if I export to China without GACC registration?',
+          a: 'Your shipment will be refused at the Chinese port of entry, and you bear the cost of return freight, storage, and any spoilage. Repeated attempts can escalate scrutiny on your future exports, and Chinese buyers may cancel contracts to limit their own regulatory exposure.',
+        },
+      ],
     },
     {
       type: 'cta',
