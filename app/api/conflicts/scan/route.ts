@@ -4,6 +4,31 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { detectConflicts, type FarmGeom } from '@/lib/geometry/polygon';
 
+function readPolygonRing(value: unknown): [number, number][] | null {
+  let boundary = value;
+  if (typeof boundary === 'string') {
+    try {
+      boundary = JSON.parse(boundary);
+    } catch {
+      return null;
+    }
+  }
+
+  const coordinates = (boundary as { type?: string; coordinates?: unknown })?.coordinates;
+  const ring = Array.isArray(coordinates) && Array.isArray(coordinates[0]) ? coordinates[0] : null;
+  if (!ring || ring.length < 4) return null;
+
+  const points = ring
+    .map((point) => Array.isArray(point) ? [Number(point[0]), Number(point[1])] as [number, number] : null)
+    .filter((point): point is [number, number] => !!point && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+  if (points.length < 4) return null;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) points.push(first);
+  return points;
+}
+
 /**
  * POST /api/conflicts/scan
  *
@@ -28,7 +53,7 @@ export async function POST(request: NextRequest) {
     // 1. Fetch all approved/pending farms with boundaries
     const { data: farms, error: farmsError } = await supabaseAdmin
       .from('farms')
-      .select('id, farmer_name, boundary, compliance_status')
+      .select('id, farmer_name, boundary, boundary_geo, compliance_status')
       .eq('org_id', profile.org_id)
       .not('boundary', 'is', null);
 
@@ -44,29 +69,91 @@ export async function POST(request: NextRequest) {
     // 2. Build geom array — skip farms with invalid/missing boundary rings
     const farmGeoms: FarmGeom[] = [];
     for (const farm of farms) {
-      const boundary = farm.boundary as { coordinates?: [number, number][][] } | null;
-      const ring = boundary?.coordinates?.[0];
-      if (!ring || ring.length < 3) continue;
+      const ring = readPolygonRing(farm.boundary);
+      if (!ring) continue;
       farmGeoms.push({ id: farm.id, farmer_name: farm.farmer_name, ring });
     }
 
-    // 3. Run detection
-    const detected = detectConflicts(farmGeoms, 0.10);
-    if (detected.length === 0) {
-      return NextResponse.json({ scanned: farmGeoms.length, new_conflicts: 0, skipped_existing: 0 });
+    // 3. Prefer the PostGIS scan so concave polygons and geography areas are
+    // handled correctly. Fall back to the winding-normalized JS detector only
+    // for older installations that have not applied the scan RPC migration.
+    const allBoundariesHavePostgisGeometry = farms.every((farm: any) => !!farm.boundary_geo);
+    let postgisDetected: any[] | null = null;
+    let postgisError: { message?: string } | null = null;
+    if (allBoundariesHavePostgisGeometry) {
+      const rpcResult = await supabaseAdmin.rpc(
+        'scan_farm_boundary_conflicts',
+        { p_org_id: profile.org_id, p_min_overlap_ratio: 0.10 },
+      );
+      postgisDetected = rpcResult.data as any[] | null;
+      postgisError = rpcResult.error;
+    }
+    const jsDetected = detectConflicts(farmGeoms, 0.10);
+    const detected = !postgisError && Array.isArray(postgisDetected) && allBoundariesHavePostgisGeometry
+      ? postgisDetected.map((row: any) => ({
+          farm_a_id: String(row.farm_a_id),
+          farm_b_id: String(row.farm_b_id),
+          overlap_ratio: Number(row.overlap_ratio),
+        }))
+      : jsDetected;
+
+    if (postgisError) {
+      console.warn('PostGIS conflict scan unavailable; using compatibility detector:', postgisError.message);
     }
 
     // 4. Fetch existing pending conflicts to avoid duplicates
-    const { data: existing } = await supabaseAdmin
+    let { data: existing, error: existingError } = await supabaseAdmin
       .from('farm_conflicts')
       .select('farm_a_id, farm_b_id')
+      .eq('org_id', profile.org_id)
       .eq('status', 'pending');
+
+    // Compatibility for pre-migration databases: farm ids are still checked
+    // against the authenticated org below, but the old conflict table did not
+    // yet have its own org_id column.
+    if (existingError?.message?.includes('org_id')) {
+      const fallbackExisting = await supabaseAdmin
+        .from('farm_conflicts')
+        .select('farm_a_id, farm_b_id')
+        .eq('status', 'pending');
+      existing = fallbackExisting.data;
+      existingError = fallbackExisting.error;
+    }
+    const orgFarmIds = new Set(farmGeoms.map((farm) => farm.id));
+    existing = (existing || []).filter((conflict) =>
+      orgFarmIds.has(conflict.farm_a_id) && orgFarmIds.has(conflict.farm_b_id)
+    );
 
     const existingSet = new Set((existing || []).map(c => `${c.farm_a_id}-${c.farm_b_id}`));
 
-    // 5. Insert new conflicts
-    let newConflicts = 0;
+    // Existing pending records are authoritative too. Repair statuses for
+    // pairs created by the database trigger before this scan ran.
+    const existingPairs = new Set<string>();
+    for (const conflict of existing || []) {
+      const pair = [conflict.farm_a_id, conflict.farm_b_id].sort().join('-');
+      existingPairs.add(pair);
+    }
+    if (existingPairs.size > 0) {
+      const ids = [...new Set((existing || []).flatMap(c => [c.farm_a_id, c.farm_b_id]))];
+      await supabaseAdmin
+        .from('farms')
+        .update({ conflict_status: 'conflict' })
+        .eq('org_id', profile.org_id)
+        .in('id', ids);
+    }
+
+    // 5. Insert new conflicts in one request. The old per-pair insert/update
+    // loop timed out as soon as a tenant had more than a handful of overlaps.
     let skipped = 0;
+    const rowsToInsert: Array<{
+      farm_a_id: string;
+      farm_b_id: string;
+      org_id: string;
+      overlap_ratio: number;
+      severity: string;
+      status: string;
+    }> = [];
+    const farmIdsToMark = new Set<string>();
 
     for (const conflict of detected) {
       const key = `${conflict.farm_a_id}-${conflict.farm_b_id}`;
@@ -79,25 +166,43 @@ export async function POST(request: NextRequest) {
       const severity =
         conflict.overlap_ratio > 0.50 ? 'critical' :
         conflict.overlap_ratio > 0.25 ? 'high' : 'low';
+      rowsToInsert.push({
+        farm_a_id: conflict.farm_a_id,
+        farm_b_id: conflict.farm_b_id,
+        org_id: profile.org_id,
+        overlap_ratio: conflict.overlap_ratio,
+        severity,
+        status: 'pending',
+      });
+      farmIdsToMark.add(conflict.farm_a_id);
+      farmIdsToMark.add(conflict.farm_b_id);
+    }
 
-      const { error: insertError } = await supabaseAdmin
+    let newConflicts = 0;
+    if (rowsToInsert.length > 0) {
+      let { error: insertError } = await supabaseAdmin
         .from('farm_conflicts')
-        .insert({
-          farm_a_id: conflict.farm_a_id,
-          farm_b_id: conflict.farm_b_id,
-          org_id: profile.org_id,
-          overlap_ratio: conflict.overlap_ratio,
-          severity,
-          status: 'pending',
-        });
+        .upsert(rowsToInsert as any, { onConflict: 'farm_a_id,farm_b_id', ignoreDuplicates: true });
+
+      if (insertError?.message?.includes('org_id') || insertError?.message?.includes('severity')) {
+        const fallbackRows = rowsToInsert.map(({ farm_a_id, farm_b_id, overlap_ratio, status }) => ({
+          farm_a_id, farm_b_id, overlap_ratio, status,
+        }));
+        const fallbackInsert = await supabaseAdmin
+          .from('farm_conflicts')
+          .upsert(fallbackRows as any, { onConflict: 'farm_a_id,farm_b_id', ignoreDuplicates: true });
+        insertError = fallbackInsert.error;
+      }
 
       if (!insertError) {
-        // Mark both farms as having a conflict
         await supabaseAdmin
           .from('farms')
           .update({ conflict_status: 'conflict' })
-          .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
-        newConflicts++;
+          .eq('org_id', profile.org_id)
+          .in('id', [...farmIdsToMark]);
+        newConflicts = rowsToInsert.length;
+      } else {
+        console.error('Failed to persist farm conflicts:', insertError);
       }
     }
 

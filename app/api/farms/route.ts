@@ -153,16 +153,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-generate a farmer ID if not explicitly provided
-    let farmer_id = parsed.data.farmer_id;
-    if (!farmer_id) {
-      const d = new Date();
-      const yr = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, '0');
-      const suffix = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
-      farmer_id = `FRM-${yr}${mo}-${suffix}`;
-    }
-
     const { data: org } = await supabaseAdmin
       .from('organizations')
       .select('settings')
@@ -175,16 +165,27 @@ export async function POST(request: NextRequest) {
       require_land_deed?: boolean;
     };
 
-    if (settings.require_polygon && (!boundary || !boundary.coordinates || boundary.coordinates[0]?.length < 4)) {
+    if (settings.require_national_id && !parsed.data.farmer_id) {
       return NextResponse.json(
-        { error: 'GPS polygon boundary is required by your organization' },
+        { error: 'Farmer National ID or identity document is required by your organization' },
         { status: 400 }
       );
     }
 
-    if (settings.require_national_id && !farmer_id) {
+    // Auto-generate a farmer ID if not explicitly provided
+    let farmer_id = parsed.data.farmer_id;
+    if (!farmer_id) {
+      const d = new Date();
+      const yr = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const suffix = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+      farmer_id = `FRM-${yr}${mo}-${suffix}`;
+    }
+
+
+    if (settings.require_polygon && (!boundary || !boundary.coordinates || boundary.coordinates[0]?.length < 4)) {
       return NextResponse.json(
-        { error: 'National ID is required by your organization' },
+        { error: 'GPS polygon boundary is required by your organization' },
         { status: 400 }
       );
     }
@@ -303,11 +304,45 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const roleError = requireRole(profile, ROLES.COMPLIANCE_ROLES);
+    if (roleError) return roleError;
     const supabaseAdmin = createAdminClient();
 
     const updateData: any = {};
     if (compliance_status) updateData.compliance_status = compliance_status;
     if (compliance_notes !== undefined) updateData.compliance_notes = compliance_notes;
+
+    if (compliance_status === 'approved') {
+      const { data: existingFarm } = await supabaseAdmin
+        .from('farms')
+        .select('farmer_id, area_hectares, legality_doc_url, boundary')
+        .eq('id', id)
+        .eq('org_id', profile.org_id)
+        .single();
+
+      if (!existingFarm) {
+        return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
+      }
+
+      const missing: string[] = [];
+      if (!existingFarm.farmer_id?.trim()) missing.push('National ID');
+      if (existingFarm.area_hectares == null || Number(existingFarm.area_hectares) <= 0) missing.push('Area (Hectares)');
+      if (!existingFarm.legality_doc_url?.trim()) missing.push('Legality Document');
+      const boundary = existingFarm.boundary as { type?: string; coordinates?: unknown[][][] } | null;
+      if (boundary?.type !== 'Polygon' || !Array.isArray(boundary.coordinates?.[0]) || boundary.coordinates[0].length < 4) {
+        missing.push('GPS Boundary');
+      }
+
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Farm cannot be approved until all required documentation is provided.',
+            missing,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const { data: updatedFarm, error: updateError } = await supabaseAdmin
       .from('farms')
