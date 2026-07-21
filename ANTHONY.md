@@ -844,7 +844,7 @@ Security:
 
 - **Robust Zod Preprocessing:** We conducted a codebase-wide audit to eliminate all "silly bugs" caused by the frontend sending empty strings (`""`) to optional backend API fields that expect strict types (like URLs, Emails, Regex, and Numbers). Zod's `.optional()` modifier ignores `undefined`, but fails on `""`.
 - **`emptyAsUndefined` Helper:** Introduced a generic `z.preprocess` helper in `lib/api/validation.ts` that safely intercepts `""` and converts it to `undefined` before validation.
-- **Widespread Safety:** This helper has been applied across 10+ critical API route schemas, including Shipments, Sync, Superadmin Events, Org KYC, Farmer Training, Batches, and Settings. 
+- **Widespread Safety:** This helper has been applied across 10+ critical API route schemas, including Shipments, Sync, Superadmin Events, Org KYC, Farmer Training, Batches, and Settings.
 
 ### Verification
 
