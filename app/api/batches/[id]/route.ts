@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 export async function GET(
   request: NextRequest,
@@ -102,9 +103,8 @@ export async function PATCH(
 
     // Dispatch action — updates status + dispatch tracking fields
     if (body.action === 'dispatch') {
-      if (!['admin', 'aggregator', 'logistics_coordinator'].includes(profile.role)) {
-        return NextResponse.json({ error: 'Insufficient permissions to dispatch' }, { status: 403 });
-      }
+      const roleError = requireRole(profile, ROLES.DISPATCH_ROLES);
+      if (roleError) return roleError;
       if (!body.dispatch_destination) {
         return NextResponse.json({ error: 'dispatch_destination is required' }, { status: 400 });
       }
@@ -112,7 +112,6 @@ export async function PATCH(
       const now = new Date().toISOString();
       const dispatchUpdates: Record<string, any> = {
         status: 'dispatched',
-        updated_at: now,
       };
       if (body.dispatch_destination)  dispatchUpdates.dispatch_destination  = body.dispatch_destination;
       if (body.vehicle_reference)     dispatchUpdates.vehicle_reference     = body.vehicle_reference;
@@ -135,7 +134,7 @@ export async function PATCH(
         if (error.code === '42703' || error.message?.includes('column')) {
           const { error: fallbackError } = await supabase
             .from('collection_batches')
-            .update({ status: 'dispatched', updated_at: new Date().toISOString() })
+            .update({ status: 'dispatched' })
             .eq('id', id)
             .eq('org_id', profile.org_id);
           if (fallbackError) return NextResponse.json({ error: fallbackError.message }, { status: 400 });
@@ -153,8 +152,6 @@ export async function PATCH(
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
-    // TODO(schema-drift): 'collection_batches' has no 'updated_at' column — dropped from
-    // this update; no equivalent last-modified column exists on this table.
     const { error } = await supabase
       .from('collection_batches')
       .update({ ...updates })

@@ -174,7 +174,9 @@ export async function POST(request: NextRequest) {
             .from('bags')
             .update({
               collection_batch_id: batch.id,
-              weight: bag.weight,
+              // The canonical bags column is weight_kg. Writing the legacy
+              // `weight` name silently leaves bags unweighted in production.
+              weight_kg: bag.weight,
               grade: bag.grade,
               is_compliant: bag.is_compliant !== false,
               status: 'collected'

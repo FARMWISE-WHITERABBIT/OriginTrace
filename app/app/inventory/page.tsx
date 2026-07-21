@@ -17,7 +17,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -265,68 +264,24 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { organization, profile } = useOrg();
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchBatches() {
-      if (!supabase || !organization) return;
+      if (!organization) return;
 
       try {
-        // Fetch batches first
-        const { data: batchData, error: batchError } = await supabase
-          .from('collection_batches')
-          .select('*')
-          .eq('org_id', String(organization.id))
-          .order('created_at', { ascending: false });
+        // Read through the tenant-scoped API route so RLS does not make the
+        // client-side collection_batches query appear empty. The route also
+        // returns the farm and agent relations in the same payload.
+        const response = await fetch('/api/batches?limit=500');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Failed to fetch batches');
 
-        if (batchError) {
-          console.error('Batch query error:', batchError.message, batchError.details, batchError.hint);
-          throw batchError;
-        }
-
-        // Fetch farm data for all batches
-        const farmIds = [...new Set((batchData || []).map(b => b.farm_id).filter(Boolean))];
-        let farmMap: Record<string, { farmer_name: string; community: string }> = {};
-
-        if (farmIds.length > 0) {
-          const { data: farms, error: farmError } = await supabase
-            .from('farms')
-            .select('id, farmer_name, community')
-            .in('id', farmIds);
-
-          if (!farmError && farms) {
-            farmMap = farms.reduce((acc, f) => {
-              acc[f.id] = { farmer_name: f.farmer_name, community: f.community };
-              return acc;
-            }, {} as Record<string, { farmer_name: string; community: string }>);
-          }
-        }
-
-        const data = batchData;
-
-        // Fetch agent names separately if we have agent IDs
-        const agentIds = [...new Set((data || []).map(b => b.agent_id).filter(Boolean))];
-        let agentMap: Record<string, string> = {};
-        
-        if (agentIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', agentIds);
-          
-          agentMap = (profiles || []).reduce((acc, p) => {
-            acc[p.user_id] = p.full_name;
-            return acc;
-          }, {} as Record<string, string>);
-        }
-
-        setBatches((data || []).map((b: any) => {
-          return {
-            ...b,
-            farm: farmMap[b.farm_id] || { farmer_name: 'Unknown', community: 'Unknown' },
-            agent: { full_name: agentMap[b.agent_id] || 'Unknown' }
-          };
-        }));
+        setBatches((payload.batches || []).map((b: any) => ({
+          ...b,
+          farm: b.farm || { farmer_name: 'Unknown', community: 'Unknown' },
+          agent: b.agent || { full_name: 'Unknown' },
+        })));
       } catch (error) {
         console.error('Failed to fetch batches:', error);
       } finally {
@@ -335,7 +290,7 @@ export default function InventoryPage() {
     }
 
     fetchBatches();
-  }, [organization, supabase]);
+  }, [organization]);
 
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = 
