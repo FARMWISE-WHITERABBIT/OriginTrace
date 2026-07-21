@@ -111,7 +111,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   return NextResponse.json({ sync_status: syncStatus, success: true });
 }, 'sync/POST');
 
-<<<<<<< HEAD
 export const PUT = withErrorHandling(async (request: NextRequest) => {
   const { user, profile } = await getAuthenticatedProfile(request);
   if (!user || !profile) return ApiError.unauthorized();
@@ -216,6 +215,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
     .from('sync_conflicts')
     .select('*')
     .eq('id', conflict_id)
+    .eq('org_id', profile.org_id)
     .single();
 
   if (fetchError || !conflict) return ApiError.notFound('Conflict');
@@ -231,14 +231,14 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
       .update({
         farm_id: fd.farm_id,
         commodity: fd.commodity,
-        gps_lat: fd.gps_lat,
-        gps_lng: fd.gps_lng,
         notes: fd.notes,
         total_weight: fd.total_weight,
         bag_count: fd.bag_count,
-        updated_at: new Date().toISOString()
+        // GPS is stored on the linked farm boundary; collection_batches has
+        // no GPS or updated_at columns.
       } as any)
-      .eq('id', conflict.batch_id);
+      .eq('id', conflict.batch_id)
+      .eq('org_id', profile.org_id);
 
     if (updateError) return ApiError.internal(updateError, 'sync/PATCH/resolve-field');
   }
@@ -251,7 +251,8 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
       resolved_at: new Date().toISOString(),
       resolution
     })
-    .eq('id', conflict_id);
+    .eq('id', conflict_id)
+    .eq('org_id', profile.org_id);
 
   if (resolveError) return ApiError.internal(resolveError, 'sync/PATCH/status');
 

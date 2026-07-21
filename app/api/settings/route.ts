@@ -174,6 +174,7 @@ export async function PATCH(request: NextRequest) {
 
     const parsed = settingsPatchSchema.safeParse(body);
     if (!parsed.success) {
+      console.error('Settings validation error:', parsed.error.flatten());
       return NextResponse.json(
         { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }

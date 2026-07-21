@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     const { data: document, error: insertError } = await supabaseAdmin
       .from('documents')
-      .insert(newDoc)
+      .insert(newDoc as any)
       .select()
       .single();
 
