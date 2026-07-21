@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
           created_at
         )
       `)
+      .eq('org_id', profile.org_id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
       const { data: simpleConflicts, error: simpleError } = await supabaseAdmin
         .from('farm_conflicts')
         .select('*')
+        .eq('org_id', profile.org_id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
@@ -180,8 +182,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create conflict' }, { status: 500 });
     }
 
-    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_a_id);
-    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_b_id);
+    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_a_id).eq('org_id', profile.org_id);
+    await supabaseAdmin.from('farms').update({ conflict_status: 'conflict' }).eq('id', farm_b_id).eq('org_id', profile.org_id);
 
     try {
       const { data: org } = await supabaseAdmin
@@ -271,6 +273,7 @@ export async function PATCH(request: NextRequest) {
       .from('farm_conflicts')
       .select('*, farm_a:farm_a_id(*), farm_b:farm_b_id(*)')
       .eq('id', conflict_id)
+      .eq('org_id', profile.org_id)
       .single();
 
     if (fetchError || !conflict) {
@@ -310,6 +313,7 @@ export async function PATCH(request: NextRequest) {
       // Admin handles the merge externally; both cleared
       await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
+        .eq('org_id', profile.org_id)
         .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
 
     } else if (action === 'deactivated') {
@@ -325,6 +329,7 @@ export async function PATCH(request: NextRequest) {
       // Admin confirmed overlap is acceptable — both farms cleared
       await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
+        .eq('org_id', profile.org_id)
         .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
 
     } else if (action === 'escalated_survey') {
@@ -337,6 +342,7 @@ export async function PATCH(request: NextRequest) {
       conflictStatus = 'dismissed';
       await supabaseAdmin.from('farms')
         .update({ conflict_status: 'clear' })
+        .eq('org_id', profile.org_id)
         .in('id', [conflict.farm_a_id, conflict.farm_b_id]);
     }
 
@@ -349,7 +355,8 @@ export async function PATCH(request: NextRequest) {
         resolved_at: conflictStatus !== 'escalated' ? new Date().toISOString() : null,
         resolution_notes: notes,
       })
-      .eq('id', conflict_id);
+      .eq('id', conflict_id)
+      .eq('org_id', profile.org_id);
 
     if (updateError) {
       console.error('Failed to update conflict:', updateError);

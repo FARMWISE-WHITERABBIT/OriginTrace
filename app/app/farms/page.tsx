@@ -59,11 +59,13 @@ const STATUS_FILTERS = [
 // ── Profile completeness ─────────────────────────────────────────────────────
 // Score out of 100 based on how complete the farm record is.
 const COMPLETENESS_FIELDS: Array<{ key: keyof Farm; weight: number; label: string }> = [
-  { key: 'phone',           weight: 20, label: 'Phone' },
-  { key: 'farmer_id',       weight: 15, label: 'Farmer ID' },
-  { key: 'area_hectares',   weight: 15, label: 'Area (ha)' },
-  { key: 'boundary',        weight: 30, label: 'GPS Boundary' },
-  { key: 'legality_doc_url',weight: 20, label: 'Legality Doc' },
+  // These fields mirror the server-side approval gate. Phone is useful for
+  // farmer contact, but it is not a compliance prerequisite and must not make
+  // an otherwise complete farm impossible to approve.
+  { key: 'farmer_id',       weight: 25, label: 'Farmer ID' },
+  { key: 'area_hectares',   weight: 25, label: 'Area (ha)' },
+  { key: 'boundary',        weight: 25, label: 'GPS Boundary' },
+  { key: 'legality_doc_url',weight: 25, label: 'Legality Doc' },
 ];
 
 function computeCompleteness(farm: Farm): { score: number; missing: string[] } {
@@ -599,7 +601,14 @@ export default function FarmsPage() {
 
       {/* ── REVIEW DIALOG ── */}
       <Dialog open={!!reviewFarm} onOpenChange={open => !open && setReviewFarm(null)}>
-        <DialogContent className="max-w-lg">
+        {(() => {
+          const completeness = reviewFarm
+            ? computeCompleteness(reviewFarm)
+            : { score: 0, missing: [] as string[] };
+          const { score, missing } = completeness;
+
+          return (
+            <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Review Farm Registration</DialogTitle>
             <DialogDescription>
@@ -635,16 +644,28 @@ export default function FarmsPage() {
                 data-testid="textarea-review-notes"
               />
             </div>
+            {missing.length > 0 && (
+              <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-start gap-2 border border-red-200">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold mb-0.5">Cannot approve farm.</p>
+                  <p>Farm cannot be approved until all required documentation is provided.</p>
+                  <p className="mt-1 text-xs">Missing: {missing.join(', ')}</p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="destructive" onClick={() => submitReview('rejected')} disabled={isSubmitting} data-testid="button-reject">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <X className="h-4 w-4 mr-1" />}Reject
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => submitReview('approved')} disabled={isSubmitting} data-testid="button-approve">
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => submitReview('approved')} disabled={isSubmitting || score < 100} data-testid="button-approve">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}Approve
             </Button>
           </DialogFooter>
-        </DialogContent>
+            </DialogContent>
+          );
+        })()}
       </Dialog>
     </>
   );
