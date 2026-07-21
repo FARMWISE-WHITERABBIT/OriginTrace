@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from('events')
-    .insert(parsed.data)
+    .insert(parsed.data as any)
     .select()
     .single();
 
@@ -155,7 +155,7 @@ export async function PATCH(request: NextRequest) {
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from('events')
-    .update({ ...partial.data, updated_at: new Date().toISOString() })
+    .update({ ...partial.data, updated_at: new Date().toISOString() } as any)
     .eq('slug', slug)
     .select()
     .single();
