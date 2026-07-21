@@ -59,12 +59,12 @@ export const config = {
      * Run middleware on all app/auth/api routes that need session handling.
      *
      * Excluded:
-     *   Static/infra : _next, monitoring, favicon, robots.txt, sitemap.xml, assets
+     *   Static/infra : _next, monitoring, favicon, robots.txt, sitemap.xml, PWA assets
      *   Marketing    : /solutions, /pedigree, /processors, /demo, /importers, /api-docs
      *                  /compliance(/*), /industries(/*), /legal(/*)
      *                  /blog(/*) — all blog posts
      *   Public tools : /verify(/*)
      */
-    '/((?!monitoring|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|importers|api-docs|compliance|industries|legal|verify|blog|events).*)',
+    '/((?!monitoring|_next/static|_next/image|favicon\\.ico|favicon\\.png|robots\\.txt|sitemap\\.xml|manifest\\.json|sw\\.js|workbox-.*\\.js|fallback-.*\\.js|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|solutions|pedigree|processors|demo|importers|api-docs|compliance|industries|legal|verify|blog|events).*)',
   ],
 };

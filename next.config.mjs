@@ -90,7 +90,19 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co https://tile.openstreetmap.org https://server.arcgisonline.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://de.sentry.io https://data-api.globalforestwatch.org https://api.openai.com https://api.paystack.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com",
+      [
+        "connect-src 'self'",
+        "https://*.supabase.co",
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        "https://*.sentry.io",
+        "https://de.sentry.io",
+        "https://data-api.globalforestwatch.org",
+        "https://api.openai.com",
+        "https://api.paystack.co",
+        "wss://*.supabase.co",
+        "https://www.google-analytics.com",
+        "https://analytics.google.com",
+      ].filter(Boolean).join(' '),
       "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
       "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
@@ -105,7 +117,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    turbopackUseSystemTlsCerts: true,
   },
   images: {
     remotePatterns: [
