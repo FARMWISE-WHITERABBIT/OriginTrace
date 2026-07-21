@@ -62,6 +62,11 @@ function scoreTraceabilityIntegrity(
   const geoLevel = profile?.geo_verification_level || 'basic';
 
   const batches = items.filter((i) => i.item_type === 'batch' && i.batch_data);
+  console.info('[Shipment Scoring] Traceability batches', batches.map((batch, index) => ({
+    index,
+    has_gps: batch.batch_data?.has_gps,
+    bag_count: batch.batch_data?.bag_count,
+  })));
   let gpsScore = 100;
   if (batches.length > 0) {
     const gpsCount = batches.filter((b) => b.batch_data!.has_gps).length;

@@ -161,8 +161,9 @@ export async function GET(
     const bulkBatchPromise = batchIds.length > 0
       ? supabase
           .from('collection_batches')
-          .select('*, farm:farms(id, farmer_name, community, area_hectares, compliance_status)')
+          .select('*, farm:farms(id, farmer_name, community, area_hectares, compliance_status, boundary)')
           .in('id', batchIds)
+          .eq('org_id', profile.org_id)
       : Promise.resolve({ data: [] });
 
     // TODO(schema-drift): column 'farm_id' does not exist on 'bags' (bags link to a farm only
@@ -174,6 +175,7 @@ export async function GET(
           .from('bags')
           .select('id, collection_batch_id')
           .in('collection_batch_id', batchIds)
+          .eq('org_id', profile.org_id)
       : Promise.resolve({ data: [] });
 
     const bulkFgPromise = finishedGoodIds.length > 0
@@ -260,16 +262,23 @@ export async function GET(
           enrichedItem.batch_data = batch;
           const bags = bagsByBatchId.get(String(batch.id)) || [];
           const bagCount = bags.length;
-          const bagsWithFarmLink = bags.filter((b: any) => b.farm_id).length;
-          const hasGps = !!(batch.farm?.community); // farm GPS tracked via boundary polygon
+          const linkedFarm = Array.isArray(batch.farm) ? batch.farm[0] : batch.farm;
+          // Bags point to collection_batches; they do not have a farm_id of
+          // their own. A bag is farm-linked when its parent batch resolves to
+          // a tenant-scoped farm.
+          const hasFarmLink = !!batch.farm_id && !!linkedFarm;
+          const bagsWithFarmLink = hasFarmLink ? bagCount : 0;
+          const hasGps = !!(linkedFarm?.boundary?.type === 'Polygon' && linkedFarm?.boundary?.coordinates?.[0]?.length >= 4);
+          const derivedFarmCount = hasFarmLink ? 1 : 0;
+          const derivedTraceabilityComplete = hasFarmLink && (bagCount === 0 || bagsWithFarmLink === bagCount);
 
           if (batch.farm_id) farmIds.push(String(batch.farm_id));
 
           scoreItems.push({
             item_type: 'batch',
             weight_kg: item.weight_kg || 0,
-            farm_count: item.farm_count || 0,
-            traceability_complete: item.traceability_complete || false,
+            farm_count: item.farm_count || derivedFarmCount,
+            traceability_complete: item.traceability_complete || derivedTraceabilityComplete,
             compliance_status: item.compliance_status || 'pending',
             batch_data: {
               has_gps: hasGps,
@@ -356,7 +365,8 @@ export async function GET(
       const { data: farmsWithChecks } = await supabase
         .from('farms')
         .select('id, deforestation_check, boundary_analysis')
-        .in('id', uniqueFarmIds);
+        .in('id', uniqueFarmIds)
+        .eq('org_id', profile.org_id);
 
       if (farmsWithChecks) {
         farmDeforestationChecks = farmsWithChecks
@@ -410,6 +420,15 @@ export async function GET(
       farm_deforestation_checks: farmDeforestationChecks,
       farm_boundary_analyses: farmBoundaryAnalyses,
     };
+
+    console.info('[Shipment Traceability]', {
+      shipment_id: shipment.id,
+      batch_items: scoreItemsWithFarmIds.filter((item) => item.item_type === 'batch').length,
+      linked_farms: uniqueFarmIds.length,
+      linked_bags: scoreItemsWithFarmIds
+        .filter((item) => item.item_type === 'batch')
+        .reduce((sum, item) => sum + (item.batch_data?.bags_with_farm_link || 0), 0),
+    });
 
     const readiness = computeShipmentReadiness(scoreInput);
 
