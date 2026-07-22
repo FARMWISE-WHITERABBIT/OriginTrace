@@ -984,3 +984,68 @@ ${EMAIL_FOOTER}
   const text = `Hi ${firstName},\n\nWe missed you on today's call — no worries at all.\n\nPick a new time: ${calcomLink}\n\nOr just reply and we'll sort it out.\n\n— The OriginTrace Team`;
   return { html, text };
 }
+
+/**
+ * Buyer-persona nurture sequence (P3 — docs/IMPORTER-FUNNEL-PLAN.md).
+ * The exporter drip talks about EUDR gaps in *your* operation; buyers carry a
+ * different pain: supplier claims they can't verify, and payment terms that
+ * expose them. Same cadence (T+24h / T+72h / T+7d), buyer-voiced copy.
+ */
+export function buildBuyerNurtureEmail1(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We received your request — still happy to walk you through how buyers use OriginTrace to verify suppliers at origin: farm records, batch traceability, lab results, and compliance documents, all in one workspace.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">It takes 30 minutes, we walk through a real supplier record, and you'll leave knowing whether it fits how you buy. No pressure, no pitch deck.</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a time that works →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply to this email if you have questions first.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe received your request — happy to show you how buyers use OriginTrace to verify suppliers at origin.\n\nBook a 30-minute call: ${calcomLink}\n\nOr just reply to this email.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+export function buildBuyerNurtureEmail2(
+  name: string,
+  commodity: string | null,
+  calcomLink: string
+) {
+  const firstName = name.split(' ')[0];
+  const commodityStr = commodity || 'the commodities you buy';
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">One question worth thinking about: <strong>when a supplier says they're compliant, how do you actually check?</strong></p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">For ${commodityStr}, the liability sits with you as the importer — rejected consignments bill the importer of record, and due-diligence regulations fine the buyer, not the supplier. A PDF pack assembled the week you asked for it proves very little.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">In a 30-minute call we'll show you a supplier risk snapshot on a real counterparty — registration signals, plot geodata cross-checked against satellite records, and the batch-level evidence your compliance team needs.</p>
+  ${CTA_BUTTON(calcomLink, 'See a supplier risk snapshot →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWhen a supplier says they're compliant, how do you actually check?\n\nFor ${commodityStr}, the liability sits with you as the importer. In 30 minutes we'll show you a supplier risk snapshot on a real counterparty.\n\nBook here: ${calcomLink}\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+export function buildBuyerNurtureEmail3(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">Last note from us. Buyer workspaces are set up by our team after a call, and we hold your slot for 7 days — yours closes tomorrow.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">If the timing isn't right, just reply and we'll come back when it is. But if you'd like your suppliers documenting their supply chain where you can see it — one data pack, every market you answer to — grab the slot:</p>
+  ${CTA_BUTTON(calcomLink, 'Set up my buyer workspace →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Either way, reply to this email and we'll make a note for whenever works best.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nLast note from us — we hold buyer-workspace slots for 7 days and yours closes tomorrow.\n\nBook here: ${calcomLink}\n\nOr reply and we'll follow up when the timing is right.\n\n— The OriginTrace Team`;
+  return { html, text };
+}

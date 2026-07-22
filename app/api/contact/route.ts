@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
       full_name, email, phone, company, role, persona,
       organization_type, commodity, monthly_tonnage,
       farmer_count, biggest_concern, message, source,
+      source_path, referrer_path,
     } = body;
 
     if (!full_name || !email) {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
         ${phone ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Phone</td><td style="padding:8px;border-bottom:1px solid #eee">${phone}</td></tr>` : ''}
         ${role ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Role</td><td style="padding:8px;border-bottom:1px solid #eee">${role}</td></tr>` : ''}
         ${persona ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Persona</td><td style="padding:8px;border-bottom:1px solid #eee">${persona === 'buyer' ? 'Buyer / Importer' : 'Exporter / Producer'}</td></tr>` : ''}
+        ${source_path ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Submitted From</td><td style="padding:8px;border-bottom:1px solid #eee">${source_path}${referrer_path ? ` (via ${referrer_path})` : ''}</td></tr>` : ''}
         ${organization_type ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Org Type</td><td style="padding:8px;border-bottom:1px solid #eee">${organization_type}</td></tr>` : ''}
         ${commodity ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Commodity</td><td style="padding:8px;border-bottom:1px solid #eee">${commodity}</td></tr>` : ''}
         ${monthly_tonnage ? `<tr><td style="padding:8px;background:#f4f4f4;font-weight:600">Monthly Volume</td><td style="padding:8px;border-bottom:1px solid #eee">${monthly_tonnage} MT</td></tr>` : ''}
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
         .eq('lead_email', email)
         .eq('status', 'active');
 
-      await supabase.from('lead_nurture_jobs').insert({
+      const baseJob = {
         lead_email:      email,
         lead_name:       full_name,
         lead_phone:      phone || null,
@@ -115,7 +117,28 @@ export async function POST(request: NextRequest) {
         org_type:        organization_type || null,
         hubspot_deal_id: hubspotDealId,
         status:          'active',
-      });
+      };
+      // Attribution columns ship in supabase/migrations/20260710_lead_attribution.sql.
+      // Until that migration is applied to the live DB, fall back to the base
+      // insert so lead capture never breaks on a missing column.
+      const attributedJob = {
+        ...baseJob,
+        persona:       persona || null,
+        source_path:   source_path || null,
+        referrer_path: referrer_path || null,
+      };
+      const { error: attributedError } = await supabase
+        .from('lead_nurture_jobs')
+        .insert(attributedJob as typeof baseJob);
+      if (attributedError) {
+        if (attributedError.code === '42703' || attributedError.code === 'PGRST204') {
+          console.warn('[api/contact] attribution columns not yet migrated — inserting base nurture job');
+          const { error: baseError } = await supabase.from('lead_nurture_jobs').insert(baseJob);
+          if (baseError) throw baseError;
+        } else {
+          throw attributedError;
+        }
+      }
     } catch (nurtureErr) {
       console.error('[api/contact] Failed to create nurture job (non-fatal):', nurtureErr);
     }

@@ -13,7 +13,7 @@ The `/importers` funnel and `/demo?role=buyer` form route buyer leads into the s
 1. Internal notification email to `LEAD_NOTIFY_EMAIL` (defaults to `hello@origintrace.trade`), including persona, org type, and biggest-concern fields.
 2. Auto-reply to the lead with a Cal.com booking link.
 3. A HubSpot contact upsert + Deal created in stage `appointmentscheduled` (`lib/hubspot.ts`).
-4. A `lead_nurture_jobs` row (status `active`) that drives an automated email drip via `app/api/cron/nurture-drip/route.ts`.
+4. A `lead_nurture_jobs` row (status `active`) that drives an automated email drip via `app/api/cron/nurture-drip/route.ts`. Buyer leads (persona `buyer` or a buyer org type) receive the buyer-voiced 3-step sequence; everyone else gets the exporter sequence.
 
 **There is no Slack notification and no superadmin UI listing new demo leads.** The internal email and the HubSpot deal are the only signals that a buyer org needs provisioning.
 
