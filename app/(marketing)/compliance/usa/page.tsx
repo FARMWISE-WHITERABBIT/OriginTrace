@@ -8,6 +8,7 @@ import { FaqSection } from '@/components/marketing/faq-section';
 import { FAQSchema } from '@/components/marketing/faq-schema';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Package, ShieldCheck } from 'lucide-react';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 
 export const metadata: Metadata = {
   title: 'Lacey Act & USDA NOP Compliance',
@@ -284,6 +285,10 @@ export default function USACompliancePage() {
 
           {/* ── FAQ SECTION ──────────────────────────────────────── */}
           <FaqSection />
+
+
+          <ImporterCallout />
+
 
 
           {/* ── FINAL CTA ────────────────────────────────────────── */}

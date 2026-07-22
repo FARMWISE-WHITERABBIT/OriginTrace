@@ -8,6 +8,7 @@ import { FaqSection } from '@/components/marketing/faq-section';
 import { FAQSchema } from '@/components/marketing/faq-schema';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Package, Banknote } from 'lucide-react';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 
 export const metadata: Metadata = {
   title: 'UK Due Diligence (UKDDS) Compliance',
@@ -284,6 +285,10 @@ export default function UKCompliancePage() {
 
           {/* ── FAQ SECTION ──────────────────────────────────────── */}
           <FaqSection />
+
+
+          <ImporterCallout />
+
 
 
           {/* ── FINAL CTA ────────────────────────────────────────── */}

@@ -230,3 +230,10 @@ test.describe('Marketing — SEO Smoke Tests', () => {
   });
 
 });
+
+test.describe('Marketing — Importer cross-links', () => {
+  test('compliance pages carry the importer callout', async ({ page }) => {
+    await gotoPublic(page, '/compliance/eudr');
+    await expect(page.getByTestId('importer-callout')).toBeAttached();
+  });
+});

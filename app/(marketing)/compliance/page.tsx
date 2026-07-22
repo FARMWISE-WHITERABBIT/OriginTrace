@@ -6,6 +6,7 @@ import { FadeIn } from '@/components/marketing/motion';
 import { FaqSection } from '@/components/marketing/faq-section';
 import { FAQSchema } from '@/components/marketing/faq-schema';
 import { ChevronRight } from 'lucide-react';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 
 const hubFaqs = [
   {
@@ -275,6 +276,10 @@ export default function ComplianceHubPage() {
 
           {/* ── FAQ SECTION ──────────────────────────────────────── */}
           <FaqSection />
+
+
+          <ImporterCallout />
+
 
 
           {/* ── FINAL CTA ────────────────────────────────────────── */}
