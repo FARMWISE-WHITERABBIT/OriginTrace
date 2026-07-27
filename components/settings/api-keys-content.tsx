@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
-import { Loader2, Plus, Key, Copy, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Key, Copy, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 interface ApiKey {
   id: string;
@@ -27,8 +29,7 @@ interface ApiKey {
 }
 
 export function ApiKeysContent() {
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tErrors = useTranslations('errors');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newKeySecret, setNewKeySecret] = useState<string | null>(null);
@@ -40,27 +41,20 @@ export function ApiKeysContent() {
 
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
-
-  const fetchKeys = useCallback(async () => {
-    if (orgLoading || !organization) {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const response = await fetch('/api/keys');
-      if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      setKeys(data.keys || []);
-    } catch (error) {
-      console.error('Failed to fetch API keys:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, orgLoading]);
-
-  useEffect(() => {
-    fetchKeys();
-  }, [fetchKeys]);
+  const {
+    data: fetchedKeys,
+    loading: keysLoading,
+    error: keysError,
+    refetch: fetchKeys,
+  } = useApiResource<ApiKey[]>('/api/keys', {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id],
+    showErrorToast: false,
+    select: (raw) => (raw as { keys?: ApiKey[] }).keys || [],
+  });
+  const keys = fetchedKeys ?? [];
+  const isLoading = orgLoading || (!!organization?.id && keysLoading);
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
@@ -187,6 +181,20 @@ export function ApiKeysContent() {
               <div className="flex justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
+            ) : keysError ? (
+              <Alert variant="destructive" data-testid="api-keys-load-error">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="font-medium">{tErrors('unableToLoadApiKeys')}</p>
+                    <p>{keysError}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => void fetchKeys()}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    {tErrors('tryAgain')}
+                  </Button>
+                </AlertDescription>
+              </Alert>
             ) : keys.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Key className="h-8 w-8 mx-auto mb-3 opacity-50" />

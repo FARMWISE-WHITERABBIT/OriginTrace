@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +30,8 @@ import {
   Pencil,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 interface Document {
   id: string;
@@ -55,6 +57,7 @@ interface DocFormState {
   notes: string;
   linked_entity_type: string;
   linked_entity_id: string;
+  linked_entity_verified: boolean;
   file_url: string;
   file_name: string;
   file_size: number | null;
@@ -73,6 +76,7 @@ const EMPTY_FORM: DocFormState = {
   notes: '',
   linked_entity_type: '',
   linked_entity_id: '',
+  linked_entity_verified: true,
   file_url: '',
   file_name: '',
   file_size: null,
@@ -113,89 +117,130 @@ const TYPE_LABELS: Record<string, string> = Object.fromEntries(
   DOCUMENT_TYPES.map(t => [t.value, t.label])
 );
 
-async function fetchEntityOptions(entityType: string): Promise<EntityOption[]> {
-  try {
-    if (entityType === 'shipment') {
-      const res = await fetch('/api/shipments?limit=100');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.shipments || []).map((s: Record<string, unknown>) => ({
-        id: String(s.id),
-        label: `${s.shipment_code || s.id} — ${s.destination_country || ''}`.trim().replace(/—\s*$/, ''),
-      }));
-    }
-    if (entityType === 'farm') {
-      const res = await fetch('/api/farms?limit=100');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.farms || []).map((f: Record<string, unknown>) => ({
-        id: String(f.id),
-        label: `${f.farmer_name || 'Farm'} — ${f.community || ''}`.trim().replace(/—\s*$/, ''),
-      }));
-    }
-    if (entityType === 'farmer') {
-      const res = await fetch('/api/farmers?limit=100');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.farmers || []).map((f: Record<string, unknown>) => ({
-        id: String(f.id || f.farmer_id),
-        label: String(f.farmer_name || f.full_name || f.id),
-      }));
-    }
-    if (entityType === 'batch') {
-      const res = await fetch('/api/batches?limit=100');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.batches || []).map((b: Record<string, unknown>) => {
-        const farm = b.farm as Record<string, unknown> | undefined;
-        const label = farm
-          ? `${farm.farmer_name || 'Batch'} — ${(b.id as string)?.slice(0, 8) || ''}`
-          : String((b.id as string)?.slice(0, 8) || b.id);
-        return { id: String(b.id), label };
-      });
-    }
-    return [];
-  } catch {
-    return [];
+async function fetchEntityPayload<T>(url: string, signal: AbortSignal): Promise<T> {
+  const response = await fetch(url, { signal });
+  const body: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = body && typeof body === 'object' && 'error' in body
+      ? String((body as { error: unknown }).error)
+      : `Request failed (${response.status})`;
+    throw new Error(message);
   }
+  return body as T;
+}
+
+async function fetchEntityOptions(entityType: string, signal: AbortSignal): Promise<EntityOption[]> {
+  if (entityType === 'shipment') {
+    const data = await fetchEntityPayload<{ shipments?: Record<string, unknown>[] }>('/api/shipments?limit=200', signal);
+    return (data.shipments || []).map((s) => ({
+      id: String(s.id),
+      label: `${s.shipment_code || s.id} — ${s.destination_country || ''}`.trim().replace(/—\s*$/, ''),
+    }));
+  }
+  if (entityType === 'farm') {
+    const data = await fetchEntityPayload<{ farms?: Record<string, unknown>[] }>('/api/farms?limit=200', signal);
+    return (data.farms || []).map((f) => ({
+      id: String(f.id),
+      label: `${f.farmer_name || 'Farm'} — ${f.community || ''}`.trim().replace(/—\s*$/, ''),
+    }));
+  }
+  if (entityType === 'farmer') {
+    const data = await fetchEntityPayload<{ farmers?: Record<string, unknown>[] }>('/api/farmers?limit=200', signal);
+    return (data.farmers || []).map((f) => ({
+      id: String(f.farm_id || f.id || f.farmer_id),
+      label: String(f.farmer_name || f.full_name || f.farm_id || f.id),
+    }));
+  }
+  if (entityType === 'batch') {
+    const data = await fetchEntityPayload<{ batches?: Record<string, unknown>[] }>('/api/batches?limit=200', signal);
+    return (data.batches || []).map((b) => {
+      const farm = b.farm as Record<string, unknown> | undefined;
+      const label = farm
+        ? `${farm.farmer_name || 'Batch'} — ${(b.id as string)?.slice(0, 8) || ''}`
+        : String((b.id as string)?.slice(0, 8) || b.id);
+      return { id: String(b.id), label };
+    });
+  }
+  return [];
 }
 
 function EntitySelect({
   entityType,
+  scopeKey,
   value,
   onChange,
 }: {
   entityType: string;
+  scopeKey: string | number | null;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string, verified: boolean) => void;
 }) {
+  const tErrors = useTranslations('errors');
   const [options, setOptions] = useState<EntityOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const activeScopeKeyRef = useRef<string | number | null>(scopeKey);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  activeScopeKeyRef.current = scopeKey;
+  valueRef.current = value;
+  onChangeRef.current = onChange;
 
   useEffect(() => {
-    if (!entityType || entityType === 'none' || entityType === 'organization') {
-      setOptions([]);
-      setUseFallback(entityType === 'organization');
+    setOptions([]);
+    if (!entityType || entityType === 'none') {
+      setIsLoading(false);
+      setLoadError(null);
+      return;
+    }
+    if (scopeKey === null) {
+      setIsLoading(false);
+      setLoadError(tErrors('organizationContextUnavailable'));
+      return;
+    }
+    if (entityType === 'organization') {
+      setIsLoading(false);
+      setLoadError(null);
+      const organizationId = String(scopeKey);
+      onChangeRef.current(organizationId, true);
       return;
     }
 
     let cancelled = false;
+    const controller = new AbortController();
+    const requestScopeKey = scopeKey;
     setIsLoading(true);
-    setUseFallback(false);
+    setLoadError(null);
+    onChangeRef.current(valueRef.current, false);
 
-    fetchEntityOptions(entityType).then(opts => {
-      if (cancelled) return;
-      setIsLoading(false);
-      if (opts.length === 0) {
-        setUseFallback(true);
-      } else {
+    void fetchEntityOptions(entityType, controller.signal)
+      .then(opts => {
+        if (cancelled || activeScopeKeyRef.current !== requestScopeKey) return;
+        setIsLoading(false);
         setOptions(opts);
-      }
-    });
+        const currentValue = valueRef.current;
+        const isVerified = !!currentValue && opts.some((option) => option.id === currentValue);
+        onChangeRef.current(isVerified ? currentValue : '', isVerified);
+      })
+      .catch((error: unknown) => {
+        if (
+          cancelled ||
+          controller.signal.aborted ||
+          activeScopeKeyRef.current !== requestScopeKey ||
+          (error instanceof DOMException && error.name === 'AbortError')
+        ) return;
+        setIsLoading(false);
+        setLoadError(error instanceof Error
+          ? error.message
+          : tErrors('unableToLoadEntityOptions', { entityType }));
+      });
 
-    return () => { cancelled = true; };
-  }, [entityType]);
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [entityType, retryAttempt, scopeKey, tErrors]);
 
   if (!entityType || entityType === 'none') {
     return (
@@ -216,19 +261,40 @@ function EntitySelect({
     );
   }
 
-  if (useFallback || entityType === 'organization') {
+  if (loadError) {
+    return (
+      <div role="alert" className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-destructive">
+            {tErrors('unableToLoadEntityOptions', { entityType })}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{loadError}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setRetryAttempt((attempt) => attempt + 1)}>
+          {tErrors('tryAgain')}
+        </Button>
+      </div>
+    );
+  }
+
+  if (entityType === 'organization') {
     return (
       <Input
-        placeholder="Paste entity ID (UUID)"
-        value={value}
-        onChange={e => onChange(e.target.value)}
+        value={scopeKey === null ? '' : String(scopeKey)}
+        readOnly
         data-testid="input-doc-entity-id"
       />
     );
   }
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select
+      value={value}
+      onValueChange={(nextValue) => onChange(
+        nextValue,
+        options.some((option) => option.id === nextValue),
+      )}
+    >
       <SelectTrigger data-testid="select-doc-entity-id">
         <SelectValue placeholder={`Select ${entityType}`} />
       </SelectTrigger>
@@ -245,11 +311,13 @@ function EntitySelect({
 
 function DocForm({
   form,
+  organizationId,
   onChange,
   onUploadComplete,
   onUploadClear,
 }: {
   form: DocFormState;
+  organizationId: string | number | null;
   onChange: (updates: Partial<DocFormState>) => void;
   onUploadComplete: (result: UploadResult) => void;
   onUploadClear: () => void;
@@ -334,7 +402,11 @@ function DocForm({
         <div className="grid grid-cols-2 gap-3">
           <Select
             value={form.linked_entity_type || 'none'}
-            onValueChange={v => onChange({ linked_entity_type: v === 'none' ? '' : v, linked_entity_id: '' })}
+            onValueChange={v => onChange({
+              linked_entity_type: v === 'none' ? '' : v,
+              linked_entity_id: '',
+              linked_entity_verified: v === 'none',
+            })}
           >
             <SelectTrigger data-testid="select-doc-entity-type">
               <SelectValue placeholder="None" />
@@ -349,8 +421,12 @@ function DocForm({
 
           <EntitySelect
             entityType={form.linked_entity_type}
+            scopeKey={organizationId}
             value={form.linked_entity_id}
-            onChange={v => onChange({ linked_entity_id: v })}
+            onChange={(v, verified) => onChange({
+              linked_entity_id: v,
+              linked_entity_verified: verified,
+            })}
           />
         </div>
       </div>
@@ -359,8 +435,7 @@ function DocForm({
 }
 
 function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tErrors = useTranslations('errors');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -381,72 +456,115 @@ function DocumentsPage() {
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
+  const [formScopeKey, setFormScopeKey] = useState<number | null>(organizationId);
+  const documentActionTokenRef = useRef(0);
+  const handledAutoOpenKeyRef = useRef<string | null>(null);
+  const formScopeMatches = Object.is(formScopeKey, organizationId);
+
+  const documentParams = new URLSearchParams();
+  if (typeFilter !== 'all') documentParams.set('type', typeFilter);
+  if (statusFilter !== 'all') documentParams.set('status', statusFilter);
+  const documentQuery = documentParams.toString();
+  const documentsUrl = documentQuery ? `/api/documents?${documentQuery}` : '/api/documents';
+  const {
+    data: fetchedDocuments,
+    error: documentsError,
+    loading: documentsLoading,
+    refetch: fetchDocuments,
+  } = useApiResource<Document[]>(documentsUrl, {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id, typeFilter, statusFilter],
+    showErrorToast: false,
+    select: (raw) => (raw as { documents?: Document[] }).documents || [],
+  });
+  const documents = fetchedDocuments ?? [];
+  const isLoading = orgLoading || (!!organization?.id && documentsLoading);
+
+  useEffect(() => {
+    ++documentActionTokenRef.current;
+    setFormScopeKey(organizationId);
+    setSelected(new Set());
+    setCreateOpen(false);
+    setCreateForm(EMPTY_FORM);
+    setEditDoc(null);
+    setEditForm(EMPTY_FORM);
+    setConfirmDelete(null);
+    setIsCreating(false);
+    setIsSaving(false);
+    setIsDeleting(false);
+  }, [organizationId]);
 
   // Auto-open upload dialog pre-filled when navigated from shipment
   useEffect(() => {
+    if (organizationId === null) {
+      handledAutoOpenKeyRef.current = null;
+      return;
+    }
     const entityType = searchParams.get('entity_type');
     const entityId   = searchParams.get('entity_id');
     const shipCode   = searchParams.get('shipment_code');
-    if (entityType && entityId) {
-      setCreateForm(f => ({
-        ...f,
-        linked_entity_type: entityType,
-        linked_entity_id:   entityId,
-        title: shipCode ? `Document for ${shipCode}` : '',
-      }));
-      setCreateOpen(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchDocuments = useCallback(async () => {
-    if (orgLoading) return;
-    if (!organization) {
-      setIsLoading(false);
+    if (!entityType || !entityId) {
+      // Leaving an auto-open URL rearms the same link for a future visit while
+      // this client page remains mounted.
+      handledAutoOpenKeyRef.current = null;
       return;
     }
-    try {
-      const params = new URLSearchParams();
-      if (typeFilter !== 'all') params.set('type', typeFilter);
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      const qs = params.toString();
-      const url = qs ? `/api/documents?${qs}` : '/api/documents';
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch documents');
-      const data = await response.json();
-      setDocuments(data.documents || []);
-    } catch (error) {
-      console.error('Failed to fetch documents:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, orgLoading, typeFilter, statusFilter]);
+    const autoOpenKey = `${organizationId}:${entityType}:${entityId}:${shipCode ?? ''}`;
+    if (handledAutoOpenKeyRef.current === autoOpenKey) return;
+    handledAutoOpenKeyRef.current = autoOpenKey;
+    setCreateForm(f => ({
+      ...f,
+      linked_entity_type: entityType,
+      linked_entity_id:   entityId,
+      linked_entity_verified: false,
+      title: shipCode ? `Document for ${shipCode}` : '',
+    }));
+    setCreateOpen(true);
+  }, [organizationId, searchParams]);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+  const beginDocumentAction = () => {
+    if (organizationId === null || !formScopeMatches) return null;
+    return {
+      organizationId,
+      token: ++documentActionTokenRef.current,
+    };
+  };
+  const documentActionIsCurrent = (action: { organizationId: number; token: number }) =>
+    activeOrganizationIdRef.current === action.organizationId &&
+    documentActionTokenRef.current === action.token;
 
   const handleCreate = async () => {
-    if (!createForm.title || !createForm.document_type) {
+    const action = beginDocumentAction();
+    if (!action) return;
+    const formSnapshot = { ...createForm };
+    if (!formSnapshot.title || !formSnapshot.document_type) {
       toast({ title: 'Missing fields', description: 'Title and document type are required.', variant: 'destructive' });
       return;
     }
+    if (
+      formSnapshot.linked_entity_type &&
+      (!formSnapshot.linked_entity_id || !formSnapshot.linked_entity_verified)
+    ) return;
     setIsCreating(true);
     try {
       const payload: Record<string, unknown> = {
-        title: createForm.title,
-        document_type: createForm.document_type,
+        title: formSnapshot.title,
+        document_type: formSnapshot.document_type,
       };
-      if (createForm.issued_date) payload.issued_date = createForm.issued_date;
-      if (createForm.expiry_date) payload.expiry_date = createForm.expiry_date;
-      if (createForm.notes) payload.notes = createForm.notes;
-      if (createForm.linked_entity_type && createForm.linked_entity_type !== 'none') {
-        payload.linked_entity_type = createForm.linked_entity_type;
+      if (formSnapshot.issued_date) payload.issued_date = formSnapshot.issued_date;
+      if (formSnapshot.expiry_date) payload.expiry_date = formSnapshot.expiry_date;
+      if (formSnapshot.notes) payload.notes = formSnapshot.notes;
+      if (formSnapshot.linked_entity_type && formSnapshot.linked_entity_type !== 'none') {
+        payload.linked_entity_type = formSnapshot.linked_entity_type;
       }
-      if (createForm.linked_entity_id) payload.linked_entity_id = createForm.linked_entity_id;
-      if (createForm.file_url) payload.file_url = createForm.file_url;
-      if (createForm.file_name) payload.file_name = createForm.file_name;
-      if (createForm.file_size != null) payload.file_size = createForm.file_size;
+      if (formSnapshot.linked_entity_id) payload.linked_entity_id = formSnapshot.linked_entity_id;
+      if (formSnapshot.file_url) payload.file_url = formSnapshot.file_url;
+      if (formSnapshot.file_name) payload.file_name = formSnapshot.file_name;
+      if (formSnapshot.file_size != null) payload.file_size = formSnapshot.file_size;
 
       const response = await fetch('/api/documents', {
         method: 'POST',
@@ -457,18 +575,21 @@ function DocumentsPage() {
         const err = await response.json();
         throw new Error(err.error || 'Failed to create document');
       }
-      toast({ title: 'Document created', description: `"${createForm.title}" has been added to the vault.` });
+      if (!documentActionIsCurrent(action)) return;
+      toast({ title: 'Document created', description: `"${formSnapshot.title}" has been added to the vault.` });
       setCreateOpen(false);
       setCreateForm(EMPTY_FORM);
-      fetchDocuments();
+      await fetchDocuments();
     } catch (error: unknown) {
+      if (!documentActionIsCurrent(action)) return;
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to create document', variant: 'destructive' });
     } finally {
-      setIsCreating(false);
+      if (documentActionIsCurrent(action)) setIsCreating(false);
     }
   };
 
   const openEdit = (doc: Document) => {
+    if (!formScopeMatches) return;
     setEditDoc(doc);
     setEditForm({
       title: doc.title,
@@ -478,6 +599,7 @@ function DocumentsPage() {
       notes: doc.notes || '',
       linked_entity_type: doc.linked_entity_type || '',
       linked_entity_id: doc.linked_entity_id || '',
+      linked_entity_verified: !doc.linked_entity_type,
       file_url: doc.file_url || '',
       file_name: doc.file_name || '',
       file_size: doc.file_size,
@@ -485,28 +607,35 @@ function DocumentsPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editDoc) return;
-    if (!editForm.title || !editForm.document_type) {
+    const action = beginDocumentAction();
+    const documentSnapshot = editDoc;
+    const formSnapshot = { ...editForm };
+    if (!action || !documentSnapshot) return;
+    if (!formSnapshot.title || !formSnapshot.document_type) {
       toast({ title: 'Missing fields', description: 'Title and document type are required.', variant: 'destructive' });
       return;
     }
+    if (
+      formSnapshot.linked_entity_type &&
+      (!formSnapshot.linked_entity_id || !formSnapshot.linked_entity_verified)
+    ) return;
     setIsSaving(true);
     try {
       const payload: Record<string, unknown> = {
-        title: editForm.title,
-        document_type: editForm.document_type,
-        issued_date: editForm.issued_date || null,
-        expiry_date: editForm.expiry_date || null,
-        notes: editForm.notes || null,
-        linked_entity_type: (editForm.linked_entity_type && editForm.linked_entity_type !== 'none')
-          ? editForm.linked_entity_type : null,
-        linked_entity_id: editForm.linked_entity_id || null,
-        file_url: editForm.file_url || null,
-        file_name: editForm.file_name || null,
-        file_size: editForm.file_size,
+        title: formSnapshot.title,
+        document_type: formSnapshot.document_type,
+        issued_date: formSnapshot.issued_date || null,
+        expiry_date: formSnapshot.expiry_date || null,
+        notes: formSnapshot.notes || null,
+        linked_entity_type: (formSnapshot.linked_entity_type && formSnapshot.linked_entity_type !== 'none')
+          ? formSnapshot.linked_entity_type : null,
+        linked_entity_id: formSnapshot.linked_entity_id || null,
+        file_url: formSnapshot.file_url || null,
+        file_name: formSnapshot.file_name || null,
+        file_size: formSnapshot.file_size,
       };
 
-      const response = await fetch(`/api/documents/${editDoc.id}`, {
+      const response = await fetch(`/api/documents/${documentSnapshot.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -515,32 +644,41 @@ function DocumentsPage() {
         const err = await response.json();
         throw new Error(err.error || 'Failed to update document');
       }
-      toast({ title: 'Document updated', description: `"${editForm.title}" has been saved.` });
+      if (!documentActionIsCurrent(action)) return;
+      toast({ title: 'Document updated', description: `"${formSnapshot.title}" has been saved.` });
       setEditDoc(null);
-      fetchDocuments();
+      await fetchDocuments();
     } catch (error: unknown) {
+      if (!documentActionIsCurrent(action)) return;
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update document', variant: 'destructive' });
     } finally {
-      setIsSaving(false);
+      if (documentActionIsCurrent(action)) setIsSaving(false);
     }
   };
 
   const handleDelete = (doc: Document) => {
+    if (!formScopeMatches) return;
     setConfirmDelete(doc);
   };
 
   const doDelete = async () => {
-    if (!confirmDelete) return;
+    const action = beginDocumentAction();
+    const documentSnapshot = confirmDelete;
+    if (!action || !documentSnapshot) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/documents/${confirmDelete.id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/documents/${documentSnapshot.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete document');
-      toast({ title: 'Document deleted', description: `"${confirmDelete.title}" has been removed.` });
+      if (!documentActionIsCurrent(action)) return;
+      toast({ title: 'Document deleted', description: `"${documentSnapshot.title}" has been removed.` });
       setConfirmDelete(null);
-      fetchDocuments();
+      await fetchDocuments();
     } catch (error: unknown) {
+      if (!documentActionIsCurrent(action)) return;
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete', variant: 'destructive' });
-    } finally { setIsDeleting(false); }
+    } finally {
+      if (documentActionIsCurrent(action)) setIsDeleting(false);
+    }
   };
 
   const filteredDocuments = useMemo(() => {
@@ -625,6 +763,19 @@ function DocumentsPage() {
 
         {isLoading || orgLoading ? (
           <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-muted animate-pulse rounded-xl"/>)}</div>
+        ) : documentsError ? (
+          <Card role="alert" className="border-destructive/40" data-testid="documents-load-error">
+            <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+              <AlertTriangle className="h-9 w-9 text-destructive" />
+              <div>
+                <h3 className="font-medium">{tErrors('unableToLoadDocuments')}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{documentsError}</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => void fetchDocuments()}>
+                {tErrors('tryAgain')}
+              </Button>
+            </CardContent>
+          </Card>
         ) : filteredDocuments.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -756,7 +907,7 @@ function DocumentsPage() {
           </div>
         )}
 
-        <Dialog open={createOpen} onOpenChange={open => { setCreateOpen(open); if (!open) setCreateForm(EMPTY_FORM); }}>
+        <Dialog open={formScopeMatches && createOpen} onOpenChange={open => { setCreateOpen(open); if (!open) setCreateForm(EMPTY_FORM); }}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Document</DialogTitle>
@@ -766,6 +917,7 @@ function DocumentsPage() {
             </DialogHeader>
             <DocForm
               form={createForm}
+              organizationId={organizationId}
               onChange={updates => setCreateForm(s => ({ ...s, ...updates }))}
               onUploadComplete={result => setCreateForm(s => ({
                 ...s,
@@ -779,7 +931,14 @@ function DocumentsPage() {
               <Button variant="outline" onClick={() => setCreateOpen(false)} data-testid="button-cancel-create">
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={isCreating} data-testid="button-confirm-create">
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating || (
+                  !!createForm.linked_entity_type &&
+                  (!createForm.linked_entity_id || !createForm.linked_entity_verified)
+                )}
+                data-testid="button-confirm-create"
+              >
                 {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Add Document
               </Button>
@@ -787,7 +946,7 @@ function DocumentsPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!editDoc} onOpenChange={open => { if (!open) setEditDoc(null); }}>
+        <Dialog open={formScopeMatches && !!editDoc} onOpenChange={open => { if (!open) setEditDoc(null); }}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Document</DialogTitle>
@@ -798,6 +957,7 @@ function DocumentsPage() {
             <DocForm
               key={editDoc?.id}
               form={editForm}
+              organizationId={organizationId}
               onChange={updates => setEditForm(s => ({ ...s, ...updates }))}
               onUploadComplete={result => setEditForm(s => ({
                 ...s,
@@ -811,7 +971,14 @@ function DocumentsPage() {
               <Button variant="outline" onClick={() => setEditDoc(null)} data-testid="button-cancel-edit">
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} disabled={isSaving} data-testid="button-confirm-edit">
+              <Button
+                onClick={handleSaveEdit}
+                disabled={isSaving || (
+                  !!editForm.linked_entity_type &&
+                  (!editForm.linked_entity_id || !editForm.linked_entity_verified)
+                )}
+                data-testid="button-confirm-edit"
+              >
                 {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Save Changes
               </Button>
@@ -821,7 +988,7 @@ function DocumentsPage() {
       </div>
 
       <ConfirmDialog
-        open={!!confirmDelete}
+        open={formScopeMatches && !!confirmDelete}
         onOpenChange={open => { if (!open) setConfirmDelete(null); }}
         title="Delete document"
         description={`Delete "${confirmDelete?.title}"? This cannot be undone.`}

@@ -24,6 +24,8 @@ import {
   Shield,
 } from 'lucide-react';
 import { TierGate } from '@/components/tier-gate';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 interface ProcessingRun {
   id: string;
@@ -61,17 +63,70 @@ interface CommodityMaster {
 }
 
 export default function ProcessingPage() {
+  const tErrors = useTranslations('errors');
   const router = useRouter();
-  const [processingRuns, setProcessingRuns] = useState<ProcessingRun[]>([]);
-  const [availableBatches, setAvailableBatches] = useState<CollectionBatch[]>([]);
-  const [commodities, setCommodities] = useState<CommodityMaster[]>([]);
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
   const { toast } = useToast();
-  const { organization } = useOrg();
+  const { organization, isLoading: orgLoading } = useOrg();
   const [processingCompliance, setProcessingCompliance] = useState<Record<string, boolean>>({});
+  const resourceEnabled = !!organization?.id;
+  const {
+    data: fetchedRuns,
+    error: runsError,
+    loading: runsLoading,
+    refetch: refetchRuns,
+    setData: setProcessingRuns,
+  } = useApiResource<ProcessingRun[]>(
+    '/api/processing-runs',
+    {
+      enabled: resourceEnabled,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => (raw as { processingRuns?: ProcessingRun[] }).processingRuns || [],
+    },
+  );
+  const {
+    data: fetchedBatches,
+    error: batchesError,
+    loading: batchesLoading,
+    refetch: refetchBatches,
+  } = useApiResource<CollectionBatch[]>(
+    '/api/batches',
+    {
+      enabled: resourceEnabled,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => (raw as { batches?: CollectionBatch[] }).batches || [],
+    },
+  );
+  const {
+    data: fetchedCommodities,
+    error: commoditiesError,
+    loading: commoditiesLoading,
+    refetch: refetchCommodities,
+  } = useApiResource<CommodityMaster[]>(
+    '/api/commodities?global_only=true',
+    {
+      enabled: resourceEnabled,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => ((raw as { commodities?: CommodityMaster[] }).commodities || [])
+        .filter((commodity) => commodity.is_active),
+    },
+  );
+  const processingRuns = fetchedRuns ?? [];
+  const availableBatches = fetchedBatches ?? [];
+  const commodities = fetchedCommodities ?? [];
+  const loading = orgLoading || (resourceEnabled && (
+    runsLoading || batchesLoading || commoditiesLoading
+  ));
+  const loadError = runsError || batchesError || commoditiesError || (
+    !orgLoading && !resourceEnabled ? tErrors('noOrganizationSelected') : null
+  );
 
   const [newRun, setNewRun] = useState({
     facility_name: '',
@@ -135,54 +190,23 @@ export default function ProcessingPage() {
   };
 
   useEffect(() => {
-    fetchData();
-    fetchCommodities();
-  }, []);
-
-  async function fetchCommodities() {
-    try {
-      const res = await fetch('/api/commodities?global_only=true');
-      if (res.ok) {
-        const data = await res.json();
-        const activeCommodities = (data.commodities || []).filter((c: CommodityMaster) => c.is_active);
-        setCommodities(activeCommodities);
-        if (activeCommodities.length > 0 && !newRun.commodity) {
-          const firstCode = activeCommodities[0].code.toLowerCase();
-          const availableProducts = productTypes[firstCode] || [{ value: 'processed', label: 'Processed', recovery: 50 }];
-          setNewRun(prev => ({ 
-            ...prev, 
-            commodity: firstCode,
-            product_type: availableProducts[0]?.value || 'processed'
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch commodities:', error);
+    if (!fetchedCommodities) return;
+    if (fetchedCommodities.length > 0 && !newRun.commodity) {
+      const firstCode = (fetchedCommodities[0].code || fetchedCommodities[0].slug).toLowerCase();
+      const availableProducts = productTypes[firstCode] || [{ value: 'processed', label: 'Processed', recovery: 50 }];
+      setNewRun((previous) => ({
+        ...previous,
+        commodity: firstCode,
+        product_type: availableProducts[0]?.value || 'processed',
+      }));
     }
-  }
+  }, [fetchedCommodities, newRun.commodity]);
 
-  async function fetchData() {
-    try {
-      const [runsRes, batchesRes] = await Promise.all([
-        fetch('/api/processing-runs'),
-        fetch('/api/batches')
-      ]);
-      
-      if (runsRes.ok) {
-        const data = await runsRes.json();
-        setProcessingRuns(data.processingRuns || []);
-      }
-      
-      if (batchesRes.ok) {
-        const data = await batchesRes.json();
-        setAvailableBatches(data.batches || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    setSelectedBatches([]);
+    setProcessingCompliance({});
+    setSheetOpen(false);
+  }, [organization?.id]);
 
   async function createProcessingRun() {
     if (!newRun.facility_name || !newRun.input_weight_kg || !newRun.output_weight_kg) {
@@ -210,7 +234,7 @@ export default function ProcessingPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setProcessingRuns([data.processingRun, ...processingRuns]);
+        setProcessingRuns((previous) => [data.processingRun, ...(previous ?? [])]);
         setSheetOpen(false);
         toast({
           title: 'Processing run created',
@@ -288,6 +312,39 @@ export default function ProcessingPage() {
   const totalInputWeight = processingRuns.reduce((sum, r) => sum + (r.input_weight_kg || 0), 0);
   const totalOutputWeight = processingRuns.reduce((sum, r) => sum + (r.output_weight_kg || 0), 0);
   const validRuns = processingRuns.filter(r => r.mass_balance_valid).length;
+
+  if (!loading && loadError) {
+    return (
+      <TierGate feature="processing" requiredTier="pro" featureLabel="Processing Runs">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Processing Runs</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage factory processing runs with mass balance validation</p>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
+              <h2 className="text-lg font-semibold">{tErrors('unableToLoadProcessingData')}</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{loadError}</p>
+              {resourceEnabled && (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => void Promise.all([
+                    refetchRuns(),
+                    refetchBatches(),
+                    refetchCommodities(),
+                  ])}
+                >
+                  {tErrors('tryAgain')}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </TierGate>
+    );
+  }
 
   return (
     <TierGate feature="processing" requiredTier="pro" featureLabel="Processing Runs">

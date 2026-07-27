@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Search, ChevronLeft, ChevronRight, Clock, User, FileText } from 'lucide-react';
+import { Shield, Search, ChevronLeft, ChevronRight, Clock, User, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useTranslations } from 'next-intl';
 
 interface AuditEvent {
   id: string;
@@ -44,40 +47,31 @@ function formatAction(action: string): string {
 }
 
 export function AuditLogContent() {
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [total, setTotal] = useState(0);
+  const tErrors = useTranslations('errors');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [resourceFilter, setResourceFilter] = useState('all');
+  const { organization, isLoading: orgLoading } = useOrg();
 
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: String(page), limit: '30' });
-      if (search) params.set('search', search);
-      if (actionFilter !== 'all') params.set('action', actionFilter);
-      if (resourceFilter !== 'all') params.set('resource_type', resourceFilter);
-
-      const res = await fetch(`/api/audit?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
-      }
-    } catch (error) {
-      console.error('Failed to fetch audit events:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, actionFilter, resourceFilter]);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+  const params = new URLSearchParams({ page: String(page), limit: '30' });
+  if (search) params.set('search', search);
+  if (actionFilter !== 'all') params.set('action', actionFilter);
+  if (resourceFilter !== 'all') params.set('resource_type', resourceFilter);
+  const { data, error: eventsError, loading: eventsLoading, refetch: refetchEvents } = useApiResource<{
+    events: AuditEvent[];
+    total: number;
+    totalPages: number;
+  }>(`/api/audit?${params}`, {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id, page, search, actionFilter, resourceFilter],
+    showErrorToast: false,
+  });
+  const events = data?.events ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
+  const loading = orgLoading || (!!organization?.id && eventsLoading);
 
   useEffect(() => {
     setPage(1);
@@ -87,7 +81,7 @@ export function AuditLogContent() {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Event Timeline</CardTitle>
-        <CardDescription>{total} events recorded</CardDescription>
+        <CardDescription>{eventsError ? tErrors('eventHistoryUnavailable') : `${total} events recorded`}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -122,6 +116,16 @@ export function AuditLogContent() {
         {loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             Loading audit events...
+          </div>
+        ) : eventsError ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="audit-load-error">
+            <AlertTriangle className="mb-4 h-10 w-10 text-destructive" />
+            <h3 className="font-semibold">{tErrors('unableToLoadAuditEvents')}</h3>
+            <p className="mt-1 max-w-md text-sm text-muted-foreground">{eventsError}</p>
+            <Button className="mt-4" variant="outline" size="sm" onClick={() => void refetchEvents()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {tErrors('tryAgain')}
+            </Button>
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -181,7 +185,7 @@ export function AuditLogContent() {
           </div>
         )}
 
-        {totalPages > 1 && (
+        {!eventsError && totalPages > 1 && (
           <div className="flex items-center justify-between mt-6 pt-4 border-t">
             <span className="text-sm text-muted-foreground">
               Page {page} of {totalPages}

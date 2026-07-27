@@ -164,6 +164,7 @@ export const ROLES = {
   COMPLIANCE_ROLES: ['admin', 'quality_manager', 'compliance_officer'] as const,
   DISPATCH_ROLES:   ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'] as const,
   LOGISTICS_ROLES:  ['admin', 'logistics_coordinator', 'warehouse_supervisor'] as const,
+  SHIPMENT_ROLES:   ['admin', 'logistics_coordinator', 'compliance_officer'] as const,
   DOC_ROLES:        ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer'] as const,
   ALL_INTERNAL:     ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator',
                      'compliance_officer', 'warehouse_supervisor'] as const,

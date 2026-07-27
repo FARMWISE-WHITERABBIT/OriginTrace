@@ -177,6 +177,14 @@ const VALID_DOC_TYPES = [
   'other',
 ] as const;
 
+export const DOCUMENT_LINKED_ENTITY_TYPES = [
+  'shipment',
+  'farm',
+  'farmer',
+  'organization',
+  'batch',
+] as const;
+
 export const documentCreateSchema = z.object({
   title:              z.string().min(1).max(200),
   document_type:      z.enum(VALID_DOC_TYPES),
@@ -185,8 +193,8 @@ export const documentCreateSchema = z.object({
   file_size:          emptyAsUndefined(z.number().int().optional().nullable()),
   issued_date:        dateSchema.optional().nullable(),
   expiry_date:        dateSchema.optional().nullable(),
-  linked_entity_type: z.string().max(100).optional().nullable(),
-  linked_entity_id:   z.string().max(200).optional().nullable(),
+  linked_entity_type: z.enum(DOCUMENT_LINKED_ENTITY_TYPES).optional().nullable(),
+  linked_entity_id:   uuidSchema.optional().nullable(),
   shipment_id:        uuidSchema.optional().nullable(),
   notes:              z.string().max(1000).optional().nullable(),
 });

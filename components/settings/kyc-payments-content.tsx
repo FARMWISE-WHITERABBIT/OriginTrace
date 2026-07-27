@@ -16,11 +16,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, BadgeCheck, AlertTriangle, CheckCircle, Landmark } from 'lucide-react';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useTranslations } from 'next-intl';
+
+const EMPTY_KYC_FORM = {
+  cac_registration_number: '',
+  tin: '',
+  rc_number: '',
+  director_name: '',
+  director_id_type: '',
+  director_id_number: '',
+  director_id_url: '',
+  bank_account_number: '',
+  bank_code: '',
+  bank_name: '',
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function KycPaymentsContent({ orgId }: { orgId: string }) {
+export function KycPaymentsContent({ orgId: _orgId }: { orgId: string }) {
   const { toast } = useToast();
+  const { organization } = useOrg();
+  const tErrors = useTranslations('errors');
 
   const [kyc, setKyc] = useState<any>(null);
   const [banks, setBanks] = useState<{ id: number; name: string; code: string }[]>([]);
@@ -28,44 +45,80 @@ export function KycPaymentsContent({ orgId }: { orgId: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [resolvedAccountName, setResolvedAccountName] = useState('');
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
+  const [loadedOrganizationId, setLoadedOrganizationId] = useState<number | null>(null);
 
-  const [form, setForm] = useState({
-    cac_registration_number: '',
-    tin: '',
-    rc_number: '',
-    director_name: '',
-    director_id_type: '',
-    director_id_number: '',
-    director_id_url: '',
-    bank_account_number: '',
-    bank_code: '',
-    bank_name: '',
-  });
+  const [form, setForm] = useState({ ...EMPTY_KYC_FORM });
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/org/kyc').then((r) => r.json()),
-      fetch('/api/org/kyc/banks').then((r) => r.json()),
-    ]).then(([kycData, bankData]) => {
-      if (kycData.kyc) {
-        setKyc(kycData.kyc);
-        setForm({
-          cac_registration_number: kycData.kyc.cac_registration_number ?? '',
-          tin: kycData.kyc.tin ?? '',
-          rc_number: kycData.kyc.rc_number ?? '',
-          director_name: kycData.kyc.director_name ?? '',
-          director_id_type: kycData.kyc.director_id_type ?? '',
-          director_id_number: kycData.kyc.director_id_number ?? '',
-          director_id_url: kycData.kyc.director_id_url ?? '',
-          bank_account_number: kycData.kyc.bank_account_number ?? '',
-          bank_code: kycData.kyc.bank_code ?? '',
-          bank_name: kycData.kyc.bank_name ?? '',
+    if (!organization?.id) {
+      setBootstrapError(tErrors('organizationContextUnavailable'));
+      setIsLoading(false);
+      return;
+    }
+
+    const requestedOrganizationId = organization.id;
+    const controller = new AbortController();
+
+    const loadKyc = async () => {
+      setIsLoading(true);
+      setBootstrapError(null);
+      try {
+        const [kycResponse, bankResponse] = await Promise.all([
+          fetch('/api/org/kyc', { signal: controller.signal }),
+          fetch('/api/org/kyc/banks', { signal: controller.signal }),
+        ]);
+        if (!kycResponse.ok || !bankResponse.ok) {
+          throw new Error(
+            `KYC settings request failed (${kycResponse.status}/${bankResponse.status})`,
+          );
+        }
+        const [kycData, bankData] = await Promise.all([
+          kycResponse.json(),
+          bankResponse.json(),
+        ]);
+        if (controller.signal.aborted) return;
+
+        if (kycData.kyc) {
+          setKyc(kycData.kyc);
+          setForm({
+            cac_registration_number: kycData.kyc.cac_registration_number ?? '',
+            tin: kycData.kyc.tin ?? '',
+            rc_number: kycData.kyc.rc_number ?? '',
+            director_name: kycData.kyc.director_name ?? '',
+            director_id_type: kycData.kyc.director_id_type ?? '',
+            director_id_number: kycData.kyc.director_id_number ?? '',
+            director_id_url: kycData.kyc.director_id_url ?? '',
+            bank_account_number: kycData.kyc.bank_account_number ?? '',
+            bank_code: kycData.kyc.bank_code ?? '',
+            bank_name: kycData.kyc.bank_name ?? '',
+          });
+          setResolvedAccountName(kycData.kyc.bank_account_name ?? '');
+        } else {
+          setKyc(null);
+          setForm({ ...EMPTY_KYC_FORM });
+          setResolvedAccountName('');
+        }
+        setBanks(bankData.banks ?? []);
+        setLoadedOrganizationId(requestedOrganizationId);
+      } catch (error) {
+        if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
+        console.error('Failed to load KYC payment settings:', error);
+        setBootstrapError(tErrors('kycLoadFailed'));
+        toast({
+          title: tErrors('failedToLoadKyc'),
+          description: tErrors('retryBeforeUpdatingKyc'),
+          variant: 'destructive',
         });
-        if (kycData.kyc.bank_account_name) setResolvedAccountName(kycData.kyc.bank_account_name);
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
       }
-      setBanks(bankData.banks ?? []);
-    }).finally(() => setIsLoading(false));
-  }, []);
+    };
+
+    void loadKyc();
+    return () => controller.abort();
+  }, [organization?.id, bootstrapAttempt, toast, tErrors]);
 
   const handleSaveKyc = async () => {
     setIsSaving(true);
@@ -112,7 +165,28 @@ export function KycPaymentsContent({ orgId }: { orgId: string }) {
     rejected:     'bg-red-100 text-red-800',
   };
 
-  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
+  const scopePending = !organization?.id || loadedOrganizationId !== organization.id;
+
+  if ((isLoading || scopePending) && !bootstrapError) {
+    return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
+  }
+
+  if (bootstrapError) {
+    return (
+      <Card role="alert" className="border-destructive/40">
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <AlertTriangle className="h-8 w-8 text-destructive" />
+          <div>
+            <p className="font-medium">{tErrors('unableToLoadKyc')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{bootstrapError}</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => setBootstrapAttempt((attempt) => attempt + 1)}>
+            {tErrors('tryAgain')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -231,14 +305,14 @@ export function KycPaymentsContent({ orgId }: { orgId: string }) {
             </div>
           )}
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleVerifyBank} disabled={isVerifying}>
+            <Button variant="outline" onClick={handleVerifyBank} disabled={isVerifying || isLoading || !!bootstrapError}>
               {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Verify Account
             </Button>
             <Button
               className="bg-green-700 hover:bg-green-800"
               onClick={handleSaveKyc}
-              disabled={isSaving}
+              disabled={isSaving || isLoading || !!bootstrapError}
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save & Submit KYC

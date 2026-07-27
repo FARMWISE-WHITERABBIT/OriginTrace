@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, TrendingUp, TrendingDown, Printer, BarChart3, ShieldCheck, DollarSign, Search } from 'lucide-react';
+import { AlertTriangle, RefreshCw, TrendingUp, TrendingDown, Printer, BarChart3, ShieldCheck, DollarSign, Search } from 'lucide-react';
 import {
   PieDonutChart,
   VerticalBarChart,
@@ -19,6 +19,8 @@ import {
 } from '@/components/charts';
 import { TierGate } from '@/components/tier-gate';
 import { VIZ_COLORS, STATUS_COLORS } from '@/lib/chart-colors';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -31,37 +33,48 @@ export default function AnalyticsPage() {
 }
 
 function AnalyticsContent() {
-  const { organization, profile } = useOrg();
+  const tErrors = useTranslations('errors');
+  const { organization, isLoading: orgLoading } = useOrg();
   const [period, setPeriod] = useState<Period>('30d');
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('operations');
+  const { data, error, loading: analyticsLoading, refetch } = useApiResource<any>(
+    organization ? `/api/analytics?period=${period}&section=all` : null,
+    {
+      enabled: !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id, period],
+      showErrorToast: false,
+    },
+  );
 
-  const fetchAnalytics = useCallback(async () => {
-    if (!organization) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/analytics?period=${period}&section=all`);
-      if (res.ok) {
-        const result = await res.json();
-        setData(result);
-      }
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, period]);
+  const resourceEnabled = !!organization?.id;
+  const isLoading = orgLoading || (resourceEnabled && analyticsLoading);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
-
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]" data-testid="analytics-loading">
         <div className="space-y-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({length:4}).map((_,i)=><div key={i} className="border border-border rounded-xl p-4 bg-card space-y-2"><div className="h-3 w-20 bg-muted animate-pulse rounded"/><div className="h-7 w-24 bg-muted animate-pulse rounded"/></div>)}</div><div className="border border-border rounded-xl p-6 bg-card"><div className="h-48 bg-muted animate-pulse rounded"/></div></div>
       </div>
+    );
+  }
+
+  if (error || !resourceEnabled || !data) {
+    return (
+      <Card className="mx-auto max-w-xl" data-testid="analytics-error">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="text-lg font-semibold">{tErrors('unableToLoadAnalytics')}</h2>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            {error || tErrors('analyticsUnavailable')}
+          </p>
+          {resourceEnabled && (
+            <Button className="mt-4" variant="outline" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {tErrors('tryAgain')}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
