@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,10 +21,13 @@ import {
   Loader2, Search, MapPin, User, Phone, Calendar, Ruler,
   FileCheck, ShieldCheck, ShieldAlert, AlertTriangle, Map,
   Check, X, Clock, FileText, ExternalLink, LayoutList, Globe, Download,
+  RefreshCw,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
 import { TierGate } from '@/components/tier-gate';
 import type { FarmMapFarm } from '@/components/farm-polygon-map';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 const FarmPolygonMap = dynamic(() => import('@/components/farm-polygon-map'), {
   ssr: false,
@@ -93,37 +96,89 @@ function CompletenessChip({ farm }: { farm: Farm }) {
 }
 
 export default function FarmsPage() {
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tErrors = useTranslations('errors');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [selectedFarmState, setSelectedFarmState] = useState<{
+    organizationId: number | null;
+    farm: Farm | null;
+  }>({ organizationId: null, farm: null });
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [reviewFarm, setReviewFarm] = useState<Farm | null>(null);
+  const [reviewFarmState, setReviewFarmState] = useState<{
+    organizationId: number | null;
+    farm: Farm | null;
+  }>({ organizationId: null, farm: null });
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const { organization, profile, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const router = useRouter();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
+  const reviewTokenRef = useRef(0);
+  const selectedFarm = Object.is(selectedFarmState.organizationId, organizationId)
+    ? selectedFarmState.farm
+    : null;
+  const reviewFarm = Object.is(reviewFarmState.organizationId, organizationId)
+    ? reviewFarmState.farm
+    : null;
+  const selectFarm = (farm: Farm | null) => {
+    setSelectedFarmState({ organizationId, farm });
+  };
+  const selectReviewFarm = (farm: Farm | null) => {
+    // Closing or replacing the review target invalidates any in-flight
+    // response for the previous farm, even when the organization is unchanged.
+    ++reviewTokenRef.current;
+    setIsSubmitting(false);
+    setReviewFarmState({ organizationId, farm });
+  };
+
+  useEffect(() => {
+    ++reviewTokenRef.current;
+    setSelectedFarmState({ organizationId, farm: null });
+    setReviewFarmState({ organizationId, farm: null });
+    setSheetOpen(false);
+    setReviewNotes('');
+    setIsSubmitting(false);
+  }, [organizationId]);
+
+  const {
+    data: fetchedFarms,
+    loading: farmsLoading,
+    error: farmsError,
+    refetch: refetchFarms,
+    setData: setFarms,
+  } = useApiResource<Farm[]>('/api/farms', {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id],
+    showErrorToast: false,
+    select: (raw) => (raw as { farms?: Farm[] }).farms || [],
+  });
+  const farms = fetchedFarms ?? [];
+  const isLoading = orgLoading || (!!organization?.id && farmsLoading);
+
+  if (!isLoading && farmsError) {
+    return (
+      <div className="p-6">
+        <Card className="mx-auto max-w-xl" data-testid="farms-load-error">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
+            <h2 className="text-lg font-semibold">{tErrors('unableToLoadFarms')}</h2>
+            <p className="mt-1 max-w-md text-sm text-muted-foreground">{farmsError}</p>
+            <Button className="mt-4" variant="outline" onClick={() => void refetchFarms()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {tErrors('tryAgain')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const isReviewer = profile?.role === 'admin' || profile?.role === 'quality_manager' || profile?.role === 'compliance_officer';
-
-  const fetchFarms = useCallback(async () => {
-    if (orgLoading || !organization) { setIsLoading(false); return; }
-    try {
-      const res = await fetch('/api/farms');
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      const data = await res.json();
-      setFarms(data.farms || []);
-    } catch (e) {
-      console.error('Failed to fetch farms:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, orgLoading]);
-
-  useEffect(() => { fetchFarms(); }, [fetchFarms]);
 
   const pendingCount = farms.filter(f => f.compliance_status === 'pending').length;
 
@@ -164,24 +219,37 @@ export default function FarmsPage() {
   });
 
   const submitReview = async (status: 'approved' | 'rejected') => {
-    if (!reviewFarm) return;
+    const farmToReview = reviewFarm;
+    const requestOrganizationId = organizationId;
+    if (!farmToReview || requestOrganizationId === null) return;
+    const requestToken = ++reviewTokenRef.current;
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/farms', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: reviewFarm.id, compliance_status: status, compliance_notes: reviewNotes || null }),
+        body: JSON.stringify({ id: farmToReview.id, compliance_status: status, compliance_notes: reviewNotes || null }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      toast({ title: status === 'approved' ? 'Farm Approved' : 'Farm Rejected', description: `${reviewFarm.farmer_name}'s farm has been ${status}.` });
-      setFarms(prev => prev.map(f => f.id === reviewFarm.id ? { ...f, compliance_status: status, compliance_notes: reviewNotes || null } : f));
-      if (selectedFarm?.id === reviewFarm.id) setSelectedFarm(prev => prev ? { ...prev, compliance_status: status } : null);
-      setReviewFarm(null);
+      if (
+        activeOrganizationIdRef.current !== requestOrganizationId ||
+        reviewTokenRef.current !== requestToken
+      ) return;
+      toast({ title: status === 'approved' ? 'Farm Approved' : 'Farm Rejected', description: `${farmToReview.farmer_name}'s farm has been ${status}.` });
+      setFarms(prev => (prev ?? []).map(f => f.id === farmToReview.id ? { ...f, compliance_status: status, compliance_notes: reviewNotes || null } : f));
+      setSelectedFarmState((previous) => previous.organizationId === requestOrganizationId && previous.farm?.id === farmToReview.id
+        ? { ...previous, farm: { ...previous.farm, compliance_status: status } }
+        : previous);
+      selectReviewFarm(null);
       setReviewNotes('');
     } catch {
+      if (
+        activeOrganizationIdRef.current !== requestOrganizationId ||
+        reviewTokenRef.current !== requestToken
+      ) return;
       toast({ title: 'Error', description: 'Failed to update farm status', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+      if (reviewTokenRef.current === requestToken) setIsSubmitting(false);
     }
   };
 
@@ -245,7 +313,7 @@ export default function FarmsPage() {
       </div>
       {isReviewer && farm.compliance_status === 'pending' && (
         <Button className="w-full" size="sm"
-          onClick={() => { setReviewFarm(farm); setReviewNotes(''); setSheetOpen(false); }}>
+          onClick={() => { selectReviewFarm(farm); setReviewNotes(''); setSheetOpen(false); }}>
           Review This Farm
         </Button>
       )}
@@ -322,7 +390,7 @@ export default function FarmsPage() {
                     <button
                       key={farm.id}
                       className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors"
-                      onClick={() => setSelectedFarm(farm)}
+                      onClick={() => selectFarm(farm)}
                       data-testid={`farm-list-row-${farm.id}`}
                     >
                       <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{
@@ -347,7 +415,7 @@ export default function FarmsPage() {
                 <div className="flex-1 overflow-y-auto">
                   <div className="p-3 border-b flex items-center gap-2">
                     <button
-                      onClick={() => setSelectedFarm(null)}
+                      onClick={() => selectFarm(null)}
                       className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                     >
                       ← All farms
@@ -368,7 +436,7 @@ export default function FarmsPage() {
             <FarmPolygonMap
               farms={filteredFarms}
               selectedFarmId={selectedFarm?.id}
-              onSelectFarm={(farm) => setSelectedFarm(farm as Farm | null)}
+              onSelectFarm={(farm) => selectFarm(farm as Farm | null)}
               loading={isLoading}
             />
           </div>
@@ -473,7 +541,7 @@ export default function FarmsPage() {
                               key={farm.id}
                               data-testid={`farm-row-${farm.id}`}
                               className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => { setSelectedFarm(farm); setSheetOpen(true); }}
+                              onClick={() => { selectFarm(farm); setSheetOpen(true); }}
                             >
                               <TableCell className="font-medium">{farm.farmer_name}</TableCell>
                               <TableCell className="text-muted-foreground">{farm.community}</TableCell>
@@ -503,7 +571,7 @@ export default function FarmsPage() {
                                   </Button>
                                   {isReviewer && farm.compliance_status === 'pending' && (
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" title="Review"
-                                      onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
+                                      onClick={() => { selectReviewFarm(farm); setReviewNotes(''); }}
                                       data-testid={`button-review-${farm.id}`}>
                                       <Clock className="h-3.5 w-3.5" />
                                     </Button>
@@ -566,7 +634,7 @@ export default function FarmsPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">Registered {new Date(farm.created_at).toLocaleDateString()}</p>
                             <Button className="w-full" size="sm"
-                              onClick={() => { setReviewFarm(farm); setReviewNotes(''); }}
+                              onClick={() => { selectReviewFarm(farm); setReviewNotes(''); }}
                               data-testid={`button-review-${farm.id}`}>
                               Review Farm
                             </Button>
@@ -600,7 +668,7 @@ export default function FarmsPage() {
       </Sheet>
 
       {/* ── REVIEW DIALOG ── */}
-      <Dialog open={!!reviewFarm} onOpenChange={open => !open && setReviewFarm(null)}>
+      <Dialog open={!!reviewFarm} onOpenChange={open => !open && selectReviewFarm(null)}>
         {(() => {
           const completeness = reviewFarm
             ? computeCompleteness(reviewFarm)

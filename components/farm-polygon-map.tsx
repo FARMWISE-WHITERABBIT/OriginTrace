@@ -153,7 +153,7 @@ export default function FarmPolygonMap({ farms, selectedFarmId, onSelectFarm, lo
               tiles={['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}']}
               tileSize={256}
             >
-              <Layer id="satellite-layer" type="raster" paint={{ 'raster-opacity': 1 }} beforeId="farms-fill" />
+              <Layer id="satellite-layer" type="raster" paint={{ 'raster-opacity': 1 }} />
             </Source>
           )}
 

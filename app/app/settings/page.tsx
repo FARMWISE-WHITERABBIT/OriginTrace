@@ -35,6 +35,8 @@ import { ApiKeysContent } from '@/components/settings/api-keys-content';
 import { IntegrationsContent } from '@/components/settings/integrations-content';
 import { ComplianceProfilesSection } from '@/components/settings/compliance-profiles-content';
 import { KycPaymentsContent } from '@/components/settings/kyc-payments-content';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 interface OrgSettings {
   require_polygon?: boolean;
@@ -92,6 +94,7 @@ interface Organization {
   active_lgas?: number[];
   subscription_status?: string;
   data_region?: string;
+  brand_colors?: { primary?: string; secondary?: string; accent?: string } | null;
 }
 
 interface State {
@@ -368,6 +371,7 @@ function CurrencyPreferenceSection() {
 
 function SettingsContent() {
   const { profile, organization, isLoading, refreshProfile } = useOrg();
+  const tErrors = useTranslations('errors');
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawTab = searchParams?.get('tab') || 'general';
@@ -400,7 +404,72 @@ function SettingsContent() {
   const [lgas, setLgas] = useState<Lga[]>([]);
   const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
   const [activeLgas, setActiveLgas] = useState<number[]>([]);
+  const [hydratedSettingsOrgId, setHydratedSettingsOrgId] = useState<number | null>(null);
+  const [hydratedCommoditiesOrgId, setHydratedCommoditiesOrgId] = useState<number | null>(null);
   const { toast } = useToast();
+  const isAdminProfile = profile?.role === 'admin';
+
+  const {
+    data: fetchedOrgData,
+    error: orgSettingsError,
+    loading: orgSettingsLoading,
+    refetch: fetchOrgSettings,
+  } = useApiResource<Organization>(
+    '/api/settings',
+    {
+      enabled: isAdminProfile && !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => (raw as { organization: Organization }).organization,
+    },
+  );
+  const { data: fetchedStates } = useApiResource<State[]>('/api/locations', {
+    enabled: isAdminProfile,
+    showErrorToast: false,
+    select: (raw) => (raw as { states?: State[] }).states || [],
+  });
+  const {
+    data: fetchedCommodities,
+    error: commoditiesError,
+    loading: commoditiesLoading,
+    refetch: fetchAvailableCommodities,
+  } = useApiResource<Commodity[]>(
+    '/api/commodities',
+    {
+      enabled: isAdminProfile && !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => {
+        const commodityList = (raw as { commodities?: Array<Commodity & {
+          slug?: string;
+          code?: string;
+          org_id?: string | null;
+          is_global?: boolean;
+          dbId?: string;
+        }> }).commodities;
+        if (!Array.isArray(commodityList)) return [];
+        return commodityList.map((commodity) => ({
+          id: commodity.slug || commodity.code?.toLowerCase() || commodity.name.toLowerCase().replace(/\s+/g, '_'),
+          name: commodity.name,
+          grades: commodity.grades || [],
+          unit: commodity.unit || 'kg',
+          dbId: commodity.dbId || commodity.id,
+          isGlobal: commodity.org_id === null || commodity.is_global || false,
+        }));
+      },
+    },
+  );
+  const { data: fetchedLgas } = useApiResource<Lga[]>(
+    selectedStateId ? `/api/locations?state_id=${selectedStateId}` : null,
+    {
+      enabled: isAdminProfile && selectedStateId !== null,
+      deps: [selectedStateId],
+      showErrorToast: false,
+      select: (raw) => (raw as { lgas?: Lga[] }).lgas || [],
+    },
+  );
 
   useEffect(() => {
     if (profile?.full_name) {
@@ -409,95 +478,37 @@ function SettingsContent() {
   }, [profile]);
 
   useEffect(() => {
-    if (profile?.role === 'admin') {
-      fetchOrgSettings();
-      fetchStates();
-      fetchAvailableCommodities();
-    }
-  }, [profile]);
-
-  const fetchAvailableCommodities = async () => {
-    try {
-      const res = await fetch('/api/commodities');
-      if (res.ok) {
-        const data = await res.json();
-        const commodityList = data.commodities || [];
-        if (Array.isArray(commodityList)) {
-          const mapped = commodityList.map((c: any) => ({
-            id: c.slug || c.name.toLowerCase().replace(/\s+/g, '_'),
-            name: c.name,
-            grades: c.grades || [],
-            unit: c.unit || 'kg',
-            dbId: c.id,
-            isGlobal: c.org_id === null || c.is_global || false,
-          }));
-          setAvailableCommodities(mapped);
-          const orgSpecific = mapped.filter((c: any) => !c.isGlobal);
-          setCustomCommodities(orgSpecific);
-          return;
-        }
-      }
-      setAvailableCommodities([]);
-      setCustomCommodities([]);
-    } catch {
-      setAvailableCommodities([]);
-      setCustomCommodities([]);
-    }
-  };
+    if (!fetchedOrgData) return;
+    setOrgData(fetchedOrgData);
+    setOrgName(fetchedOrgData.name || '');
+    setLogoUrl(fetchedOrgData.logo_url || '');
+    setLogoPreview(fetchedOrgData.logo_url || '');
+    setSettings(fetchedOrgData.settings || {});
+    setSelectedCommodities(fetchedOrgData.commodity_types || []);
+    setActiveLgas(fetchedOrgData.active_lgas || []);
+    const colors = fetchedOrgData.brand_colors;
+    setBrandColors({
+      primary: colors?.primary || '',
+      secondary: colors?.secondary || '',
+      accent: colors?.accent || '',
+    });
+    if (organization?.id) setHydratedSettingsOrgId(organization.id);
+  }, [fetchedOrgData, organization?.id]);
 
   useEffect(() => {
-    if (selectedStateId) {
-      fetchLgas(selectedStateId);
-    }
-  }, [selectedStateId]);
+    if (fetchedStates) setStates(fetchedStates);
+  }, [fetchedStates]);
 
-  const fetchOrgSettings = async () => {
-    try {
-      const response = await fetch('/api/settings');
-      if (response.ok) {
-        const data = await response.json();
-        setOrgData(data.organization);
-        setOrgName(data.organization.name || '');
-        setLogoUrl(data.organization.logo_url || '');
-        setLogoPreview(data.organization.logo_url || '');
-        setSettings(data.organization.settings || {});
-        setSelectedCommodities(data.organization.commodity_types || []);
-        setActiveLgas(data.organization.active_lgas || []);
-        const bc = data.organization.brand_colors;
-        if (bc && typeof bc === 'object') {
-          setBrandColors({ primary: bc.primary || '', secondary: bc.secondary || '', accent: bc.accent || '' });
-        } else {
-          setBrandColors({ primary: '', secondary: '', accent: '' });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch org settings:', error);
-    }
-  };
+  useEffect(() => {
+    if (!fetchedCommodities) return;
+    setAvailableCommodities(fetchedCommodities);
+    setCustomCommodities(fetchedCommodities.filter((commodity: any) => !commodity.isGlobal));
+    if (organization?.id) setHydratedCommoditiesOrgId(organization.id);
+  }, [fetchedCommodities, organization?.id]);
 
-  const fetchStates = async () => {
-    try {
-      const response = await fetch('/api/locations');
-      if (response.ok) {
-        const data = await response.json();
-        setStates(data.states || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch states:', error);
-    }
-  };
-
-  const fetchLgas = async (stateId: number) => {
-    try {
-      const response = await fetch(`/api/locations?state_id=${stateId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setLgas(data.lgas || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch LGAs:', error);
-    }
-  };
+  useEffect(() => {
+    setLgas(fetchedLgas || []);
+  }, [fetchedLgas]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -838,6 +849,37 @@ function SettingsContent() {
   }
 
   const isAdmin = profile.role === 'admin';
+
+  const tenantSettingsError = orgSettingsError || commoditiesError;
+  const tenantSettingsReady = hydratedSettingsOrgId === organization.id
+    && hydratedCommoditiesOrgId === organization.id;
+
+  if (isAdmin && tenantSettingsError) {
+    return (
+      <Card role="alert" className="mx-auto max-w-xl border-destructive/40">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <h2 className="text-lg font-semibold">{tErrors('unableToLoadSettings')}</h2>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">{tenantSettingsError}</p>
+          <Button
+            className="mt-4"
+            variant="outline"
+            onClick={() => void Promise.all([fetchOrgSettings(), fetchAvailableCommodities()])}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {tErrors('tryAgain')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isAdmin && (orgSettingsLoading || commoditiesLoading || !tenantSettingsReady)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const TAB_LABELS: Record<string, string> = {
     general:      'General',

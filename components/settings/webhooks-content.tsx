@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Webhook, Plus, Trash2, Copy, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useTranslations } from 'next-intl';
 
 interface WebhookEndpoint {
   id: string;
@@ -31,10 +34,6 @@ interface WebhookDelivery {
 }
 
 export function WebhooksContent() {
-  const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
-  const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
-  const [availableEvents, setAvailableEvents] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -42,26 +41,38 @@ export function WebhooksContent() {
   const [creating, setCreating] = useState(false);
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchWebhooks();
-  }, []);
-
-  const fetchWebhooks = async () => {
-    try {
-      const res = await fetch('/api/webhooks');
-      if (res.ok) {
-        const data = await res.json();
-        setEndpoints(data.endpoints || []);
-        setDeliveries(data.deliveries || []);
-        setAvailableEvents(data.availableEvents || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch webhooks:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { organization, isLoading: orgLoading } = useOrg();
+  const tErrors = useTranslations('errors');
+  const {
+    data: webhookData,
+    error: webhooksError,
+    loading,
+    refetch: fetchWebhooks,
+  } = useApiResource<{
+    endpoints: WebhookEndpoint[];
+    deliveries: WebhookDelivery[];
+    availableEvents: string[];
+  }>('/api/webhooks', {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id],
+    showErrorToast: false,
+    select: (raw) => {
+      const data = raw as {
+        endpoints?: WebhookEndpoint[];
+        deliveries?: WebhookDelivery[];
+        availableEvents?: string[];
+      };
+      return {
+        endpoints: data.endpoints || [],
+        deliveries: data.deliveries || [],
+        availableEvents: data.availableEvents || [],
+      };
+    },
+  });
+  const endpoints = webhookData?.endpoints ?? [];
+  const deliveries = webhookData?.deliveries ?? [];
+  const availableEvents = webhookData?.availableEvents ?? [];
 
   const handleCreate = async () => {
     if (!newUrl || selectedEvents.length === 0) return;
@@ -93,11 +104,22 @@ export function WebhooksContent() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/webhooks?id=${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/webhooks?id=${id}`, { method: 'DELETE' });
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = body && typeof body === 'object' && 'error' in body
+          ? String((body as { error: unknown }).error)
+          : tErrors('failedToDeleteWebhook');
+        throw new Error(message);
+      }
       toast({ title: 'Webhook Deleted' });
-      fetchWebhooks();
+      await fetchWebhooks();
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : tErrors('failedToDeleteWebhook'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -107,12 +129,30 @@ export function WebhooksContent() {
     );
   };
 
-  if (loading) {
+  if ((orgLoading || (!!organization?.id && loading)) && webhookData === null) {
     return <div className="flex items-center justify-center py-12 text-muted-foreground">Loading webhooks...</div>;
   }
 
+  const resourceError = webhooksError ? (
+    <Card role="alert" className="border-destructive/40">
+      <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+        <XCircle className="h-7 w-7 text-destructive" />
+        <div>
+          <p className="font-medium">{tErrors('unableToLoadWebhooks')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{webhooksError}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => void fetchWebhooks()}>
+          {tErrors('tryAgain')}
+        </Button>
+      </CardContent>
+    </Card>
+  ) : null;
+
+  if (resourceError && webhookData === null) return resourceError;
+
   return (
     <div className="space-y-6">
+      {resourceError}
       {newSecret && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-4">

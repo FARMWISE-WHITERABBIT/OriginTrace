@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FarmerTableSkeleton } from '@/components/skeletons';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -16,10 +16,13 @@ import {
   Loader2, Users, Search, MapPin, Package, TrendingUp,
   CheckCircle2, Clock, AlertCircle, LayoutList, LayoutGrid,
   ArrowUpDown, ChevronUp, ChevronDown, Scale, Star, Map,
-  Download, UserPlus, Eye, SlidersHorizontal, X,
+  Download, UserPlus, Eye, SlidersHorizontal, X, RefreshCw,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TierGate } from '@/components/tier-gate';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useTranslations } from 'next-intl';
 
 interface FarmerLedger {
   farm_id: number;
@@ -72,14 +75,55 @@ function relativeDate(dateStr: string | null): string {
 }
 
 export default function FarmersPage() {
+  const tErrors = useTranslations('errors');
   const router = useRouter();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const toggleSelect = (id: number) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = (ids: number[]) => setSelected(p => p.size === ids.length && ids.every(id => p.has(id)) ? new Set() : new Set(ids));
-  const [commodityColorMap, setCommodityColorMap] = useState<Record<string, string>>({});
-  const [farmers, setFarmers] = useState<FarmerLedger[]>([]);
+  const { organization, isLoading: orgLoading } = useOrg();
+  const resourceEnabled = !!organization?.id;
+  const {
+    data: fetchedFarmers,
+    error: farmersError,
+    loading: farmersLoading,
+    refetch: refetchFarmers,
+  } = useApiResource<FarmerLedger[]>(
+    '/api/farmers',
+    {
+      enabled: resourceEnabled,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => (raw as { farmers?: FarmerLedger[] }).farmers || [],
+    },
+  );
+  const { data: fetchedCommodityColors } = useApiResource<Record<string, string>>(
+    '/api/commodities',
+    {
+      enabled: resourceEnabled,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      select: (raw) => {
+        const colorMap: Record<string, string> = {};
+        const commodities = (raw as { commodities?: Array<{ slug?: string; name: string }> }).commodities || [];
+        commodities.forEach((commodity, index) => {
+          const color = BADGE_COLORS[index % BADGE_COLORS.length];
+          const key = (commodity.name || commodity.slug || '').toLowerCase();
+          colorMap[key] = color;
+          if (commodity.slug) colorMap[commodity.slug.toLowerCase()] = color;
+        });
+        return colorMap;
+      },
+    },
+  );
+  const farmers = fetchedFarmers || [];
+  const commodityColorMap = fetchedCommodityColors || {};
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const isLoading = orgLoading || (resourceEnabled && farmersLoading);
+  const loadError = farmersError || (!orgLoading && !resourceEnabled
+    ? tErrors('noOrganizationSelected')
+    : null);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [sortKey, setSortKey] = useState<SortKey>('farmer_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -88,37 +132,6 @@ export default function FarmersPage() {
   const [lastCollectionFilter, setLastCollectionFilter] = useState<string>('all');
   const [frequencyFilter, setFrequencyFilter] = useState<string>('all');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
-  useEffect(() => {
-    fetchFarmers();
-    // Fetch commodities to build dynamic color map
-    fetch('/api/commodities')
-      .then(r => r.ok ? r.json() : { commodities: [] })
-      .then(d => {
-        const map: Record<string, string> = {};
-        (d.commodities || []).forEach((c: { slug?: string; name: string }, i: number) => {
-          const key = (c.name || c.slug || '').toLowerCase();
-          map[key] = BADGE_COLORS[i % BADGE_COLORS.length];
-          if (c.slug) map[c.slug.toLowerCase()] = BADGE_COLORS[i % BADGE_COLORS.length];
-        });
-        setCommodityColorMap(map);
-      })
-      .catch(() => {});
-  }, []);
-
-  const fetchFarmers = async () => {
-    try {
-      const response = await fetch('/api/farmers');
-      if (response.ok) {
-        const data = await response.json();
-        setFarmers(data.farmers || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch farmers:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -265,6 +278,23 @@ export default function FarmersPage() {
               <FarmerTableSkeleton rows={8} />
             </table>
           </div>
+        </div>
+      ) : loadError ? (
+        <div className="p-6 space-y-6">
+          {headerContent}
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+              <h2 className="text-lg font-semibold">{tErrors('unableToLoadFarmers')}</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{loadError}</p>
+              {resourceEnabled && (
+                <Button className="mt-4" variant="outline" onClick={() => void refetchFarmers()}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {tErrors('tryAgain')}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <div className="p-6 space-y-6">
