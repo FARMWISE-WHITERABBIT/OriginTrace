@@ -5,6 +5,7 @@ import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { requireRole, ROLES } from '@/lib/rbac';
 import { COMPLIANCE_TEMPLATES } from '@/lib/compliance-templates';
+import { buyerProfileCustomRulesSchema } from '@/lib/compliance/buyer-profile';
 
 // Convert shared ComplianceTemplate format to the legacy TEMPLATES format expected by this route
 const TEMPLATES = Object.fromEntries(
@@ -117,9 +118,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'];
+    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom'];
     if (!validFrameworks.includes(regulation_framework)) {
       return NextResponse.json({ error: 'Invalid regulation_framework' }, { status: 400 });
+    }
+
+    if (
+      custom_rules &&
+      typeof custom_rules === 'object' &&
+      'buyer_profile' in custom_rules &&
+      !buyerProfileCustomRulesSchema.safeParse(custom_rules).success
+    ) {
+      return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
     }
 
     const { data: created, error } = await supabaseAdmin

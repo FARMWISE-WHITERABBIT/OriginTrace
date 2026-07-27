@@ -239,7 +239,7 @@ async function addShipmentUpstream(supabase: any, orgId: string, shipmentId: str
       if (lotItems) {
         for (const item of lotItems) {
           if (item.batch_id) {
-            await addBatchUpstream(supabase, String(item.batch_id), shipNodeId, graph);
+            await addBatchUpstream(supabase, orgId, String(item.batch_id), shipNodeId, graph);
           }
         }
       }
@@ -249,24 +249,32 @@ async function addShipmentUpstream(supabase: any, orgId: string, shipmentId: str
   const { data: shipmentItems } = await supabase
     .from('shipment_items')
     .select('id, batch_id, weight_kg')
-    .eq('shipment_id', shipmentId);
+    .eq('shipment_id', shipmentId)
+    .eq('org_id', orgId);
 
   if (shipmentItems) {
     for (const si of shipmentItems) {
       if (si.batch_id) {
-        await addBatchUpstream(supabase, String(si.batch_id), shipNodeId, graph);
+        await addBatchUpstream(supabase, orgId, String(si.batch_id), shipNodeId, graph);
       }
     }
   }
 }
 
-async function addBatchUpstream(supabase: any, batchId: string, downstreamNodeId: string, graph: GraphBuilder) {
+async function addBatchUpstream(
+  supabase: any,
+  orgId: string,
+  batchId: string,
+  downstreamNodeId: string,
+  graph: GraphBuilder
+) {
   const batchNodeId = `batch-${batchId}`;
   if (!graph.hasNode(batchNodeId)) {
     const { data: batch } = await supabase
       .from('collection_batches')
       .select('id, status, total_weight, farm_id, farms(id, farmer_name, community, commodity)')
       .eq('id', batchId)
+      .eq('org_id', orgId)
       .single();
     if (!batch) return;
     graph.addNode({
@@ -388,7 +396,11 @@ async function buildFullGraph(supabase: any, orgId: string, graph: GraphBuilder)
         }
       }
 
-      const { data: shipmentItems } = await supabase.from('shipment_items').select('batch_id').eq('shipment_id', s.id);
+      const { data: shipmentItems } = await supabase
+        .from('shipment_items')
+        .select('batch_id')
+        .eq('shipment_id', s.id)
+        .eq('org_id', orgId);
       if (shipmentItems) {
         for (const si of shipmentItems) {
           if (si.batch_id) {
@@ -434,6 +446,7 @@ async function buildBuyerGraph(supabase: any, buyerOrgId: string, shipmentId: st
         .from('shipments')
         .select('id, shipment_code, destination_country, total_weight_kg, status')
         .eq('id', cs.shipment_id)
+        .eq('org_id', contract.exporter_org_id)
         .single();
 
       if (!shipment) continue;
@@ -445,27 +458,13 @@ async function buildBuyerGraph(supabase: any, buyerOrgId: string, shipmentId: st
       });
       graph.addEdge({ source: shipNodeId, target: `buyer-${buyerOrgId}`, label: contract.contract_reference });
 
-      const { data: lots } = await supabase
-        .from('shipment_lots')
-        .select('id')
-        .eq('shipment_id', shipment.id);
-
-      if (lots) {
-        for (const lot of lots) {
-          const { data: lotItems } = await supabase
-            .from('shipment_lot_items')
-            .select('batch_id')
-            .eq('lot_id', lot.id);
-
-          if (lotItems) {
-            for (const li of lotItems) {
-              if (li.batch_id) {
-                await addBatchUpstream(supabase, String(li.batch_id), shipNodeId, graph);
-              }
-            }
-          }
-        }
-      }
+      await addShipmentUpstream(
+        supabase,
+        contract.exporter_org_id,
+        shipment.id,
+        shipNodeId,
+        graph
+      );
     }
   }
 }

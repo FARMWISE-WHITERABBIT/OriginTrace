@@ -1,3 +1,5 @@
+import type { BuyerRequirementCheck } from '@/lib/compliance/buyer-profile';
+
 export interface ComplianceProfile {
   id: string;
   name: string;
@@ -72,6 +74,7 @@ export interface ScoreDimension {
   score: number;
   weighted_score: number;
   details: string[];
+  requirement_checks?: BuyerRequirementCheck[];
 }
 
 export interface RiskFlag {
@@ -117,4 +120,5 @@ export interface FrameworkScorerResult {
   details: string[];
   riskFlags: RiskFlag[];
   remediation: RemediationItem[];
+  requirementChecks?: BuyerRequirementCheck[];
 }

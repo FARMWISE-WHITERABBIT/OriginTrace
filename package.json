@@ -31,6 +31,7 @@
     "seed:qa": "tsx scripts/seed-qa-users.ts",
     "seed:qa:data": "tsx scripts/seed-qa-entities.ts",
     "seed:qa:wipe": "tsx scripts/seed-qa-users.ts --wipe",
+    "seed:dutch-demo": "tsx scripts/seed-dutch-buyer-demo.ts",
     "seed:reset-all": "bash scripts/reset-and-seed.sh"
   },
   "dependencies": {

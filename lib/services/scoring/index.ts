@@ -20,6 +20,7 @@ import { scoreFSMA204 } from './fsma204';
 import { scoreUKEnvironmentAct } from './uk-environment';
 import { scoreLaceyUFLPA } from './lacey-uflpa';
 import { scoreBuyerStandards } from './buyer-standards';
+import { parseBuyerProfileMetadata } from '@/lib/compliance/buyer-profile';
 import { scoreChinaGreenTrade } from './china-green-trade';
 import { scoreUAEHalal } from './uae-halal';
 
@@ -382,12 +383,13 @@ function scoreStorageHandling(
 
 function scoreRegulatoryAlignment(
   input: ShipmentScoreInput
-): { score: number; details: string[]; riskFlags: RiskFlag[]; remediation: RemediationItem[] } {
+): { score: number; details: string[]; riskFlags: RiskFlag[]; remediation: RemediationItem[]; requirementChecks?: import('@/lib/compliance/buyer-profile').BuyerRequirementCheck[] } {
   const { shipment, items } = input;
   const { target_regulations, doc_status } = shipment;
   const details: string[] = [];
   const riskFlags: RiskFlag[] = [];
   const remediation: RemediationItem[] = [];
+  let requirementChecks: import('@/lib/compliance/buyer-profile').BuyerRequirementCheck[] | undefined;
 
   const profile = input.compliance_profile;
 
@@ -430,6 +432,7 @@ function scoreRegulatoryAlignment(
   };
 
   const regulationScores: number[] = [];
+  let buyerStandardsScored = false;
 
   for (const reg of effectiveRegulations) {
     const regLower = reg.toLowerCase();
@@ -449,6 +452,7 @@ function scoreRegulatoryAlignment(
       result = scoreUAEHalal(ctx);
     } else if (regLower.includes('buyer') || regLower.includes('custom')) {
       result = scoreBuyerStandards(ctx);
+      buyerStandardsScored = true;
     } else {
       let met = 0;
       const total = 1;
@@ -469,7 +473,17 @@ function scoreRegulatoryAlignment(
     details.push(...result.details);
     riskFlags.push(...result.riskFlags);
     remediation.push(...result.remediation);
+    if (result.requirementChecks) requirementChecks = result.requirementChecks;
     regulationScores.push(result.total > 0 ? (result.met / result.total) * 100 : 100);
+  }
+
+  if (profile && parseBuyerProfileMetadata(profile.custom_rules) && !buyerStandardsScored) {
+    const buyerResult = scoreBuyerStandards(ctx);
+    details.push(...buyerResult.details);
+    riskFlags.push(...buyerResult.riskFlags);
+    remediation.push(...buyerResult.remediation);
+    requirementChecks = buyerResult.requirementChecks;
+    regulationScores.push(buyerResult.total > 0 ? (buyerResult.met / buyerResult.total) * 100 : 100);
   }
 
   let score = regulationScores.reduce((sum, s) => sum + s, 0) / regulationScores.length;
@@ -513,7 +527,7 @@ function scoreRegulatoryAlignment(
     details.push('Clean compliance track record (0% rejection rate)');
   }
 
-  return { score: clamp(score, 0, 100), details, riskFlags, remediation };
+  return { score: clamp(score, 0, 100), details, riskFlags, remediation, requirementChecks };
 }
 
 function checkHardFails(input: ShipmentScoreInput, traceabilityScore: number): RiskFlag[] {
@@ -652,13 +666,19 @@ export function computeShipmentReadiness(input: ShipmentScoreInput): ShipmentRea
     { name: 'Regulatory Alignment',          weight: DIMENSION_WEIGHTS.REGULATORY_ALIGNMENT,        result: regulatory },
   ];
 
-  const dimensions: ScoreDimension[] = dimensionResults.map((d) => ({
-    name: d.name,
-    weight: d.weight,
-    score: Math.round(d.result.score * 100) / 100,
-    weighted_score: Math.round(d.result.score * d.weight * 100) / 100,
-    details: d.result.details,
-  }));
+  const dimensions: ScoreDimension[] = dimensionResults.map((d) => {
+    const dimension: ScoreDimension = {
+      name: d.name,
+      weight: d.weight,
+      score: Math.round(d.result.score * 100) / 100,
+      weighted_score: Math.round(d.result.score * d.weight * 100) / 100,
+      details: d.result.details,
+    };
+    if ('requirementChecks' in d.result && Array.isArray(d.result.requirementChecks)) {
+      dimension.requirement_checks = d.result.requirementChecks;
+    }
+    return dimension;
+  });
 
   for (const d of dimensionResults) {
     allRiskFlags.push(...d.result.riskFlags);
