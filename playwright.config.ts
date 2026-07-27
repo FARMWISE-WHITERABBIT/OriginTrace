@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { getE2eBaseUrl } from './tests/e2e/helpers/local-environment';
 
-const rawBaseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
-const baseURL = rawBaseURL.replace('http://127.0.0.1:5000', 'http://localhost:5000');
+const baseURL = getE2eBaseUrl();
 
 /**
  * Playwright E2E configuration — Session 10
@@ -15,10 +15,10 @@ const baseURL = rawBaseURL.replace('http://127.0.0.1:5000', 'http://localhost:50
  *   npx playwright test tests/e2e/auth.spec.ts   (single file)
  *   npx playwright show-report             (HTML report)
  *
- * Credentials (set in .env.test or env vars):
- *   E2E_BASE_URL      — defaults to Replit URL below
- *   E2E_ADMIN_EMAIL   — defaults to obemog@gmail.com
- *   E2E_ADMIN_PASSWORD
+ * Credentials (set in environment variables for local QA only):
+ *   E2E_BASE_URL       — http://localhost:5000 or http://127.0.0.1:5000
+ *   E2E_ADMIN_EMAIL    — optional .test user; defaults to admin@demo.test
+ *   E2E_ADMIN_PASSWORD - optional local demo password
  */
 
 export default defineConfig({

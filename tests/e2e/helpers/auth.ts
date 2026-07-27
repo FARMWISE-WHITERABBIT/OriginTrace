@@ -7,12 +7,19 @@
  * intentionally tests the login flow with a fresh browser context.
  */
 
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import {
+  assertLocalE2eEnvironment,
+  getLocalE2eAdminCredentials,
+} from './local-environment';
 
-export const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    || 'obemog@gmail.com';
-export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'IloveCloudsC69@';
+const adminCredentials = getLocalE2eAdminCredentials();
+
+export const ADMIN_EMAIL = adminCredentials.email;
+export const ADMIN_PASSWORD = adminCredentials.password;
 
 export async function loginAsAdmin(page: Page) {
+  assertLocalE2eEnvironment();
   await page.goto('/auth/login');
   await page.locator('#email').waitFor({ state: 'visible' });
   await page.locator('#email').fill(ADMIN_EMAIL);
@@ -22,6 +29,7 @@ export async function loginAsAdmin(page: Page) {
 }
 
 export async function logout(page: Page) {
+  assertLocalE2eEnvironment();
   const btn = page.locator('[data-testid="button-logout"]');
   await btn.waitFor({ state: 'visible' });
   await btn.click();
