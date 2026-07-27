@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,9 +30,11 @@ import {
   FileText,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
+import { useApiResource } from '@/hooks/use-api-resource';
 
 interface LocalBatch {
   id: string;
+  org_id: number | string;
   local_id: string;
   batch_id?: string;
   farm_id?: string;
@@ -78,6 +80,7 @@ type QueueItemType = 'farm' | 'upload' | 'ocr' | 'boundary';
 
 interface QueueItem {
   id: string;
+  org_id: number | string;
   type: QueueItemType;
   label: string;
   detail: string;
@@ -86,27 +89,54 @@ interface QueueItem {
   created_at: string;
 }
 
+const EMPTY_QUEUE = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
+const EMPTY_STATS: SyncStats = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
+
 export default function SyncDashboardPage() {
   const { organization, profile, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
 
-  const [batches, setBatches] = useState<LocalBatch[]>([]);
-  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
-  const emptyQueue = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
-  const [stats, setStats] = useState<SyncStats>({ pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 });
+  const [storedBatches, setBatches] = useState<LocalBatch[]>([]);
+  const [storedQueueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [storedStats, setStats] = useState<SyncStats>(EMPTY_STATS);
+  const [loadedOrganizationId, setLoadedOrganizationId] = useState<number | null>(null);
+  const [quarantinedCount, setQuarantinedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [discardConfirmId, setDiscardConfirmId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [serverMetrics, setServerMetrics] = useState<{
+  const dataMatchesActiveOrganization = organizationId !== null && loadedOrganizationId === organizationId;
+  const batches = dataMatchesActiveOrganization ? storedBatches : [];
+  const queueItems = dataMatchesActiveOrganization ? storedQueueItems : [];
+  const stats = dataMatchesActiveOrganization ? storedStats : EMPTY_STATS;
+  const { data: serverMetrics } = useApiResource<{
     pendingConflicts: number;
     unsyncedBags: number;
     agentCount: number;
-  } | null>(null);
+  }>(!orgLoading && organization?.id && isOnline ? '/api/sync-metrics' : null, {
+    enabled: !orgLoading && !!organization?.id && isOnline,
+    scopeKey: organization?.id,
+    deps: [organization?.id, isOnline],
+    showErrorToast: false,
+  });
 
   const loadData = useCallback(async () => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      setBatches([]);
+      setQueueItems([]);
+      setStats(EMPTY_STATS);
+      setLoadedOrganizationId(null);
+      setQuarantinedCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const {
@@ -116,18 +146,22 @@ export default function SyncDashboardPage() {
         getAllUploads,
         getAllOcrJobs,
         getSyncStats,
+        getQuarantinedQueueStats,
       } = await import('@/lib/offline/sync-store');
-      const [batchList, farmList, boundaryList, uploadList, ocrList, syncStats] = await Promise.all([
-        getAllBatches(),
-        getAllOfflineFarms(),
-        getAllBoundaries(),
-        getAllUploads(),
-        getAllOcrJobs(),
-        getSyncStats(),
+      const [batchList, farmList, boundaryList, uploadList, ocrList, syncStats, quarantined] = await Promise.all([
+        getAllBatches(requestedOrganizationId),
+        getAllOfflineFarms(requestedOrganizationId),
+        getAllBoundaries(requestedOrganizationId),
+        getAllUploads(requestedOrganizationId),
+        getAllOcrJobs(requestedOrganizationId),
+        getSyncStats(requestedOrganizationId),
+        getQuarantinedQueueStats(),
       ]);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       const fieldItems: QueueItem[] = [
         ...farmList.map((farm: any) => ({
           id: farm.id,
+          org_id: farm.org_id,
           type: 'farm' as const,
           label: farm.farmer_name || 'Offline farmer',
           detail: [farm.community, farm.phone].filter(Boolean).join(' - ') || farm.local_id,
@@ -137,6 +171,7 @@ export default function SyncDashboardPage() {
         })),
         ...uploadList.map((upload: any) => ({
           id: upload.id,
+          org_id: upload.org_id,
           type: 'upload' as const,
           label: upload.file_name || upload.file_type || 'Queued file',
           detail: `${upload.file_type || 'file'} for ${upload.local_farm_id || upload.farm_id}`,
@@ -146,6 +181,7 @@ export default function SyncDashboardPage() {
         })),
         ...ocrList.map((job: any) => ({
           id: job.id,
+          org_id: job.org_id,
           type: 'ocr' as const,
           label: 'Offline OCR job',
           detail: `Runs after ${job.local_farm_id || job.farm_id} syncs`,
@@ -155,6 +191,7 @@ export default function SyncDashboardPage() {
         })),
         ...boundaryList.map((boundary: any) => ({
           id: boundary.id,
+          org_id: boundary.org_id,
           type: 'boundary' as const,
           label: 'Farm boundary',
           detail: `${boundary.area_hectares ?? 0} ha for ${boundary.local_farm_id || boundary.farm_id}`,
@@ -166,31 +203,26 @@ export default function SyncDashboardPage() {
       setBatches(batchList as any);
       setQueueItems(fieldItems);
       setStats(syncStats);
+      setQuarantinedCount(quarantined.total);
+      setLoadedOrganizationId(requestedOrganizationId);
     } catch (error) {
       console.error('Failed to load sync data:', error);
     } finally {
-      setIsLoading(false);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) setIsLoading(false);
     }
-  }, []);
-
-  const loadServerMetrics = useCallback(async () => {
-    try {
-      const response = await fetch('/api/sync-metrics');
-      if (response.ok) {
-        const data = await response.json();
-        setServerMetrics(data);
-      }
-    } catch (error) {
-      console.error('Failed to load server metrics:', error);
-    }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
-    if (!orgLoading) {
-      loadData();
-      if (isOnline) loadServerMetrics();
-    }
-  }, [orgLoading, loadData, isOnline, loadServerMetrics]);
+    if (orgLoading) return;
+    setLoadedOrganizationId(null);
+    setBatches([]);
+    setQueueItems([]);
+    setStats(EMPTY_STATS);
+    setQuarantinedCount(0);
+    setDiscardConfirmId(null);
+    setExpandedId(null);
+    void loadData();
+  }, [organizationId, orgLoading, loadData]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -216,11 +248,20 @@ export default function SyncDashboardPage() {
       toast({ title: 'Offline', description: 'You need to be online to sync.', variant: 'destructive' });
       return;
     }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
 
     setIsSyncing(true);
     try {
       const { syncPendingBatches } = await import('@/lib/offline/sync-service');
-      const result = await syncPendingBatches();
+      const result = await syncPendingBatches(
+        requestedOrganizationId,
+        () => activeOrganizationIdRef.current === requestedOrganizationId,
+      );
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       if (result.synced > 0) {
         toast({ title: 'Sync Complete', description: `${result.synced} item(s) synced successfully.` });
       }
@@ -229,6 +270,10 @@ export default function SyncDashboardPage() {
       }
       if (result.synced === 0 && result.failed === 0) {
         toast({ title: 'Nothing to Sync', description: 'All data is up to date.' });
+      }
+      const quarantineWarning = result.warnings.find((warning) => warning.type === 'legacy_unscoped_queue');
+      if (quarantineWarning) {
+        toast({ title: 'Legacy Offline Data Blocked', description: quarantineWarning.message, variant: 'destructive' });
       }
       await loadData();
     } catch (error) {
@@ -244,12 +289,15 @@ export default function SyncDashboardPage() {
       toast({ title: 'Offline', description: 'You need to be online to retry.', variant: 'destructive' });
       return;
     }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
 
     try {
       const { updateBatchStatus } = await import('@/lib/offline/sync-store');
-      await updateBatchStatus(batchId, 'pending');
+      await updateBatchStatus(batchId, requestedOrganizationId, 'pending');
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       await loadData();
-      handleSyncAll();
+      void handleSyncAll();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to retry.', variant: 'destructive' });
     }
@@ -260,6 +308,8 @@ export default function SyncDashboardPage() {
       toast({ title: 'Offline', description: 'You need to be online to retry.', variant: 'destructive' });
       return;
     }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
 
     try {
       const {
@@ -269,22 +319,27 @@ export default function SyncDashboardPage() {
         updateBoundaryStatus,
       } = await import('@/lib/offline/sync-store');
 
-      if (item.type === 'farm') await updateFarmStatus(item.id, 'pending');
-      if (item.type === 'upload') await updateUploadStatus(item.id, 'pending');
-      if (item.type === 'ocr') await updateOcrJobStatus(item.id, 'pending');
-      if (item.type === 'boundary') await updateBoundaryStatus(item.id, 'pending');
+      if (String(item.org_id) !== String(requestedOrganizationId)) throw new Error('Queue item belongs to another organization.');
+      if (item.type === 'farm') await updateFarmStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'upload') await updateUploadStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'ocr') await updateOcrJobStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'boundary') await updateBoundaryStatus(item.id, requestedOrganizationId, 'pending');
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       await loadData();
-      handleSyncAll();
+      void handleSyncAll();
     } catch {
       toast({ title: 'Error', description: 'Failed to retry item.', variant: 'destructive' });
     }
   };
 
   const handleClearSynced = async () => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
     setIsClearing(true);
     try {
       const { deleteSyncedQueueItems } = await import('@/lib/offline/sync-store');
-      await deleteSyncedQueueItems();
+      await deleteSyncedQueueItems(requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       await loadData();
       toast({ title: 'Cleared', description: 'Synced offline items removed from local storage.' });
     } catch (error) {
@@ -295,6 +350,8 @@ export default function SyncDashboardPage() {
   };
 
   const handleDiscardQueueItem = async (item: QueueItem) => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
     try {
       const {
         deleteFarm,
@@ -303,10 +360,12 @@ export default function SyncDashboardPage() {
         deleteBoundary,
       } = await import('@/lib/offline/sync-store');
 
-      if (item.type === 'farm') await deleteFarm(item.id);
-      if (item.type === 'upload') await deleteUpload(item.id);
-      if (item.type === 'ocr') await deleteOcrJob(item.id);
-      if (item.type === 'boundary') await deleteBoundary(item.id);
+      if (String(item.org_id) !== String(requestedOrganizationId)) throw new Error('Queue item belongs to another organization.');
+      if (item.type === 'farm') await deleteFarm(item.id, requestedOrganizationId);
+      if (item.type === 'upload') await deleteUpload(item.id, requestedOrganizationId);
+      if (item.type === 'ocr') await deleteOcrJob(item.id, requestedOrganizationId);
+      if (item.type === 'boundary') await deleteBoundary(item.id, requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       setDiscardConfirmId(null);
       await loadData();
       toast({ title: 'Discarded', description: 'Queued item removed from local storage.' });
@@ -316,9 +375,16 @@ export default function SyncDashboardPage() {
   };
 
   const handleDiscard = async (batchId: string) => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
     try {
       const { deleteBatch } = await import('@/lib/offline/sync-store');
-      await deleteBatch(batchId);
+      const batch = batches.find((item) => item.id === batchId);
+      if (!batch || String(batch.org_id) !== String(requestedOrganizationId)) {
+        throw new Error('Batch belongs to another organization.');
+      }
+      await deleteBatch(batchId, requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       setDiscardConfirmId(null);
       await loadData();
       toast({ title: 'Discarded', description: 'Batch removed from local queue.' });
@@ -449,6 +515,21 @@ export default function SyncDashboardPage() {
         </div>
       )}
 
+      {dataMatchesActiveOrganization && quarantinedCount > 0 && (
+        <Card role="alert" className="border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20">
+          <CardContent className="flex items-start gap-3 py-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-none text-amber-600" />
+            <div>
+              <p className="font-medium">Legacy offline data is quarantined</p>
+              <p className="text-sm text-muted-foreground">
+                {quarantinedCount} older item(s) have no organization owner and will not sync automatically.
+                They remain stored locally for administrator-assisted recovery and will never be assigned to the active organization automatically.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Pending', value: stats.pending, accent: 'card-accent-amber', color: 'text-amber-600', testId: 'text-stat-pending' },
@@ -467,11 +548,11 @@ export default function SyncDashboardPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Farmers', value: (stats.farms || emptyQueue).pending + (stats.farms || emptyQueue).error, testId: 'text-queue-farms' },
-          { label: 'Files', value: (stats.uploads || emptyQueue).pending + (stats.uploads || emptyQueue).error, testId: 'text-queue-uploads' },
-          { label: 'OCR', value: (stats.ocr || emptyQueue).pending + (stats.ocr || emptyQueue).error, testId: 'text-queue-ocr' },
-          { label: 'Boundaries', value: (stats.boundaries || emptyQueue).pending + (stats.boundaries || emptyQueue).error, testId: 'text-queue-boundaries' },
-          { label: 'Batches', value: (stats.batches || emptyQueue).pending + (stats.batches || emptyQueue).error, testId: 'text-queue-batches' },
+          { label: 'Farmers', value: (stats.farms || EMPTY_QUEUE).pending + (stats.farms || EMPTY_QUEUE).error, testId: 'text-queue-farms' },
+          { label: 'Files', value: (stats.uploads || EMPTY_QUEUE).pending + (stats.uploads || EMPTY_QUEUE).error, testId: 'text-queue-uploads' },
+          { label: 'OCR', value: (stats.ocr || EMPTY_QUEUE).pending + (stats.ocr || EMPTY_QUEUE).error, testId: 'text-queue-ocr' },
+          { label: 'Boundaries', value: (stats.boundaries || EMPTY_QUEUE).pending + (stats.boundaries || EMPTY_QUEUE).error, testId: 'text-queue-boundaries' },
+          { label: 'Batches', value: (stats.batches || EMPTY_QUEUE).pending + (stats.batches || EMPTY_QUEUE).error, testId: 'text-queue-batches' },
         ].map(item => (
           <Card key={item.label}>
             <CardContent className="pt-3 pb-3 text-center">

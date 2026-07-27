@@ -20,15 +20,16 @@ export function CacheWarmer() {
 
   useEffect(() => {
     // Purge stale cached entries after first paint; this is not needed for initial UI.
-    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+    const requestedOrganizationId = organization?.id ?? null;
+    if (requestedOrganizationId !== null && typeof window !== 'undefined' && 'indexedDB' in window) {
       return runWhenIdle(() => {
         purgeExpiredCaches();
         import('@/lib/offline/sync-store')
-          .then(({ purgeExpiredOfflineData }) => purgeExpiredOfflineData())
+          .then(({ purgeExpiredOfflineData }) => purgeExpiredOfflineData(requestedOrganizationId))
           .catch(() => undefined);
       });
     }
-  }, []);
+  }, [organization?.id]);
 
   useEffect(() => {
     if (!isOnline || isLoading || !profile) return;

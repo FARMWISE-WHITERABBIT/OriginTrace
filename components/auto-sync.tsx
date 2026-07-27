@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useSyncStatus } from '@/components/sync-status-provider';
 import { runWhenIdle } from '@/lib/utils/idle';
 
 export function AutoSync() {
-  const { profile, isLoading } = useOrg();
+  const { organization, profile, isLoading } = useOrg();
   const { hasPendingWork } = useSyncStatus();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
 
   useEffect(() => {
-    if (isLoading || !profile) return;
+    if (isLoading || !profile || organizationId === null) return;
+
+    const requestedOrganizationId = organizationId;
+    const isOrganizationActive = () => activeOrganizationIdRef.current === requestedOrganizationId;
 
     let cleanup: (() => void) | undefined;
     let cancelled = false;
@@ -18,9 +24,9 @@ export function AutoSync() {
       import('@/lib/offline/sync-service')
         .then(({ setupAutoSync, syncFieldWorkQueue }) => {
           if (cancelled) return;
-          cleanup = setupAutoSync(60_000, { immediate: false });
+          cleanup = setupAutoSync(requestedOrganizationId, isOrganizationActive, 60_000, { immediate: false });
           if (hasPendingWork && navigator.onLine) {
-            void syncFieldWorkQueue();
+            void syncFieldWorkQueue(requestedOrganizationId, isOrganizationActive);
           }
         })
         .catch(() => undefined);
@@ -31,7 +37,7 @@ export function AutoSync() {
       cancelIdle();
       cleanup?.();
     };
-  }, [hasPendingWork, isLoading, profile]);
+  }, [hasPendingWork, isLoading, organizationId, profile]);
 
   return null;
 }

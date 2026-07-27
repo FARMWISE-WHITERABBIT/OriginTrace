@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOnlineStatus } from '@/components/online-status';
+import { useTranslations } from 'next-intl';
 import {
   getCachedLocations,
   cacheLocations,
@@ -16,12 +17,61 @@ import {
 } from '@/lib/offline/offline-cache';
 import type { LocationState, LocationLGA, Farmer, Farm, Contributor, InventoryEntry, ComplianceFlag } from './types';
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function logLoadFailure(resource: string, detail: number | unknown): void {
+  if (typeof detail === 'number') {
+    console.error(`[Smart Collect] Failed to load ${resource} (HTTP ${detail}).`);
+    return;
+  }
+
+  const errorType = detail instanceof Error ? detail.name : 'UnknownError';
+  console.error(`[Smart Collect] Failed to load ${resource} (${errorType}).`);
+}
+
+function commoditiesForOrganization(commodities: any[], organizationId: number | null): any[] {
+  return commodities.filter((entry) => {
+    if (entry?.org_id === null) return true;
+    if (entry?.org_id === undefined) return false;
+    return organizationId !== null && String(entry.org_id) === String(organizationId);
+  });
+}
+
+function withCommodityFallbacks(commodities: any[], fallbackNames: string[]): any[] {
+  const merged = [...commodities];
+  const names = new Set(merged.map((entry) => String(entry?.name || '').trim().toLowerCase()).filter(Boolean));
+
+  for (const name of fallbackNames) {
+    const normalizedName = name.trim().toLowerCase();
+    if (!normalizedName || names.has(normalizedName)) continue;
+    merged.push({ name });
+    names.add(normalizedName);
+  }
+
+  return merged;
+}
+
 export function useCollectionLogic() {
   const router = useRouter();
   const { organization, profile } = useOrg();
   const { toast } = useToast();
+  const tErrors = useTranslations('errors');
   const supabase = createClient(); // used for offline quickAddFarmer
   const isOnline = useOnlineStatus();
+  const organizationId = organization?.id ?? null;
+  const profileOrganizationId = profile?.org_id ?? null;
+  const hasActiveOrganization = organizationId !== null;
+  // Reads may legitimately use an impersonated organization selected by the
+  // server. Direct browser/offline mutations must still belong to the user's
+  // own profile organization because they bypass the impersonation-aware API.
+  const canMutateActiveOrganization = hasActiveOrganization
+    && profileOrganizationId !== null
+    && String(organizationId) === String(profileOrganizationId);
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
+  const [restoreEpoch, setRestoreEpoch] = useState(0);
 
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +110,42 @@ export function useCollectionLogic() {
   const [complianceAttestations, setComplianceAttestations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    const reloadAfterRestore = (event: PageTransitionEvent) => {
+      if (event.persisted) setRestoreEpoch((epoch) => epoch + 1);
+    };
+    window.addEventListener('pageshow', reloadAfterRestore);
+    return () => window.removeEventListener('pageshow', reloadAfterRestore);
+  }, []);
+
+  useEffect(() => {
+    // A collection draft is tenant-bound. Clear it before any reads for a new tenant.
+    setStep(1);
+    setShowSuccess(false);
+    setSavedBatchId('');
+    setSavedOffline(false);
+    setSelectedState('');
+    setSelectedLGA('');
+    setCommunity('');
+    setCommodity('');
+    setGrade('');
+    setCommodityOptions([]);
+    setCommodityMaster([]);
+    setAllFarms([]);
+    setFarmsLoading(organizationId !== null);
+    setContributors([]);
+    setFarmerSearch('');
+    setShowQuickAdd(false);
+    setQuickName('');
+    setQuickPhone('');
+    setQuickCommunity('');
+    setInventory([]);
+    setBatchNotes('');
+    setComplianceFlags([]);
+    setComplianceAttestations({});
+    setIsSaving(false);
+  }, [organizationId]);
+
+  useEffect(() => {
     const d = new Date();
     const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -77,8 +163,17 @@ export function useCollectionLogic() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const cancelLocationLoad = () => {
+      cancelled = true;
+      controller.abort();
+    };
+    window.addEventListener('pagehide', cancelLocationLoad, { once: true });
     async function loadLocations() {
+      setLocLoading(true);
       const cached = await getCachedLocations();
+      if (cancelled) return;
       if (cached) {
         setStates(cached.states || []);
         setLgas(cached.lgas || []);
@@ -86,59 +181,108 @@ export function useCollectionLogic() {
       }
       if (isOnline) {
         try {
-          const res = await fetch('/api/locations?all=true');
+          const res = await fetch('/api/locations?all=true', { signal: controller.signal });
           if (res.ok) {
             const data = await res.json();
+            if (cancelled) return;
             setStates(data.states || []);
             setLgas(data.lgas || []);
             await cacheLocations(data.states || [], data.lgas || [], data.villages || []);
+          } else {
+            logLoadFailure('locations', res.status);
           }
-        } catch {}
+        } catch (error) {
+          if (!isAbortError(error)) logLoadFailure('locations', error);
+        }
       }
-      setLocLoading(false);
+      if (!cancelled) setLocLoading(false);
     }
-    loadLocations();
-  }, [isOnline]);
+    void loadLocations();
+    return () => {
+      window.removeEventListener('pagehide', cancelLocationLoad);
+      cancelLocationLoad();
+    };
+  }, [isOnline, restoreEpoch]);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const cancelCommodityLoad = () => {
+      cancelled = true;
+      controller.abort();
+    };
+    window.addEventListener('pagehide', cancelCommodityLoad, { once: true });
     async function loadCommodities() {
-      let hasCached = false;
+      const fallbackNames = organization?.commodity_types || [];
       const cached = await getCachedCommodities();
-      if (cached && cached.length > 0) {
-        setCommodityOptions(cached.map((c: any) => c.name));
-        setCommodityMaster(cached);
-        hasCached = true;
+      if (cancelled) return;
+      const safeCached = commoditiesForOrganization(cached || [], organizationId);
+      const cachedWithFallbacks = withCommodityFallbacks(safeCached, fallbackNames);
+      if (cachedWithFallbacks.length > 0) {
+        setCommodityOptions(cachedWithFallbacks.map((entry) => entry.name));
+        setCommodityMaster(cachedWithFallbacks);
       }
       if (isOnline) {
         try {
-          const orgId = organization?.id;
-          const url = orgId ? `/api/commodities?org_id=${orgId}` : '/api/commodities?global_only=true';
-          const res = await fetch(url);
+          const url = organizationId !== null
+            ? `/api/commodities?org_id=${encodeURIComponent(String(organizationId))}`
+            : '/api/commodities?global_only=true';
+          const res = await fetch(url, { signal: controller.signal });
           if (res.ok) {
             const data = await res.json();
+            if (cancelled) return;
             const commodities = data.commodities || data;
-            if (Array.isArray(commodities) && commodities.length > 0) {
-              setCommodityOptions(commodities.map((c: any) => c.name));
-              setCommodityMaster(commodities);
-              await cacheCommodities(commodities);
+            if (Array.isArray(commodities)) {
+              const safeCommodities = commoditiesForOrganization(commodities, organizationId);
+              const commoditiesWithFallbacks = withCommodityFallbacks(safeCommodities, fallbackNames);
+              setCommodityOptions(commoditiesWithFallbacks.map((entry) => entry.name));
+              setCommodityMaster(commoditiesWithFallbacks);
+              if (safeCommodities.length > 0) await cacheCommodities(safeCommodities);
               return;
             }
+            logLoadFailure('commodities', new TypeError('Invalid response shape'));
+          } else {
+            logLoadFailure('commodities', res.status);
           }
-        } catch {}
-      }
-      if (!hasCached && organization?.commodity_types && organization.commodity_types.length > 0) {
-        setCommodityOptions(organization.commodity_types);
+        } catch (error) {
+          if (!isAbortError(error)) logLoadFailure('commodities', error);
+        }
       }
     }
-    loadCommodities();
-  }, [organization, isOnline]);
+    void loadCommodities();
+    return () => {
+      window.removeEventListener('pagehide', cancelCommodityLoad);
+      cancelCommodityLoad();
+    };
+  }, [organizationId, organization?.commodity_types, isOnline, restoreEpoch]);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const cancelFarmLoad = () => {
+      cancelled = true;
+      controller.abort();
+    };
+    window.addEventListener('pagehide', cancelFarmLoad, { once: true });
     async function loadFarms() {
-      if (!organization) { setFarmsLoading(false); return; }
-      const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
-      const localFarms = await getLocalFarmsForOrg(organization.id);
-      const cached = await getCachedFarmsFull(organization.id);
+      setFarmsLoading(hasActiveOrganization);
+      if (!hasActiveOrganization || organizationId === null) {
+        setAllFarms([]);
+        setFarmsLoading(false);
+        return;
+      }
+      let localFarms: any[] = [];
+      let cached: any[] | null = null;
+      try {
+        const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
+        [localFarms, cached] = await Promise.all([
+          getLocalFarmsForOrg(organizationId),
+          getCachedFarmsFull(organizationId),
+        ]);
+      } catch (error) {
+        if (!isAbortError(error)) logLoadFailure('offline farms', error);
+      }
+      if (cancelled) return;
       if (cached && cached.length > 0) {
         setAllFarms([...localFarms, ...cached.filter((farm: any) => !localFarms.some((local: any) => local.id === farm.id))]);
         setFarmsLoading(false);
@@ -149,22 +293,28 @@ export function useCollectionLogic() {
       if (isOnline) {
         try {
           // Use the admin-backed API endpoint to avoid RLS issues with the browser client
-          const res = await fetch('/api/collect/farmers');
+          const res = await fetch('/api/collect/farmers', { signal: controller.signal });
           if (res.ok) {
             const { farms: farmsData } = await res.json();
-            if (farmsData?.length > 0) {
-              setAllFarms([...localFarms, ...farmsData.filter((farm: any) => !localFarms.some((local: any) => local.id === farm.id))]);
-              await cacheFarmsFull(organization.id, farmsData);
-            }
+            if (cancelled) return;
+            const serverFarms = Array.isArray(farmsData) ? farmsData : [];
+            setAllFarms([...localFarms, ...serverFarms.filter((farm: any) => !localFarms.some((local: any) => local.id === farm.id))]);
+            await cacheFarmsFull(organizationId, serverFarms);
+          } else {
+            logLoadFailure('farms', res.status);
           }
         } catch (err) {
-          console.error('Failed to load farms for collection:', err);
+          if (!isAbortError(err)) logLoadFailure('farms', err);
         }
       }
-      setFarmsLoading(false);
+      if (!cancelled) setFarmsLoading(false);
     }
-    loadFarms();
-  }, [organization, isOnline]);
+    void loadFarms();
+    return () => {
+      window.removeEventListener('pagehide', cancelFarmLoad);
+      cancelFarmLoad();
+    };
+  }, [organizationId, profileOrganizationId, hasActiveOrganization, isOnline, restoreEpoch]);
 
   const filteredLGAs = useMemo(() => {
     if (!selectedState) return [];
@@ -207,13 +357,26 @@ export function useCollectionLogic() {
 
   const quickAddFarmer = useCallback(async () => {
     if (!quickName.trim()) return;
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      toast({ title: tErrors('organizationUnavailable'), description: tErrors('waitForOrganization'), variant: 'destructive' });
+      return;
+    }
+    if (!canMutateActiveOrganization) {
+      toast({
+        title: tErrors('quickAddUnavailable'),
+        description: tErrors('switchToOwnOrganization'),
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsAddingFarmer(true);
     try {
-      if (isOnline && supabase && organization && profile) {
+      if (isOnline && supabase && profile) {
         const { data, error } = await supabase
           .from('farms')
           .insert({
-            org_id: String(organization.id),
+            org_id: String(requestedOrganizationId),
             farmer_name: quickName.trim(),
             phone: quickPhone || null,
             community: quickCommunity || community || 'Unknown',
@@ -224,6 +387,7 @@ export function useCollectionLogic() {
           .single();
 
         if (error) throw error;
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
         if (data) {
           const newFarmer: Farmer = { id: data.id, farmer_name: data.farmer_name, community: data.community };
           const newFarm: Farm = { ...data, boundary: null, has_boundary: false } as any;
@@ -235,7 +399,7 @@ export function useCollectionLogic() {
         const tempId = generateLocalId('farm');
         await saveFarmOffline({
           local_id: tempId,
-          org_id: organization?.id,
+          org_id: requestedOrganizationId,
           farmer_name: quickName.trim(),
           phone: quickPhone || null,
           community: quickCommunity || community || 'Unknown',
@@ -243,6 +407,7 @@ export function useCollectionLogic() {
           consent_timestamp: null,
           consent_signature: null,
         });
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
         const newFarmer: Farmer = { id: tempId, farmer_name: quickName.trim(), community: quickCommunity || community || 'Unknown' };
         const newFarm: Farm = {
           id: tempId,
@@ -265,7 +430,7 @@ export function useCollectionLogic() {
     } finally {
       setIsAddingFarmer(false);
     }
-  }, [quickName, quickPhone, quickCommunity, community, isOnline, supabase, organization, profile, addContributor, toast]);
+  }, [quickName, quickPhone, quickCommunity, community, commodity, isOnline, supabase, organizationId, canMutateActiveOrganization, profile, addContributor, toast, tErrors]);
 
   const getFarmsForFarmer = useCallback((farmerName: string) => {
     return allFarms.filter(f => f.farmer_name.toLowerCase().trim() === farmerName.toLowerCase().trim());
@@ -414,13 +579,22 @@ export function useCollectionLogic() {
   }, [step, selectedState, selectedLGA, community, commodity, contributors.length, totalBags, hasBlockingIssues]);
 
   const handleFinalize = useCallback(async () => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      toast({ title: tErrors('organizationUnavailable'), description: tErrors('waitForOrganization'), variant: 'destructive' });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const primaryFarmId = inventory[0]?.farm_id;
       const { saveBatchOffline, generateLocalId } = await import('@/lib/offline/sync-store');
 
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+
       const localId = generateLocalId();
       await saveBatchOffline({
+        org_id: requestedOrganizationId,
         local_id: localId,
         batch_id: batchId,
         farm_id: primaryFarmId || 'unknown',
@@ -450,6 +624,10 @@ export function useCollectionLogic() {
         collected_at: new Date().toISOString(),
       });
 
+      // The queued record remains safely owned by the organization captured
+      // above, but never show its success state inside a newly selected tenant.
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+
       setSavedOffline(true);
       setSavedBatchId(batchId);
       setShowSuccess(true);
@@ -457,8 +635,11 @@ export function useCollectionLogic() {
       if (isOnline) {
         try {
           const { syncPendingBatches } = await import('@/lib/offline/sync-service');
-          const result = await syncPendingBatches();
-          if (result.synced > 0) {
+          const result = await syncPendingBatches(
+            requestedOrganizationId,
+            () => activeOrganizationIdRef.current === requestedOrganizationId,
+          );
+          if (activeOrganizationIdRef.current === requestedOrganizationId && result.synced > 0) {
             setSavedOffline(false);
           }
         } catch (syncErr) {
@@ -467,11 +648,13 @@ export function useCollectionLogic() {
       }
     } catch (error) {
       console.error('Finalize error:', error);
-      toast({ title: 'Error', description: 'Failed to save batch. Please try again.', variant: 'destructive' });
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        toast({ title: 'Error', description: 'Failed to save batch. Please try again.', variant: 'destructive' });
+      }
     } finally {
       setIsSaving(false);
     }
-  }, [inventory, batchId, commodity, grade, selectedState, selectedLGA, community, gpsLat, gpsLng, batchNotes, complianceAttestations, isOnline, toast]);
+  }, [inventory, batchId, commodity, grade, selectedState, selectedLGA, community, gpsLat, gpsLng, batchNotes, complianceAttestations, isOnline, organizationId, toast, tErrors]);
 
   return {
     router,
