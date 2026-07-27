@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, notFound } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -144,6 +145,22 @@ interface ShipmentDetail {
   // Payment fields (Phase 1a migration)
   payment_status: string | null;
   payment_method: string | null;
+  compliance_profile: {
+    id: string;
+    name: string;
+    destination_market: string;
+    regulation_framework: string;
+    required_documents: string[] | null;
+    required_certifications: string[] | null;
+    custom_rules: {
+      buyer_profile?: {
+        version?: string;
+        is_placeholder?: boolean;
+        buyer_approved?: boolean;
+        disclaimer?: string;
+      };
+    } | null;
+  } | null;
   payment_instruction_token: string | null;
 }
 
@@ -723,59 +740,95 @@ function ShipmentPaymentCard({
 export default function ShipmentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const buyerProfileT = useTranslations('BuyerContracts');
   const { organization, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const shipmentId = params.id as string;
+  const organizationId = organization?.id ?? null;
+  const activeScopeKey = organizationId === null ? null : `${organizationId}:${shipmentId}`;
+  const activeScopeKeyRef = useRef<string | null>(activeScopeKey);
+  activeScopeKeyRef.current = activeScopeKey;
 
-  const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
-  const [items, setItems] = useState<ShipmentItem[]>([]);
+  const [shipmentData, setShipmentData] = useState<ShipmentDetail | null>(null);
+  const [loadedScopeKey, setLoadedScopeKey] = useState<string | null>(null);
+  const [settledScopeKey, setSettledScopeKey] = useState<string | null>(null);
+  const loadedScopeKeyRef = useRef<string | null>(loadedScopeKey);
+  loadedScopeKeyRef.current = loadedScopeKey;
+  const scopeMatches = activeScopeKey !== null && loadedScopeKey === activeScopeKey;
+  const shipment = scopeMatches ? shipmentData : null;
+  const [itemsData, setItemsData] = useState<ShipmentItem[]>([]);
+  const items = scopeMatches ? itemsData : [];
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
   const [isRemovingItem, setIsRemovingItem] = useState(false);
-  const [readiness, setReadiness] = useState<ShipmentReadinessResult | null>(null);
+  const [readinessData, setReadinessData] = useState<ShipmentReadinessResult | null>(null);
+  const readiness = scopeMatches ? readinessData : null;
   const [recalculating, setRecalculating] = useState(false);
   const [uploadDocOpen, setUploadDocOpen] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<string>('');
+  const isCurrentShipmentScope = (requestScopeKey: string | null) =>
+    requestScopeKey !== null &&
+    activeScopeKeyRef.current === requestScopeKey &&
+    loadedScopeKeyRef.current === requestScopeKey;
 
   const handleRecalculate = async () => {
-    if (!shipment) return;
+    const requestScopeKey = activeScopeKey;
+    if (!shipment || !isCurrentShipmentScope(requestScopeKey)) return;
     setRecalculating(true);
     try {
       const res = await fetch(`/api/shipments/${shipment.id}/recalculate`, { method: 'POST' });
       const data = await res.json();
-      if (res.ok && data.readiness) setReadiness(data.readiness);
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
+      if (res.ok && data.readiness) setReadinessData(data.readiness);
       else toast({ title: 'Recalculation failed', variant: 'destructive' });
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Recalculation failed', variant: 'destructive' });
     } finally {
-      setRecalculating(false);
+      if (isCurrentShipmentScope(requestScopeKey)) setRecalculating(false);
     }
   };
   const [isLoading, setIsLoading] = useState(true);
+  const [initialReadVersion, setInitialReadVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedDimension, setExpandedDimension] = useState<string | null>(null);
   const [showRemediation, setShowRemediation] = useState(true);
-  const [outcomes, setOutcomes] = useState<ShipmentOutcome[]>([]);
-  const [coldChainLogs, setColdChainLogs] = useState<ColdChainLog[]>([]);
-  const [coldChainSummary, setColdChainSummary] = useState<ColdChainSummary | null>(null);
-  const [lots, setLots] = useState<ShipmentLot[]>([]);
-  const [activityEvents, setActivityEvents] = useState<any[]>([]);
+  const [outcomesData, setOutcomesData] = useState<ShipmentOutcome[]>([]);
+  const outcomes = scopeMatches ? outcomesData : [];
+  const [coldChainLogsData, setColdChainLogsData] = useState<ColdChainLog[]>([]);
+  const coldChainLogs = scopeMatches ? coldChainLogsData : [];
+  const [coldChainSummaryData, setColdChainSummaryData] = useState<ColdChainSummary | null>(null);
+  const coldChainSummary = scopeMatches ? coldChainSummaryData : null;
+  const [lotsData, setLotsData] = useState<ShipmentLot[]>([]);
+  const lots = scopeMatches ? lotsData : [];
+  const [activityEventsData, setActivityEventsData] = useState<any[]>([]);
+  const activityEvents = scopeMatches ? activityEventsData : [];
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFetched, setActivityFetched] = useState(false);
   // Lab results + evidence packages
-  const [labResults, setLabResults] = useState<any[]>([]);
-  const [evidencePackages, setEvidencePackages] = useState<any[]>([]);
+  const [labResultsData, setLabResultsData] = useState<any[]>([]);
+  const labResults = scopeMatches ? labResultsData : [];
+  const [evidencePackagesData, setEvidencePackagesData] = useState<any[]>([]);
+  const evidencePackages = scopeMatches ? evidencePackagesData : [];
   const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const fetchActivity = async () => {
-    if (activityFetched || !shipmentId) return;
+    const requestScopeKey = activeScopeKey;
+    if (activityFetched || !shipmentId || !isCurrentShipmentScope(requestScopeKey)) return;
     setActivityLoading(true);
     try {
       const res = await fetch(`/api/audit?resource_type=shipment&resource_id=${shipmentId}&limit=20`);
-      if (res.ok) { const d = await res.json(); setActivityEvents(d.logs || d.events || []); }
+      if (res.ok) {
+        const d = await res.json();
+        if (!isCurrentShipmentScope(requestScopeKey)) return;
+        setActivityEventsData(d.logs || d.events || []);
+      }
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       setActivityFetched(true);
     } catch { /* ignore */ }
-    finally { setActivityLoading(false); }
+    finally {
+      if (isCurrentShipmentScope(requestScopeKey)) setActivityLoading(false);
+    }
   };
   const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
   const [coldChainDialogOpen, setColdChainDialogOpen] = useState(false);
@@ -786,41 +839,72 @@ export default function ShipmentDetailPage() {
   const [releaseEscrow, setReleaseEscrow] = useState<EscrowAccount | null>(null);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
 
-  const fetchShipment = useCallback(async () => {
-    if (orgLoading || !organization) return;
+  const fetchShipment = useCallback(async (signal?: AbortSignal) => {
+    const requestScopeKey = activeScopeKey;
+    if (
+      orgLoading ||
+      requestScopeKey === null ||
+      activeScopeKeyRef.current !== requestScopeKey
+    ) return;
     try {
-      const response = await fetch(`/api/shipments/${shipmentId}`);
+      const response = await fetch(`/api/shipments/${shipmentId}`, { signal });
       if (!response.ok) throw new Error('Failed to fetch shipment');
       const data = await response.json();
-      setShipment(data.shipment);
-      setItems(data.items || []);
-      setReadiness(data.readiness || null);
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+      setShipmentData(data.shipment);
+      setItemsData(data.items || []);
+      setReadinessData(data.readiness || null);
+      setLoadedScopeKey(requestScopeKey);
     } catch (error) {
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
       console.error('Failed to fetch shipment:', error);
       toast({ title: 'Error', description: 'Failed to load shipment details', variant: 'destructive' });
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted && activeScopeKeyRef.current === requestScopeKey) {
+        setSettledScopeKey(requestScopeKey);
+        setIsLoading(false);
+      }
     }
-  }, [shipmentId, organization, orgLoading, toast]);
+  }, [activeScopeKey, shipmentId, orgLoading, toast]);
 
-  const fetchLabResultsAndEvidence = useCallback(async () => {
-    if (!shipmentId) return;
+  const fetchLabResultsAndEvidence = useCallback(async (signal?: AbortSignal) => {
+    const requestScopeKey = activeScopeKey;
+    if (!shipmentId || requestScopeKey === null) return;
     try {
       const [labRes, evRes] = await Promise.all([
-        fetch(`/api/lab-results?shipment_id=${shipmentId}&page_size=20`),
-        fetch(`/api/shipments/${shipmentId}/evidence-package`),
+        fetch(`/api/lab-results?shipment_id=${shipmentId}&page_size=20`, { signal }),
+        fetch(`/api/shipments/${shipmentId}/evidence-package`, { signal }),
       ]);
-      if (labRes.ok) { const d = await labRes.json(); setLabResults(d.results ?? []); }
-      if (evRes.ok) { const d = await evRes.json(); setEvidencePackages(d.packages ?? []); }
-    } catch (e) { console.error('Failed to fetch lab/evidence:', e); }
-  }, [shipmentId]);
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+      if (labRes.ok) {
+        const data = await labRes.json();
+        if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+        setLabResultsData(data.results ?? []);
+      } else {
+        console.error(`Failed to fetch lab results (HTTP ${labRes.status})`);
+      }
+      if (evRes.ok) {
+        const data = await evRes.json();
+        if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+        setEvidencePackagesData(data.packages ?? []);
+      } else {
+        console.error(`Failed to fetch evidence packages (HTTP ${evRes.status})`);
+      }
+    } catch (error) {
+      if (!signal?.aborted && activeScopeKeyRef.current === requestScopeKey) {
+        console.error('Failed to fetch lab/evidence:', error);
+      }
+    }
+  }, [activeScopeKey, shipmentId]);
 
   const generateEvidencePackage = async () => {
-    if (!shipmentId) return;
+    const requestScopeKey = activeScopeKey;
+    if (!shipmentId || !isCurrentShipmentScope(requestScopeKey)) return;
     setIsGeneratingEvidence(true);
     try {
       const res = await fetch(`/api/shipments/${shipmentId}/evidence-package`, { method: 'POST' });
       const d = await res.json();
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       if (!res.ok) { toast({ title: 'Error', description: d.error, variant: 'destructive' }); return; }
       // Download PDF
       const link = document.createElement('a');
@@ -828,8 +912,10 @@ export default function ShipmentDetailPage() {
       link.download = d.fileName;
       link.click();
       toast({ title: 'Evidence package generated', description: `Shareable link: ${d.shareableUrl}` });
-      fetchLabResultsAndEvidence();
-    } finally { setIsGeneratingEvidence(false); }
+      await fetchLabResultsAndEvidence();
+    } finally {
+      if (isCurrentShipmentScope(requestScopeKey)) setIsGeneratingEvidence(false);
+    }
   };
 
   const copyUrl = (url: string) => {
@@ -838,49 +924,114 @@ export default function ShipmentDetailPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   };
 
-  const fetchOutcomes = useCallback(async () => {
-    if (!organization) return;
+  const fetchOutcomes = useCallback(async (signal?: AbortSignal) => {
+    const requestScopeKey = activeScopeKey;
+    if (requestScopeKey === null) return;
     try {
-      const res = await fetch(`/api/shipments/${shipmentId}/outcomes`);
-      if (res.ok) {
-        const data = await res.json();
-        setOutcomes(data.outcomes || []);
+      const res = await fetch(`/api/shipments/${shipmentId}/outcomes`, { signal });
+      if (!res.ok) throw new Error(`Outcomes request failed (HTTP ${res.status})`);
+      const data = await res.json();
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+      setOutcomesData(data.outcomes || []);
+    } catch (error) {
+      if (!signal?.aborted && activeScopeKeyRef.current === requestScopeKey) {
+        console.error('Failed to fetch shipment outcomes:', error);
       }
-    } catch { /* silent */ }
-  }, [shipmentId, organization]);
+    }
+  }, [activeScopeKey, shipmentId]);
 
-  const fetchColdChain = useCallback(async () => {
-    if (!organization) return;
+  const fetchColdChain = useCallback(async (signal?: AbortSignal) => {
+    const requestScopeKey = activeScopeKey;
+    if (requestScopeKey === null) return;
     try {
-      const res = await fetch(`/api/shipments/${shipmentId}/cold-chain`);
-      if (res.ok) {
-        const data = await res.json();
-        setColdChainLogs(data.logs || []);
-        setColdChainSummary(data.summary || null);
+      const res = await fetch(`/api/shipments/${shipmentId}/cold-chain`, { signal });
+      if (!res.ok) throw new Error(`Cold-chain request failed (HTTP ${res.status})`);
+      const data = await res.json();
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+      setColdChainLogsData(data.logs || []);
+      setColdChainSummaryData(data.summary || null);
+    } catch (error) {
+      if (!signal?.aborted && activeScopeKeyRef.current === requestScopeKey) {
+        console.error('Failed to fetch cold-chain logs:', error);
       }
-    } catch { /* silent */ }
-  }, [shipmentId, organization]);
+    }
+  }, [activeScopeKey, shipmentId]);
 
-  const fetchLots = useCallback(async () => {
-    if (!organization) return;
+  const fetchLots = useCallback(async (signal?: AbortSignal) => {
+    const requestScopeKey = activeScopeKey;
+    if (requestScopeKey === null) return;
     try {
-      const res = await fetch(`/api/shipments/${shipmentId}/lots`);
-      if (res.ok) {
-        const data = await res.json();
-        setLots(data.lots || []);
+      const res = await fetch(`/api/shipments/${shipmentId}/lots`, { signal });
+      if (!res.ok) throw new Error(`Lots request failed (HTTP ${res.status})`);
+      const data = await res.json();
+      if (signal?.aborted || activeScopeKeyRef.current !== requestScopeKey) return;
+      setLotsData(data.lots || []);
+    } catch (error) {
+      if (!signal?.aborted && activeScopeKeyRef.current === requestScopeKey) {
+        console.error('Failed to fetch shipment lots:', error);
       }
-    } catch { /* silent */ }
-  }, [shipmentId, organization]);
+    }
+  }, [activeScopeKey, shipmentId]);
 
   useEffect(() => {
-    fetchShipment();
-    fetchOutcomes();
-    fetchColdChain();
-    fetchLots();
-    fetchLabResultsAndEvidence();
-  }, [fetchShipment, fetchOutcomes, fetchColdChain, fetchLots, fetchLabResultsAndEvidence]);
+    const resumeInitialReads = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setIsLoading(true);
+      setInitialReadVersion((version) => version + 1);
+    };
+    window.addEventListener('pageshow', resumeInitialReads);
+    return () => window.removeEventListener('pageshow', resumeInitialReads);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(activeScopeKey !== null);
+    setLoadedScopeKey(null);
+    setSettledScopeKey(null);
+    setShipmentData(null);
+    setItemsData([]);
+    setReadinessData(null);
+    setOutcomesData([]);
+    setColdChainLogsData([]);
+    setColdChainSummaryData(null);
+    setLotsData([]);
+    setActivityEventsData([]);
+    setActivityFetched(false);
+    setActivityLoading(false);
+    setLabResultsData([]);
+    setEvidencePackagesData([]);
+    setConfirmRemoveItem(null);
+    setUploadDocOpen(false);
+    setUploadDocType('');
+    setOutcomeDialogOpen(false);
+    setColdChainDialogOpen(false);
+    setLotDialogOpen(false);
+    setPaymentSetupOpen(false);
+    setReleaseEscrow(null);
+    setIsRemovingItem(false);
+    setIsSaving(false);
+    setIsSubmitting(false);
+    setRecalculating(false);
+    setIsGeneratingEvidence(false);
+
+    if (activeScopeKey === null) return;
+
+    const controller = new AbortController();
+    const cancelInitialReads = () => controller.abort();
+    window.addEventListener('pagehide', cancelInitialReads, { once: true });
+    void fetchShipment(controller.signal);
+    void fetchOutcomes(controller.signal);
+    void fetchColdChain(controller.signal);
+    void fetchLots(controller.signal);
+    void fetchLabResultsAndEvidence(controller.signal);
+    return () => {
+      window.removeEventListener('pagehide', cancelInitialReads);
+      cancelInitialReads();
+    };
+  }, [activeScopeKey, fetchShipment, fetchOutcomes, fetchColdChain, fetchLots, fetchLabResultsAndEvidence, initialReadVersion]);
 
   const updateField = async (field: string, value: unknown) => {
+    const requestScopeKey = activeScopeKey;
+    if (!isCurrentShipmentScope(requestScopeKey)) return;
     setIsSaving(true);
     try {
       const response = await fetch(`/api/shipments/${shipmentId}`, {
@@ -889,11 +1040,13 @@ export default function ShipmentDetailPage() {
         body: JSON.stringify({ [field]: value }),
       });
       if (!response.ok) throw new Error('Failed to update');
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       await fetchShipment();
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Error', description: 'Failed to save changes', variant: 'destructive' });
     } finally {
-      setIsSaving(false);
+      if (isCurrentShipmentScope(requestScopeKey)) setIsSaving(false);
     }
   };
 
@@ -909,28 +1062,37 @@ export default function ShipmentDetailPage() {
   };
 
   const removeItem = (itemId: string) => {
+    if (!scopeMatches) return;
     setConfirmRemoveItem(itemId);
   };
 
   const doRemoveItem = async () => {
-    if (!confirmRemoveItem) return;
+    const requestScopeKey = activeScopeKey;
+    const itemId = confirmRemoveItem;
+    if (!itemId || !isCurrentShipmentScope(requestScopeKey)) return;
     setIsRemovingItem(true);
     try {
       const response = await fetch(`/api/shipments/${shipmentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ remove_items: [confirmRemoveItem] }),
+        body: JSON.stringify({ remove_items: [itemId] }),
       });
       if (!response.ok) throw new Error('Failed to remove item');
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Item removed' });
       setConfirmRemoveItem(null);
-      fetchShipment();
+      await fetchShipment();
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Error', description: 'Failed to remove item', variant: 'destructive' });
-    } finally { setIsRemovingItem(false); }
+    } finally {
+      if (isCurrentShipmentScope(requestScopeKey)) setIsRemovingItem(false);
+    }
   };
 
   const recordOutcome = async (formData: { outcome: string; outcome_date: string; rejection_reason?: string; rejection_category?: string; port_of_entry?: string; financial_impact_usd?: number; inspector_notes?: string }) => {
+    const requestScopeKey = activeScopeKey;
+    if (!isCurrentShipmentScope(requestScopeKey)) return;
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/shipments/${shipmentId}/outcomes`, {
@@ -939,18 +1101,21 @@ export default function ShipmentDetailPage() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error('Failed to record outcome');
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Outcome recorded' });
       setOutcomeDialogOpen(false);
-      fetchOutcomes();
-      fetchShipment();
+      await Promise.all([fetchOutcomes(), fetchShipment()]);
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Error', description: 'Failed to record outcome', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+      if (isCurrentShipmentScope(requestScopeKey)) setIsSubmitting(false);
     }
   };
 
   const addColdChainLog = async (formData: { log_type: string; value: number; location?: string; threshold_min?: number; threshold_max?: number }) => {
+    const requestScopeKey = activeScopeKey;
+    if (!isCurrentShipmentScope(requestScopeKey)) return;
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/shipments/${shipmentId}/cold-chain`, {
@@ -959,18 +1124,21 @@ export default function ShipmentDetailPage() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error('Failed to add log');
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Cold chain entry recorded' });
       setColdChainDialogOpen(false);
-      fetchColdChain();
-      fetchShipment();
+      await Promise.all([fetchColdChain(), fetchShipment()]);
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Error', description: 'Failed to add cold chain entry', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+      if (isCurrentShipmentScope(requestScopeKey)) setIsSubmitting(false);
     }
   };
 
   const createLot = async (formData: { lot_code: string; commodity?: string; notes?: string }) => {
+    const requestScopeKey = activeScopeKey;
+    if (!isCurrentShipmentScope(requestScopeKey)) return;
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/shipments/${shipmentId}/lots`, {
@@ -979,17 +1147,21 @@ export default function ShipmentDetailPage() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error('Failed to create lot');
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Lot created' });
       setLotDialogOpen(false);
-      fetchLots();
+      await fetchLots();
     } catch {
+      if (!isCurrentShipmentScope(requestScopeKey)) return;
       toast({ title: 'Error', description: 'Failed to create lot', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+      if (isCurrentShipmentScope(requestScopeKey)) setIsSubmitting(false);
     }
   };
 
-  if (isLoading || orgLoading) {
+  const scopePending = activeScopeKey !== null && settledScopeKey !== activeScopeKey;
+
+  if (isLoading || orgLoading || scopePending) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -1101,6 +1273,47 @@ export default function ShipmentDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {shipment.compliance_profile && (
+        <Card data-testid="card-compliance-profile">
+          <CardContent className="space-y-3 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {buyerProfileT('complianceProfile')}
+                </p>
+                <p className="mt-1 font-semibold" data-testid="text-compliance-profile-name">
+                  {shipment.compliance_profile.name}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {shipment.compliance_profile.destination_market} ·{' '}
+                  {shipment.compliance_profile.regulation_framework.replace(/_/g, ' ')}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {shipment.compliance_profile.custom_rules?.buyer_profile?.version && (
+                  <Badge variant="outline">
+                    {shipment.compliance_profile.custom_rules.buyer_profile.version}
+                  </Badge>
+                )}
+                {shipment.compliance_profile.custom_rules?.buyer_profile?.is_placeholder && (
+                  <Badge variant="secondary">{buyerProfileT('illustrativePlaceholder')}</Badge>
+                )}
+              </div>
+            </div>
+            {shipment.compliance_profile.custom_rules?.buyer_profile?.is_placeholder && (
+              <p
+                className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground"
+                role="note"
+                data-testid="text-compliance-profile-disclaimer"
+              >
+                {shipment.compliance_profile.custom_rules.buyer_profile.disclaimer
+                  || buyerProfileT('placeholderDisclaimer')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ShipmentPipeline shipment={shipment} onRefresh={fetchShipment} />
 
@@ -1431,8 +1644,10 @@ export default function ShipmentDetailPage() {
                     {uploadDocType && (
                       <DocumentUpload
                         onUploadComplete={async (result) => {
-                          if (shipment) {
-                            await fetch('/api/documents', {
+                          const requestScopeKey = activeScopeKey;
+                          const currentShipment = shipment;
+                          if (currentShipment && isCurrentShipmentScope(requestScopeKey)) {
+                            const response = await fetch('/api/documents', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
@@ -1440,14 +1655,15 @@ export default function ShipmentDetailPage() {
                                 file_url: result.url,
                                 document_type: uploadDocType,
                                 linked_entity_type: 'shipment',
-                                linked_entity_id: shipment.id,
+                                linked_entity_id: currentShipment.id,
                               }),
                             });
+                            if (!response.ok || !isCurrentShipmentScope(requestScopeKey)) return;
                             setUploadDocOpen(false);
                             setUploadDocType('');
-                            fetchShipment();
+                            await fetchShipment();
                             // Trigger score recompute — new document may improve readiness
-                            handleRecalculate();
+                            await handleRecalculate();
                           }
                         }}
                       />
@@ -1772,7 +1988,7 @@ export default function ShipmentDetailPage() {
                     updateField('destination_country', e.target.value);
                   }
                 }}
-                onChange={e => setShipment(s => s ? { ...s, destination_country: e.target.value } : null)}
+                onChange={e => setShipmentData(s => s ? { ...s, destination_country: e.target.value } : null)}
                 data-testid="input-edit-destination"
               />
             </div>
@@ -1785,7 +2001,7 @@ export default function ShipmentDetailPage() {
                     updateField('destination_port', e.target.value);
                   }
                 }}
-                onChange={e => setShipment(s => s ? { ...s, destination_port: e.target.value } : null)}
+                onChange={e => setShipmentData(s => s ? { ...s, destination_port: e.target.value } : null)}
                 data-testid="input-edit-port"
               />
             </div>
@@ -1798,7 +2014,7 @@ export default function ShipmentDetailPage() {
                     updateField('buyer_company', e.target.value);
                   }
                 }}
-                onChange={e => setShipment(s => s ? { ...s, buyer_company: e.target.value } : null)}
+                onChange={e => setShipmentData(s => s ? { ...s, buyer_company: e.target.value } : null)}
                 data-testid="input-edit-buyer"
               />
             </div>
@@ -1822,7 +2038,7 @@ export default function ShipmentDetailPage() {
                   updateField('notes', e.target.value);
                 }
               }}
-              onChange={e => setShipment(s => s ? { ...s, notes: e.target.value } : null)}
+              onChange={e => setShipmentData(s => s ? { ...s, notes: e.target.value } : null)}
               data-testid="input-edit-notes"
             />
           </div>
@@ -2048,8 +2264,10 @@ export default function ShipmentDetailPage() {
         open={paymentSetupOpen}
         shipmentId={shipment.id}
         shipmentValue={shipment.total_shipment_value_usd}
+        scopeKey={activeScopeKey}
+        isScopeCurrent={isCurrentShipmentScope}
         onOpenChange={setPaymentSetupOpen}
-        onSuccess={() => { setPaymentSetupOpen(false); fetchShipment(); }}
+        onSuccess={() => { setPaymentSetupOpen(false); void fetchShipment(); }}
       />
 
       {/* Escrow Release Confirmation */}
@@ -2058,8 +2276,10 @@ export default function ShipmentDetailPage() {
           open={!!releaseEscrow}
           escrow={releaseEscrow}
           shipment={shipment}
+          scopeKey={activeScopeKey}
+          isScopeCurrent={isCurrentShipmentScope}
           onOpenChange={(v) => { if (!v) setReleaseEscrow(null); }}
-          onSuccess={() => { setReleaseEscrow(null); fetchShipment(); }}
+          onSuccess={() => { setReleaseEscrow(null); void fetchShipment(); }}
         />
       )}
     </div>
@@ -2072,12 +2292,16 @@ function PaymentSetupModal({
   open,
   shipmentId,
   shipmentValue,
+  scopeKey,
+  isScopeCurrent,
   onOpenChange,
   onSuccess,
 }: {
   open: boolean;
   shipmentId: string;
   shipmentValue: number | null;
+  scopeKey: string | null;
+  isScopeCurrent: (requestScopeKey: string | null) => boolean;
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
 }) {
@@ -2089,8 +2313,18 @@ function PaymentSetupModal({
     { stage: 'on_delivery', amount: '', description: 'Payment on delivery' },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const actionTokenRef = useRef(0);
+
+  useEffect(() => () => {
+    ++actionTokenRef.current;
+  }, []);
 
   const handleSubmit = async () => {
+    const requestScopeKey = scopeKey;
+    if (!isScopeCurrent(requestScopeKey)) return;
+    const requestToken = ++actionTokenRef.current;
+    const actionIsCurrent = () =>
+      actionTokenRef.current === requestToken && isScopeCurrent(requestScopeKey);
     const amountNum = parseFloat(amount);
     if (!amountNum || amountNum <= 0) {
       toast({ title: 'Invalid amount', variant: 'destructive' });
@@ -2114,14 +2348,16 @@ function PaymentSetupModal({
         }),
       });
       const data = await res.json();
+      if (!actionIsCurrent()) return;
       if (!res.ok) throw new Error(data.error || 'Failed to set up payment');
 
       toast({ title: 'Payment set up', description: `Method: ${method === 'escrow_usdc' ? 'USDC Escrow' : method === 'swift_virtual' ? 'Wire Transfer' : 'Manual'}` });
       onSuccess();
     } catch (err: any) {
+      if (!actionIsCurrent()) return;
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+      if (actionIsCurrent()) setIsSubmitting(false);
     }
   };
 
@@ -2212,22 +2448,36 @@ function EscrowReleaseModal({
   open,
   escrow,
   shipment,
+  scopeKey,
+  isScopeCurrent,
   onOpenChange,
   onSuccess,
 }: {
   open: boolean;
   escrow: EscrowAccount;
   shipment: ShipmentDetail;
+  scopeKey: string | null;
+  isScopeCurrent: (requestScopeKey: string | null) => boolean;
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [isReleasing, setIsReleasing] = useState(false);
+  const actionTokenRef = useRef(0);
+
+  useEffect(() => () => {
+    ++actionTokenRef.current;
+  }, []);
 
   const pendingMilestones = escrow.milestone_config.filter((m) => !m.released_at);
 
   const handleRelease = async () => {
+    const requestScopeKey = scopeKey;
+    if (!isScopeCurrent(requestScopeKey)) return;
+    const requestToken = ++actionTokenRef.current;
+    const actionIsCurrent = () =>
+      actionTokenRef.current === requestToken && isScopeCurrent(requestScopeKey);
     if (!selectedMilestone) {
       toast({ title: 'Select a milestone to release', variant: 'destructive' });
       return;
@@ -2240,13 +2490,15 @@ function EscrowReleaseModal({
         body: JSON.stringify({ milestone_id: selectedMilestone }),
       });
       const data = await res.json();
+      if (!actionIsCurrent()) return;
       if (!res.ok) throw new Error(data.error || 'Failed to release milestone');
       toast({ title: 'Milestone released', description: 'Funds have been released.' });
       onSuccess();
     } catch (err: any) {
+      if (!actionIsCurrent()) return;
       toast({ title: 'Release failed', description: err.message, variant: 'destructive' });
     } finally {
-      setIsReleasing(false);
+      if (actionIsCurrent()) setIsReleasing(false);
     }
   };
 

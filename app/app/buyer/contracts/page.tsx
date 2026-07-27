@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, FileCheck, Calendar, Package } from 'lucide-react';
+import { Loader2, Plus, Search, FileCheck, Calendar, Package, Info } from 'lucide-react';
+
+interface ComplianceProfileOption {
+  id: string;
+  exporter_org_id: string;
+  name: string;
+  destination_market: string;
+  regulation_framework: string;
+  version: string | null;
+  is_placeholder: boolean;
+  buyer_approved: boolean | null;
+  disclaimer: string | null;
+}
 
 interface Contract {
   id: string;
@@ -23,6 +36,8 @@ interface Contract {
   quality_requirements: Record<string, unknown>;
   notes: string | null;
   created_at: string;
+  compliance_profile_id: string | null;
+  compliance_profile?: ComplianceProfileOption | null;
   exporter_org?: { id: string; name: string; slug: string };
 }
 
@@ -40,7 +55,9 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
 };
 
 export default function BuyerContractsPage() {
+  const t = useTranslations('BuyerContracts');
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [profileOptions, setProfileOptions] = useState<ComplianceProfileOption[]>([]);
   const [links, setLinks] = useState<SupplyChainLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +65,7 @@ export default function BuyerContractsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [newContract, setNewContract] = useState({
     exporter_org_id: '',
+    compliance_profile_id: '',
     commodity: '',
     quantity_mt: '',
     delivery_deadline: '',
@@ -66,6 +84,7 @@ export default function BuyerContractsPage() {
       if (contractsRes.ok) {
         const d = await contractsRes.json();
         setContracts(d.contracts || []);
+        setProfileOptions(d.compliance_profile_options || []);
       }
       if (linksRes.ok) {
         const d = await linksRes.json();
@@ -94,6 +113,9 @@ export default function BuyerContractsPage() {
         destination_port: newContract.destination_port || undefined,
         delivery_deadline: newContract.delivery_deadline || undefined,
       };
+      if (newContract.compliance_profile_id) {
+        body.compliance_profile_id = newContract.compliance_profile_id;
+      }
       if (newContract.quantity_mt) body.quantity_mt = parseFloat(newContract.quantity_mt);
       if (newContract.quality_requirements) {
         try { body.quality_requirements = JSON.parse(newContract.quality_requirements); } catch { /* skip */ }
@@ -111,7 +133,7 @@ export default function BuyerContractsPage() {
       const data = await response.json();
       toast({ title: 'Contract created', description: `Contract ${data.contract?.contract_reference || ''} created.` });
       setDialogOpen(false);
-      setNewContract({ exporter_org_id: '', commodity: '', quantity_mt: '', delivery_deadline: '', destination_port: '', quality_requirements: '', notes: '' });
+      setNewContract({ exporter_org_id: '', compliance_profile_id: '', commodity: '', quantity_mt: '', delivery_deadline: '', destination_port: '', quality_requirements: '', notes: '' });
       fetchData();
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
@@ -145,6 +167,9 @@ export default function BuyerContractsPage() {
       || (c.commodity || '').toLowerCase().includes(q)
       || c.exporter_org?.name?.toLowerCase().includes(q);
   });
+  const selectedExporterProfiles = profileOptions.filter(
+    (option) => option.exporter_org_id === newContract.exporter_org_id
+  );
 
   return (
     <div className="flex-1 space-y-6">
@@ -168,7 +193,14 @@ export default function BuyerContractsPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Exporter</Label>
-                <Select value={newContract.exporter_org_id} onValueChange={v => setNewContract(c => ({ ...c, exporter_org_id: v }))}>
+                <Select
+                  value={newContract.exporter_org_id}
+                  onValueChange={v => setNewContract(c => ({
+                    ...c,
+                    exporter_org_id: v,
+                    compliance_profile_id: '',
+                  }))}
+                >
                   <SelectTrigger data-testid="select-exporter">
                     <SelectValue placeholder="Select linked exporter" />
                   </SelectTrigger>
@@ -180,6 +212,41 @@ export default function BuyerContractsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('complianceProfile')}</Label>
+                <Select
+                  value={newContract.compliance_profile_id || 'none'}
+                  onValueChange={(value) => setNewContract((contract) => ({
+                    ...contract,
+                    compliance_profile_id: value === 'none' ? '' : value,
+                  }))}
+                  disabled={!newContract.exporter_org_id}
+                >
+                  <SelectTrigger data-testid="select-compliance-profile">
+                    <SelectValue placeholder={t('selectComplianceProfile')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('noComplianceProfile')}</SelectItem>
+                    {selectedExporterProfiles.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {newContract.compliance_profile_id && (() => {
+                  const selected = selectedExporterProfiles.find(
+                    (option) => option.id === newContract.compliance_profile_id
+                  );
+                  if (!selected?.is_placeholder) return null;
+                  return (
+                    <p className="flex items-start gap-2 text-xs text-muted-foreground" role="note">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{selected.disclaimer || t('placeholderDisclaimer')}</span>
+                    </p>
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="commodity">Commodity</Label>
@@ -276,6 +343,35 @@ export default function BuyerContractsPage() {
                         )}
                         {contract.destination_port && <span>{contract.destination_port}</span>}
                       </div>
+                      {contract.compliance_profile && (
+                        <div
+                          className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
+                          data-testid={`contract-profile-${contract.id}`}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-foreground">
+                              {t('complianceProfile')}: {contract.compliance_profile.name}
+                            </span>
+                            {contract.compliance_profile.version && (
+                              <Badge variant="outline">{contract.compliance_profile.version}</Badge>
+                            )}
+                            {contract.compliance_profile.is_placeholder && (
+                              <Badge variant="secondary">{t('illustrativePlaceholder')}</Badge>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {contract.compliance_profile.destination_market}
+                          </p>
+                          {contract.compliance_profile.is_placeholder && (
+                            <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground" role="note">
+                              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                              <span>
+                                {contract.compliance_profile.disclaimer || t('placeholderDisclaimer')}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">

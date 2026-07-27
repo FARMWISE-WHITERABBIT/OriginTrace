@@ -1,4 +1,5 @@
 import type { FrameworkScorerContext, FrameworkScorerResult } from './types';
+import { evaluateBuyerRequirements } from '@/lib/compliance/buyer-profile';
 
 export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScorerResult {
   const { allHaveGps, allTraceable, items, doc_status, profile } = ctx;
@@ -9,14 +10,32 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
   let met = 0;
   const total = 5;
 
-  const profileDocs = profile?.required_documents || [];
+  const batchItems = items.filter((item) => item.item_type === 'batch');
+  const hasBagToFarmChain = batchItems.length > 0 && batchItems.every((item) =>
+    (
+      !!item.batch_data &&
+      item.batch_data.bag_count > 0 &&
+      item.batch_data.bags_with_farm_link === item.batch_data.bag_count
+    )
+  );
+  const achievedTraceabilityDepth = items.length === 0
+    ? 0
+    : hasBagToFarmChain && allTraceable
+      ? 3
+      : allTraceable
+        ? 2
+        : 1;
+  const requirementChecks = evaluateBuyerRequirements({
+    profile: profile || {},
+    docStatus: doc_status,
+    allHaveGps,
+    allTraceable,
+    traceabilityDepth: achievedTraceabilityDepth,
+  });
+
+  const profileDocs = requirementChecks.filter((check) => check.category === 'document');
   if (profileDocs.length > 0) {
-    const presentDocs = profileDocs.filter(doc => {
-      const key = doc.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-      return doc_status[key] === true || Object.keys(doc_status).some(k =>
-        k.toLowerCase().replace(/[^a-z0-9]+/g, '_') === key && doc_status[k] === true
-      );
-    });
+    const presentDocs = profileDocs.filter((check) => check.met);
     if (presentDocs.length >= profileDocs.length) {
       met++;
       details.push(`Buyer Standards: All ${profileDocs.length} required documents present`);
@@ -41,9 +60,8 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
   }
 
   const requiredGeoLevel = profile?.geo_verification_level || 'basic';
-  const geoLevelMap: Record<string, number> = { basic: 1, polygon: 2, satellite: 3 };
-  const achievedGeoLevel = allHaveGps ? (requiredGeoLevel === 'satellite' ? 3 : 2) : 1;
-  if (achievedGeoLevel >= (geoLevelMap[requiredGeoLevel] || 1)) {
+  const geoCheck = requirementChecks.find((check) => check.category === 'geolocation');
+  if (geoCheck?.met) {
     met++;
     details.push(`Buyer Standards: Geo-verification level met (${requiredGeoLevel})`);
   } else {
@@ -56,8 +74,8 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
   }
 
   const requiredDepth = profile?.min_traceability_depth || 1;
-  const avgFarmCount = items.length > 0 ? items.reduce((sum, i) => sum + i.farm_count, 0) / items.length : 0;
-  if (allTraceable && avgFarmCount >= requiredDepth) {
+  const traceabilityCheck = requirementChecks.find((check) => check.category === 'traceability');
+  if (traceabilityCheck?.met) {
     met++;
     details.push(`Buyer Standards: Traceability depth met (depth ${requiredDepth})`);
   } else {
@@ -69,14 +87,9 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
     });
   }
 
-  const requiredCerts = profile?.required_certifications || [];
+  const requiredCerts = requirementChecks.filter((check) => check.category === 'certification');
   if (requiredCerts.length > 0) {
-    const certKeys = requiredCerts.map(c => c.toLowerCase().replace(/[^a-z0-9]+/g, '_'));
-    const hasCerts = certKeys.every(ck =>
-      doc_status[ck] === true || Object.keys(doc_status).some(k =>
-        k.toLowerCase().replace(/[^a-z0-9]+/g, '_').includes(ck) && doc_status[k] === true
-      )
-    );
+    const hasCerts = requiredCerts.every((check) => check.met);
     if (hasCerts) {
       met++;
       details.push(`Buyer Standards: All ${requiredCerts.length} buyer certifications verified`);
@@ -84,7 +97,7 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
       remediation.push({
         priority: 'important',
         title: 'Buyer Standards: Buyer-specific certifications missing',
-        description: `Required certifications: ${requiredCerts.join(', ')}. Ensure all are obtained and uploaded.`,
+        description: `Required certifications: ${requiredCerts.map((check) => check.label).join(', ')}. Ensure all are obtained and uploaded.`,
         dimension: 'Regulatory Alignment',
       });
     }
@@ -122,5 +135,5 @@ export function scoreBuyerStandards(ctx: FrameworkScorerContext): FrameworkScore
 
   details.push(`Buyer Standards: ${met}/${total} requirements met`);
 
-  return { met, total, details, riskFlags, remediation };
+  return { met, total, details, riskFlags, remediation, requirementChecks };
 }
