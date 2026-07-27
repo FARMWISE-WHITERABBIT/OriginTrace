@@ -10,6 +10,7 @@ import type { PendingBatch } from '../lib/offline/sync-store';
 function batch(overrides: Partial<PendingBatch> = {}): PendingBatch {
   return {
     id: 'batch-local-1',
+    org_id: 1,
     local_id: 'batch-local-1',
     batch_id: 'BAT-001',
     farm_id: 'farm-local-1',

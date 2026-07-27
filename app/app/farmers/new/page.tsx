@@ -42,6 +42,8 @@ interface LocationVillage { id: string; name: string; lga_id: string; }
 export default function FarmerRegistrationPage() {
   const router = useRouter();
   const { organization, profile, isLoading: orgLoading } = useOrg();
+  const activeOrganizationIdRef = useRef<number | null>(organization?.id ?? null);
+  activeOrganizationIdRef.current = organization?.id ?? null;
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
   const [commodityList, setCommodityList] = useState<{name: string; slug: string}[]>([]);
@@ -193,6 +195,16 @@ export default function FarmerRegistrationPage() {
     if (!hasConsent) errs.consent = 'Farmer consent is required';
     if (phone.trim() && !PHONE_REGEX.test(phone.trim())) errs.phone = 'Enter a valid Nigerian phone number (e.g. 08012345678)';
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    const requestedOrganizationId = organization?.id ?? null;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
+    const assertOrganizationUnchanged = () => {
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) {
+        throw new Error('The active organization changed while saving offline data.');
+      }
+    };
     setFieldErrors({});
     setIsSaving(true);
 
@@ -265,9 +277,10 @@ export default function FarmerRegistrationPage() {
         } = await import('@/lib/offline/sync-store');
         const localId = generateLocalId('farm');
 
+        assertOrganizationUnchanged();
         await saveFarmOffline({
           local_id: localId,
-          org_id: organization?.id,
+          org_id: requestedOrganizationId,
           farmer_name: fullName.trim(),
           farmer_id: undefined,
           phone: phone || null,
@@ -279,7 +292,9 @@ export default function FarmerRegistrationPage() {
         });
 
         if (Object.keys(complianceData).length > 0) {
+          assertOrganizationUnchanged();
           await saveUploadOffline({
+            org_id: requestedOrganizationId,
             farm_id: localId,
             local_farm_id: localId,
             upload_kind: 'record',
@@ -289,7 +304,9 @@ export default function FarmerRegistrationPage() {
         }
 
         if (farmerPhoto) {
+          assertOrganizationUnchanged();
           await saveUploadOffline({
+            org_id: requestedOrganizationId,
             farm_id: localId,
             local_farm_id: localId,
             upload_kind: 'file',
@@ -302,7 +319,9 @@ export default function FarmerRegistrationPage() {
         }
 
         if (idDocument) {
+          assertOrganizationUnchanged();
           const upload = await saveUploadOffline({
+            org_id: requestedOrganizationId,
             farm_id: localId,
             local_farm_id: localId,
             upload_kind: 'file',
@@ -315,7 +334,9 @@ export default function FarmerRegistrationPage() {
 
           if (idDocument.type.startsWith('image/')) {
             try {
+              assertOrganizationUnchanged();
               await saveOcrJobOffline({
+                org_id: requestedOrganizationId,
                 farm_id: localId,
                 local_farm_id: localId,
                 upload_id: upload.id,
@@ -329,7 +350,9 @@ export default function FarmerRegistrationPage() {
 
         for (const [fileType, file] of Object.entries(complianceFiles)) {
           if (!file) continue;
+          assertOrganizationUnchanged();
           await saveUploadOffline({
+            org_id: requestedOrganizationId,
             farm_id: localId,
             local_farm_id: localId,
             upload_kind: 'file',
@@ -341,6 +364,7 @@ export default function FarmerRegistrationPage() {
           });
         }
 
+        assertOrganizationUnchanged();
         toast({ title: 'Saved Offline', description: `${fullName} and field files will sync when online.` });
         setQueuedOffline(true);
         setSavedFarmId(localId);
@@ -348,7 +372,9 @@ export default function FarmerRegistrationPage() {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast({ title: 'Error', description: 'Failed to register farmer. Please try again.', variant: 'destructive' });
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        toast({ title: 'Error', description: 'Failed to register farmer. Please try again.', variant: 'destructive' });
+      }
     } finally {
       setIsSaving(false);
     }
