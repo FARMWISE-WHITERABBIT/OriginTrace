@@ -4,6 +4,7 @@ import { newAuthedPage, QA_SEED_SKIP_MESSAGE } from './helpers/qa-flows';
 const SERVER_FARM_ID = '0f2f1714-19fb-41d3-a60d-7df4e97ab931';
 const LOCAL_FARM_ID = 'farm-e2e-offline-1';
 const LOCAL_BATCH_ID = 'batch-e2e-offline-1';
+const FOREIGN_FARM_ID = 'farm-e2e-foreign-org-1';
 
 async function installSyncMocks(page: Page) {
   const seen: string[] = [];
@@ -89,8 +90,8 @@ async function installSyncMocks(page: Page) {
   await page.exposeFunction('offlineSyncSeen', () => seen);
 }
 
-async function seedOfflineQueue(page: Page) {
-  await page.evaluate(async ({ localFarmId, localBatchId }) => {
+async function seedOfflineQueue(page: Page, orgId: number | string) {
+  await page.evaluate(async ({ localFarmId, localBatchId, foreignFarmId, activeOrgId }) => {
     function requestToPromise<T = IDBDatabase>(request: IDBRequest<T>): Promise<T> {
       return new Promise((resolve, reject) => {
         request.onsuccess = () => resolve(request.result);
@@ -126,15 +127,26 @@ async function seedOfflineQueue(page: Page) {
     await requestToPromise(tx.objectStore('pending_farms').put({
       id: localFarmId,
       local_id: localFarmId,
-      org_id: 'offline-e2e-org',
+      org_id: activeOrgId,
       farmer_name: 'Offline E2E Farmer',
       community: 'Offline Village',
       status: 'pending',
       created_at: now,
     }));
 
+    await requestToPromise(tx.objectStore('pending_farms').put({
+      id: foreignFarmId,
+      local_id: foreignFarmId,
+      org_id: `foreign-${activeOrgId}`,
+      farmer_name: 'Foreign Organization Farmer',
+      community: 'Foreign Village',
+      status: 'pending',
+      created_at: now,
+    }));
+
     await requestToPromise(tx.objectStore('pending_uploads').put({
       id: 'upload-e2e-1',
+      org_id: activeOrgId,
       farm_id: localFarmId,
       local_farm_id: localFarmId,
       upload_kind: 'file',
@@ -149,6 +161,7 @@ async function seedOfflineQueue(page: Page) {
 
     await requestToPromise(tx.objectStore('pending_ocr_jobs').put({
       id: 'ocr-e2e-1',
+      org_id: activeOrgId,
       farm_id: localFarmId,
       local_farm_id: localFarmId,
       upload_id: 'upload-e2e-1',
@@ -159,6 +172,7 @@ async function seedOfflineQueue(page: Page) {
 
     await requestToPromise(tx.objectStore('pending_boundaries').put({
       id: 'boundary-e2e-1',
+      org_id: activeOrgId,
       farm_id: localFarmId,
       local_farm_id: localFarmId,
       boundary: {
@@ -172,6 +186,7 @@ async function seedOfflineQueue(page: Page) {
 
     await requestToPromise(tx.objectStore('pending_batches').put({
       id: 'queue-batch-e2e-1',
+      org_id: activeOrgId,
       local_id: localBatchId,
       batch_id: 'BAT-OFFLINE-E2E',
       farm_id: localFarmId,
@@ -198,10 +213,36 @@ async function seedOfflineQueue(page: Page) {
       tx.onabort = () => reject(tx.error);
     });
     db.close();
-  }, { localFarmId: LOCAL_FARM_ID, localBatchId: LOCAL_BATCH_ID });
+  }, {
+    localFarmId: LOCAL_FARM_ID,
+    localBatchId: LOCAL_BATCH_ID,
+    foreignFarmId: FOREIGN_FARM_ID,
+    activeOrgId: orgId,
+  });
+}
+
+async function readQueueItemStatus(page: Page, storeName: string, id: string): Promise<string | null> {
+  return page.evaluate(async ({ targetStore, targetId }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('origintrace-offline', 6);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    try {
+      const value = await new Promise<any>((resolve, reject) => {
+        const request = db.transaction(targetStore, 'readonly').objectStore(targetStore).get(targetId);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return typeof value?.status === 'string' ? value.status : null;
+    } finally {
+      db.close();
+    }
+  }, { targetStore: storeName, targetId: id });
 }
 
 test('field agent syncs queued offline farmer, files, OCR, boundary, and batch in order', async ({ browser }) => {
+  test.setTimeout(60_000);
   let authed: Awaited<ReturnType<typeof newAuthedPage>>;
   try {
     authed = await newAuthedPage(browser, 'agent');
@@ -210,24 +251,36 @@ test('field agent syncs queued offline farmer, files, OCR, boundary, and batch i
     return;
   }
 
-    const { context, page } = authed;
+  const { context, page } = authed;
   try {
     await installSyncMocks(page);
     await page.goto('/app/sync', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => {});
     await expect(page.getByTestId('button-refresh')).toBeVisible({ timeout: 30_000 });
+    const activeOrgId = await page.evaluate(async () => {
+      const response = await fetch('/api/profile');
+      if (!response.ok) throw new Error(`Profile request failed (${response.status})`);
+      const data = await response.json();
+      const orgId = data?.organization?.id;
+      if (typeof orgId !== 'number' && typeof orgId !== 'string') {
+        throw new Error('Authenticated profile has no active organization id');
+      }
+      return orgId;
+    });
     await context.setOffline(true);
-    await seedOfflineQueue(page);
+    await seedOfflineQueue(page, activeOrgId);
     await page.getByTestId('button-refresh').click();
     await expect(page.getByTestId('text-stat-pending')).toHaveText('5');
 
     await context.setOffline(false);
-    await page.getByTestId('button-sync-all').click();
+    await page.waitForFunction(() => navigator.onLine === true);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
     await expect(page.getByTestId('text-stat-pending')).toHaveText('0');
     await expect(page.getByTestId('text-stat-synced')).toHaveText('5');
 
     const seen = await page.evaluate(() => (window as unknown as { offlineSyncSeen: () => string[] }).offlineSyncSeen());
     expect(seen).toEqual(['farms', 'uploads', 'ocr', 'boundaries', 'batches']);
+    expect(await readQueueItemStatus(page, 'pending_farms', FOREIGN_FARM_ID)).toBe('pending');
   } finally {
     await context.setOffline(false).catch(() => undefined);
     await context.close();

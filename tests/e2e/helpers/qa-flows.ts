@@ -1,5 +1,17 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
-import { existsSync, readFileSync } from 'fs';
+import {
+  assertLocalE2eEnvironment,
+  getE2eBaseUrl,
+  getE2eEnvValue,
+  LOCAL_DEMO_ADMIN_EMAIL,
+  LOCAL_DEMO_ADMIN_PASSWORD,
+} from './local-environment';
+
+export {
+  assertLocalE2eEnvironment,
+  getE2eBaseUrl,
+  getLocalE2eAdminCredentials,
+} from './local-environment';
 
 export type QaRole =
   | 'admin'
@@ -12,12 +24,12 @@ export type QaRole =
   | 'buyer'
   | 'farmer';
 
-export const QA_PASSWORD = 'Demo1234!';
+export const QA_PASSWORD = LOCAL_DEMO_ADMIN_PASSWORD;
 export const QA_SEED_SKIP_MESSAGE =
   'QA seed data missing. Run npm run seed:qa and npm run seed:qa:data before this spec.';
 
 export const QA_USERS: Record<QaRole, { email: string; password: string }> = {
-  admin: { email: 'admin@demo.test', password: QA_PASSWORD },
+  admin: { email: LOCAL_DEMO_ADMIN_EMAIL, password: QA_PASSWORD },
   aggregator: { email: 'aggregator@demo.test', password: QA_PASSWORD },
   agent: { email: 'agent@demo.test', password: QA_PASSWORD },
   quality: { email: 'quality@demo.test', password: QA_PASSWORD },
@@ -47,22 +59,6 @@ type JsonMap = Record<string, any>;
 const SUPABASE_SESSION_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 const SUPABASE_COOKIE_CHUNK_SIZE = 3180;
 
-export function getE2eBaseUrl(): string {
-  const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000';
-  return baseUrl.replace('http://127.0.0.1:5000', 'http://localhost:5000');
-}
-
-function getEnvValue(key: string): string | undefined {
-  if (process.env[key]) return process.env[key];
-  if (!existsSync('.env.local')) return undefined;
-
-  const line = readFileSync('.env.local', 'utf8')
-    .split(/\r?\n/)
-    .find((entry) => entry.startsWith(`${key}=`));
-
-  return line?.slice(key.length + 1).trim();
-}
-
 function base64UrlEncode(value: string): string {
   return Buffer.from(value, 'utf8')
     .toString('base64')
@@ -89,8 +85,8 @@ export async function authenticateContextWithCredentials(
   email: string,
   password: string,
 ) {
-  const supabaseUrl = getEnvValue('NEXT_PUBLIC_SUPABASE_URL') || 'http://127.0.0.1:54321';
-  const anonKey = getEnvValue('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const { baseUrl, supabaseUrl } = assertLocalE2eEnvironment();
+  const anonKey = getE2eEnvValue('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   if (!anonKey) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required for E2E auth setup');
 
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
@@ -113,8 +109,6 @@ export async function authenticateContextWithCredentials(
   const session = { ...tokenResponse, expires_at: expiresAt };
   const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
   const cookieValue = `base64-${base64UrlEncode(JSON.stringify(session))}`;
-  const baseUrl = getE2eBaseUrl();
-
   await context.addCookies(sessionCookieChunks(storageKey, cookieValue).map((chunk) => ({
     ...chunk,
     url: baseUrl,
@@ -153,6 +147,7 @@ async function waitForLoginHydration(page: Page) {
 }
 
 export async function loginAsRole(page: Page, role: QaRole) {
+  assertLocalE2eEnvironment();
   const user = QA_USERS[role];
   await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
   await waitForLoginHydration(page);
@@ -253,49 +248,45 @@ export async function apiPatchJson<T = JsonMap>(
 }
 
 export async function findQaAnchors(page: Page): Promise<QaAnchors | null> {
-  try {
-    const [farmersData, farmsData, batchesData, processingData, shipmentsData] = await Promise.all([
-      apiGetJson<JsonMap>(page, '/api/farmers?limit=1000'),
-      apiGetJson<JsonMap>(page, '/api/farms?limit=1000'),
-      apiGetJson<JsonMap>(page, '/api/batches?limit=1000'),
-      apiGetJson<JsonMap>(page, '/api/processing-runs?limit=1000'),
-      apiGetJson<JsonMap>(page, '/api/shipments?limit=1000'),
-    ]);
+  const [farmersData, farmsData, batchesData, processingData, shipmentsData] = await Promise.all([
+    apiGetJson<JsonMap>(page, '/api/farmers?limit=1000'),
+    apiGetJson<JsonMap>(page, '/api/farms?limit=1000'),
+    apiGetJson<JsonMap>(page, '/api/batches?limit=1000'),
+    apiGetJson<JsonMap>(page, '/api/processing-runs?limit=1000'),
+    apiGetJson<JsonMap>(page, '/api/shipments?limit=1000'),
+  ]);
 
-    const farmers = farmersData.farmers || [];
-    const farms = farmsData.farms || [];
-    const batches = batchesData.batches || [];
-    const processingRuns = processingData.processingRuns || [];
-    const shipments = shipmentsData.shipments || [];
+  const farmers = farmersData.farmers || [];
+  const farms = farmsData.farms || [];
+  const batches = batchesData.batches || [];
+  const processingRuns = processingData.processingRuns || [];
+  const shipments = shipmentsData.shipments || [];
 
-    const farmer = farmers.find((item: JsonMap) =>
-      item.farmer_id === 'QA-FARMER-001' ||
-      item.farm_id === 'QA-FARMER-001' ||
-      String(item.farmer_name || '').includes('QA Ada Cocoa')
-    );
-    const farm = farms.find((item: JsonMap) =>
-      item.farmer_id === 'QA-FARMER-001' ||
-      String(item.farmer_name || '').includes('QA Ada Cocoa')
-    );
-    const batch = batches.find((item: JsonMap) => item.batch_code === 'QA-BCH-001');
-    const processingRun = processingRuns.find((item: JsonMap) => item.run_code === 'QA-RUN-001');
-    const shipment = shipments.find((item: JsonMap) => item.shipment_code === 'QA-SHP-001');
+  const farmer = farmers.find((item: JsonMap) =>
+    item.farmer_id === 'QA-FARMER-001' ||
+    item.farm_id === 'QA-FARMER-001' ||
+    String(item.farmer_name || '').includes('QA Ada Cocoa')
+  );
+  const farm = farms.find((item: JsonMap) =>
+    item.farmer_id === 'QA-FARMER-001' ||
+    String(item.farmer_name || '').includes('QA Ada Cocoa')
+  );
+  const batch = batches.find((item: JsonMap) => item.batch_code === 'QA-BCH-001');
+  const processingRun = processingRuns.find((item: JsonMap) => item.run_code === 'QA-RUN-001');
+  const shipment = shipments.find((item: JsonMap) => item.shipment_code === 'QA-SHP-001');
 
-    const farmerId = String(farmer?.farm_id || farm?.id || farmer?.id || '');
-    const farmId = String(farm?.id || farmer?.farm_id || farmer?.id || '');
-    const batchId = String(batch?.id || '');
-    const processingRunId = String(processingRun?.id || '');
-    const shipmentId = String(shipment?.id || '');
-    const shipmentCode = String(shipment?.shipment_code || '');
+  const farmerId = String(farmer?.farm_id || farm?.id || farmer?.id || '');
+  const farmId = String(farm?.id || farmer?.farm_id || farmer?.id || '');
+  const batchId = String(batch?.id || '');
+  const processingRunId = String(processingRun?.id || '');
+  const shipmentId = String(shipment?.id || '');
+  const shipmentCode = String(shipment?.shipment_code || '');
 
-    if (!farmerId || !farmId || !batchId || !processingRunId || !shipmentId || !shipmentCode) {
-      return null;
-    }
-
-    return { farmerId, farmId, batchId, processingRunId, shipmentId, shipmentCode };
-  } catch {
+  if (!farmerId || !farmId || !batchId || !processingRunId || !shipmentId || !shipmentCode) {
     return null;
   }
+
+  return { farmerId, farmId, batchId, processingRunId, shipmentId, shipmentCode };
 }
 
 export async function selectRadixOption(
