@@ -138,9 +138,12 @@ test.describe('Marketing — Importer Funnel', () => {
     expect(h1?.length).toBeGreaterThan(5);
   });
 
-  test('"For Importers" nav link navigates to /importers', async ({ page }) => {
+  test('"For Importers" nav dropdown navigates to /importers', async ({ page }) => {
     await gotoPublic(page, '/');
-    await page.getByTestId('nav-link-for-importers').first().click();
+    // "For Importers" now lives under the "Solutions" dropdown, not as a top-level nav link.
+    await page.getByTestId('nav-link-solutions').first().hover();
+    await expect(page.getByTestId('dropdown-solutions')).toBeVisible();
+    await page.getByTestId('dropdown-link-for-importers').click();
     await page.waitForURL(/\/importers/, { timeout: 10_000 });
     await expect(page.locator('h1')).toBeVisible();
   });
@@ -226,4 +229,11 @@ test.describe('Marketing — SEO Smoke Tests', () => {
     expect(body).toContain('<url>');
   });
 
+});
+
+test.describe('Marketing — Importer cross-links', () => {
+  test('compliance pages carry the importer callout', async ({ page }) => {
+    await gotoPublic(page, '/compliance/eudr');
+    await expect(page.getByTestId('importer-callout')).toBeAttached();
+  });
 });

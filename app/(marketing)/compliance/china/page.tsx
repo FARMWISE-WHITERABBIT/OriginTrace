@@ -7,6 +7,7 @@ import { FadeIn } from '@/components/marketing/motion';
 import { FaqSection } from '@/components/marketing/faq-section';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Factory, Package } from 'lucide-react';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 
 export const metadata: Metadata = {
   title: 'China GACC Compliance',
@@ -239,6 +240,10 @@ export default function ChinaCompliancePage() {
 
           {/* ── FAQ SECTION ──────────────────────────────────────── */}
           <FaqSection />
+
+
+          <ImporterCallout />
+
 
 
           {/* ── FINAL CTA ────────────────────────────────────────── */}

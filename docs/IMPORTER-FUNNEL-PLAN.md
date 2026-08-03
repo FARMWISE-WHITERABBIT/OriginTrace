@@ -1,6 +1,6 @@
 # Importer Funnel & Escrow Positioning — Implementation Plan
 
-_2026-07-10. Status: **AWAITING APPROVAL — no building until signed off.** Companion to docs/CONTENT-STRATEGY.md and docs/ESCROW-SHIPPING-APIS.md._
+_2026-07-10. Status: **APPROVED (D1=a, D2=§3, D3=keep /importers) — P1 + P2 implemented 2026-07-10; P3 measurement ongoing.** See §8 for the implementation record. Companion to docs/CONTENT-STRATEGY.md and docs/ESCROW-SHIPPING-APIS.md._
 
 ## 0. Why this plan exists
 
@@ -92,3 +92,10 @@ Five cards, one per regime the buyer answers to, each with its verified hook and
 5. **UAE/GCC** — Dubai Municipality FIRS clearance + re-export inheritance ("origin follows the goods") → `/compliance/uae`
 
 ⚠ Accuracy rule: UK/USA hooks above are from the existing compliance pages' claims — re-verify dates/status against primary sources before the cards ship (same discipline as the blog work; UK timber/forest-risk commodity regulations have shifted repeatedly).
+
+
+## 8. Implementation record (2026-07-10)
+
+P1: T1 demo persona shipped as an `importer_buyer` organization-type option (flows through /api/contact, internal email, nurture job, and HubSpot `industry` with zero API changes) + `?role=buyer` copy variant on /demo (hero + feature cards) + `defaultOrgType` preselect. T2 /importers v2: 5 region cards (EU/UK/USA/UAE/China), escrow section rewritten to §3 ("LC-grade assurance, milestone-speed cash flow"), FAQ with FAQPage schema, CTAs → /demo?role=buyer. T3 homepage "I'm a buyer / importer" hero link. T4 all 8 importer-post CTAs repointed (mid → /demo?role=buyer, end → /importers). T12 docs updated. T13 Playwright smoke added to marketing.spec.ts. T15 docs/BUYER-PROVISIONING.md.
+P2: T6 pedigree For-Buyers card linked. T7+T8 ImporterCallout component on solutions + all 6 compliance pages. T9 milestone-escrow-exporters-get-paid-at-loading + T10 escrow-vs-letter-of-credit-commodity-imports published (§3 narrative, hedged). T11 D2 payment section linked to the escrow comparison.
+P3 (implemented 2026-07-10 — see docs/MEASUREMENT.md): GA4 `generate_lead` event with persona/source params; first-party attribution columns on lead_nurture_jobs (migration pending manual apply — Supabase MCP write access was revoked mid-session; /api/contact degrades gracefully until applied); buyer-voiced 3-step nurture sequence branched by persona/org_type; monthly GSC/GA4/SQL/HubSpot review protocol with kill/iterate rule. Still manual/portal-side: HubSpot custom persona property (optional).

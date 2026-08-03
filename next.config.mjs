@@ -108,7 +108,7 @@ const securityHeaders = [
       ].filter(Boolean).join(' '),
       "frame-src 'self' https://js.paystack.co https://www.youtube-nocookie.com https://www.youtube.com",
       "worker-src 'self' blob:",
-      "media-src 'self' blob: https://sjpnqhlohgyyndxyfgvh.supabase.co",
+      "media-src 'self' blob: https://*.supabase.co",
     ].join('; '),
   },
 ];

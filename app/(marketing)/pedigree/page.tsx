@@ -67,6 +67,8 @@ const beneficiaryCards = [
   {
     title: 'For Buyers',
     body: 'You need to clear the shipment at port, satisfy your own due diligence requirements, and give your downstream buyers the sourcing evidence they need. The OriginTrace pedigree gives you independently verifiable origin data.',
+    href: '/importers',
+    linkLabel: 'See OriginTrace for importers',
   },
   {
     title: 'For Auditors',
@@ -256,6 +258,11 @@ export default function PedigreePage() {
                     <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
                       {card.body}
                     </p>
+                    {'href' in card && card.href && (
+                      <Link href={card.href} className="mk-card__arrow" style={{ marginTop: '1rem', display: 'inline-block', fontSize: '0.875rem', fontWeight: 600 }}>
+                        {card.linkLabel} <ChevronRight className="h-4 w-4 inline" />
+                      </Link>
+                    )}
                   </div>
                 </FadeIn>
               ))}

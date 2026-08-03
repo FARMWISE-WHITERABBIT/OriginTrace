@@ -7,6 +7,7 @@ import { FaqSection } from '@/components/marketing/faq-section';
 import { FAQSchema } from '@/components/marketing/faq-schema';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
 import { ChevronRight, Globe, Factory, FileText } from 'lucide-react';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 
 const faqs = [
   {
@@ -303,6 +304,10 @@ export default function EUDRCompliancePage() {
 
           {/* ── FAQ SECTION ──────────────────────────────────────── */}
           <FaqSection />
+
+
+          <ImporterCallout />
+
 
 
           {/* ── FINAL CTA ────────────────────────────────────────── */}

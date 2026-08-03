@@ -22,13 +22,17 @@ const industryLinks = [
   { href: '/industries/minerals',    label: 'Minerals' },
 ];
 
+const solutionsLinks = [
+  { href: '/solutions', label: 'For Exporters' },
+  { href: '/importers', label: 'For Importers' },
+];
+
 // Mobile nav: 0.75rem top padding (12px) + pill height (0.5rem×2 padding + 34px logo = 50px) + 10px gap
 const MOBILE_DRAWER_TOP = '72px';
 
 const navLinks = [
   { href: '/',           label: 'Home' },
-  { href: '/solutions',  label: 'Solutions' },
-  { href: '/importers',  label: 'For Importers' },
+  { href: '/solutions',  label: 'Solutions', dropdown: solutionsLinks },
   { href: '/compliance/eudr', label: 'Compliance', dropdown: complianceLinks },
   { href: '/industries', label: 'Industries', dropdown: industryLinks },
   { href: '/blog',       label: 'Insights' },
@@ -37,7 +41,10 @@ const navLinks = [
 function NavDropdown({ link, pathname }: { link: typeof navLinks[0]; pathname: string | null }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isActive = link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href);
+  const isActive =
+    link.href === '/'
+      ? pathname === '/'
+      : pathname?.startsWith(link.href) || link.dropdown!.some((sub) => pathname?.startsWith(sub.href));
 
   return (
     <div
@@ -350,7 +357,8 @@ export function MarketingNav() {
                       className="flex items-center justify-between w-full px-5 py-3.5 font-medium transition-colors"
                       style={{
                         fontSize: '15px',
-                        color: pathname?.startsWith(link.href) ? 'var(--mk-green)' : 'var(--mk-text-secondary)',
+                        color: (pathname?.startsWith(link.href) || link.dropdown.some((sub) => pathname?.startsWith(sub.href)))
+                          ? 'var(--mk-green)' : 'var(--mk-text-secondary)',
                       }}
                       data-testid={`mobile-nav-${link.label.toLowerCase()}`}
                     >

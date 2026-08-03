@@ -19,12 +19,16 @@ import { post as rainforestAlliance } from './rainforest-alliance-certification-
 import { post as exportCocoaCashewSesame } from './how-to-export-cocoa-cashew-sesame-eu-nigeria-ghana';
 import { post as gaccSesameGumArabic } from './gacc-compliance-traceability-sesame-gum-arabic-nigeria';
 import { post as verifySupplierEudr } from './how-to-verify-supplier-eudr-claims';
+import { post as milestoneEscrowExporters } from './milestone-escrow-exporters-get-paid-at-loading';
+import { post as escrowVsLc } from './escrow-vs-letter-of-credit-commodity-imports';
 import { post as verifyNigerianExporter } from './verify-nigerian-exporter-legitimacy';
 import { post as dubaiFirsGuide } from './dubai-food-import-firs-registration-guide';
 import { post as dubaiReexportEuRules } from './dubai-reexport-eu-rules-african-commodities';
 import type { BlogPost } from '@/lib/blog';
 
 export const posts: BlogPost[] = [
+  milestoneEscrowExporters,
+  escrowVsLc,
   verifySupplierEudr,
   verifyNigerianExporter,
   dubaiFirsGuide,

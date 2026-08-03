@@ -185,7 +185,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Blind telegraphic transfers — especially full prepayment — are how nearly every commodity scam ends. An exporter who won\'t work with an LC or inspection-linked terms on a first deal isn\'t offering you a deal at all. The best Nigerian exporters have worked this out: they volunteer certificate numbers, inspection access, and traceability records upfront, because being easy to verify wins contracts.',
+      text: 'Blind telegraphic transfers — especially full prepayment — are how nearly every commodity scam ends. An exporter who won\'t work with an LC or inspection-linked terms on a first deal isn\'t offering you a deal at all. And if the LC bureaucracy is what\'s slowing both sides down, [milestone escrow](/blog/escrow-vs-letter-of-credit-commodity-imports) ties payments to verified shipping events instead. The best Nigerian exporters have worked this out: they volunteer certificate numbers, inspection access, and traceability records upfront, because being easy to verify wins contracts.',
     },
     {
       type: 'h2',

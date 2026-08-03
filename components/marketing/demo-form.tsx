@@ -220,13 +220,32 @@ export function DemoFormWidget({
     }
     setSubmitting(true);
     try {
+      // First-party attribution (P3 measurement): the page the lead submitted
+      // from (persona variant included via query) and the on-site referrer.
+      const sourcePath = window.location.pathname + window.location.search;
+      let referrerPath: string | null = null;
+      try {
+        referrerPath = document.referrer ? new URL(document.referrer).pathname : null;
+      } catch {
+        referrerPath = null;
+      }
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, source: 'demo' }),
+        body: JSON.stringify({ ...formData, source: 'demo', source_path: sourcePath, referrer_path: referrerPath }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error('Submission failed');
+      // GA4 conversion event — persona-split demo submissions (consent-gated
+      // gtag is loaded by the marketing layout; guard for its absence).
+      const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+      if (typeof gtag === 'function') {
+        gtag('event', 'generate_lead', {
+          persona: formData.persona,
+          organization_type: formData.organization_type,
+          source_path: sourcePath,
+        });
+      }
       // Redirect to booking confirm page while intent is hot
       router.push(data.redirect || `/demo/confirm?name=${encodeURIComponent(formData.full_name)}&email=${encodeURIComponent(formData.email)}`);
     } catch {

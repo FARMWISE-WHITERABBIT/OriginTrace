@@ -6,6 +6,7 @@ import { MarketingFooter } from '@/components/marketing/footer';
 import { FadeIn } from '@/components/marketing/motion';
 import HeroBackground from '@/components/marketing/hero-background';
 import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { ImporterCallout } from '@/components/marketing/importer-callout';
 import {
   Globe,
   FileText,
@@ -541,6 +542,8 @@ export default function SolutionsPage() {
           </div>
         </section>
 
+
+        <ImporterCallout />
 
         {/* ══════════════════════════════════════════════════════════
             6. FINAL CTA

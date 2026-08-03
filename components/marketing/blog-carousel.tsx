@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -9,6 +9,10 @@ import type { BlogPost } from '@/lib/blog';
 
 interface BlogCarouselProps {
   posts: BlogPost[];
+  eyebrow?: string;
+  heading?: ReactNode;
+  viewAllHref?: string;
+  viewAllLabel?: string;
 }
 
 const MOBILE_QUERY = '(max-width: 767px)';
@@ -19,7 +23,21 @@ function subscribeToMediaQuery(callback: () => void) {
   return () => mq.removeEventListener('change', callback);
 }
 
-export function BlogCarousel({ posts }: BlogCarouselProps) {
+export function BlogCarousel({
+  posts,
+  eyebrow = 'Our Blog',
+  heading = (
+    <>
+      Insights &amp;{' '}
+      <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
+        case studies
+      </span>{' '}
+      from our team
+    </>
+  ),
+  viewAllHref = '/blog',
+  viewAllLabel = 'View All Insights',
+}: BlogCarouselProps) {
   const [page, setPage] = useState(0);
   const isMobile = useSyncExternalStore(
     subscribeToMediaQuery,
@@ -50,7 +68,7 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
       {/* LEFT — sticky heading */}
       <FadeIn>
         <div className="mk-blog-layout__heading">
-          <span className="pre-title margin-bottom margin-medium">Our Blog</span>
+          <span className="pre-title margin-bottom margin-medium">{eyebrow}</span>
           <h2
             className="text-display-lg"
             data-testid="text-blog-headline"
@@ -63,15 +81,11 @@ export function BlogCarousel({ posts }: BlogCarouselProps) {
               marginTop: '0.75rem',
             }}
           >
-            Insights &amp;{' '}
-            <span style={{ color: 'var(--mk-text-muted)', fontWeight: 400 }}>
-              case studies
-            </span>{' '}
-            from our team
+            {heading}
           </h2>
           <div style={{ marginTop: '2rem' }}>
-            <Link href="/blog" className="btn-mk-outline">
-              View All Insights
+            <Link href={viewAllHref} className="btn-mk-outline">
+              {viewAllLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
