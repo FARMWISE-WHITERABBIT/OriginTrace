@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { StatCardSkeleton } from '@/components/skeletons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS, VIZ_COLORS } from '@/lib/chart-colors';
 import { runWhenIdle } from '@/lib/utils/idle';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 // Semantic colors for known African export commodities
 const COMMODITY_HUE: Record<string, string> = {
@@ -138,67 +140,120 @@ function SectionDivider({ label }: { label: string }) {
 }
 
 export function AdminDashboard() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [auditScore, setAuditScore] = useState<AuditScore | null>(null);
-  const [operationalAlerts, setOperationalAlerts] = useState<AlertItem[]>([]);
+  const tErrors = useTranslations('errors');
   const [period, setPeriod] = useState<Period>('30d');
-  const [isLoading, setIsLoading] = useState(true);
   const [isDeferredLoading, setIsDeferredLoading] = useState(false);
+  const [deferredRestoreVersion, setDeferredRestoreVersion] = useState(0);
   const { organization } = useOrg();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
+  const [scopedAuditScore, setScopedAuditScore] = useState<{
+    organizationId: number | null;
+    value: AuditScore | null;
+  }>({ organizationId: null, value: null });
+  const [scopedOperationalAlerts, setScopedOperationalAlerts] = useState<{
+    organizationId: number | null;
+    value: AlertItem[];
+  }>({ organizationId: null, value: [] });
+  const auditScore = Object.is(scopedAuditScore.organizationId, organizationId)
+    ? scopedAuditScore.value
+    : null;
+  const operationalAlerts = Object.is(scopedOperationalAlerts.organizationId, organizationId)
+    ? scopedOperationalAlerts.value
+    : [];
+  const {
+    data: analytics,
+    error: analyticsError,
+    loading: isLoading,
+    refetch: refetchAnalytics,
+    setData: setAnalytics,
+  } = useApiResource<AnalyticsData>(
+    organization ? `/api/analytics?period=${period}&section=dashboard` : null,
+    {
+      enabled: !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id, period],
+      showErrorToast: false,
+    },
+  );
 
-  const fetchAnalytics = useCallback(async () => {
-    if (!organization) return;
-    setIsLoading(true);
-    setIsDeferredLoading(false);
-    try {
-      const analyticsRes = await fetch(`/api/analytics?period=${period}&section=dashboard`);
-      if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setIsLoading(false);
-      setIsDeferredLoading(true);
+  useEffect(() => {
+    if (!organizationId || isLoading || analytics?.period !== period) {
+      setIsDeferredLoading(false);
+      return;
     }
-  }, [organization, period]);
+    setIsDeferredLoading(true);
+  }, [analytics?.period, isLoading, organizationId, period]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    const resumeDeferredFetch = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsDeferredLoading(true);
+        setDeferredRestoreVersion((version) => version + 1);
+      }
+    };
+    window.addEventListener('pageshow', resumeDeferredFetch);
+    return () => window.removeEventListener('pageshow', resumeDeferredFetch);
+  }, []);
 
   useEffect(() => {
-    if (!organization || isLoading || !isDeferredLoading) return;
+    if (!organizationId || isLoading || !isDeferredLoading) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const requestOrganizationId = organizationId;
     const cancelIdle = runWhenIdle(() => {
+      if (cancelled || controller.signal.aborted) return;
       Promise.all([
-        fetch(`/api/analytics?period=${period}&section=strategic`),
-        fetch('/api/audit-readiness'),
-        fetch('/api/alerts'),
+        fetch(`/api/analytics?period=${period}&section=strategic`, { signal: controller.signal }),
+        fetch('/api/audit-readiness', { signal: controller.signal }),
+        fetch('/api/alerts', { signal: controller.signal }),
       ])
         .then(async ([strategicRes, auditRes, alertsRes]) => {
-          if (cancelled) return;
-          if (strategicRes.ok) {
-            const strategic = await strategicRes.json();
+          const [strategic, audit, alertsJson] = await Promise.all([
+            strategicRes.ok ? strategicRes.json() : Promise.resolve(null),
+            auditRes.ok ? auditRes.json() : Promise.resolve(null),
+            alertsRes.ok ? alertsRes.json() : Promise.resolve(null),
+          ]);
+          if (
+            cancelled ||
+            controller.signal.aborted ||
+            activeOrganizationIdRef.current !== requestOrganizationId
+          ) return;
+          if (strategic) {
             setAnalytics(prev => prev ? { ...prev, ...strategic, period: prev.period } : strategic);
           }
-          if (auditRes.ok) setAuditScore(await auditRes.json());
-          if (alertsRes.ok) {
-            const alertsJson = await alertsRes.json();
-            setOperationalAlerts(alertsJson.alerts ?? []);
+          if (audit) {
+            setScopedAuditScore({ organizationId: requestOrganizationId, value: audit });
+          }
+          if (alertsJson) {
+            setScopedOperationalAlerts({
+              organizationId: requestOrganizationId,
+              value: alertsJson.alerts ?? [],
+            });
           }
         })
         .catch((error) => {
-          console.error('Failed to fetch deferred dashboard data:', error);
+          if (!cancelled && !controller.signal.aborted) {
+            console.error('Failed to fetch deferred dashboard data:', error);
+          }
         })
         .finally(() => {
           if (!cancelled) setIsDeferredLoading(false);
         });
     });
-    return () => {
+    const cancelDeferredFetch = () => {
       cancelled = true;
+      controller.abort();
       cancelIdle();
     };
-  }, [isDeferredLoading, isLoading, organization, period]);
+    window.addEventListener('pagehide', cancelDeferredFetch, { once: true });
+    return () => {
+      window.removeEventListener('pagehide', cancelDeferredFetch);
+      cancelDeferredFetch();
+    };
+  }, [deferredRestoreVersion, isDeferredLoading, isLoading, organizationId, period, setAnalytics]);
 
   const overallComplianceRate = analytics
     ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
@@ -338,6 +393,23 @@ export function AdminDashboard() {
     </div>
   );
   const isStrategicPending = isLoading || (isDeferredLoading && !analytics?.commodityBreakdown);
+
+  if (!isLoading && analyticsError && !analytics) {
+    return (
+      <Card role="alert" className="border-destructive/40" data-testid="admin-dashboard-load-error">
+        <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <AlertTriangle className="h-9 w-9 text-destructive" />
+          <div>
+            <h2 className="font-medium">{tErrors('unableToLoadAnalytics')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{analyticsError}</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => void refetchAnalytics()}>
+            {tErrors('tryAgain')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="admin-dashboard">

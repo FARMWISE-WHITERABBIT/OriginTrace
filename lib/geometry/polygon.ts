@@ -5,15 +5,30 @@
 
 type Coord = [number, number]; // [lng, lat]
 
+function withoutClosingPoint(ring: Coord[]): Coord[] {
+  if (ring.length > 1) {
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] === last[0] && first[1] === last[1]) return ring.slice(0, -1);
+  }
+  return ring.slice();
+}
+
+function signedPolygonArea(ring: Coord[]): number {
+  const points = withoutClosingPoint(ring);
+  if (points.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const next = points[(i + 1) % points.length];
+    area += points[i][0] * next[1] - next[0] * points[i][1];
+  }
+  return area / 2;
+}
+
 // ─── Shoelace area ────────────────────────────────────────────────────────────
 
 export function polygonArea(ring: Coord[]): number {
-  let area = 0;
-  const n = ring.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    area += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
-  }
-  return Math.abs(area / 2);
+  return Math.abs(signedPolygonArea(ring));
 }
 
 // ─── Sutherland-Hodgman polygon clipping ─────────────────────────────────────
@@ -50,11 +65,18 @@ function clipPolygonByEdge(poly: Coord[], a: Coord, b: Coord): Coord[] {
 }
 
 export function intersectPolygons(subj: Coord[], clip: Coord[]): Coord[] {
-  let output = subj.slice();
-  const n = clip.length;
+  let output = withoutClosingPoint(subj);
+  // Sutherland-Hodgman assumes a counter-clockwise clipping polygon. GeoJSON
+  // permits either winding order, so normalize it before clipping. Keeping
+  // this normalization at the geometry boundary prevents the old false
+  // negatives where a clockwise farm silently produced an empty intersection.
+  const normalizedClip = signedPolygonArea(clip) < 0
+    ? withoutClosingPoint(clip).reverse()
+    : withoutClosingPoint(clip);
+  const n = normalizedClip.length;
   for (let i = 0; i < n; i++) {
     if (output.length === 0) return [];
-    output = clipPolygonByEdge(output, clip[i], clip[(i + 1) % n]);
+    output = clipPolygonByEdge(output, normalizedClip[i], normalizedClip[(i + 1) % n]);
   }
   return output;
 }

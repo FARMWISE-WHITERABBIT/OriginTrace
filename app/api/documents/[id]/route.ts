@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { documentPatchSchema, parseBody } from '@/lib/api/validation';
 import { deleteDocumentFile } from '@/lib/supabase/storage';
+import { requireRole, ROLES } from '@/lib/rbac';
+import { ApiError, withErrorHandling } from '@/lib/api/errors';
+import { documentLinkBelongsToOrganization } from '@/lib/api/document-link-validation';
 
 type AuthResult =
   | { error: NextResponse }
@@ -60,72 +63,74 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const rawBody = await request.json();
+export const PATCH = withErrorHandling(async (request: NextRequest, ctx: unknown) => {
+  const { params } = ctx as { params: Promise<{ id: string }> };
+  const { id } = await params;
+  const rawBody = await request.json();
 
-    const { data: body, error: validationError } = parseBody(documentPatchSchema, rawBody);
-    if (validationError) return validationError;
+  const { data: body, error: validationError } = parseBody(documentPatchSchema, rawBody);
+  if (validationError) return validationError;
 
-    const auth = await getAuthAndProfile(request);
-    if ('error' in auth) return auth.error;
-    const { profile, supabaseAdmin } = auth;
+  const auth = await getAuthAndProfile(request);
+  if ('error' in auth) return auth.error;
+  const { profile, supabaseAdmin } = auth;
 
-    const patchAllowedRoles = ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator'];
-    if (!patchAllowedRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+  const roleError = requireRole(profile, ROLES.DOC_ROLES);
+  if (roleError) return roleError;
 
-    const { data: existing } = await supabaseAdmin
-      .from('documents')
-      .select('id, file_url, file_name')
-      .eq('id', id)
-      .eq('org_id', profile.org_id)
-      .single();
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('documents')
+    .select('id, file_url, file_name, linked_entity_type, linked_entity_id')
+    .eq('id', id)
+    .eq('org_id', profile.org_id)
+    .maybeSingle();
 
-    if (!existing) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
-    }
+  if (existingError) return ApiError.internal(existingError, 'documents/[id]/PATCH lookup');
+  if (!existing) return ApiError.notFound('Document');
 
-    const updates: Record<string, unknown> = { ...body };
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
-    }
-
-    if ('file_url' in updates && updates.file_url !== existing.file_url && existing.file_url) {
-      try {
-        const oldPath = extractStoragePath(existing.file_url as string);
-        if (oldPath) await deleteDocumentFile(oldPath);
-      } catch (cleanupErr) {
-        console.warn('Failed to delete old storage file:', cleanupErr);
-      }
-    }
-
-    const { data: document, error } = await supabaseAdmin
-      .from('documents')
-      .update(updates)
-      .eq('id', id)
-      .eq('org_id', profile.org_id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Document update error:', error);
-      return NextResponse.json({ error: 'Failed to update document', details: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ document });
-
-  } catch (error) {
-    console.error('Document PATCH error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  const updates: Record<string, unknown> = { ...body };
+  if (Object.keys(updates).length === 0) {
+    return ApiError.badRequest('No valid fields to update');
   }
-}
+
+  if ('linked_entity_type' in body || 'linked_entity_id' in body) {
+    const entityType = 'linked_entity_type' in body
+      ? body.linked_entity_type
+      : existing.linked_entity_type;
+    const entityId = 'linked_entity_id' in body
+      ? body.linked_entity_id
+      : existing.linked_entity_id;
+    const linkBelongsToOrganization = await documentLinkBelongsToOrganization(
+      supabaseAdmin,
+      profile.org_id,
+      entityType,
+      entityId,
+    );
+    if (!linkBelongsToOrganization) {
+      return ApiError.badRequest('Linked entity is invalid or outside the active organization');
+    }
+  }
+
+  if ('file_url' in updates && updates.file_url !== existing.file_url && existing.file_url) {
+    try {
+      const oldPath = extractStoragePath(existing.file_url as string);
+      if (oldPath) await deleteDocumentFile(oldPath);
+    } catch (cleanupErr) {
+      console.warn('Failed to delete old storage file:', cleanupErr);
+    }
+  }
+
+  const { data: document, error } = await supabaseAdmin
+    .from('documents')
+    .update(updates)
+    .eq('id', id)
+    .eq('org_id', profile.org_id)
+    .select()
+    .single();
+
+  if (error) return ApiError.internal(error, 'documents/[id]/PATCH update');
+  return NextResponse.json({ document });
+}, 'documents/[id]/PATCH');
 
 export async function DELETE(
   request: NextRequest,

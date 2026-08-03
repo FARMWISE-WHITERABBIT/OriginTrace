@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import type { Database } from '@/lib/supabase/database.types';
 
 type FarmerTrainingInsert = Database['public']['Tables']['farmer_training']['Insert'];
@@ -16,7 +17,7 @@ const trainingCreateSchema = z.object({
   status: z.enum(STATUSES).default('not_started'),
   score: z.number().min(0).max(100).optional().nullable(),
   completed_at: z.string().optional().nullable(),
-  certificate_url: z.string().url().optional().nullable(),
+  certificate_url: emptyAsNull(z.string().url().nullable().optional()),
 });
 
 const trainingPatchSchema = z.object({

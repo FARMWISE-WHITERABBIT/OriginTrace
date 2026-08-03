@@ -106,6 +106,8 @@ function HybridFarmMappingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { organization, isLoading: orgLoading } = useOrg();
+  const activeOrganizationIdRef = useRef<number | null>(organization?.id ?? null);
+  activeOrganizationIdRef.current = organization?.id ?? null;
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
 
@@ -137,16 +139,28 @@ function HybridFarmMappingContent() {
   const farmIdParam = searchParams.get('farm_id');
 
   useEffect(() => {
+    const requestedOrganizationId = organization?.id ?? null;
+    let cancelled = false;
+    const isOrganizationActive = () => !cancelled
+      && activeOrganizationIdRef.current === requestedOrganizationId;
+
     async function loadFarms() {
       setFarmsLoading(true);
       setFarmsLoadError(false);
       try {
+        if (requestedOrganizationId === null) {
+          setFarms([]);
+          setSelectedFarm(null);
+          return;
+        }
         const { getCachedFarmsFull, cacheFarmsFull } = await import('@/lib/offline/offline-cache');
         const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
-        const localFarms = await getLocalFarmsForOrg(organization?.id) as Farm[];
-        const cached = organization?.id ? await getCachedFarmsFull(organization.id) : null;
+        const localFarms = await getLocalFarmsForOrg(requestedOrganizationId) as Farm[];
+        const cached = await getCachedFarmsFull(requestedOrganizationId);
+        if (!isOrganizationActive()) return;
 
         const applyFarms = (serverFarms: Farm[]) => {
+          if (!isOrganizationActive()) return;
           const merged = [...localFarms, ...serverFarms.filter((farm) => !localFarms.some((local) => local.id === farm.id))];
           const sorted: Farm[] = merged.sort((a: Farm, b: Farm) =>
             (a.farmer_name || '').localeCompare(b.farmer_name || '')
@@ -173,20 +187,24 @@ function HybridFarmMappingContent() {
           if (!res.ok) throw new Error('Failed to load farms');
           const json = await res.json();
           const serverFarms = json.farms || [];
-          if (organization?.id) {
-            await cacheFarmsFull(organization.id, serverFarms);
+          if (isOrganizationActive()) {
+            await cacheFarmsFull(requestedOrganizationId, serverFarms);
           }
+          if (!isOrganizationActive()) return;
           applyFarms(serverFarms);
         } else if (!cached?.length && localFarms.length === 0) {
           throw new Error('No cached farms available');
         }
       } catch {
-        setFarmsLoadError(true);
+        if (isOrganizationActive()) setFarmsLoadError(true);
       } finally {
-        setFarmsLoading(false);
+        if (isOrganizationActive()) setFarmsLoading(false);
       }
     }
-    if (!orgLoading) loadFarms();
+    if (!orgLoading) void loadFarms();
+    return () => {
+      cancelled = true;
+    };
   }, [farmIdParam, isOnline, organization?.id, orgLoading]);
 
   useEffect(() => {
@@ -379,6 +397,11 @@ function HybridFarmMappingContent() {
 
   const handleSave = async () => {
     if (!selectedFarm || coordinates.length < 3) return;
+    const requestedOrganizationId = organization?.id ?? null;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
     setIsSaving(true);
 
     const boundary = {
@@ -404,20 +427,25 @@ function HybridFarmMappingContent() {
         setSavedOffline(false);
       } else {
         const { saveBoundaryOffline } = await import('@/lib/offline/sync-store');
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
         await saveBoundaryOffline({
+          org_id: requestedOrganizationId,
           farm_id: selectedFarm.id,
           local_farm_id: selectedFarm.is_local ? (selectedFarm.local_id || selectedFarm.id) : undefined,
           boundary,
           area_hectares: areaHectares,
         });
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
         setSelectedFarm(prev => prev ? { ...prev, boundary, area_hectares: areaHectares, has_boundary: true } as any : prev);
         toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
         setSavedOffline(true);
       }
-      setIsSuccess(true);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) setIsSuccess(true);
     } catch (error: any) {
       console.error('Save error:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to save boundary.', variant: 'destructive' });
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        toast({ title: 'Error', description: error.message || 'Failed to save boundary.', variant: 'destructive' });
+      }
     } finally {
       setIsSaving(false);
     }

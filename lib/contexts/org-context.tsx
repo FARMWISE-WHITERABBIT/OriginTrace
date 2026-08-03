@@ -52,7 +52,7 @@ interface OrgContextType {
   setOrganization: (org: Organization | null) => void;
   refreshProfile: () => Promise<void>;
   startImpersonation: (orgId: number) => Promise<boolean>;
-  stopImpersonation: () => Promise<void>;
+  stopImpersonation: () => Promise<boolean>;
 }
 
 const OrgContext = createContext<OrgContextType | undefined>(undefined);
@@ -68,46 +68,65 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isSuperadminRoute = pathname?.startsWith('/superadmin');
   const didRequestInitialProfileRef = useRef(false);
+  const profileAbortRef = useRef<AbortController | null>(null);
+  const impersonationQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const refreshProfile = async () => {
+    profileAbortRef.current?.abort();
+    const controller = new AbortController();
+    profileAbortRef.current = controller;
+    const isCurrentRequest = () => (
+      profileAbortRef.current === controller && !controller.signal.aborted
+    );
+    setIsLoading(true);
+    setProfile(null);
+    setOrganization(null);
+    setIsSystemAdmin(false);
+
     if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setProfile(null);
-      setOrganization(null);
-      setIsSystemAdmin(false);
-      setImpersonation({ isImpersonating: false });
-      setIsLoading(false);
+      if (isCurrentRequest()) setIsLoading(false);
       return;
     }
 
     try {
-      let response = await fetch('/api/profile');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!isCurrentRequest()) return;
+      if (!user) {
+        setProfile(null);
+        setOrganization(null);
+        setIsSystemAdmin(false);
+        setImpersonation({ isImpersonating: false });
+        return;
+      }
+
+      let response = await fetch('/api/profile', { signal: controller.signal });
+      if (!isCurrentRequest()) return;
       if (response.status === 503) {
         await new Promise(r => setTimeout(r, 2000));
-        response = await fetch('/api/profile');
+        if (!isCurrentRequest()) return;
+        response = await fetch('/api/profile', { signal: controller.signal });
+        if (!isCurrentRequest()) return;
       }
       if (!response.ok) {
         if (response.status !== 401 && response.status !== 503) {
           try {
             const errorData = await response.json();
+            if (!isCurrentRequest()) return;
             console.error('Profile API error:', errorData);
           } catch {
+            if (!isCurrentRequest()) return;
             console.error('Profile API error: status', response.status);
           }
         }
+        if (!isCurrentRequest()) return;
         setProfile(null);
         setOrganization(null);
         setIsSystemAdmin(false);
-        setIsLoading(false);
         return;
       }
 
       const data = await response.json();
+      if (!isCurrentRequest()) return;
       setImpersonation(data.impersonation || { isImpersonating: false });
       
       if (data.profile) {
@@ -145,24 +164,39 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         setIsSystemAdmin(false);
       }
     } catch (error) {
+      if (!isCurrentRequest()) return;
       console.error('Failed to fetch profile:', error);
       setProfile(null);
       setOrganization(null);
       setIsSystemAdmin(false);
+    } finally {
+      if (isCurrentRequest()) setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
-  const startImpersonation = async (orgId: number): Promise<boolean> => {
-    try {
-      const response = await fetch('/api/impersonate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', org_id: orgId })
-      });
-      
-      if (response.ok) {
+  const refreshProfileRef = useRef(refreshProfile);
+  refreshProfileRef.current = refreshProfile;
+
+  function enqueueImpersonationOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = impersonationQueueRef.current.then(operation, operation);
+    impersonationQueueRef.current = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
+  const startImpersonation = (orgId: number): Promise<boolean> => (
+    enqueueImpersonationOperation(async () => {
+      try {
+        const response = await fetch('/api/impersonate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'start', org_id: orgId })
+        });
+
+        if (!response.ok) return false;
+
         const data = await response.json();
         setImpersonation({
           isImpersonating: true,
@@ -172,29 +206,54 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         });
         await refreshProfile();
         return true;
+      } catch (error) {
+        console.error('Failed to start impersonation:', error);
+        return false;
       }
-    } catch (error) {
-      console.error('Failed to start impersonation:', error);
-    }
-    return false;
-  };
+    })
+  );
 
-  const stopImpersonation = async () => {
-    try {
-      await fetch('/api/impersonate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'stop' })
-      });
-      setImpersonation({ isImpersonating: false });
-      await refreshProfile();
-    } catch (error) {
-      console.error('Failed to stop impersonation:', error);
-    }
-  };
+  const stopImpersonation = (): Promise<boolean> => (
+    enqueueImpersonationOperation(async () => {
+      try {
+        const response = await fetch('/api/impersonate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'stop' })
+        });
+        if (!response.ok) {
+          console.error('Failed to stop impersonation: status', response.status);
+          return false;
+        }
+        setImpersonation({ isImpersonating: false });
+        await refreshProfile();
+        return true;
+      } catch (error) {
+        console.error('Failed to stop impersonation:', error);
+        return false;
+      }
+    })
+  );
+
+  useEffect(() => {
+    const abortProfileOnPageHide = () => profileAbortRef.current?.abort();
+    const refreshProfileAfterRestore = (event: PageTransitionEvent) => {
+      if (!event.persisted || isSuperadminRoute) return;
+      setIsLoading(true);
+      void refreshProfileRef.current();
+    };
+    window.addEventListener('pagehide', abortProfileOnPageHide);
+    window.addEventListener('pageshow', refreshProfileAfterRestore);
+    return () => {
+      window.removeEventListener('pagehide', abortProfileOnPageHide);
+      window.removeEventListener('pageshow', refreshProfileAfterRestore);
+      profileAbortRef.current?.abort();
+    };
+  }, [isSuperadminRoute]);
 
   useEffect(() => {
     if (isSuperadminRoute) {
+      profileAbortRef.current?.abort();
       setIsLoading(false);
       return;
     }
@@ -202,7 +261,9 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     didRequestInitialProfileRef.current = true;
     refreshProfile();
 
-    if (!supabase) return;
+    if (!supabase) {
+      return () => profileAbortRef.current?.abort();
+    }
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'INITIAL_SESSION' && didRequestInitialProfileRef.current) return;
@@ -211,7 +272,10 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      profileAbortRef.current?.abort();
+      subscription.unsubscribe();
+    };
   }, [isSuperadminRoute]);
 
   return (

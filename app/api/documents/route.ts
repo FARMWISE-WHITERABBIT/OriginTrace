@@ -6,7 +6,9 @@ import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { parsePagination } from '@/lib/api/validation';
 import { documentCreateSchema, parseBody } from '@/lib/api/validation';
-import { requireRole } from '@/lib/rbac';
+import { requireRole, ROLES } from '@/lib/rbac';
+import { ApiError, withErrorHandling } from '@/lib/api/errors';
+import { documentLinkBelongsToOrganization } from '@/lib/api/document-link-validation';
 
 
 export async function GET(request: NextRequest) {
@@ -77,14 +79,6 @@ export async function GET(request: NextRequest) {
       return doc;
     });
 
-    const docsToUpdate = updatedDocs.filter((doc, i) => doc.status !== (documents || [])[i]?.status);
-    for (const doc of docsToUpdate) {
-      await supabaseAdmin
-        .from('documents')
-        .update({ status: doc.status })
-        .eq('id', doc.id);
-    }
-
     return NextResponse.json({ documents: updatedDocs, pagination: { page, limit, total: count ?? 0 } });
 
   } catch (error) {
@@ -96,89 +90,82 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const rawBody = await request.json();
-    const { data: body, error: validationError } = parseBody(documentCreateSchema, rawBody);
-    if (validationError) return validationError;
+export const POST = withErrorHandling(async (request: NextRequest) => {
+  const rawBody = await request.json();
+  const { data: body, error: validationError } = parseBody(documentCreateSchema, rawBody);
+  if (validationError) return validationError;
 
-    const { user, profile } = await getAuthenticatedProfile(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-    const supabaseAdmin = createAdminClient();
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user) return ApiError.unauthorized();
+  if (!profile) return ApiError.notFound('Profile');
+  if (!profile.org_id) return ApiError.forbidden('No organization assigned');
+  const supabaseAdmin = createAdminClient();
 
-    const roleError = requireRole(profile, ['admin', 'compliance_officer', 'quality_manager', 'logistics_coordinator']);
-    if (roleError) return roleError;
+  const roleError = requireRole(profile, ROLES.DOC_ROLES);
+  if (roleError) return roleError;
 
-    const tierBlock = await enforceTier(profile.org_id, 'documents');
-    if (tierBlock) return tierBlock;
+  const tierBlock = await enforceTier(profile.org_id, 'documents');
+  if (tierBlock) return tierBlock;
 
-    // Validation handled by documentCreateSchema above
-
-    let status = 'active';
-    if (body.expiry_date) {
-      const now = new Date();
-      const expiry = new Date(body.expiry_date);
-      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      if (expiry < now) {
-        status = 'expired';
-      } else if (expiry <= sevenDaysFromNow) {
-        status = 'expiring_soon';
-      }
-    }
-
-    const newDoc = {
-      org_id: profile.org_id,
-      title: body.title,
-      document_type: body.document_type,
-      file_url: body.file_url || null,
-      file_name: body.file_name || null,
-      file_size: body.file_size || null,
-      issued_date: body.issued_date || null,
-      expiry_date: body.expiry_date || null,
-      status,
-      linked_entity_type: body.linked_entity_type || null,
-      linked_entity_id: body.linked_entity_id || null,
-      notes: body.notes || null,
-      uploaded_by: user.id,
-    };
-
-    const { data: document, error: insertError } = await supabaseAdmin
-      .from('documents')
-      .insert(newDoc)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Document insert error:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to create document', details: insertError.message },
-        { status: 500 }
-      );
-    }
-
-    await logAuditEvent({
-      orgId: profile.org_id,
-      actorId: user.id,
-      actorEmail: user.email,
-      action: 'document.uploaded',
-      resourceType: 'document',
-      resourceId: document.id?.toString(),
-      metadata: { title: body.title, document_type: body.document_type },
-    });
-
-    dispatchWebhookEvent(profile.org_id, 'document.uploaded', {
-      document_id: document.id, title: body.title, document_type: body.document_type,
-    });
-
-    return NextResponse.json({ document });
-
-  } catch (error) {
-    console.error('Document create error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+  const linkBelongsToOrganization = await documentLinkBelongsToOrganization(
+    supabaseAdmin,
+    profile.org_id,
+    body.linked_entity_type,
+    body.linked_entity_id,
+  );
+  if (!linkBelongsToOrganization) {
+    return ApiError.badRequest('Linked entity is invalid or outside the active organization');
   }
-}
+
+  let status = 'active';
+  if (body.expiry_date) {
+    const now = new Date();
+    const expiry = new Date(body.expiry_date);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (expiry < now) {
+      status = 'expired';
+    } else if (expiry <= sevenDaysFromNow) {
+      status = 'expiring_soon';
+    }
+  }
+
+  const newDoc = {
+    org_id: profile.org_id,
+    title: body.title,
+    document_type: body.document_type,
+    file_url: body.file_url || null,
+    file_name: body.file_name || null,
+    file_size: body.file_size || null,
+    issued_date: body.issued_date || null,
+    expiry_date: body.expiry_date || null,
+    status,
+    linked_entity_type: body.linked_entity_type || null,
+    linked_entity_id: body.linked_entity_id || null,
+    notes: body.notes || null,
+    uploaded_by: user.id,
+  };
+
+  const { data: document, error: insertError } = await supabaseAdmin
+    .from('documents')
+    .insert(newDoc as any)
+    .select()
+    .single();
+
+  if (insertError) return ApiError.internal(insertError, 'documents/POST insert');
+
+  await logAuditEvent({
+    orgId: profile.org_id,
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'document.uploaded',
+    resourceType: 'document',
+    resourceId: document.id?.toString(),
+    metadata: { title: body.title, document_type: body.document_type },
+  });
+
+  dispatchWebhookEvent(profile.org_id, 'document.uploaded', {
+    document_id: document.id, title: body.title, document_type: body.document_type,
+  });
+
+  return NextResponse.json({ document });
+}, 'documents/POST');

@@ -6353,6 +6353,14 @@ export type Database = {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
+      scan_farm_boundary_conflicts: {
+        Args: { p_min_overlap_ratio?: number; p_org_id: string }
+        Returns: {
+          farm_a_id: string
+          farm_b_id: string
+          overlap_ratio: number
+        }[]
+      }
       sync_batches_atomic: {
         Args: { p_batches: Json; p_org_id: string; p_user_id: string }
         Returns: Json

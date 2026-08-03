@@ -1,11 +1,15 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 type QueueStatus = 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
+type OrganizationId = number | string;
 
-interface PendingFarm {
+interface TenantOwnedQueueItem {
+  org_id: OrganizationId;
+}
+
+interface PendingFarm extends TenantOwnedQueueItem {
   id: string;
   local_id: string;
-  org_id?: number | string;
   farmer_name: string;
   farmer_id?: string | null;
   phone?: string | null;
@@ -21,7 +25,7 @@ interface PendingFarm {
   server_id?: string;
 }
 
-interface PendingBoundary {
+interface PendingBoundary extends TenantOwnedQueueItem {
   id: string;
   farm_id: string;
   local_farm_id?: string;
@@ -33,7 +37,7 @@ interface PendingBoundary {
   synced_at?: string;
 }
 
-interface PendingUpload {
+interface PendingUpload extends TenantOwnedQueueItem {
   id: string;
   farm_id: string;
   local_farm_id?: string;
@@ -52,7 +56,7 @@ interface PendingUpload {
   file_url?: string;
 }
 
-interface PendingOcrJob {
+interface PendingOcrJob extends TenantOwnedQueueItem {
   id: string;
   farm_id: string;
   local_farm_id?: string;
@@ -65,14 +69,14 @@ interface PendingOcrJob {
   synced_at?: string;
 }
 
-interface IdMapping {
+interface IdMapping extends TenantOwnedQueueItem {
   local_id: string;
   server_id: string;
   entity_type: 'farm';
   created_at: string;
 }
 
-interface PendingBatch {
+interface PendingBatch extends TenantOwnedQueueItem {
   id: string;
   local_id: string;
   batch_id: string;
@@ -164,6 +168,7 @@ interface OriginTraceDB extends DBSchema {
     key: string;
     value: {
       id: string;
+      org_id: OrganizationId;
       serial: string;
       status: string;
       cached_at: string;
@@ -247,9 +252,53 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function organizationKey(orgId: OrganizationId): string {
+  const key = String(orgId).trim();
+  if (!key) throw new Error('An organization id is required for offline data.');
+  return key;
+}
+
+function hasOrganizationId(value: unknown): value is OrganizationId {
+  return (typeof value === 'number' && Number.isFinite(value))
+    || (typeof value === 'string' && value.trim().length > 0);
+}
+
+function belongsToOrganization(item: { org_id?: OrganizationId }, orgId: OrganizationId): boolean {
+  return hasOrganizationId(item.org_id) && organizationKey(item.org_id) === organizationKey(orgId);
+}
+
+function filterForOrganization<T extends { org_id?: OrganizationId }>(
+  items: T[],
+  orgId: OrganizationId,
+): T[] {
+  organizationKey(orgId);
+  return items.filter((item) => belongsToOrganization(item, orgId));
+}
+
+async function assertLocalFarmScope(
+  db: IDBPDatabase<OriginTraceDB>,
+  orgId: OrganizationId,
+  farmId?: string,
+  localFarmId?: string,
+): Promise<void> {
+  const localReference = [localFarmId, farmId].find((id) => id && (
+    id.startsWith('farm-') || id.startsWith('offline-') || id.startsWith('temp-') || id.startsWith('local-')
+  ));
+  if (!localReference) return;
+
+  const farm = await db.get('pending_farms', localReference);
+  if (!farm) {
+    throw new Error('The linked offline farm could not be found.');
+  }
+  if (!belongsToOrganization(farm, orgId)) {
+    throw new Error('The linked offline farm belongs to another organization.');
+  }
+}
+
 async function updateStatus<T extends { id: string; status: QueueStatus; error_message?: string; synced_at?: string }>(
   storeName: 'pending_farms' | 'pending_boundaries' | 'pending_uploads' | 'pending_ocr_jobs' | 'pending_batches',
   id: string,
+  orgId: OrganizationId,
   status: QueueStatus,
   error_message?: string,
   extra?: Partial<T>
@@ -257,6 +306,9 @@ async function updateStatus<T extends { id: string; status: QueueStatus; error_m
   const db = await getDB();
   const current = await db.get(storeName as never, id as never) as T | undefined;
   if (!current) return;
+  if (!belongsToOrganization(current as T & { org_id?: OrganizationId }, orgId)) {
+    throw new Error('Offline queue item is outside the active organization.');
+  }
   const next = {
     ...current,
     ...extra,
@@ -269,6 +321,7 @@ async function updateStatus<T extends { id: string; status: QueueStatus; error_m
 
 export async function saveFarmOffline(input: Omit<PendingFarm, 'id' | 'status' | 'created_at'>): Promise<PendingFarm> {
   const db = await getDB();
+  organizationKey(input.org_id);
   const localId = input.local_id || generateLocalId('farm');
   const farm: PendingFarm = {
     ...input,
@@ -294,25 +347,28 @@ export async function saveFarmOffline(input: Omit<PendingFarm, 'id' | 'status' |
   return farm;
 }
 
-export async function getPendingFarms(): Promise<PendingFarm[]> {
+export async function getPendingFarms(orgId: OrganizationId): Promise<PendingFarm[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_farms', 'by-status', 'pending');
+  return filterForOrganization(
+    await db.getAllFromIndex('pending_farms', 'by-status', 'pending'),
+    orgId,
+  );
 }
 
-export async function getAllOfflineFarms(): Promise<PendingFarm[]> {
+export async function getAllOfflineFarms(orgId: OrganizationId): Promise<PendingFarm[]> {
   const db = await getDB();
-  const farms = await db.getAll('pending_farms');
+  const farms = filterForOrganization(await db.getAll('pending_farms'), orgId);
   return farms.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
-export async function getLocalFarmsForOrg(orgId?: number | string): Promise<any[]> {
-  const farms = await getAllOfflineFarms();
+export async function getLocalFarmsForOrg(orgId: OrganizationId): Promise<any[]> {
+  const farms = await getAllOfflineFarms(orgId);
   return farms
     .filter((farm) => farm.status !== 'synced')
-    .filter((farm) => orgId === undefined || String(farm.org_id ?? '') === String(orgId))
     .map((farm) => ({
       id: farm.local_id,
       local_id: farm.local_id,
+      org_id: farm.org_id,
       farmer_name: farm.farmer_name,
       farmer_id: farm.farmer_id,
       phone: farm.phone,
@@ -328,15 +384,18 @@ export async function getLocalFarmsForOrg(orgId?: number | string): Promise<any[
 
 export async function updateFarmStatus(
   id: string,
+  orgId: OrganizationId,
   status: QueueStatus,
   error_message?: string,
   extra?: Partial<PendingFarm>
 ): Promise<void> {
-  await updateStatus<PendingFarm>('pending_farms', id, status, error_message, extra);
+  await updateStatus<PendingFarm>('pending_farms', id, orgId, status, error_message, extra);
 }
 
 export async function saveBoundaryOffline(input: Omit<PendingBoundary, 'id' | 'status' | 'created_at'>): Promise<PendingBoundary> {
   const db = await getDB();
+  organizationKey(input.org_id);
+  await assertLocalFarmScope(db, input.org_id, input.farm_id, input.local_farm_id);
   const boundary: PendingBoundary = {
     ...input,
     id: generateLocalId('boundary'),
@@ -347,27 +406,30 @@ export async function saveBoundaryOffline(input: Omit<PendingBoundary, 'id' | 's
   return boundary;
 }
 
-export async function getPendingBoundaries(): Promise<PendingBoundary[]> {
+export async function getPendingBoundaries(orgId: OrganizationId): Promise<PendingBoundary[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_boundaries', 'by-status', 'pending');
+  return filterForOrganization(await db.getAllFromIndex('pending_boundaries', 'by-status', 'pending'), orgId);
 }
 
-export async function getAllBoundaries(): Promise<PendingBoundary[]> {
+export async function getAllBoundaries(orgId: OrganizationId): Promise<PendingBoundary[]> {
   const db = await getDB();
-  return db.getAll('pending_boundaries');
+  return filterForOrganization(await db.getAll('pending_boundaries'), orgId);
 }
 
 export async function updateBoundaryStatus(
   id: string,
+  orgId: OrganizationId,
   status: QueueStatus,
   error_message?: string,
   extra?: Partial<PendingBoundary>
 ): Promise<void> {
-  await updateStatus<PendingBoundary>('pending_boundaries', id, status, error_message, extra);
+  await updateStatus<PendingBoundary>('pending_boundaries', id, orgId, status, error_message, extra);
 }
 
 export async function saveUploadOffline(input: Omit<PendingUpload, 'id' | 'status' | 'created_at'>): Promise<PendingUpload> {
   const db = await getDB();
+  organizationKey(input.org_id);
+  await assertLocalFarmScope(db, input.org_id, input.farm_id, input.local_farm_id);
   const upload: PendingUpload = {
     ...input,
     id: generateLocalId('upload'),
@@ -378,27 +440,36 @@ export async function saveUploadOffline(input: Omit<PendingUpload, 'id' | 'statu
   return upload;
 }
 
-export async function getPendingUploads(): Promise<PendingUpload[]> {
+export async function getPendingUploads(orgId: OrganizationId): Promise<PendingUpload[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_uploads', 'by-status', 'pending');
+  return filterForOrganization(await db.getAllFromIndex('pending_uploads', 'by-status', 'pending'), orgId);
 }
 
-export async function getAllUploads(): Promise<PendingUpload[]> {
+export async function getAllUploads(orgId: OrganizationId): Promise<PendingUpload[]> {
   const db = await getDB();
-  return db.getAll('pending_uploads');
+  return filterForOrganization(await db.getAll('pending_uploads'), orgId);
 }
 
 export async function updateUploadStatus(
   id: string,
+  orgId: OrganizationId,
   status: QueueStatus,
   error_message?: string,
   extra?: Partial<PendingUpload>
 ): Promise<void> {
-  await updateStatus<PendingUpload>('pending_uploads', id, status, error_message, extra);
+  await updateStatus<PendingUpload>('pending_uploads', id, orgId, status, error_message, extra);
 }
 
 export async function saveOcrJobOffline(input: Omit<PendingOcrJob, 'id' | 'status' | 'created_at'>): Promise<PendingOcrJob> {
   const db = await getDB();
+  organizationKey(input.org_id);
+  await assertLocalFarmScope(db, input.org_id, input.farm_id, input.local_farm_id);
+  if (input.upload_id) {
+    const upload = await db.get('pending_uploads', input.upload_id);
+    if (!upload || !belongsToOrganization(upload, input.org_id)) {
+      throw new Error('The linked offline upload is outside the active organization.');
+    }
+  }
   const job: PendingOcrJob = {
     ...input,
     id: generateLocalId('ocr'),
@@ -409,51 +480,67 @@ export async function saveOcrJobOffline(input: Omit<PendingOcrJob, 'id' | 'statu
   return job;
 }
 
-export async function getPendingOcrJobs(): Promise<PendingOcrJob[]> {
+export async function getPendingOcrJobs(orgId: OrganizationId): Promise<PendingOcrJob[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_ocr_jobs', 'by-status', 'pending');
+  return filterForOrganization(await db.getAllFromIndex('pending_ocr_jobs', 'by-status', 'pending'), orgId);
 }
 
-export async function getAllOcrJobs(): Promise<PendingOcrJob[]> {
+export async function getAllOcrJobs(orgId: OrganizationId): Promise<PendingOcrJob[]> {
   const db = await getDB();
-  return db.getAll('pending_ocr_jobs');
+  return filterForOrganization(await db.getAll('pending_ocr_jobs'), orgId);
 }
 
 export async function updateOcrJobStatus(
   id: string,
+  orgId: OrganizationId,
   status: QueueStatus,
   error_message?: string,
   extra?: Partial<PendingOcrJob>
 ): Promise<void> {
-  await updateStatus<PendingOcrJob>('pending_ocr_jobs', id, status, error_message, extra);
+  await updateStatus<PendingOcrJob>('pending_ocr_jobs', id, orgId, status, error_message, extra);
 }
 
-export async function setIdMapping(local_id: string, server_id: string, entity_type: 'farm' = 'farm'): Promise<void> {
+export async function setIdMapping(
+  local_id: string,
+  server_id: string,
+  orgId: OrganizationId,
+  entity_type: 'farm' = 'farm',
+): Promise<void> {
   const db = await getDB();
-  await db.put('id_mappings', { local_id, server_id, entity_type, created_at: nowIso() });
+  organizationKey(orgId);
+  const existing = await db.get('id_mappings', local_id);
+  if (existing && !belongsToOrganization(existing, orgId)) {
+    throw new Error('Offline id mapping is outside the active organization.');
+  }
+  await db.put('id_mappings', { local_id, server_id, org_id: orgId, entity_type, created_at: nowIso() });
 
   const cached = await db.get('cached_farms', local_id);
-  if (cached) {
+  if (cached && belongsToOrganization(cached, orgId)) {
     await db.delete('cached_farms', local_id);
     await db.put('cached_farms', { ...cached, id: server_id, local_id, is_local: false, cached_at: nowIso() });
   }
 }
 
-export async function getServerIdForLocalId(local_id: string): Promise<string | undefined> {
+export async function getServerIdForLocalId(local_id: string, orgId: OrganizationId): Promise<string | undefined> {
   const db = await getDB();
   const mapping = await db.get('id_mappings', local_id);
-  return mapping?.server_id;
+  return mapping && belongsToOrganization(mapping, orgId) ? mapping.server_id : undefined;
 }
 
-export async function resolveFarmId(farmId: string): Promise<string | undefined> {
+export async function resolveFarmId(farmId: string, orgId: OrganizationId): Promise<string | undefined> {
   if (!farmId.startsWith('farm-') && !farmId.startsWith('offline-') && !farmId.startsWith('temp-') && !farmId.startsWith('local-')) {
     return farmId;
   }
-  return getServerIdForLocalId(farmId);
+  return getServerIdForLocalId(farmId, orgId);
 }
 
 export async function saveBatchOffline(batch: Omit<PendingBatch, 'id' | 'status' | 'created_at'>): Promise<PendingBatch> {
   const db = await getDB();
+  organizationKey(batch.org_id);
+  await assertLocalFarmScope(db, batch.org_id, batch.farm_id, batch.local_farm_id);
+  for (const contributor of batch.contributors || []) {
+    await assertLocalFarmScope(db, batch.org_id, contributor.farm_id, contributor.local_farm_id);
+  }
   const localFarmId = batch.farm_id?.startsWith('farm-') || batch.farm_id?.startsWith('offline-') || batch.farm_id?.startsWith('temp-') || batch.farm_id?.startsWith('local-')
     ? batch.farm_id
     : batch.local_farm_id;
@@ -476,36 +563,44 @@ export async function saveBatchOffline(batch: Omit<PendingBatch, 'id' | 'status'
   return newBatch;
 }
 
-export async function getPendingBatches(): Promise<PendingBatch[]> {
+export async function getPendingBatches(orgId: OrganizationId): Promise<PendingBatch[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_batches', 'by-status', 'pending');
+  return filterForOrganization(await db.getAllFromIndex('pending_batches', 'by-status', 'pending'), orgId);
 }
 
-export async function getErrorBatches(): Promise<PendingBatch[]> {
+export async function getErrorBatches(orgId: OrganizationId): Promise<PendingBatch[]> {
   const db = await getDB();
-  return db.getAllFromIndex('pending_batches', 'by-status', 'error');
+  return filterForOrganization(await db.getAllFromIndex('pending_batches', 'by-status', 'error'), orgId);
 }
 
-export async function getAllBatches(): Promise<PendingBatch[]> {
+export async function getAllBatches(orgId: OrganizationId): Promise<PendingBatch[]> {
   const db = await getDB();
-  const batches = await db.getAll('pending_batches');
+  const batches = filterForOrganization(await db.getAll('pending_batches'), orgId);
   return batches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export async function updateBatchStatus(
   id: string,
+  orgId: OrganizationId,
   status: PendingBatch['status'],
   error_message?: string,
   conflict_id?: string,
   extra?: Partial<PendingBatch>
 ): Promise<void> {
-  await updateStatus<PendingBatch>('pending_batches', id, status, error_message, { ...extra, conflict_id });
+  await updateStatus<PendingBatch>('pending_batches', id, orgId, status, error_message, { ...extra, conflict_id });
 }
 
-export async function updateBatchFarmReferences(batchId: string, farmMap: Map<string, string>): Promise<void> {
+export async function updateBatchFarmReferences(
+  batchId: string,
+  orgId: OrganizationId,
+  farmMap: Map<string, string>,
+): Promise<void> {
   const db = await getDB();
   const batch = await db.get('pending_batches', batchId);
   if (!batch) return;
+  if (!belongsToOrganization(batch, orgId)) {
+    throw new Error('Offline batch is outside the active organization.');
+  }
 
   const next: PendingBatch = {
     ...batch,
@@ -518,21 +613,28 @@ export async function updateBatchFarmReferences(batchId: string, farmMap: Map<st
   await db.put('pending_batches', next);
 }
 
-export async function deleteBatch(id: string): Promise<void> {
+export async function deleteBatch(id: string, orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  const batch = await db.get('pending_batches', id);
+  if (!batch) return;
+  if (!belongsToOrganization(batch, orgId)) throw new Error('Offline batch is outside the active organization.');
   await db.delete('pending_batches', id);
 }
 
-export async function deleteFarm(id: string): Promise<void> {
+export async function deleteFarm(id: string, orgId: OrganizationId): Promise<void> {
   const db = await getDB();
   const farm = await db.get('pending_farms', id);
+  if (!farm) return;
+  if (!belongsToOrganization(farm, orgId)) throw new Error('Offline farm is outside the active organization.');
   const localIds = [id, farm?.local_id].filter(Boolean) as string[];
 
   for (const storeName of ['pending_boundaries', 'pending_uploads', 'pending_ocr_jobs'] as const) {
     const items = await db.getAll(storeName);
     const tx = db.transaction(storeName, 'readwrite');
     for (const item of items) {
-      if (localIds.includes(item.farm_id) || (item.local_farm_id && localIds.includes(item.local_farm_id))) {
+      if (belongsToOrganization(item, orgId) && (
+        localIds.includes(item.farm_id) || (item.local_farm_id && localIds.includes(item.local_farm_id))
+      )) {
         await tx.store.delete(item.id as never);
       }
     }
@@ -542,11 +644,11 @@ export async function deleteFarm(id: string): Promise<void> {
   const batches = await db.getAll('pending_batches');
   const batchTx = db.transaction('pending_batches', 'readwrite');
   for (const batch of batches) {
-    const hasFarm = localIds.includes(batch.farm_id)
+    const hasFarm = belongsToOrganization(batch, orgId) && (localIds.includes(batch.farm_id)
       || (batch.local_farm_id && localIds.includes(batch.local_farm_id))
       || batch.contributors.some((contributor) =>
         localIds.includes(contributor.farm_id) || (!!contributor.local_farm_id && localIds.includes(contributor.local_farm_id))
-      );
+      ));
     if (hasFarm) {
       await batchTx.store.delete(batch.id);
     }
@@ -554,39 +656,54 @@ export async function deleteFarm(id: string): Promise<void> {
   await batchTx.done;
 
   await db.delete('pending_farms', id);
-  if (farm?.local_id) {
-    await db.delete('cached_farms', farm.local_id);
-    await db.delete('id_mappings', farm.local_id);
+  if (farm.local_id) {
+    const cached = await db.get('cached_farms', farm.local_id);
+    if (cached && belongsToOrganization(cached, orgId)) {
+      await db.delete('cached_farms', farm.local_id);
+    }
+    const mapping = await db.get('id_mappings', farm.local_id);
+    if (mapping && belongsToOrganization(mapping, orgId)) {
+      await db.delete('id_mappings', farm.local_id);
+    }
   }
 }
 
-export async function deleteBoundary(id: string): Promise<void> {
+export async function deleteBoundary(id: string, orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  const item = await db.get('pending_boundaries', id);
+  if (!item) return;
+  if (!belongsToOrganization(item, orgId)) throw new Error('Offline boundary is outside the active organization.');
   await db.delete('pending_boundaries', id);
 }
 
-export async function deleteUpload(id: string): Promise<void> {
+export async function deleteUpload(id: string, orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  const item = await db.get('pending_uploads', id);
+  if (!item) return;
+  if (!belongsToOrganization(item, orgId)) throw new Error('Offline upload is outside the active organization.');
   await db.delete('pending_uploads', id);
 }
 
-export async function deleteOcrJob(id: string): Promise<void> {
+export async function deleteOcrJob(id: string, orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  const item = await db.get('pending_ocr_jobs', id);
+  if (!item) return;
+  if (!belongsToOrganization(item, orgId)) throw new Error('Offline OCR job is outside the active organization.');
   await db.delete('pending_ocr_jobs', id);
 }
 
-export async function deleteSyncedBatches(): Promise<void> {
+export async function deleteSyncedBatches(orgId: OrganizationId): Promise<void> {
   const db = await getDB();
   const syncedBatches = await db.getAllFromIndex('pending_batches', 'by-status', 'synced');
 
   const tx = db.transaction('pending_batches', 'readwrite');
   for (const batch of syncedBatches) {
-    await tx.store.delete(batch.id);
+    if (belongsToOrganization(batch, orgId)) await tx.store.delete(batch.id);
   }
   await tx.done;
 }
 
-export async function deleteSyncedQueueItems(): Promise<void> {
+export async function deleteSyncedQueueItems(orgId: OrganizationId): Promise<void> {
   const db = await getDB();
   const stores: Array<'pending_farms' | 'pending_boundaries' | 'pending_uploads' | 'pending_ocr_jobs' | 'pending_batches'> = [
     'pending_farms',
@@ -597,10 +714,38 @@ export async function deleteSyncedQueueItems(): Promise<void> {
   ];
 
   for (const storeName of stores) {
-    const items = await db.getAllFromIndex(storeName as never, 'by-status' as never, 'synced' as never) as Array<{ id: string }>;
+    const items = await db.getAllFromIndex(storeName as never, 'by-status' as never, 'synced' as never) as Array<{ id: string; org_id?: OrganizationId }>;
     const tx = db.transaction(storeName as never, 'readwrite');
     for (const item of items) {
-      await tx.store.delete(item.id as never);
+      if (belongsToOrganization(item, orgId)) await tx.store.delete(item.id as never);
+    }
+    await tx.done;
+  }
+}
+
+export async function resetInterruptedSyncItems(orgId: OrganizationId): Promise<void> {
+  const db = await getDB();
+  organizationKey(orgId);
+  const stores: Array<'pending_farms' | 'pending_boundaries' | 'pending_uploads' | 'pending_ocr_jobs' | 'pending_batches'> = [
+    'pending_farms',
+    'pending_boundaries',
+    'pending_uploads',
+    'pending_ocr_jobs',
+    'pending_batches',
+  ];
+
+  for (const storeName of stores) {
+    const items = await db.getAllFromIndex(storeName as never, 'by-status' as never, 'syncing' as never) as Array<{
+      id: string;
+      org_id?: OrganizationId;
+      status: QueueStatus;
+      error_message?: string;
+    }>;
+    const tx = db.transaction(storeName as never, 'readwrite');
+    for (const item of items) {
+      if (belongsToOrganization(item, orgId)) {
+        await tx.store.put({ ...item, status: 'pending', error_message: undefined } as never);
+      }
     }
     await tx.done;
   }
@@ -616,7 +761,8 @@ function countByStatus(items: Array<{ status: QueueStatus }>) {
   };
 }
 
-export async function getSyncStats(): Promise<{
+export async function getSyncStats(orgId: OrganizationId): Promise<{
+  org_id: OrganizationId;
   pending: number;
   syncing: number;
   synced: number;
@@ -638,14 +784,15 @@ export async function getSyncStats(): Promise<{
       db.getAll('pending_ocr_jobs'),
     ]);
 
-    const batchStats = countByStatus(batches);
-    const farmStats = countByStatus(farms);
-    const boundaryStats = countByStatus(boundaries);
-    const uploadStats = countByStatus(uploads);
-    const ocrStats = countByStatus(ocr);
+    const batchStats = countByStatus(filterForOrganization(batches, orgId));
+    const farmStats = countByStatus(filterForOrganization(farms, orgId));
+    const boundaryStats = countByStatus(filterForOrganization(boundaries, orgId));
+    const uploadStats = countByStatus(filterForOrganization(uploads, orgId));
+    const ocrStats = countByStatus(filterForOrganization(ocr, orgId));
     const groups = [batchStats, farmStats, boundaryStats, uploadStats, ocrStats];
 
     return {
+      org_id: orgId,
       pending: groups.reduce((sum, group) => sum + group.pending, 0),
       syncing: groups.reduce((sum, group) => sum + group.syncing, 0),
       synced: groups.reduce((sum, group) => sum + group.synced, 0),
@@ -660,8 +807,40 @@ export async function getSyncStats(): Promise<{
   } catch (error) {
     console.warn('Failed to get sync stats:', error);
     const empty = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
-    return { ...empty, batches: empty, farms: empty, boundaries: empty, uploads: empty, ocr: empty };
+    return { org_id: orgId, ...empty, batches: empty, farms: empty, boundaries: empty, uploads: empty, ocr: empty };
   }
+}
+
+export async function getQuarantinedQueueStats(): Promise<{
+  total: number;
+  batches: number;
+  farms: number;
+  boundaries: number;
+  uploads: number;
+  ocr: number;
+  mappings: number;
+}> {
+  const db = await getDB();
+  const [batches, farms, boundaries, uploads, ocr, mappings] = await Promise.all([
+    db.getAll('pending_batches'),
+    db.getAll('pending_farms'),
+    db.getAll('pending_boundaries'),
+    db.getAll('pending_uploads'),
+    db.getAll('pending_ocr_jobs'),
+    db.getAll('id_mappings'),
+  ]);
+  const counts = {
+    batches: batches.filter((item) => !hasOrganizationId(item.org_id)).length,
+    farms: farms.filter((item) => !hasOrganizationId(item.org_id)).length,
+    boundaries: boundaries.filter((item) => !hasOrganizationId(item.org_id)).length,
+    uploads: uploads.filter((item) => !hasOrganizationId(item.org_id)).length,
+    ocr: ocr.filter((item) => !hasOrganizationId(item.org_id)).length,
+    mappings: mappings.filter((item) => !hasOrganizationId(item.org_id)).length,
+  };
+  return {
+    total: Object.values(counts).reduce((sum, count) => sum + count, 0),
+    ...counts,
+  };
 }
 
 export async function resetDB(): Promise<void> {
@@ -677,8 +856,9 @@ export async function resetDB(): Promise<void> {
   }
 }
 
-export async function cacheFarms(farms: any[]): Promise<void> {
+export async function cacheFarms(farms: any[], orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  organizationKey(orgId);
   const tx = db.transaction('cached_farms', 'readwrite');
 
   for (const farm of farms) {
@@ -690,7 +870,7 @@ export async function cacheFarms(farms: any[]): Promise<void> {
       cached_at: nowIso(),
       commodity: farm.commodity || undefined,
       area_hectares: farm.area_hectares || undefined,
-      org_id: farm.org_id,
+      org_id: orgId,
       boundary: farm.boundary,
       is_local: farm.is_local,
       local_id: farm.local_id,
@@ -700,18 +880,20 @@ export async function cacheFarms(farms: any[]): Promise<void> {
   await tx.done;
 }
 
-export async function getCachedFarms(): Promise<any[]> {
+export async function getCachedFarms(orgId: OrganizationId): Promise<any[]> {
   const db = await getDB();
-  return db.getAll('cached_farms');
+  return filterForOrganization(await db.getAll('cached_farms'), orgId);
 }
 
-export async function cacheBags(bags: any[]): Promise<void> {
+export async function cacheBags(bags: any[], orgId: OrganizationId): Promise<void> {
   const db = await getDB();
+  organizationKey(orgId);
   const tx = db.transaction('cached_bags', 'readwrite');
 
   for (const bag of bags) {
     await tx.store.put({
       id: bag.id,
+      org_id: orgId,
       serial: bag.serial,
       status: bag.status,
       cached_at: nowIso(),
@@ -721,13 +903,17 @@ export async function cacheBags(bags: any[]): Promise<void> {
   await tx.done;
 }
 
-export async function getCachedBags(): Promise<any[]> {
+export async function getCachedBags(orgId: OrganizationId): Promise<any[]> {
   const db = await getDB();
-  return db.getAll('cached_bags');
+  return filterForOrganization(await db.getAll('cached_bags'), orgId);
 }
 
-export async function purgeExpiredOfflineData(ttlMs = OFFLINE_TTL_MS): Promise<void> {
+export async function purgeExpiredOfflineData(
+  orgId: OrganizationId,
+  ttlMs = OFFLINE_TTL_MS,
+): Promise<void> {
   const db = await getDB();
+  organizationKey(orgId);
   const cutoff = Date.now() - ttlMs;
   const stores: Array<'pending_farms' | 'pending_boundaries' | 'pending_uploads' | 'pending_ocr_jobs' | 'pending_batches'> = [
     'pending_farms',
@@ -741,7 +927,11 @@ export async function purgeExpiredOfflineData(ttlMs = OFFLINE_TTL_MS): Promise<v
     const all = await db.getAll(storeName);
     const tx = db.transaction(storeName, 'readwrite');
     for (const item of all) {
-      if (item.status === 'synced' && new Date(item.synced_at || item.created_at).getTime() < cutoff) {
+      if (
+        belongsToOrganization(item, orgId)
+        && item.status === 'synced'
+        && new Date(item.synced_at || item.created_at).getTime() < cutoff
+      ) {
         await tx.store.delete(item.id as never);
       }
     }
@@ -763,6 +953,7 @@ export async function clearAllData(): Promise<void> {
 
 export type {
   QueueStatus,
+  OrganizationId,
   PendingFarm,
   PendingBoundary,
   PendingUpload,

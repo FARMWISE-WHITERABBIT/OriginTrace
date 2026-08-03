@@ -131,7 +131,8 @@ export async function POST(request: NextRequest) {
 
     const bagRows = Array.from({ length: count }, () => ({
       org_id: profile.org_id,
-      status: 'empty',
+      // `empty` is not a valid bags.status value; unused is the initial state.
+      status: 'unused',
       serial: crypto.randomUUID(),
     }));
 

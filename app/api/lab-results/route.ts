@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { emitEvent } from '@/lib/services/events';
@@ -26,7 +27,7 @@ const labResultCreateSchema = z.object({
   test_type:           z.enum(['aflatoxin', 'pesticide_residue', 'heavy_metal', 'microbiological', 'moisture', 'other']),
   commodity:           z.string().optional(),
   result:              z.enum(['pass', 'fail', 'conditional']),
-  result_value:        z.number().optional(),
+  result_value:        emptyAsNull(z.number().nullable().optional()),
   result_unit:         z.string().optional(),
   result_notes:        z.string().optional(),
 
@@ -35,7 +36,7 @@ const labResultCreateSchema = z.object({
 
   target_markets:      z.array(z.string()).default([]),
 
-  file_url:            z.string().url().optional(),
+  file_url:            emptyAsNull(z.string().url().nullable().optional()),
   file_name:           z.string().optional(),
   document_id:         z.string().uuid().optional(),
 });

@@ -127,7 +127,7 @@ export async function POST(
     if (body.port_of_entry !== undefined) insertData.port_of_entry = body.port_of_entry;
     if (body.customs_reference !== undefined) insertData.customs_reference = body.customs_reference;
     if (body.inspector_notes !== undefined) insertData.inspector_notes = body.inspector_notes;
-    if (body.financial_impact_usd !== undefined) insertData.financial_impact_usd = body.financial_impact_usd;
+    if (body.financial_impact_usd !== undefined) insertData.financial_impact_usd = body.financial_impact_usd as number;
 
     const { data: outcomeRecord, error: insertError } = await supabase
       .from('shipment_outcomes')

@@ -4,6 +4,7 @@ import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
 import { normalizeMarketCodes } from '@/lib/services/market-normalization';
 import { withErrorHandling, ApiError } from '@/lib/api/errors';
+import { emptyAsNull } from '@/lib/api/validation';
 import { requireRole, ROLES } from '@/lib/rbac';
 import type { Json } from '@/lib/supabase/database.types';
 
@@ -17,19 +18,19 @@ const syncBatchSchema = z.object({
   state: z.string().optional(),
   lga: z.string().optional(),
   community: z.string().optional(),
-  gps_lat: z.number().optional(),
-  gps_lng: z.number().optional(),
-  bag_count: z.number().optional(),
-  total_weight: z.number().optional(),
+  gps_lat: emptyAsNull(z.number().nullable().optional()),
+  gps_lng: emptyAsNull(z.number().nullable().optional()),
+  bag_count: emptyAsNull(z.number().nullable().optional()),
+  total_weight: emptyAsNull(z.number().nullable().optional()),
   contributors: z.array(z.object({
     farm_id: z.string().uuid().optional().or(z.string().optional()).or(z.number().optional()),
     farmer_name: z.string().optional(),
-    weight_kg: z.number().optional(),
-    bag_count: z.number().optional(),
+    weight_kg: emptyAsNull(z.number().nullable().optional()),
+    bag_count: emptyAsNull(z.number().nullable().optional()),
   })).optional(),
   bags: z.array(z.object({
     serial: z.string().optional(),
-    weight: z.number().optional(),
+    weight: emptyAsNull(z.number().nullable().optional()),
     grade: z.string().optional(),
   })).optional(),
   notes: z.string().optional(),
@@ -214,6 +215,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
     .from('sync_conflicts')
     .select('*')
     .eq('id', conflict_id)
+    .eq('org_id', profile.org_id)
     .single();
 
   if (fetchError || !conflict) return ApiError.notFound('Conflict');
@@ -229,14 +231,14 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
       .update({
         farm_id: fd.farm_id,
         commodity: fd.commodity,
-        gps_lat: fd.gps_lat,
-        gps_lng: fd.gps_lng,
         notes: fd.notes,
         total_weight: fd.total_weight,
         bag_count: fd.bag_count,
-        updated_at: new Date().toISOString()
+        // GPS is stored on the linked farm boundary; collection_batches has
+        // no GPS or updated_at columns.
       } as any)
-      .eq('id', conflict.batch_id);
+      .eq('id', conflict.batch_id)
+      .eq('org_id', profile.org_id);
 
     if (updateError) return ApiError.internal(updateError, 'sync/PATCH/resolve-field');
   }
@@ -249,7 +251,8 @@ export const PATCH = withErrorHandling(async (request: NextRequest) => {
       resolved_at: new Date().toISOString(),
       resolution
     })
-    .eq('id', conflict_id);
+    .eq('id', conflict_id)
+    .eq('org_id', profile.org_id);
 
   if (resolveError) return ApiError.internal(resolveError, 'sync/PATCH/status');
 

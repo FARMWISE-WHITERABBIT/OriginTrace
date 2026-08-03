@@ -17,7 +17,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -39,7 +38,6 @@ import {
   Send,
   Download,
   FileText,
-  QrCode,
   Users,
   ChevronDown,
   Navigation,
@@ -48,11 +46,15 @@ import {
   CheckSquare,
   CheckCircle2,
   ArrowRight,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateBatchManifestCSV, downloadCSV } from '@/lib/export/csv-export';
 import { TierGate } from '@/components/tier-gate';
 import { StatusBadge } from '@/lib/status-badge';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 interface Batch {
   id: string;
@@ -84,7 +86,10 @@ interface Bag {
 }
 
 export default function InventoryPage() {
+  const tErrors = useTranslations('errors');
   const router = useRouter();
+  const { organization, profile } = useOrg();
+  const { toast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // ── Tab control ──
   const [activeTab, setActiveTab] = useState<string>('batches');
@@ -153,7 +158,7 @@ export default function InventoryPage() {
       const failed = results.filter(r => !r.ok);
       if (failed.length > 0) throw new Error(failed[0].json.error || 'Failed to dispatch one or more batches');
       // Optimistically update batch statuses in the local state
-      setBatches(prev => prev.map(b => ids.includes(b.id) ? { ...b, status: 'dispatched' } : b));
+      setBatches(prev => (prev ?? []).map(b => ids.includes(b.id) ? { ...b, status: 'dispatched' } : b));
       toast({ title: 'Dispatched', description: `${ids.length} batch${ids.length !== 1 ? 'es' : ''} dispatched to ${dispatchDest}` });
       setDispatchComplete(true);
       setConfirmDispatch(false);
@@ -190,26 +195,24 @@ export default function InventoryPage() {
   }, []);
 
   // ── Bags sub-tab state ──
-  const [bags, setBags] = useState<Bag[]>([]);
-  const [bagsLoading, setBagsLoading] = useState(false);
-  const [bagsFetched, setBagsFetched] = useState(false);
   const [bagSearch, setBagSearch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [batchCount, setBatchCount] = useState(10);
   const [bagDialogOpen, setBagDialogOpen] = useState(false);
-  const { toast } = useToast();
-
-  const fetchBags = async () => {
-    if (bagsFetched) return;
-    setBagsLoading(true);
-    try {
-      const res = await fetch('/api/bags');
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      const data = await res.json();
-      setBags(data.bags || []);
-      setBagsFetched(true);
-    } catch (e) { console.error(e); } finally { setBagsLoading(false); }
-  };
+  const {
+    data: fetchedBags,
+    error: bagsError,
+    loading: bagsLoading,
+    refetch: fetchBags,
+  } = useApiResource<Bag[]>('/api/bags', {
+    enabled: !!organization?.id && activeTab === 'bags',
+    scopeKey: organization?.id,
+    deps: [organization?.id, activeTab],
+    showErrorToast: false,
+    select: (raw) => (raw as { bags?: Bag[] }).bags || [],
+  });
+  const bags = fetchedBags ?? [];
+  const bagsPending = activeTab === 'bags' && fetchedBags === null && !bagsError;
 
   const generateBagBatch = async () => {
     setIsGenerating(true);
@@ -223,13 +226,7 @@ export default function InventoryPage() {
       const data = await res.json();
       toast({ title: 'Batch Generated', description: `Created ${data.count} bags — batch ${data.batchId}` });
       setBagDialogOpen(false);
-      setBagsFetched(false);
-      setBagsLoading(true);
-      const res2 = await fetch('/api/bags');
-      const data2 = await res2.json();
-      setBags(data2.bags || []);
-      setBagsFetched(true);
-      setBagsLoading(false);
+      await fetchBags();
     } catch {
       toast({ title: 'Error', description: 'Failed to generate bag batch', variant: 'destructive' });
     } finally { setIsGenerating(false); }
@@ -260,82 +257,32 @@ export default function InventoryPage() {
     } | null;
   }
 
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const { organization, profile } = useOrg();
-  const supabase = createClient();
-
-  useEffect(() => {
-    async function fetchBatches() {
-      if (!supabase || !organization) return;
-
-      try {
-        // Fetch batches first
-        const { data: batchData, error: batchError } = await supabase
-          .from('collection_batches')
-          .select('*')
-          .eq('org_id', String(organization.id))
-          .order('created_at', { ascending: false });
-
-        if (batchError) {
-          console.error('Batch query error:', batchError.message, batchError.details, batchError.hint);
-          throw batchError;
-        }
-
-        // Fetch farm data for all batches
-        const farmIds = [...new Set((batchData || []).map(b => b.farm_id).filter(Boolean))];
-        let farmMap: Record<string, { farmer_name: string; community: string }> = {};
-
-        if (farmIds.length > 0) {
-          const { data: farms, error: farmError } = await supabase
-            .from('farms')
-            .select('id, farmer_name, community')
-            .in('id', farmIds);
-
-          if (!farmError && farms) {
-            farmMap = farms.reduce((acc, f) => {
-              acc[f.id] = { farmer_name: f.farmer_name, community: f.community };
-              return acc;
-            }, {} as Record<string, { farmer_name: string; community: string }>);
-          }
-        }
-
-        const data = batchData;
-
-        // Fetch agent names separately if we have agent IDs
-        const agentIds = [...new Set((data || []).map(b => b.agent_id).filter(Boolean))];
-        let agentMap: Record<string, string> = {};
-        
-        if (agentIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', agentIds);
-          
-          agentMap = (profiles || []).reduce((acc, p) => {
-            acc[p.user_id] = p.full_name;
-            return acc;
-          }, {} as Record<string, string>);
-        }
-
-        setBatches((data || []).map((b: any) => {
-          return {
-            ...b,
-            farm: farmMap[b.farm_id] || { farmer_name: 'Unknown', community: 'Unknown' },
-            agent: { full_name: agentMap[b.agent_id] || 'Unknown' }
-          };
-        }));
-      } catch (error) {
-        console.error('Failed to fetch batches:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchBatches();
-  }, [organization, supabase]);
+  const {
+    data: fetchedBatches,
+    error: batchesError,
+    loading: batchesLoading,
+    refetch: fetchBatches,
+    setData: setBatches,
+  } = useApiResource<Batch[]>(
+    '/api/batches?limit=500',
+    {
+      enabled: !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id],
+      showErrorToast: false,
+      // Read through the tenant-scoped API route so RLS does not make the
+      // collection_batches query appear empty. It includes farm/agent relations.
+      select: (raw) => ((raw as { batches?: Batch[] }).batches || []).map((batch) => ({
+        ...batch,
+        farm: batch.farm || { farmer_name: 'Unknown', community: 'Unknown' },
+        agent: batch.agent || { full_name: 'Unknown' },
+      })),
+    },
+  );
+  const batches = fetchedBatches ?? [];
+  const isLoading = !organization?.id || batchesLoading;
 
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = 
@@ -400,7 +347,7 @@ export default function InventoryPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-9">
           <TabsTrigger value="batches" className="text-sm">Batches</TabsTrigger>
-          <TabsTrigger value="bags" className="text-sm" onClick={fetchBags}>Bags</TabsTrigger>
+          <TabsTrigger value="bags" className="text-sm">Bags</TabsTrigger>
           <TabsTrigger value="dispatch" className="text-sm">
             <Truck className="h-3.5 w-3.5 mr-1.5" />
             Dispatch
@@ -461,6 +408,22 @@ export default function InventoryPage() {
                 </thead>
                 <InventoryTableSkeleton rows={6} />
               </table>
+            </div>
+          ) : batchesError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <AlertTriangle className="h-10 w-10 text-destructive mb-3" />
+              <p className="font-medium text-foreground">{tErrors('unableToLoadCollectionBatches')}</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">{batchesError}</p>
+              <Button
+                className="mt-4"
+                size="sm"
+                variant="outline"
+                onClick={() => void fetchBatches()}
+                data-testid="button-retry-batches"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {tErrors('tryAgain')}
+              </Button>
             </div>
           ) : filteredBatches.length === 0 ? (
             <div className="empty-state">
@@ -620,7 +583,7 @@ export default function InventoryPage() {
       </TabsContent>
 
       {/* ── BAGS TAB ── */}
-      <TabsContent value="bags" className="mt-4 space-y-4" onFocus={fetchBags}>
+      <TabsContent value="bags" className="mt-4 space-y-4">
         <TierGate feature="bags" requiredTier="starter" featureLabel="Bags">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[12rem]">
@@ -674,14 +637,25 @@ export default function InventoryPage() {
 
           <Card>
             <CardContent className="p-0">
-              {bagsLoading ? (
+              {bagsLoading || bagsPending ? (
                 <div className="flex items-center justify-center h-40">
                   <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
                 </div>
-              ) : !bagsFetched ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <QrCode className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  <p className="text-sm">Click this tab to load bag inventory</p>
+              ) : bagsError ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <AlertTriangle className="h-10 w-10 text-destructive mb-3" />
+                  <p className="font-medium text-foreground">{tErrors('unableToLoadBagInventory')}</p>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-md">{bagsError}</p>
+                  <Button
+                    className="mt-4"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void fetchBags()}
+                    data-testid="button-retry-bags"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {tErrors('tryAgain')}
+                  </Button>
                 </div>
               ) : filteredBags.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">

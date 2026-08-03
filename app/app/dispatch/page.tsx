@@ -201,6 +201,11 @@ function DispatchContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processingRunIdParam]);
 
+  const shouldRedirectToInventory = !isLoading && batchIds.length === 0 && !processingRunIdParam;
+  useEffect(() => {
+    if (shouldRedirectToInventory) router.replace('/app/inventory');
+  }, [router, shouldRedirectToInventory]);
+
   const handleDispatch = async () => {
     if (batches.length === 0 || !destination.trim() || !confirmDispatch) return;
     setIsDispatching(true);
@@ -288,8 +293,11 @@ function DispatchContent() {
   }
 
   if (batchIds.length === 0 && !processingRunIdParam) {
-    router.replace('/app/inventory');
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // ── Processing Run Dispatch Mode ──────────────────────────────────────────

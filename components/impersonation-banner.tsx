@@ -12,8 +12,10 @@ export function ImpersonationBanner() {
   }
   
   const handleStopImpersonation = async () => {
-    await stopImpersonation();
-    window.location.href = '/superadmin/organizations';
+    const stopped = await stopImpersonation();
+    if (stopped) {
+      window.location.href = '/superadmin/organizations';
+    }
   };
   
   return (

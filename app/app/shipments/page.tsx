@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ShipmentCardSkeleton } from '@/components/skeletons';
 import { useRouter } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/hooks/use-toast';
 import { TierGate } from '@/components/tier-gate';
 import { Textarea } from '@/components/ui/textarea';
+import { useApiResource } from '@/hooks/use-api-resource';
 import {
   Loader2,
   Plus,
@@ -145,18 +146,8 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'cancelled',  label: 'Cancelled' },
 ];
 
-export default function ShipmentsPage() {
-  const [shipments, setShipments]           = useState<Shipment[]>([]);
-  const [isLoading, setIsLoading]           = useState(true);
-  const [searchQuery, setSearchQuery]       = useState('');
-  const [statusFilter, setStatusFilter]     = useState('all');
-  const [sortBy, setSortBy]                 = useState<'date' | 'score'>('date');
-  const [dialogOpen, setDialogOpen]         = useState(false);
-  const [createStep, setCreateStep]         = useState<1|2>(1);
-  const [isCreating, setIsCreating]         = useState(false);
-  const [templates, setTemplates]           = useState<ShipmentTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [newShipment, setNewShipment]       = useState({
+function emptyShipmentDraft() {
+  return {
     destination_country: '',
     destination_port: '',
     commodity: '',
@@ -165,48 +156,67 @@ export default function ShipmentsPage() {
     buyer_contact: '',
     target_regulations: [] as string[],
     notes: '',
-  });
+  };
+}
+
+export default function ShipmentsPage() {
+  const [searchQuery, setSearchQuery]       = useState('');
+  const [statusFilter, setStatusFilter]     = useState('all');
+  const [sortBy, setSortBy]                 = useState<'date' | 'score'>('date');
+  const [dialogOpen, setDialogOpen]         = useState(false);
+  const [createStep, setCreateStep]         = useState<1|2>(1);
+  const [isCreating, setIsCreating]         = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [newShipment, setNewShipment]       = useState(emptyShipmentDraft);
   const { organization, profile, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const router = useRouter();
-
-  const fetchShipments = async () => {
-    if (orgLoading) return;
-    if (!organization) {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const url = statusFilter !== 'all'
-        ? `/api/shipments?status=${statusFilter}`
-        : '/api/shipments';
-      const response = await fetch(url);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch shipments');
-      setShipments(data.shipments || []);
-    } catch (error: any) {
-      console.error('Failed to fetch shipments:', error);
-      toast({ title: 'Failed to load shipments', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const createAbortRef = useRef<AbortController | null>(null);
+  const activeOrgIdRef = useRef(organization?.id);
+  activeOrgIdRef.current = organization?.id;
 
   useEffect(() => {
-    fetchShipments();
-  }, [organization, orgLoading, statusFilter]);
+    createAbortRef.current?.abort();
+    createAbortRef.current = null;
+    setDialogOpen(false);
+    setCreateStep(1);
+    setIsCreating(false);
+    setSelectedTemplateId('');
+    setNewShipment(emptyShipmentDraft());
+  }, [organization?.id]);
 
-  const fetchTemplates = async () => {
-    try {
-      const res = await fetch('/api/shipment-templates');
-      if (res.ok) {
-        const d = await res.json();
-        setTemplates(d.templates ?? []);
-      }
-    } catch { /* silent */ }
-  };
+  useEffect(() => () => createAbortRef.current?.abort(), []);
+
+  const shipmentsUrl = statusFilter !== 'all'
+    ? `/api/shipments?status=${statusFilter}`
+    : '/api/shipments';
+  const {
+    data: fetchedShipments,
+    loading: shipmentsLoading,
+    refetch: fetchShipments,
+  } = useApiResource<Shipment[]>(shipmentsUrl, {
+    enabled: !!organization?.id,
+    scopeKey: organization?.id,
+    deps: [organization?.id, statusFilter],
+    select: (raw) => (raw as { shipments?: Shipment[] }).shipments || [],
+  });
+  const shipments = fetchedShipments ?? [];
+  const isLoading = orgLoading || (!!organization?.id && shipmentsLoading);
+
+  const { data: fetchedTemplates } = useApiResource<ShipmentTemplate[]>(
+    '/api/shipment-templates',
+    {
+      enabled: !!organization?.id && dialogOpen,
+      scopeKey: organization?.id,
+      deps: [organization?.id, dialogOpen],
+      showErrorToast: false,
+      select: (raw) => (raw as { templates?: ShipmentTemplate[] }).templates ?? [],
+    },
+  );
+  const templates = fetchedTemplates ?? [];
 
   const applyTemplate = (templateId: string) => {
+    if (!organization?.id || activeOrgIdRef.current !== organization.id) return;
     const tpl = templates.find((t) => t.id === templateId);
     if (!tpl) return;
     setNewShipment((s) => ({
@@ -221,10 +231,15 @@ export default function ShipmentsPage() {
   };
 
   const handleCreate = async () => {
+    const orgId = organization?.id;
+    if (!orgId || activeOrgIdRef.current !== orgId) return;
     if (!newShipment.destination_country || !newShipment.commodity) {
       toast({ title: 'Missing fields', description: 'Destination country and commodity are required.', variant: 'destructive' });
       return;
     }
+    createAbortRef.current?.abort();
+    const controller = new AbortController();
+    createAbortRef.current = controller;
     setIsCreating(true);
     try {
       const body = {
@@ -241,22 +256,29 @@ export default function ShipmentsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      if (controller.signal.aborted || activeOrgIdRef.current !== orgId) return;
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || 'Failed to create shipment');
       }
       const data = await response.json();
+      if (controller.signal.aborted || activeOrgIdRef.current !== orgId) return;
       toast({ title: 'Shipment created', description: `Shipment ${data.shipment?.shipment_code || ''} has been created.` });
       setDialogOpen(false);
-      setNewShipment({ destination_country: '', destination_port: '', commodity: '', estimated_ship_date: '', buyer_company: '', buyer_contact: '', target_regulations: [], notes: '' });
+      setNewShipment(emptyShipmentDraft());
       setSelectedTemplateId('');
       setCreateStep(1);
       fetchShipments();
     } catch (error: unknown) {
+      if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to create shipment', variant: 'destructive' });
     } finally {
-      setIsCreating(false);
+      if (createAbortRef.current === controller) {
+        createAbortRef.current = null;
+        if (activeOrgIdRef.current === orgId) setIsCreating(false);
+      }
     }
   };
 
@@ -305,9 +327,16 @@ export default function ShipmentsPage() {
             </div>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (v) { fetchTemplates(); setCreateStep(1); } }}>
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              if (open && (!organization?.id || activeOrgIdRef.current !== organization.id)) return;
+              setDialogOpen(open);
+              if (open) setCreateStep(1);
+            }}
+          >
             <DialogTrigger asChild>
-              <Button data-testid="button-create-shipment">
+              <Button disabled={orgLoading || !organization?.id} data-testid="button-create-shipment">
                 <Plus className="h-4 w-4 mr-2" />
                 New Shipment
               </Button>
@@ -520,7 +549,11 @@ export default function ShipmentsPage() {
                     Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 ) : (
-                  <Button onClick={handleCreate} disabled={isCreating} data-testid="button-confirm-create">
+                  <Button
+                    onClick={handleCreate}
+                    disabled={isCreating || !organization?.id || activeOrgIdRef.current !== organization.id}
+                    data-testid="button-confirm-create"
+                  >
                     {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Create Shipment
                   </Button>
@@ -613,7 +646,11 @@ export default function ShipmentsPage() {
                 : 'Create your first shipment to start assessing export readiness. Add batches and finished goods, then get a Go/No-Go decision.'}
             </p>
             {!searchQuery && statusFilter === 'all' && (
-              <Button onClick={() => setDialogOpen(true)} data-testid="button-create-first-shipment">
+              <Button
+                onClick={() => setDialogOpen(true)}
+                disabled={orgLoading || !organization?.id}
+                data-testid="button-create-first-shipment"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Shipment
               </Button>

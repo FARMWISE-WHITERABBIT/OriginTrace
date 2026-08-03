@@ -6,10 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { runWhenIdle } from '@/lib/utils/idle';
+import { useOrg } from '@/lib/contexts/org-context';
 
 type QueueCounts = {
   pending: number;
@@ -20,6 +22,7 @@ type QueueCounts = {
 };
 
 export type SyncStats = QueueCounts & {
+  org_id?: number | string;
   batches: QueueCounts;
   farms: QueueCounts;
   boundaries: QueueCounts;
@@ -55,22 +58,38 @@ const EMPTY_STATS: SyncStats = {
 const SyncStatusContext = createContext<SyncStatusContextValue | null>(null);
 
 export function SyncStatusProvider({ children }: { children: ReactNode }) {
+  const { organization } = useOrg();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
   const [isOnline, setIsOnline] = useState(true);
-  const [stats, setStats] = useState<SyncStats>(EMPTY_STATS);
+  const [scopedStats, setScopedStats] = useState<{ orgId: number | null; stats: SyncStats }>({
+    orgId: null,
+    stats: EMPTY_STATS,
+  });
+  const stats = organizationId !== null && scopedStats.orgId === organizationId
+    ? scopedStats.stats
+    : EMPTY_STATS;
 
   const refresh = useCallback(async () => {
-    if (typeof window === 'undefined' || !('indexedDB' in window)) {
-      setStats(EMPTY_STATS);
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || typeof window === 'undefined' || !('indexedDB' in window)) {
+      setScopedStats({ orgId: null, stats: EMPTY_STATS });
       return;
     }
 
     try {
       const { getSyncStats } = await import('@/lib/offline/sync-store');
-      setStats(await getSyncStats());
+      const nextStats = await getSyncStats(requestedOrganizationId);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        setScopedStats({ orgId: requestedOrganizationId, stats: nextStats });
+      }
     } catch {
-      setStats(EMPTY_STATS);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        setScopedStats({ orgId: requestedOrganizationId, stats: EMPTY_STATS });
+      }
     }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
     const updateOnline = () => setIsOnline(navigator.onLine);
@@ -86,7 +105,9 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
     };
     const handleSyncStats = (event: Event) => {
       const detail = (event as CustomEvent<SyncStats>).detail;
-      if (detail) setStats(detail);
+      if (detail && organizationId !== null && String(detail.org_id) === String(organizationId)) {
+        setScopedStats({ orgId: organizationId, stats: detail });
+      }
     };
 
     window.addEventListener('online', handleOnline);
@@ -107,7 +128,7 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('origintrace:sync-stats', handleSyncStats);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refresh]);
+  }, [organizationId, refresh]);
 
   const value = useMemo<SyncStatusContextValue>(() => {
     const pendingCount = stats.pending + stats.error + stats.conflict;

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ConflictMap — Leaflet map for boundary conflict visualisation.
+ * ConflictMap — MapLibre map for boundary conflict visualisation.
  *
  * Renders two overlapping farm polygons and their intersection zone:
  *   Farm A  → blue (#3B82F6)
@@ -9,11 +9,15 @@
  *   Overlap → amber (#F59E0B)
  *
  * Imported with `next/dynamic + ssr:false` from the conflicts page so
- * Leaflet's window-dependent code never runs during SSR.
+ * MapLibre's window-dependent code never runs during SSR.
  */
 
-import { useEffect, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { intersectPolygons } from '@/lib/geometry/polygon';
+import Map, { Source, Layer, Popup } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import bbox from '@turf/bbox';
+import { featureCollection, polygon } from '@turf/helpers';
 
 type Coord = [number, number]; // [lng, lat]
 
@@ -30,108 +34,144 @@ interface ConflictMapProps {
 }
 
 export default function ConflictMap({ farmA, farmB, className = '' }: ConflictMapProps) {
-  const mapRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    lngLat: [number, number];
+    label: string;
+    subLabel: string;
+  } | null>(null);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const geojson = useMemo(() => {
+    const ringA: Coord[] = (farmA.boundary?.coordinates?.[0] ?? []) as Coord[];
+    const ringB: Coord[] = (farmB.boundary?.coordinates?.[0] ?? []) as Coord[];
 
-    let map: any;
+    const features: any[] = [];
 
-    async function initMap() {
-      // Dynamic import keeps Leaflet off the SSR bundle
-      const L = (await import('leaflet')).default;
-      // Leaflet CSS is loaded via live-supply-map.tsx at the app level;
-      // no need to duplicate the import here.
-
-      if (mapRef.current) return; // already initialised (StrictMode double-invoke)
-
-      const ringA: Coord[] = (farmA.boundary?.coordinates?.[0] ?? []) as Coord[];
-      const ringB: Coord[] = (farmB.boundary?.coordinates?.[0] ?? []) as Coord[];
-
-      // Combine all coords to find a centre + bounds
-      const allCoords = [...ringA, ...ringB];
-      if (allCoords.length === 0) return;
-
-      const lngs = allCoords.map((c) => c[0]);
-      const lats = allCoords.map((c) => c[1]);
-      const midLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-      const midLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
-
-      map = L.map(containerRef.current!, {
-        center: [midLat, midLng],
-        zoom: 15,
-        zoomControl: true,
-        scrollWheelZoom: true,
+    if (ringA.length >= 3) {
+      features.push({
+        type: 'Feature',
+        properties: { id: 'farmA', label: farmA.farmer_name, subLabel: 'Farm A', color: '#3B82F6', outline: '#2563EB' },
+        geometry: { type: 'Polygon', coordinates: [ringA] }
       });
-      mapRef.current = map;
+    }
 
-      // CartoDB Positron — clean basemap with no Leaflet attribution issues
-      L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 20,
-        }
-      ).addTo(map);
+    if (ringB.length >= 3) {
+      features.push({
+        type: 'Feature',
+        properties: { id: 'farmB', label: farmB.farmer_name, subLabel: 'Farm B', color: '#EF4444', outline: '#DC2626' },
+        geometry: { type: 'Polygon', coordinates: [ringB] }
+      });
+    }
 
-      // Leaflet wants [lat, lng] — swap from GeoJSON [lng, lat]
-      const toLatLng = (c: Coord): [number, number] => [c[1], c[0]];
-
-      if (ringA.length >= 3) {
-        L.polygon(ringA.map(toLatLng), {
-          color: '#2563EB',
-          fillColor: '#3B82F6',
-          fillOpacity: 0.25,
-          weight: 2.5,
-        }).addTo(map).bindPopup(`<b>${farmA.farmer_name}</b><br>Farm A`);
-      }
-
-      if (ringB.length >= 3) {
-        L.polygon(ringB.map(toLatLng), {
-          color: '#DC2626',
-          fillColor: '#EF4444',
-          fillOpacity: 0.25,
-          weight: 2.5,
-        }).addTo(map).bindPopup(`<b>${farmB.farmer_name}</b><br>Farm B`);
-      }
-
-      // Compute and render intersection polygon
-      if (ringA.length >= 3 && ringB.length >= 3) {
-        const intersection = intersectPolygons(ringA, ringB);
-        if (intersection.length >= 3) {
-          L.polygon(intersection.map(toLatLng), {
-            color: '#D97706',
-            fillColor: '#F59E0B',
-            fillOpacity: 0.55,
-            weight: 2,
-            dashArray: '4 3',
-          }).addTo(map).bindPopup('Overlap zone');
-        }
-      }
-
-      // Fit map to show all polygons
-      if (allCoords.length > 0) {
-        const bounds = L.latLngBounds(allCoords.map(toLatLng));
-        map.fitBounds(bounds, { padding: [30, 30] });
+    if (ringA.length >= 3 && ringB.length >= 3) {
+      const intersection = intersectPolygons(ringA, ringB);
+      if (intersection.length >= 3) {
+        features.push({
+          type: 'Feature',
+          properties: { id: 'overlap', label: 'Overlap Zone', subLabel: 'Conflict Area', color: '#F59E0B', outline: '#D97706', isOverlap: true },
+          geometry: { type: 'Polygon', coordinates: [intersection] }
+        });
       }
     }
 
-    initMap();
+    return { type: 'FeatureCollection', features };
+  }, [farmA, farmB]);
 
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [farmA.id, farmB.id]);
+  const initialBounds = useMemo(() => {
+    if (geojson.features.length === 0) return undefined;
+    const fc = featureCollection(geojson.features.map(f => polygon(f.geometry.coordinates)));
+    const [minLng, minLat, maxLng, maxLat] = bbox(fc);
+    return [
+      [minLng, minLat],
+      [maxLng, maxLat]
+    ] as [[number, number], [number, number]];
+  }, [geojson]);
+
+  if (geojson.features.length === 0) {
+    return <div className={`bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 ${className}`}>No boundaries available</div>;
+  }
 
   return (
     <div className={`relative ${className}`}>
-      <div ref={containerRef} className="h-full w-full rounded-lg overflow-hidden" />
+      <div className="h-full w-full rounded-lg overflow-hidden border border-border shadow-sm">
+        <Map
+          initialViewState={{
+            bounds: initialBounds,
+            fitBoundsOptions: { padding: 40 }
+          }}
+          mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+          interactiveLayerIds={['farms-fill', 'overlap-fill']}
+          onMouseMove={(e) => {
+            if (e.features && e.features.length > 0) {
+              const feature = e.features[0];
+              setHoverInfo({
+                lngLat: [e.lngLat.lng, e.lngLat.lat],
+                label: feature.properties.label,
+                subLabel: feature.properties.subLabel
+              });
+            } else {
+              setHoverInfo(null);
+            }
+          }}
+          onMouseLeave={() => setHoverInfo(null)}
+        >
+          <Source type="geojson" data={geojson as any}>
+            <Layer
+              id="farms-fill"
+              type="fill"
+              filter={['!=', 'isOverlap', true]}
+              paint={{
+                'fill-color': ['get', 'color'],
+                'fill-opacity': 0.25
+              }}
+            />
+            <Layer
+              id="farms-outline"
+              type="line"
+              filter={['!=', 'isOverlap', true]}
+              paint={{
+                'line-color': ['get', 'outline'],
+                'line-width': 2.5
+              }}
+            />
+            <Layer
+              id="overlap-fill"
+              type="fill"
+              filter={['==', 'isOverlap', true]}
+              paint={{
+                'fill-color': ['get', 'color'],
+                'fill-opacity': 0.55
+              }}
+            />
+            <Layer
+              id="overlap-outline"
+              type="line"
+              filter={['==', 'isOverlap', true]}
+              paint={{
+                'line-color': ['get', 'outline'],
+                'line-width': 2,
+                'line-dasharray': [2, 1]
+              }}
+            />
+          </Source>
+
+          {hoverInfo && (
+            <Popup
+              longitude={hoverInfo.lngLat[0]}
+              latitude={hoverInfo.lngLat[1]}
+              closeButton={false}
+              closeOnClick={false}
+              anchor="bottom"
+              className="z-50"
+            >
+              <div className="text-sm p-1">
+                <strong className="block text-foreground">{hoverInfo.label}</strong>
+                <span className="text-muted-foreground">{hoverInfo.subLabel}</span>
+              </div>
+            </Popup>
+          )}
+        </Map>
+      </div>
+
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-[400] flex flex-col gap-1 bg-white/90 backdrop-blur-sm rounded-md px-3 py-2 text-xs shadow border border-border/50">
         <div className="flex items-center gap-2">
