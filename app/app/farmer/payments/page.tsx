@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Banknote, Calendar, Smartphone, CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Banknote, Calendar, Smartphone, CreditCard, AlertTriangle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useApiResource } from '@/hooks/use-api-resource';
 
 const methodIcons: Record<string, any> = {
   mobile_money: Smartphone,
@@ -13,19 +15,27 @@ const methodIcons: Record<string, any> = {
 };
 
 export default function FarmerPaymentsPage() {
-  const [payments, setPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const t = useTranslations('farmer');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
 
-  useEffect(() => {
-    fetch('/api/farmer')
-      .then(r => r.json())
-      .then(d => setPayments(d.payments || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, error, refetch } = useApiResource<{ payments: any[] }>('/api/farmer');
+  const payments = data?.payments || [];
 
   if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading payments...</div>;
+    return <div className="text-center py-12 text-muted-foreground">{tCommon('loading')}</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+        <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-payments">
+          {tErrors('tryAgain')}
+        </Button>
+      </div>
+    );
   }
 
   const totalReceived = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -35,12 +45,12 @@ export default function FarmerPaymentsPage() {
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-payments-title">
         <Banknote className="h-5 w-5 text-primary" />
-        My Payments
+        {t('myPayments')}
       </h2>
 
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-3 flex justify-between items-center">
-          <span className="text-sm text-primary font-medium">Total Received</span>
+          <span className="text-sm text-primary font-medium">{t('totalReceived')}</span>
           <span className="text-lg font-bold text-primary" data-testid="text-total-received">
             {currency} {totalReceived.toLocaleString()}
           </span>
@@ -52,8 +62,8 @@ export default function FarmerPaymentsPage() {
           <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
             <Banknote className="h-6 w-6 text-muted-foreground" />
           </div>
-          <p className="font-medium text-sm">No payments recorded yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Payments from your aggregator will appear here.</p>
+          <p className="font-medium text-sm">{t('noPaymentsYet')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('noPaymentsHint')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -75,11 +85,11 @@ export default function FarmerPaymentsPage() {
                     <span className="text-lg font-bold">{payment.currency} {payment.amount?.toLocaleString()}</span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '—'}
+                      {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : '—'}
                     </span>
                   </div>
                   {payment.reference_number && (
-                    <div className="text-xs text-muted-foreground mt-1">Ref: {payment.reference_number}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{t('ref')}: {payment.reference_number}</div>
                   )}
                   {payment.notes && (
                     <div className="text-xs text-muted-foreground mt-1">{payment.notes}</div>

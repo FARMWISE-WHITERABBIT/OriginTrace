@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { LogoIcon } from '@/components/logo';
 import { CheckCircle2, Shield } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 function FarmerActivateContent() {
+  const t = useTranslations('farmerActivate');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [step, setStep] = useState<'loading' | 'confirm' | 'pin' | 'success' | 'error'>('loading');
@@ -22,10 +24,11 @@ function FarmerActivateContent() {
   useEffect(() => {
     if (!token) {
       setStep('error');
-      setError('Invalid activation link.');
+      setError(t('invalidLink'));
       return;
     }
     verifyToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const verifyToken = async () => {
@@ -37,21 +40,21 @@ function FarmerActivateContent() {
         setStep('confirm');
       } else {
         setStep('error');
-        setError('This activation link is invalid or has already been used.');
+        setError(t('linkInvalidOrUsed'));
       }
     } catch {
       setStep('error');
-      setError('Unable to verify your activation link. Please try again.');
+      setError(t('verifyError'));
     }
   };
 
   const handleActivate = async () => {
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      setError('PIN must be exactly 4 digits.');
+      setError(t('pinMustBe4Digits'));
       return;
     }
     if (pin !== confirmPin) {
-      setError('PINs do not match.');
+      setError(t('pinsDoNotMatch'));
       return;
     }
 
@@ -69,10 +72,10 @@ function FarmerActivateContent() {
         setStep('success');
       } else {
         const data = await res.json();
-        setError(data.error || 'Activation failed. Please try again.');
+        setError(data.error || t('activationFailed'));
       }
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('somethingWentWrong'));
     } finally {
       setSubmitting(false);
     }
@@ -86,13 +89,13 @@ function FarmerActivateContent() {
             <LogoIcon size={64} className="drop-shadow-sm" />
           </div>
           <h1 className="text-xl font-bold text-[#1F5F52]">OriginTrace</h1>
-          <p className="text-sm text-muted-foreground mt-1">Farmer Portal</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('portalTitle')}</p>
         </div>
 
         {step === 'loading' && (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              Verifying your link...
+              {t('verifyingLink')}
             </CardContent>
           </Card>
         )}
@@ -100,26 +103,26 @@ function FarmerActivateContent() {
         {step === 'confirm' && farmerData && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Welcome, {farmerData.farmer_name}!</CardTitle>
-              <CardDescription>Confirm your phone number to activate your account.</CardDescription>
+              <CardTitle className="text-lg">{t('welcomeName', { name: farmerData.farmer_name })}</CardTitle>
+              <CardDescription>{t('confirmPhoneDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Phone</span>
+                  <span className="text-muted-foreground">{t('phone')}</span>
                   <span className="font-medium" data-testid="text-farmer-phone">{farmerData.phone}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Community</span>
+                  <span className="text-muted-foreground">{t('community')}</span>
                   <span className="font-medium">{farmerData.community}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Organization</span>
+                  <span className="text-muted-foreground">{t('organization')}</span>
                   <span className="font-medium">{farmerData.org_name}</span>
                 </div>
               </div>
               <Button className="w-full" onClick={() => setStep('pin')} data-testid="button-confirm-phone">
-                Yes, this is my phone number
+                {t('confirmPhoneButton')}
               </Button>
             </CardContent>
           </Card>
@@ -130,13 +133,13 @@ function FarmerActivateContent() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Shield className="h-5 w-5 text-[#2E7D6B]" />
-                Set Your PIN
+                {t('setPinTitle')}
               </CardTitle>
-              <CardDescription>Choose a 4-digit PIN to log in to your account.</CardDescription>
+              <CardDescription>{t('setPinDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Enter 4-digit PIN</Label>
+                <Label>{t('enterPin')}</Label>
                 <Input
                   type="password"
                   inputMode="numeric"
@@ -149,7 +152,7 @@ function FarmerActivateContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Confirm PIN</Label>
+                <Label>{t('confirmPin')}</Label>
                 <Input
                   type="password"
                   inputMode="numeric"
@@ -163,7 +166,7 @@ function FarmerActivateContent() {
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <Button className="w-full" onClick={handleActivate} disabled={submitting || pin.length !== 4} data-testid="button-activate">
-                {submitting ? 'Activating...' : 'Activate My Account'}
+                {submitting ? t('activating') : t('activateButton')}
               </Button>
             </CardContent>
           </Card>
@@ -173,10 +176,10 @@ function FarmerActivateContent() {
           <Card>
             <CardContent className="py-8 text-center space-y-4">
               <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
-              <h2 className="text-xl font-bold text-[#1F5F52]">Account Activated!</h2>
-              <p className="text-muted-foreground text-sm">Your farmer portal is ready. You can now log in with your phone number and PIN.</p>
-              <Button className="w-full" onClick={() => window.location.href = '/login'} data-testid="button-go-login">
-                Go to Login
+              <h2 className="text-xl font-bold text-[#1F5F52]">{t('accountActivated')}</h2>
+              <p className="text-muted-foreground text-sm">{t('accountActivatedDesc')}</p>
+              <Button className="w-full" onClick={() => window.location.href = '/auth/farmer-login'} data-testid="button-go-login">
+                {t('goToLogin')}
               </Button>
             </CardContent>
           </Card>
@@ -186,7 +189,7 @@ function FarmerActivateContent() {
           <Card>
             <CardContent className="py-8 text-center space-y-4">
               <p className="text-red-600 font-medium">{error}</p>
-              <p className="text-muted-foreground text-sm">Contact your field agent for a new activation link.</p>
+              <p className="text-muted-foreground text-sm">{t('contactFieldAgent')}</p>
             </CardContent>
           </Card>
         )}

@@ -1,40 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, MapPin, Award, GraduationCap, QrCode, Fingerprint } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Phone, MapPin, Award, GraduationCap, QrCode, Fingerprint, AlertTriangle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useApiResource } from '@/hooks/use-api-resource';
 
 export default function FarmerProfilePage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const t = useTranslations('farmer');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
 
-  useEffect(() => {
-    fetch('/api/farmer')
-      .then(r => r.json())
-      .then(d => setData(d))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, error, refetch } = useApiResource<any>('/api/farmer');
 
   if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading profile...</div>;
+    return <div className="text-center py-12 text-muted-foreground">{tCommon('loading')}</div>;
   }
 
-  if (!data?.farm) {
-    return <div className="text-center py-12 text-muted-foreground">Profile not available.</div>;
+  if (error || !data?.farm) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+        <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{error || tErrors('generic')}</p>
+        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-profile">
+          {tErrors('tryAgain')}
+        </Button>
+      </div>
+    );
   }
 
   const farm = data.farm;
   const account = data.account;
-  const completedTraining = (data.training || []).filter((t: any) => t.status === 'completed').length;
+  const completedTraining = (data.training || []).filter((tr: any) => tr.status === 'completed').length;
   const totalTraining = (data.training || []).length;
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-profile-title">
         <User className="h-5 w-5 text-[#2E7D6B]" />
-        Digital Identity
+        {t('digitalIdentity')}
       </h2>
 
       <Card className="border-[#2E7D6B]/20">
@@ -45,7 +50,7 @@ export default function FarmerProfilePage() {
             </div>
             <h3 className="text-lg font-bold" data-testid="text-farmer-name">{farm.farmer_name}</h3>
             {account?.farmer_code && (
-              <p className="text-sm text-muted-foreground font-mono" data-testid="text-farmer-code">ID: {account.farmer_code}</p>
+              <p className="text-sm text-muted-foreground font-mono" data-testid="text-farmer-code">{t('idPrefix')}: {account.farmer_code}</p>
             )}
           </div>
 
@@ -53,30 +58,30 @@ export default function FarmerProfilePage() {
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Phone className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-muted-foreground text-xs">Phone</div>
+                <div className="text-muted-foreground text-xs">{t('phoneLabel')}</div>
                 <div className="font-medium" data-testid="text-phone">{account?.phone || farm.phone || '—'}</div>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-muted-foreground text-xs">Community</div>
+                <div className="text-muted-foreground text-xs">{t('community')}</div>
                 <div className="font-medium" data-testid="text-community">{farm.community || '—'}</div>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-muted-foreground text-xs">Farm Area</div>
-                <div className="font-medium">{farm.area_hectares ? `${farm.area_hectares} hectares` : '—'}</div>
+                <div className="text-muted-foreground text-xs">{t('farmAreaLabel')}</div>
+                <div className="font-medium">{farm.area_hectares ? `${farm.area_hectares} ${t('hectares')}` : '—'}</div>
               </div>
             </div>
             {farm.boundary && (
               <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
                 <MapPin className="h-4 w-4 text-green-600" />
                 <div>
-                  <div className="text-green-800 font-medium text-xs">GPS Boundary Verified</div>
-                  <div className="text-green-600 text-xs">{farm.boundary.coordinates?.[0]?.length || 0} coordinate points</div>
+                  <div className="text-green-800 font-medium text-xs">{t('gpsBoundaryVerified')}</div>
+                  <div className="text-green-600 text-xs">{t('coordinatePoints', { count: farm.boundary.coordinates?.[0]?.length || 0 })}</div>
                 </div>
               </div>
             )}
@@ -89,7 +94,7 @@ export default function FarmerProfilePage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Award className="h-4 w-4 text-[#2E7D6B]" />
-              Certifications
+              {t('certifications')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -102,7 +107,7 @@ export default function FarmerProfilePage() {
                   </div>
                   <div className="text-right">
                     <Badge variant={cert.status === 'active' ? 'default' : 'secondary'} className="text-xs">{cert.status}</Badge>
-                    {cert.expiry_date && <div className="text-xs text-muted-foreground mt-1">Exp: {new Date(cert.expiry_date).toLocaleDateString()}</div>}
+                    {cert.expiry_date && <div className="text-xs text-muted-foreground mt-1">{t('expiryPrefix')}: {new Date(cert.expiry_date).toLocaleDateString('en-GB')}</div>}
                   </div>
                 </div>
               ))}
@@ -115,22 +120,22 @@ export default function FarmerProfilePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-[#2E7D6B]" />
-            Training Summary
+            {t('trainingSummary')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {totalTraining > 0 ? (
             <div className="text-center py-2">
               <div className="text-2xl font-bold text-[#2E7D6B]" data-testid="text-training-completed">{completedTraining}/{totalTraining}</div>
-              <div className="text-xs text-muted-foreground">Modules Completed</div>
+              <div className="text-xs text-muted-foreground">{t('modulesCompleted')}</div>
               <div className="w-full bg-muted rounded-full h-2 mt-2">
                 <div className="bg-[#2E7D6B] h-2 rounded-full transition-all" style={{ width: `${(completedTraining / totalTraining) * 100}%` }} />
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center py-6 text-center">
-              <p className="text-sm font-medium">No training assigned yet</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Check the Training tab for full details.</p>
+              <p className="text-sm font-medium">{t('noTrainingAssignedYet')}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t('checkTrainingTabHint')}</p>
             </div>
           )}
         </CardContent>
@@ -139,9 +144,9 @@ export default function FarmerProfilePage() {
       <Card className="bg-muted/30">
         <CardContent className="py-4 text-center space-y-2">
           <QrCode className="h-12 w-12 text-[#2E7D6B] mx-auto" />
-          <p className="text-sm font-medium">Verified Farmer Identity</p>
+          <p className="text-sm font-medium">{t('verifiedFarmerIdentity')}</p>
           <p className="text-xs text-muted-foreground">
-            Scan to verify: {farm.farmer_name} — {data.organization?.name || 'OriginTrace'}
+            {t('scanToVerify', { name: farm.farmer_name, org: data.organization?.name || 'OriginTrace' })}
           </p>
         </CardContent>
       </Card>

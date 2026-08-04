@@ -164,6 +164,11 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground/70" data-testid="text-contact-prompt">
                 New to OriginTrace? Contact us to get access.
               </p>
+              <p>
+                <Link href="/auth/farmer-login" className="text-primary hover:underline" data-testid="link-farmer-login">
+                  Farmer? Log in with phone &amp; PIN
+                </Link>
+              </p>
             </div>
           </CardFooter>
         </form>
