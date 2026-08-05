@@ -23,6 +23,24 @@ const TEMPLATES = Object.fromEntries(
   ])
 );
 
+// A buyer has no compliance_profiles of their own org — they view/manage
+// profiles that live under a *linked* exporter's org_id. Verifies an active
+// supply_chain_links row exists before allowing that cross-org read/write.
+async function requireActiveLink(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  buyerOrgId: string,
+  exporterOrgId: string
+) {
+  const { data: link } = await supabaseAdmin
+    .from('supply_chain_links')
+    .select('id')
+    .eq('buyer_org_id', buyerOrgId)
+    .eq('exporter_org_id', exporterOrgId)
+    .eq('status', 'active')
+    .maybeSingle();
+  return !!link;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = createAdminClient();
@@ -32,16 +50,29 @@ export async function GET(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
-    if (tierBlock) return tierBlock;
-
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);
+
+    let targetOrgId = profile.org_id;
+
+    if (profile.role === 'buyer') {
+      const exporterOrgId = searchParams.get('exporter_org_id');
+      if (!exporterOrgId) {
+        return NextResponse.json({ error: 'exporter_org_id is required' }, { status: 400 });
+      }
+      if (!(await requireActiveLink(supabaseAdmin, profile.org_id, exporterOrgId))) {
+        return NextResponse.json({ error: 'No active supply chain link with this exporter' }, { status: 403 });
+      }
+      targetOrgId = exporterOrgId;
+    }
+
+    const tierBlock = await enforceTier(targetOrgId, 'compliance_profiles');
+    if (tierBlock) return tierBlock;
 
     const { data: profiles, error, count } = await supabaseAdmin
       .from('compliance_profiles')
       .select('*', { count: 'exact' })
-      .eq('org_id', profile.org_id)
+      .eq('org_id', targetOrgId)
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -50,7 +81,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch compliance profiles' }, { status: 500 });
     }
 
-    return NextResponse.json({ profiles: profiles || [], templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });
+    // Exporters viewing their own profile list need to know which ones were
+    // set up by a buyer (not just which fields to lock) so the UI can label
+    // them and guard against an exporter unilaterally deleting a buyer's
+    // requirement profile.
+    const buyerOrgIds = [
+      ...new Set((profiles || []).map((p) => p.buyer_org_id).filter((id): id is string => !!id)),
+    ];
+    let buyerOrgNames = new Map<string, string>();
+    if (profile.role !== 'buyer' && buyerOrgIds.length > 0) {
+      const { data: buyerOrgs } = await supabaseAdmin
+        .from('buyer_organizations')
+        .select('id, name')
+        .in('id', buyerOrgIds);
+      buyerOrgNames = new Map((buyerOrgs || []).map((b) => [b.id, b.name]));
+    }
+
+    const withOwnership = (profiles || []).map((p) => ({
+      ...p,
+      is_own_buyer_profile: profile.role === 'buyer' ? p.buyer_org_id === profile.org_id : undefined,
+      buyer_org_name: p.buyer_org_id ? buyerOrgNames.get(p.buyer_org_id) ?? null : null,
+    }));
+
+    return NextResponse.json({ profiles: withOwnership, templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('Compliance profiles API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -66,13 +119,76 @@ export async function POST(request: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
+    const body = await request.json();
+
+    if (profile.role === 'buyer') {
+      const { data: buyerProfile } = await supabaseAdmin
+        .from('buyer_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      if (!buyerProfile || buyerProfile.role !== 'buyer_admin') {
+        return NextResponse.json({ error: 'Only buyer admins can set up compliance profiles' }, { status: 403 });
+      }
+
+      const { exporter_org_id, template, custom_rules: buyerCustomRules } = body;
+      if (!exporter_org_id) {
+        return NextResponse.json({ error: 'exporter_org_id is required' }, { status: 400 });
+      }
+      if (!template || !TEMPLATES[template]) {
+        return NextResponse.json(
+          { error: 'A regulatory template must be selected — the baseline requirements cannot be hand-written' },
+          { status: 400 }
+        );
+      }
+      if (!(await requireActiveLink(supabaseAdmin, profile.org_id, exporter_org_id))) {
+        return NextResponse.json({ error: 'No active supply chain link with this exporter' }, { status: 403 });
+      }
+
+      const tierBlock = await enforceTier(exporter_org_id, 'compliance_profiles');
+      if (tierBlock) return tierBlock;
+
+      if (
+        buyerCustomRules &&
+        typeof buyerCustomRules === 'object' &&
+        !buyerProfileCustomRulesSchema.safeParse(buyerCustomRules).success
+      ) {
+        return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
+      }
+
+      const t = TEMPLATES[template];
+      const { data: created, error } = await supabaseAdmin
+        .from('compliance_profiles')
+        .insert({
+          org_id: exporter_org_id,
+          buyer_org_id: profile.org_id,
+          name: t.name,
+          destination_market: t.destination_market,
+          regulation_framework: t.regulation_framework,
+          required_documents: t.required_documents,
+          required_certifications: t.required_certifications,
+          geo_verification_level: t.geo_verification_level,
+          min_traceability_depth: t.min_traceability_depth,
+          custom_rules: buyerCustomRules || {},
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Buyer compliance profile creation error:', error);
+        return NextResponse.json({ error: 'Failed to create compliance profile' }, { status: 500 });
+      }
+
+      return NextResponse.json({ profile: created }, { status: 201 });
+    }
+
     const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
     if (roleError) return roleError;
 
     const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
     if (tierBlock) return tierBlock;
 
-    const body = await request.json();
     const {
       name,
       destination_market,

@@ -200,6 +200,7 @@ import {
   farmPatchSchema,
   batchCreateSchema,
   shipmentCreateSchema,
+  supplyChainLinkSchema,
   parseBody,
   parseQuery,
   paginationSchema,
@@ -325,6 +326,48 @@ describe('shipmentCreateSchema', () => {
       target_regulations: ['EUDR', 'UK Environment Act'],
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('supplyChainLinkSchema', () => {
+  it('accepts a blank exporter_email (buyer invite dialog default state)', () => {
+    const result = supplyChainLinkSchema.safeParse({
+      exporter_org_name: 'Nigerian Cocoa Exports Ltd',
+      exporter_email: '',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.exporter_email).toBeUndefined();
+    }
+  });
+
+  it('accepts a missing exporter_email entirely', () => {
+    const result = supplyChainLinkSchema.safeParse({ exporter_org_name: 'Acme Exports' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a valid exporter_email', () => {
+    const result = supplyChainLinkSchema.safeParse({
+      exporter_org_name: 'Acme Exports',
+      exporter_email: 'contact@acme-exports.com',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.exporter_email).toBe('contact@acme-exports.com');
+    }
+  });
+
+  it('rejects a malformed exporter_email', () => {
+    const result = supplyChainLinkSchema.safeParse({
+      exporter_org_name: 'Acme Exports',
+      exporter_email: 'not-an-email',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a missing exporter_org_name', () => {
+    const result = supplyChainLinkSchema.safeParse({ exporter_email: 'contact@acme.com' });
+    expect(result.success).toBe(false);
   });
 });
 

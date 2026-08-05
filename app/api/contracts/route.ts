@@ -27,7 +27,24 @@ const contractPatchSchema = z.object({
   contract_id: z.string().uuid({ message: 'contract_id is required' }),
   status: z.enum(['draft', 'active', 'fulfilled', 'cancelled']).optional(),
   shipment_id: z.string().uuid().optional(),
+  commodity: z.string().min(1).optional(),
+  quantity_mt: z.number().positive().optional(),
+  delivery_deadline: z.string().optional(),
+  destination_port: z.string().optional(),
+  compliance_profile_id: z.string().uuid('Compliance profile must be a valid UUID').nullable().optional(),
+  quality_requirements: z.record(z.any()).optional(),
+  notes: z.string().optional(),
 });
+
+const CONTRACT_EDITABLE_FIELDS = [
+  'commodity',
+  'quantity_mt',
+  'delivery_deadline',
+  'destination_port',
+  'compliance_profile_id',
+  'quality_requirements',
+  'notes',
+] as const;
 
 function getAdminClient() {
   return createAdminClient();
@@ -112,7 +129,11 @@ export async function GET(request: NextRequest) {
       if (linksError) throw linksError;
 
       const linkedExporterIds = [
-        ...new Set((activeLinks || []).map((link) => link.exporter_org_id)),
+        ...new Set(
+          (activeLinks || [])
+            .map((link) => link.exporter_org_id)
+            .filter((id): id is string => id !== null)
+        ),
       ];
       if (linkedExporterIds.length > 0) {
         const { data: availableProfiles, error: profilesError } = await supabaseAdmin
@@ -318,11 +339,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { contract_id, status, shipment_id } = parsed.data;
+    const { contract_id, status, shipment_id, ...editFields } = parsed.data;
 
     const { data: contract } = await supabaseAdmin
       .from('contracts')
-      .select('id, buyer_org_id, exporter_org_id, contract_reference, compliance_profile_id')
+      .select('id, buyer_org_id, exporter_org_id, contract_reference, compliance_profile_id, status')
       .eq('id', contract_id)
       .single();
 
@@ -395,6 +416,65 @@ export async function PATCH(request: NextRequest) {
         .is('notes', null); // Only set if notes are currently empty (non-destructive)
 
       return NextResponse.json({ success: true, contract_reference: contract.contract_reference });
+    }
+
+    const requestedEdits = Object.fromEntries(
+      CONTRACT_EDITABLE_FIELDS
+        .filter((field) => editFields[field] !== undefined)
+        .map((field) => [field, editFields[field]])
+    );
+
+    if (Object.keys(requestedEdits).length > 0) {
+      if (!isBuyer) {
+        return NextResponse.json({ error: 'Only the buyer can edit contract terms' }, { status: 403 });
+      }
+      if (contract.status !== 'draft') {
+        return NextResponse.json({ error: 'Only draft contracts can be edited' }, { status: 400 });
+      }
+
+      if (requestedEdits.compliance_profile_id) {
+        const { data: complianceProfile, error: profileError } = await supabaseAdmin
+          .from('compliance_profiles')
+          .select('id, org_id')
+          .eq('id', requestedEdits.compliance_profile_id as string)
+          .eq('org_id', contract.exporter_org_id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Compliance profile lookup error:', profileError);
+          return NextResponse.json({ error: 'Failed to validate compliance profile' }, { status: 500 });
+        }
+        if (!profileBelongsToExporter(contract.exporter_org_id, requestedEdits.compliance_profile_id as string, complianceProfile)) {
+          return NextResponse.json(
+            { error: 'Selected compliance profile is not available for this exporter' },
+            { status: 400 }
+          );
+        }
+      }
+
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('contracts')
+        .update(requestedEdits)
+        .eq('id', contract_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Contract edit error:', updateError);
+        return NextResponse.json({ error: 'Failed to update contract' }, { status: 500 });
+      }
+
+      await logAuditEvent({
+        orgId: contract.buyer_org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'contract.edited',
+        resourceType: 'contract',
+        resourceId: contract_id,
+        metadata: { fields: Object.keys(requestedEdits) },
+      });
+
+      return NextResponse.json({ contract: updated });
     }
 
     if (status) {

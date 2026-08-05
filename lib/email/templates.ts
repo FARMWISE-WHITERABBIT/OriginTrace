@@ -245,6 +245,103 @@ origintrace.trade`;
   return { html, text };
 }
 
+export function buildExporterSignupInvitationEmail(params: {
+  buyerCompanyName: string;
+  invitedOrgName: string;
+  acceptUrl: string;
+}) {
+  const { buyerCompanyName, invitedOrgName, acceptUrl } = params;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're invited to OriginTrace</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1F5F52;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+              <p style="margin:8px 0 0;color:#6FB8A8;font-size:13px;letter-spacing:1px;text-transform:uppercase;">You're Invited</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:600;">Join the OriginTrace family for ${buyerCompanyName}</h2>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                Hello ${invitedOrgName} Team,
+              </p>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                <strong style="color:#111827;">${buyerCompanyName}</strong> has invited your organization, ${invitedOrgName}, to join OriginTrace as a supplier. Creating your account takes a couple of minutes and lets you share traceability data, shipments, and compliance documentation directly with ${buyerCompanyName}.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 24px;">
+                    <a href="${acceptUrl}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;letter-spacing:0.3px;">Create Your Account</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Note -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0;color:#1E40AF;font-size:13px;line-height:1.5;">
+                      <strong>What happens next?</strong> Set up your organization and admin account using the button above. This invitation link expires in 14 days. Once you're signed up, you'll automatically be connected to ${buyerCompanyName} on OriginTrace.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F9FAFB;padding:24px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0 0 4px;color:#9CA3AF;font-size:12px;text-align:center;">
+                &copy; 2026 OriginTrace. All rights reserved.
+              </p>
+              <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">
+                EUDR Compliance Ready &bull; origintrace.trade
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `You're Invited - OriginTrace
+
+Hello ${invitedOrgName} Team,
+
+${buyerCompanyName} has invited your organization, ${invitedOrgName}, to join OriginTrace as a supplier. Creating your account lets you share traceability data, shipments, and compliance documentation directly with ${buyerCompanyName}.
+
+Create your account: ${acceptUrl}
+
+This invitation link expires in 14 days. Once you're signed up, you'll automatically be connected to ${buyerCompanyName} on OriginTrace.
+
+© 2026 OriginTrace. All rights reserved.
+origintrace.trade`;
+
+  return { html, text };
+}
+
 export function buildYieldFlagEmail(params: {
   recipientName: string;
   orgName: string;

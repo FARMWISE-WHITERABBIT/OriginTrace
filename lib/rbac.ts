@@ -76,6 +76,7 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/buyer/documents': ['buyer'],
   '/app/buyer/suppliers': ['buyer'],
   '/app/buyer/tenders': ['buyer'],
+  '/app/buyer/compliance': ['buyer'],
   '/app/tenders': ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
   '/app/audit': ['admin', 'compliance_officer'],
   '/app/farmer': ['farmer'],

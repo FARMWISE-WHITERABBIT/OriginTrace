@@ -61,6 +61,14 @@ export const farmerActivateSchema = z.object({
   pin:   z.string().length(4).regex(/^\d{4}$/),
 });
 
+export const exporterActivateSchema = z.object({
+  token:      z.string().min(1, 'Token required'),
+  orgName:    z.string().min(1, 'Organization name is required').max(200),
+  adminName:  z.string().min(1, 'Your name is required').max(200),
+  adminEmail: z.string().email('Invalid email address'),
+  password:   z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 // ---------------------------------------------------------------------------
 // Farms
 // ---------------------------------------------------------------------------
@@ -241,7 +249,10 @@ export const complianceProfileCreateSchema = z.object({
 // ---------------------------------------------------------------------------
 export const supplyChainLinkSchema = z.object({
   exporter_org_name: z.string().min(1).max(200),
-  exporter_email:    z.string().email(),
+  exporter_email: z
+    .union([z.string().email(), z.literal('')])
+    .optional()
+    .transform((value) => (value ? value : undefined)),
 });
 
 // ---------------------------------------------------------------------------
