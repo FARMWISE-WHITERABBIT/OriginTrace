@@ -103,6 +103,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Used by handleDocumentsSection: a shipment belongs to exactly one buyer
+// via contracts -> contract_shipments, which is what makes it safe to use as
+// the document-sharing boundary between buyers of the same exporter.
+async function getBuyerShipmentIds(supabaseAdmin: any, buyerOrgId: string): Promise<string[]> {
+  const { data: contracts } = await supabaseAdmin
+    .from('contracts')
+    .select('id')
+    .eq('buyer_org_id', buyerOrgId);
+
+  if (!contracts || contracts.length === 0) return [];
+
+  const contractIds = contracts.map((c: any) => c.id);
+  const { data: contractShipments } = await supabaseAdmin
+    .from('contract_shipments')
+    .select('shipment_id')
+    .in('contract_id', contractIds);
+
+  return (contractShipments || [])
+    .map((cs: any) => cs.shipment_id)
+    .filter((id: any): id is string => !!id);
+}
+
 async function handleShipmentsSection(supabaseAdmin: any, buyerOrgId: string) {
   const { data: contracts } = await supabaseAdmin
     .from('contracts')
@@ -294,11 +316,28 @@ async function handleDocumentsSection(supabaseAdmin: any, buyerOrgId: string) {
 
   const exporterOrgIds = links.map((l: any) => l.exporter_org_id);
 
+  // Scoped by shipment, not just exporter org: a shipment belongs to exactly
+  // one buyer via its contract, so this is what keeps buyer A from seeing
+  // documents an exporter linked to buyer B's shipment even though both
+  // buyers are actively linked to the same exporter. A document not linked
+  // to any shipment isn't buyer-specific and correctly doesn't show here.
+  const shipmentIds = await getBuyerShipmentIds(supabaseAdmin, buyerOrgId);
+
+  if (shipmentIds.length === 0) {
+    const { data: orgs } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name')
+      .in('id', exporterOrgIds);
+    return NextResponse.json({ documents: [], exporters: (orgs || []).map((o: any) => ({ id: o.id, name: o.name })) });
+  }
+
   const [docsRes, orgsRes] = await Promise.all([
     supabaseAdmin
       .from('documents')
       .select('id, title, document_type, file_url, file_name, file_size, issued_date, expiry_date, status, linked_entity_type, linked_entity_id, notes, created_at')
       .in('org_id', exporterOrgIds)
+      .eq('linked_entity_type', 'shipment')
+      .in('linked_entity_id', shipmentIds)
       .order('created_at', { ascending: false }),
     supabaseAdmin
       .from('organizations')

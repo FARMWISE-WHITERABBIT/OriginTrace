@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, ShieldCheck, FileText, MapPin, Layers, Pencil } from 'lucide-react';
+import { Loader2, Plus, ShieldCheck, FileText, MapPin, Layers, Pencil, Trash2, Send } from 'lucide-react';
 import { COMPLIANCE_TEMPLATES, TEMPLATE_ORDER, type TemplateKey } from '@/lib/compliance-templates';
 
 interface SupplyChainLink {
@@ -31,17 +31,26 @@ interface BuyerProfileOverlay {
   private_requirement_labels: string[];
 }
 
+interface ComplianceTemplateRow {
+  id: string;
+  name: string;
+  destination_market: string;
+  regulation_framework: string;
+  required_documents: string[];
+  min_traceability_depth: number;
+  custom_rules: { buyer_profile?: BuyerProfileOverlay } | null;
+}
+
 interface ComplianceProfile {
   id: string;
   org_id: string;
   buyer_org_id: string | null;
+  source_buyer_template_id: string | null;
   is_own_buyer_profile?: boolean;
   name: string;
   destination_market: string;
   regulation_framework: string;
   required_documents: string[];
-  required_certifications: string[];
-  geo_verification_level: string;
   min_traceability_depth: number;
   custom_rules: { buyer_profile?: BuyerProfileOverlay } | null;
 }
@@ -59,17 +68,39 @@ const emptyOverlay = {
 
 export default function BuyerCompliancePage() {
   const { toast } = useToast();
+
+  // Section 1: buyer's own templates, independent of any exporter.
+  const [templates, setTemplates] = useState<ComplianceTemplateRow[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey | ''>('');
+  const [overlay, setOverlay] = useState(emptyOverlay);
+  const [assigningTemplateId, setAssigningTemplateId] = useState<string | null>(null);
+  const [assignExporterId, setAssignExporterId] = useState<Record<string, string>>({});
+
+  // Section 2: what's actually materialized for a specific linked exporter.
   const [links, setLinks] = useState<SupplyChainLink[]>([]);
   const [linksLoading, setLinksLoading] = useState(true);
   const [selectedExporterId, setSelectedExporterId] = useState('');
   const [profiles, setProfiles] = useState<ComplianceProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey | ''>('');
-  const [overlay, setOverlay] = useState(emptyOverlay);
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch('/api/buyer/compliance-templates');
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data.templates || []);
+      }
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
   useEffect(() => {
     (async () => {
@@ -87,7 +118,7 @@ export default function BuyerCompliancePage() {
     })();
   }, []);
 
-  const fetchProfiles = async (exporterOrgId: string) => {
+  const fetchProfiles = useCallback(async (exporterOrgId: string) => {
     if (!exporterOrgId) { setProfiles([]); return; }
     setProfilesLoading(true);
     try {
@@ -101,20 +132,20 @@ export default function BuyerCompliancePage() {
     } finally {
       setProfilesLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchProfiles(selectedExporterId); }, [selectedExporterId]);
+  useEffect(() => { fetchProfiles(selectedExporterId); }, [selectedExporterId, fetchProfiles]);
 
   const openCreateDialog = () => {
-    setEditingProfileId(null);
+    setEditingTemplateId(null);
     setSelectedTemplate('');
     setOverlay(emptyOverlay);
     setDialogOpen(true);
   };
 
-  const openEditDialog = (p: ComplianceProfile) => {
-    const bp = p.custom_rules?.buyer_profile;
-    setEditingProfileId(p.id);
+  const openEditDialog = (t: ComplianceTemplateRow) => {
+    const bp = t.custom_rules?.buyer_profile;
+    setEditingTemplateId(t.id);
     setSelectedTemplate('');
     setOverlay({
       version: bp?.version || 'v1',
@@ -153,34 +184,31 @@ export default function BuyerCompliancePage() {
     }
     setSaving(true);
     try {
-      if (editingProfileId) {
-        const res = await fetch(`/api/compliance-profiles/${editingProfileId}`, {
+      if (editingTemplateId) {
+        const res = await fetch(`/api/buyer/compliance-templates/${editingTemplateId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ custom_rules: buildOverlayPayload() }),
         });
-        if (!res.ok) throw new Error((await res.json()).error || 'Failed to update profile');
-        toast({ title: 'Profile updated' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to update template');
+        toast({ title: 'Template updated', description: 'Any exporter this is assigned to now has the update too.' });
       } else {
         if (!selectedTemplate) {
-          toast({ title: 'Pick a regulation', description: 'Choose which market framework this profile is for.', variant: 'destructive' });
+          toast({ title: 'Pick a regulation', description: 'Choose which market framework this template is for.', variant: 'destructive' });
           setSaving(false);
           return;
         }
-        const res = await fetch('/api/compliance-profiles', {
+        const res = await fetch('/api/buyer/compliance-templates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            exporter_org_id: selectedExporterId,
-            template: selectedTemplate,
-            custom_rules: buildOverlayPayload(),
-          }),
+          body: JSON.stringify({ template: selectedTemplate, custom_rules: buildOverlayPayload() }),
         });
-        if (!res.ok) throw new Error((await res.json()).error || 'Failed to create profile');
-        toast({ title: 'Compliance profile set up' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to create template');
+        toast({ title: 'Compliance template created' });
       }
       setDialogOpen(false);
-      fetchProfiles(selectedExporterId);
+      fetchTemplates();
+      if (selectedExporterId) fetchProfiles(selectedExporterId);
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
     } finally {
@@ -188,33 +216,187 @@ export default function BuyerCompliancePage() {
     }
   };
 
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      const res = await fetch(`/api/buyer/compliance-templates/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to delete');
+      toast({ title: 'Template deleted' });
+      fetchTemplates();
+    } catch (error: unknown) {
+      toast({ title: 'Cannot delete', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
+    }
+  };
+
+  const handleAssign = async (templateId: string) => {
+    const exporterOrgId = assignExporterId[templateId];
+    if (!exporterOrgId) {
+      toast({ title: 'Pick an exporter', variant: 'destructive' });
+      return;
+    }
+    setAssigningTemplateId(templateId);
+    try {
+      const res = await fetch(`/api/buyer/compliance-templates/${templateId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exporter_org_id: exporterOrgId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to assign');
+      const exporterName = links.find((l) => l.exporter_org?.id === exporterOrgId)?.exporter_org?.name || 'the exporter';
+      toast({
+        title: data.already_assigned ? 'Already assigned' : 'Assigned',
+        description: data.already_assigned
+          ? `${exporterName} already has this template.`
+          : `${exporterName} now has this compliance profile.`,
+      });
+      if (selectedExporterId === exporterOrgId) fetchProfiles(exporterOrgId);
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
+    } finally {
+      setAssigningTemplateId(null);
+    }
+  };
+
   const selectedExporterName = links.find((l) => l.exporter_org?.id === selectedExporterId)?.exporter_org?.name;
 
   return (
-    <div className="flex-1 space-y-6">
+    <div className="flex-1 space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">Compliance</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Set up and maintain your own compliance requirements with each linked exporter
+          Set up your compliance requirements once, then assign them to any exporter you connect with
         </p>
       </div>
 
-      {linksLoading ? (
-        <div className="h-10 w-72 bg-muted animate-pulse rounded" />
-      ) : links.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <ShieldCheck className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-1">No linked exporters yet</h3>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Invite and connect with a supplier first, then set up compliance requirements for them here.
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-lg font-medium">Your Compliance Templates</h2>
+            <p className="text-sm text-muted-foreground">
+              Built once, ahead of any exporter — assign to a linked exporter whenever you're ready.
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="space-y-2 min-w-[240px]">
+          </div>
+          <Button onClick={openCreateDialog} data-testid="button-new-compliance-template">
+            <Plus className="h-4 w-4 mr-2" />
+            New Template
+          </Button>
+        </div>
+
+        {templatesLoading ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-40 bg-muted animate-pulse rounded-xl" />)}
+          </div>
+        ) : templates.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <ShieldCheck className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-1">No compliance templates yet</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                Set up a template from one of the standard market regulations — you don&apos;t need a linked exporter to do this.
+              </p>
+              <Button onClick={openCreateDialog} data-testid="button-create-first-compliance-template">
+                <Plus className="h-4 w-4 mr-2" />
+                New Template
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {templates.map((t) => {
+              const bp = t.custom_rules?.buyer_profile;
+              return (
+                <Card key={t.id} data-testid={`card-compliance-template-${t.id}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <CardTitle className="text-base truncate">{t.name}</CardTitle>
+                        <CardDescription className="flex items-center gap-1 mt-1">
+                          <MapPin className="h-3 w-3" />{t.destination_market}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(t)} data-testid={`button-edit-template-${t.id}`} aria-label="Edit your requirements">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteTemplate(t.id)} data-testid={`button-delete-template-${t.id}`} aria-label="Delete template">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="w-fit">{t.regulation_framework}</Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{t.required_documents?.length || 0} required docs</span>
+                      <span className="flex items-center gap-1"><Layers className="h-3 w-3" />depth {t.min_traceability_depth}</span>
+                    </div>
+                    {bp && (
+                      <div className="rounded-md bg-muted/40 p-2.5 text-xs space-y-1">
+                        <p><span className="text-muted-foreground">Your commodity: </span>{bp.commodity.name} (HS {bp.commodity.hs_code})</p>
+                        <p><span className="text-muted-foreground">Destination: </span>{bp.destination.country} — {bp.destination.port}</p>
+                        {bp.private_requirement_labels.length > 0 && (
+                          <p><span className="text-muted-foreground">Extra requirements: </span>{bp.private_requirement_labels.join(', ')}</p>
+                        )}
+                      </div>
+                    )}
+                    {links.length > 0 && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Select
+                          value={assignExporterId[t.id] || ''}
+                          onValueChange={(v) => setAssignExporterId((m) => ({ ...m, [t.id]: v }))}
+                        >
+                          <SelectTrigger className="h-8 text-xs" data-testid={`select-assign-exporter-${t.id}`}>
+                            <SelectValue placeholder="Assign to exporter..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {links.map((l) => (
+                              <SelectItem key={l.exporter_org?.id || l.id} value={l.exporter_org?.id || ''}>
+                                {l.exporter_org?.name || 'Unknown'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 shrink-0"
+                          disabled={assigningTemplateId === t.id || !assignExporterId[t.id]}
+                          onClick={() => handleAssign(t.id)}
+                          data-testid={`button-assign-template-${t.id}`}
+                        >
+                          {assigningTemplateId === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4 border-t pt-6">
+        <div>
+          <h2 className="text-lg font-medium">Assigned to Exporter</h2>
+          <p className="text-sm text-muted-foreground">What a linked exporter has received, including their own baseline profiles.</p>
+        </div>
+
+        {linksLoading ? (
+          <div className="h-10 w-72 bg-muted animate-pulse rounded" />
+        ) : links.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <ShieldCheck className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-1">No linked exporters yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Invite and connect with a supplier first, then assign a template to them here.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="space-y-2 min-w-[240px] max-w-xs">
               <Label>Exporter</Label>
               <Select value={selectedExporterId} onValueChange={setSelectedExporterId}>
                 <SelectTrigger data-testid="select-compliance-exporter">
@@ -229,94 +411,87 @@ export default function BuyerCompliancePage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={openCreateDialog} disabled={!selectedExporterId} data-testid="button-new-compliance-profile">
-              <Plus className="h-4 w-4 mr-2" />
-              Set Up Profile
-            </Button>
-          </div>
 
-          {profilesLoading ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
-            </div>
-          ) : profiles.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <ShieldCheck className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-1">No compliance profiles for {selectedExporterName || 'this exporter'}</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                  Set up a profile from one of the standard market regulations, then add your own requirements on top.
-                </p>
-                <Button onClick={openCreateDialog} data-testid="button-create-first-compliance-profile">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Set Up Profile
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {profiles.map((p) => {
-                const bp = p.custom_rules?.buyer_profile;
-                return (
-                  <Card key={p.id} data-testid={`card-compliance-profile-${p.id}`}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
+            {profilesLoading ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
+              </div>
+            ) : profiles.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <ShieldCheck className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-1">Nothing assigned to {selectedExporterName || 'this exporter'} yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Assign one of your templates above, or wait for {selectedExporterName || 'the exporter'} to set up their own baseline.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {profiles.map((p) => {
+                  const bp = p.custom_rules?.buyer_profile;
+                  const sourceTemplate = templates.find((t) => t.id === p.source_buyer_template_id);
+                  return (
+                    <Card key={p.id} data-testid={`card-compliance-profile-${p.id}`}>
+                      <CardHeader className="pb-3">
                         <div className="min-w-0">
                           <CardTitle className="text-base truncate">{p.name}</CardTitle>
                           <CardDescription className="flex items-center gap-1 mt-1">
                             <MapPin className="h-3 w-3" />{p.destination_market}
                           </CardDescription>
                         </div>
-                        {p.is_own_buyer_profile ? (
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openEditDialog(p)} data-testid={`button-edit-profile-${p.id}`} aria-label="Edit your requirements">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Badge variant="outline">{p.regulation_framework}</Badge>
-                        {p.is_own_buyer_profile ? (
-                          <Badge variant="secondary">Set up by you</Badge>
-                        ) : (
-                          <Badge variant="outline">Exporter baseline</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{p.required_documents?.length || 0} required docs</span>
-                        <span className="flex items-center gap-1"><Layers className="h-3 w-3" />depth {p.min_traceability_depth}</span>
-                      </div>
-                      {bp && (
-                        <div className="rounded-md bg-muted/40 p-2.5 text-xs space-y-1">
-                          <p><span className="text-muted-foreground">Your commodity: </span>{bp.commodity.name} (HS {bp.commodity.hs_code})</p>
-                          <p><span className="text-muted-foreground">Destination: </span>{bp.destination.country} — {bp.destination.port}</p>
-                          {bp.private_requirement_labels.length > 0 && (
-                            <p><span className="text-muted-foreground">Extra requirements: </span>{bp.private_requirement_labels.join(', ')}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="outline">{p.regulation_framework}</Badge>
+                          {p.is_own_buyer_profile ? (
+                            <Badge variant="secondary">
+                              {sourceTemplate ? `Assigned from ${sourceTemplate.name}` : 'Set up by you'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">Exporter baseline</Badge>
                           )}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{p.required_documents?.length || 0} required docs</span>
+                          <span className="flex items-center gap-1"><Layers className="h-3 w-3" />depth {p.min_traceability_depth}</span>
+                        </div>
+                        {bp && (
+                          <div className="rounded-md bg-muted/40 p-2.5 text-xs space-y-1">
+                            <p><span className="text-muted-foreground">Commodity: </span>{bp.commodity.name} (HS {bp.commodity.hs_code})</p>
+                            <p><span className="text-muted-foreground">Destination: </span>{bp.destination.country} — {bp.destination.port}</p>
+                            {bp.private_requirement_labels.length > 0 && (
+                              <p><span className="text-muted-foreground">Extra requirements: </span>{bp.private_requirement_labels.join(', ')}</p>
+                            )}
+                          </div>
+                        )}
+                        {p.is_own_buyer_profile && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Edit this in Your Compliance Templates above — changes sync here automatically.
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingProfileId ? 'Edit Your Requirements' : 'Set Up Compliance Profile'}</DialogTitle>
+            <DialogTitle>{editingTemplateId ? 'Edit Your Requirements' : 'New Compliance Template'}</DialogTitle>
             <DialogDescription>
-              {editingProfileId
+              {editingTemplateId
                 ? 'The regulatory baseline is fixed — you can update your own commodity, destination, and extra requirements.'
-                : `Pick a market regulation for ${selectedExporterName || 'this exporter'}, then add your own requirements on top.`}
+                : 'Pick a market regulation, then add your own requirements on top. Assign it to an exporter whenever you\'re ready.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {!editingProfileId && (
+            {!editingTemplateId && (
               <div className="space-y-2">
                 <Label>Regulation</Label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -385,10 +560,10 @@ export default function BuyerCompliancePage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-compliance-profile">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} data-testid="button-save-compliance-profile">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-compliance-template">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} data-testid="button-save-compliance-template">
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingProfileId ? 'Save Changes' : 'Set Up Profile'}
+              {editingTemplateId ? 'Save Changes' : 'Create Template'}
             </Button>
           </DialogFooter>
         </DialogContent>

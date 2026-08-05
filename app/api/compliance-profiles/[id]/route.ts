@@ -2,7 +2,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
-import { buyerProfileCustomRulesSchema } from '@/lib/compliance/buyer-profile';
 
 const BASELINE_FIELDS = [
   'name',
@@ -39,45 +38,20 @@ export async function PATCH(
 
     const body = await request.json();
 
+    // Buyers no longer edit a materialized compliance_profiles row directly
+    // — that would drift from the template it was assigned from. They edit
+    // the buyer_compliance_profile_templates row instead, which propagates
+    // to every exporter it's assigned to (see
+    // app/api/buyer/compliance-templates/[id]/route.ts).
     if (profile.role === 'buyer') {
-      if (existing.buyer_org_id !== profile.org_id) {
-        return NextResponse.json({ error: 'Not authorized to edit this profile' }, { status: 403 });
-      }
-
-      const attemptedBaselineChange = BASELINE_FIELDS.some(
-        (field) => field in body && JSON.stringify(body[field]) !== JSON.stringify(existing[field])
+      return NextResponse.json(
+        {
+          error: existing.source_buyer_template_id
+            ? 'Edit the source compliance template instead — changes propagate to every exporter it is assigned to.'
+            : 'Not authorized to edit this profile',
+        },
+        { status: 403 }
       );
-      if (attemptedBaselineChange) {
-        return NextResponse.json(
-          { error: 'The regulatory baseline cannot be modified — only your own requirement overlay can be edited' },
-          { status: 403 }
-        );
-      }
-
-      const nextCustomRules = body.custom_rules;
-      if (nextCustomRules === undefined) {
-        return NextResponse.json({ error: 'custom_rules is required' }, { status: 400 });
-      }
-      if (!buyerProfileCustomRulesSchema.safeParse(nextCustomRules).success) {
-        return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
-      }
-
-      const tierBlock = await enforceTier(existing.org_id, 'compliance_profiles');
-      if (tierBlock) return tierBlock;
-
-      const { data: updated, error } = await supabase
-        .from('compliance_profiles')
-        .update({ custom_rules: nextCustomRules })
-        .eq('id', profileId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Buyer compliance profile edit error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ profile: updated });
     }
 
     if (existing.org_id !== profile.org_id) {

@@ -155,6 +155,37 @@ export const COMPLIANCE_TEMPLATES: Record<string, ComplianceTemplate> = {
 export const TEMPLATE_ORDER = ['EU', 'UK', 'US', 'LACEY_UFLPA', 'CHINA', 'UAE'] as const;
 export type TemplateKey = typeof TEMPLATE_ORDER[number];
 
+export interface LegacyProfileTemplate {
+  name: string;
+  destination_market: string;
+  regulation_framework: string;
+  required_documents: string[];
+  required_certifications: string[];
+  geo_verification_level: string;
+  min_traceability_depth: number;
+}
+
+/**
+ * COMPLIANCE_TEMPLATES reshaped into the flat compliance_profiles column
+ * shape. Shared by every place that materializes a compliance_profiles (or
+ * buyer_compliance_profile_templates) row from a template key:
+ * /api/compliance-profiles, /api/buyer/compliance-templates.
+ */
+export const LEGACY_PROFILE_TEMPLATES: Record<string, LegacyProfileTemplate> = Object.fromEntries(
+  Object.entries(COMPLIANCE_TEMPLATES).map(([key, tpl]) => [
+    key,
+    {
+      name: tpl.market_name,
+      destination_market: tpl.destination_market,
+      regulation_framework: tpl.regulation_framework,
+      required_documents: tpl.docs.filter((d) => d.required).map((d) => d.label),
+      required_certifications: tpl.required_certifications,
+      geo_verification_level: tpl.geo_verification_level,
+      min_traceability_depth: tpl.min_traceability_depth,
+    },
+  ])
+);
+
 /**
  * Merge superadmin overrides (from compliance_rulesets table) into the base templates.
  * The DB row's `docs` array replaces the template docs for that market_id.

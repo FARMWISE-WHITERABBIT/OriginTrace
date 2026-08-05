@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/database.types';
 
 export const buyerProfileMetadataSchema = z.object({
   schema_version: z.literal(1),
@@ -114,6 +116,27 @@ export function evaluateBuyerRequirements(input: {
   };
 
   return [...documentChecks, ...certificationChecks, geoCheck, traceabilityCheck];
+}
+
+// A buyer has no compliance data of their own org — everything they read or
+// write against a specific exporter (compliance_profiles rows, template
+// assignment) requires an *active* supply_chain_links row to that exporter.
+// Shared by app/api/compliance-profiles/route.ts and
+// app/api/buyer/compliance-templates/**/route.ts so both enforce the same
+// cross-org access check.
+export async function requireActiveLink(
+  supabaseAdmin: SupabaseClient<Database>,
+  buyerOrgId: string,
+  exporterOrgId: string
+): Promise<boolean> {
+  const { data: link } = await supabaseAdmin
+    .from('supply_chain_links')
+    .select('id')
+    .eq('buyer_org_id', buyerOrgId)
+    .eq('exporter_org_id', exporterOrgId)
+    .eq('status', 'active')
+    .maybeSingle();
+  return !!link;
 }
 
 export const DUTCH_COCOA_BUYER_PROFILE_TEMPLATE = {

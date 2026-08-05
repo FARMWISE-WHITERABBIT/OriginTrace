@@ -324,6 +324,62 @@ export type Database = {
           },
         ]
       }
+      buyer_compliance_profile_templates: {
+        Row: {
+          buyer_org_id: string
+          created_at: string
+          custom_rules: Json | null
+          destination_market: string
+          geo_verification_level: string | null
+          id: string
+          min_traceability_depth: number | null
+          name: string
+          regulation_framework: string
+          required_certifications: Json | null
+          required_documents: Json | null
+          template: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_org_id: string
+          created_at?: string
+          custom_rules?: Json | null
+          destination_market: string
+          geo_verification_level?: string | null
+          id?: string
+          min_traceability_depth?: number | null
+          name: string
+          regulation_framework: string
+          required_certifications?: Json | null
+          required_documents?: Json | null
+          template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_org_id?: string
+          created_at?: string
+          custom_rules?: Json | null
+          destination_market?: string
+          geo_verification_level?: string | null
+          id?: string
+          min_traceability_depth?: number | null
+          name?: string
+          regulation_framework?: string
+          required_certifications?: Json | null
+          required_documents?: Json | null
+          template?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_compliance_profile_templates_buyer_org_id_fkey"
+            columns: ["buyer_org_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_organizations: {
         Row: {
           contact_email: string | null
@@ -769,6 +825,7 @@ export type Database = {
           regulation_framework: string
           required_certifications: Json | null
           required_documents: Json | null
+          source_buyer_template_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -785,6 +842,7 @@ export type Database = {
           regulation_framework: string
           required_certifications?: Json | null
           required_documents?: Json | null
+          source_buyer_template_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -801,6 +859,7 @@ export type Database = {
           regulation_framework?: string
           required_certifications?: Json | null
           required_documents?: Json | null
+          source_buyer_template_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -816,6 +875,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_profiles_source_buyer_template_id_fkey"
+            columns: ["source_buyer_template_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_compliance_profile_templates"
             referencedColumns: ["id"]
           },
         ]

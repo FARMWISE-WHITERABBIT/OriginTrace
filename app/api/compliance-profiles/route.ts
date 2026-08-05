@@ -4,42 +4,8 @@ import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { requireRole, ROLES } from '@/lib/rbac';
-import { COMPLIANCE_TEMPLATES } from '@/lib/compliance-templates';
-import { buyerProfileCustomRulesSchema } from '@/lib/compliance/buyer-profile';
-
-// Convert shared ComplianceTemplate format to the legacy TEMPLATES format expected by this route
-const TEMPLATES = Object.fromEntries(
-  Object.entries(COMPLIANCE_TEMPLATES).map(([key, tpl]) => [
-    key,
-    {
-      name: tpl.market_name,
-      destination_market: tpl.destination_market,
-      regulation_framework: tpl.regulation_framework,
-      required_documents: tpl.docs.filter(d => d.required).map(d => d.label),
-      required_certifications: tpl.required_certifications,
-      geo_verification_level: tpl.geo_verification_level,
-      min_traceability_depth: tpl.min_traceability_depth,
-    },
-  ])
-);
-
-// A buyer has no compliance_profiles of their own org — they view/manage
-// profiles that live under a *linked* exporter's org_id. Verifies an active
-// supply_chain_links row exists before allowing that cross-org read/write.
-async function requireActiveLink(
-  supabaseAdmin: ReturnType<typeof createAdminClient>,
-  buyerOrgId: string,
-  exporterOrgId: string
-) {
-  const { data: link } = await supabaseAdmin
-    .from('supply_chain_links')
-    .select('id')
-    .eq('buyer_org_id', buyerOrgId)
-    .eq('exporter_org_id', exporterOrgId)
-    .eq('status', 'active')
-    .maybeSingle();
-  return !!link;
-}
+import { LEGACY_PROFILE_TEMPLATES as TEMPLATES } from '@/lib/compliance-templates';
+import { buyerProfileCustomRulesSchema, requireActiveLink } from '@/lib/compliance/buyer-profile';
 
 export async function GET(request: NextRequest) {
   try {
@@ -121,66 +87,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Buyers no longer create compliance_profiles rows directly here — they
+    // build a buyer_compliance_profile_templates row (independent of any
+    // exporter, see app/api/buyer/compliance-templates/route.ts) and then
+    // assign it to a linked exporter, which materializes the row this
+    // endpoint used to create inline.
     if (profile.role === 'buyer') {
-      const { data: buyerProfile } = await supabaseAdmin
-        .from('buyer_profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      if (!buyerProfile || buyerProfile.role !== 'buyer_admin') {
-        return NextResponse.json({ error: 'Only buyer admins can set up compliance profiles' }, { status: 403 });
-      }
-
-      const { exporter_org_id, template, custom_rules: buyerCustomRules } = body;
-      if (!exporter_org_id) {
-        return NextResponse.json({ error: 'exporter_org_id is required' }, { status: 400 });
-      }
-      if (!template || !TEMPLATES[template]) {
-        return NextResponse.json(
-          { error: 'A regulatory template must be selected — the baseline requirements cannot be hand-written' },
-          { status: 400 }
-        );
-      }
-      if (!(await requireActiveLink(supabaseAdmin, profile.org_id, exporter_org_id))) {
-        return NextResponse.json({ error: 'No active supply chain link with this exporter' }, { status: 403 });
-      }
-
-      const tierBlock = await enforceTier(exporter_org_id, 'compliance_profiles');
-      if (tierBlock) return tierBlock;
-
-      if (
-        buyerCustomRules &&
-        typeof buyerCustomRules === 'object' &&
-        !buyerProfileCustomRulesSchema.safeParse(buyerCustomRules).success
-      ) {
-        return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
-      }
-
-      const t = TEMPLATES[template];
-      const { data: created, error } = await supabaseAdmin
-        .from('compliance_profiles')
-        .insert({
-          org_id: exporter_org_id,
-          buyer_org_id: profile.org_id,
-          name: t.name,
-          destination_market: t.destination_market,
-          regulation_framework: t.regulation_framework,
-          required_documents: t.required_documents,
-          required_certifications: t.required_certifications,
-          geo_verification_level: t.geo_verification_level,
-          min_traceability_depth: t.min_traceability_depth,
-          custom_rules: buyerCustomRules || {},
-          is_default: false,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Buyer compliance profile creation error:', error);
-        return NextResponse.json({ error: 'Failed to create compliance profile' }, { status: 500 });
-      }
-
-      return NextResponse.json({ profile: created }, { status: 201 });
+      return NextResponse.json(
+        { error: 'Buyers set up a compliance template and assign it to an exporter — see /api/buyer/compliance-templates' },
+        { status: 400 }
+      );
     }
 
     const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
