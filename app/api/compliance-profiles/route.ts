@@ -81,9 +81,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch compliance profiles' }, { status: 500 });
     }
 
+    // Exporters viewing their own profile list need to know which ones were
+    // set up by a buyer (not just which fields to lock) so the UI can label
+    // them and guard against an exporter unilaterally deleting a buyer's
+    // requirement profile.
+    const buyerOrgIds = [
+      ...new Set((profiles || []).map((p) => p.buyer_org_id).filter((id): id is string => !!id)),
+    ];
+    let buyerOrgNames = new Map<string, string>();
+    if (profile.role !== 'buyer' && buyerOrgIds.length > 0) {
+      const { data: buyerOrgs } = await supabaseAdmin
+        .from('buyer_organizations')
+        .select('id, name')
+        .in('id', buyerOrgIds);
+      buyerOrgNames = new Map((buyerOrgs || []).map((b) => [b.id, b.name]));
+    }
+
     const withOwnership = (profiles || []).map((p) => ({
       ...p,
       is_own_buyer_profile: profile.role === 'buyer' ? p.buyer_org_id === profile.org_id : undefined,
+      buyer_org_name: p.buyer_org_id ? buyerOrgNames.get(p.buyer_org_id) ?? null : null,
     }));
 
     return NextResponse.json({ profiles: withOwnership, templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });

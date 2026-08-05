@@ -22,7 +22,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogTrigger,
 } from '@/components/ui/dialog';
-import { ShieldCheck, Loader2, Trash2, Plus, MapPin, Shield } from 'lucide-react';
+import { ShieldCheck, Loader2, Trash2, Plus, MapPin, Shield, Handshake } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,8 @@ interface CPProfile {
   min_traceability_depth:number;
   is_default:            boolean;
   created_at:            string;
+  buyer_org_id:          string | null;
+  buyer_org_name:        string | null;
 }
 
 // ── Static data ───────────────────────────────────────────────────────────────
@@ -192,6 +194,14 @@ export function ComplianceProfilesSection() {
     finally { setCPDeleting(null); }
   };
 
+  const confirmDeleteBuyerProfile = (id: string, buyerName: string) => {
+    if (window.confirm(
+      `${buyerName} set up this compliance profile as their sourcing requirement. Deleting it removes it from their view too and can't be undone. Delete anyway?`
+    )) {
+      handleCPDelete(id);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -303,8 +313,10 @@ export function ComplianceProfilesSection() {
                   <Button
                     variant="ghost" size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-                    aria-label="Delete compliance profile"
-                    onClick={() => handleCPDelete(p.id)}
+                    aria-label={p.buyer_org_id ? `Delete profile set up by ${p.buyer_org_name || 'a buyer'}` : 'Delete compliance profile'}
+                    onClick={() => p.buyer_org_id
+                      ? confirmDeleteBuyerProfile(p.id, p.buyer_org_name || 'A buyer')
+                      : handleCPDelete(p.id)}
                     disabled={cpDeleting === p.id}
                   >
                     {cpDeleting === p.id
@@ -312,9 +324,17 @@ export function ComplianceProfilesSection() {
                       : <Trash2 className="h-3.5 w-3.5" />}
                   </Button>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {CP_FRAMEWORK_LABELS[p.regulation_framework] || p.regulation_framework}
-                </Badge>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Badge variant="outline" className="text-xs">
+                    {CP_FRAMEWORK_LABELS[p.regulation_framework] || p.regulation_framework}
+                  </Badge>
+                  {p.buyer_org_id && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <Handshake className="h-3 w-3" />
+                      Set up by {p.buyer_org_name || 'a buyer'}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span>{p.required_documents?.length || 0} docs</span>
                   <span>{CP_GEO_LABELS[p.geo_verification_level] || p.geo_verification_level}</span>
