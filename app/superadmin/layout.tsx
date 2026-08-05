@@ -1,0 +1,294 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { LogoIcon } from '@/components/logo';
+import {
+  Building2,
+  Users,
+  BarChart3,
+  Settings,
+  RefreshCw,
+  LogOut,
+  Menu,
+  X,
+  Shield,
+  Zap,
+  Handshake,
+  CreditCard,
+  CalendarDays,
+  ChevronRight,
+  BookOpen,
+  FileText,
+  Server,
+  DollarSign,
+  ShieldCheck,
+  Satellite,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: 'Overview',
+    items: [
+      { href: '/superadmin', label: 'Platform Dashboard', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'Tenants',
+    items: [
+      { href: '/superadmin/tenants', label: 'All Tenants', icon: Building2 },
+      { href: '/superadmin/billing', label: 'Subscriptions', icon: CreditCard },
+      { href: '/superadmin/users', label: 'User Management', icon: Users },
+      { href: '/superadmin/buyer-orgs', label: 'Buyer Organizations', icon: Handshake },
+    ],
+  },
+  {
+    title: 'Compliance',
+    items: [
+      { href: '/superadmin/compliance', label: 'Market Rulesets', icon: ShieldCheck },
+      { href: '/superadmin/reference-data', label: 'Reference Data', icon: BookOpen },
+      { href: '/superadmin/traces', label: 'TRACES Monitor', icon: Satellite },
+    ],
+  },
+  {
+    title: 'Platform Config',
+    items: [
+      { href: '/superadmin/feature-toggles', label: 'Feature Toggles', icon: Zap },
+      { href: '/superadmin/events', label: 'Events', icon: CalendarDays },
+      { href: '/superadmin/settings', label: 'Platform Settings', icon: Settings },
+    ],
+  },
+  {
+    title: 'Platform Ops',
+    items: [
+      { href: '/superadmin/revenue', label: 'Revenue Dashboard', icon: DollarSign },
+      { href: '/superadmin/payment-ops', label: 'Payment Operations', icon: CreditCard },
+      { href: '/superadmin/sync', label: 'Sync Status', icon: RefreshCw },
+      { href: '/superadmin/health', label: 'System Health', icon: Server },
+    ],
+  },
+  {
+    title: 'Security',
+    items: [
+      { href: '/superadmin/admin-users', label: 'Admin Users', icon: Shield },
+      { href: '/superadmin/audit', label: 'Audit Log', icon: FileText },
+    ],
+  },
+];
+
+// Flat list for mobile header label lookup
+const ALL_NAV_ITEMS = NAV_SECTIONS.flatMap(s => s.items);
+
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+export default function SuperadminLayout({ children }: { children: React.ReactNode }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const inactivityTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isLoginPage = pathname === '/superadmin/login';
+
+  // ── Inactivity timeout ────────────────────────────────────────────────────
+  const resetInactivityTimer = React.useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(async () => {
+      const client = createClient();
+      if (client) await client.auth.signOut();
+      router.push('/superadmin/login?reason=timeout');
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthorized || isLoginPage) return;
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetInactivityTimer, { passive: true }));
+    resetInactivityTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetInactivityTimer));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [isAuthorized, isLoginPage, resetInactivityTimer]);
+
+  useEffect(() => {
+    if (isLoginPage) {
+      setIsLoading(false);
+      setIsAuthorized(true);
+      return;
+    }
+
+    async function checkAuth() {
+      const client = createClient();
+      if (!client) { router.push('/superadmin/login'); return; }
+
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) { router.push('/superadmin/login'); return; }
+
+      try {
+        const res = await fetch('/api/superadmin');
+        if (!res.ok) { router.push('/app'); return; }
+      } catch {
+        router.push('/superadmin/login');
+        return;
+      }
+
+      setIsAuthorized(true);
+      setIsLoading(false);
+    }
+
+    checkAuth();
+  }, [router, isLoginPage]);
+
+  const handleSignOut = async () => {
+    const client = createClient();
+    if (client) await client.auth.signOut();
+    router.push('/superadmin/login');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <LogoIcon size={48} className="drop-shadow-sm" />
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
+  if (isLoginPage) return <>{children}</>;
+
+  const isActive = (href: string) => {
+    if (href === '/superadmin') return pathname === '/superadmin';
+    return pathname.startsWith(href);
+  };
+
+  const currentPage = ALL_NAV_ITEMS.find(item =>
+    item.href === '/superadmin' ? pathname === '/superadmin' : pathname.startsWith(item.href)
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 px-4 h-14 flex items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-slate-400 hover:text-white hover:bg-slate-800 h-9 w-9"
+          data-testid="button-toggle-sidebar"
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+        <div className="flex items-center gap-2 text-sm">
+          <LogoIcon size={20} />
+          <span className="font-medium text-slate-200">{currentPage?.label || 'Command Tower'}</span>
+        </div>
+        <div className="w-9" />
+      </div>
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-40 w-60 bg-slate-900 border-r border-slate-800
+        transform transition-transform duration-200 ease-in-out
+        lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        flex flex-col
+      `}>
+        {/* Brand */}
+        <div className="p-5 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <LogoIcon size={36} />
+            <div>
+              <div className="text-sm font-bold text-white leading-tight">OriginTrace</div>
+              <div className="text-[10px] font-semibold text-cyan-400 tracking-widest uppercase">Command Tower</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          {NAV_SECTIONS.map((section, si) => (
+            <div key={section.title} className={si > 0 ? 'mt-4' : ''}>
+              <p className="px-3 mb-1 text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
+                {section.title}
+              </p>
+              {section.items.map(item => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`
+                      group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all relative
+                      ${active
+                        ? 'bg-cyan-500/10 text-cyan-400'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'}
+                    `}
+                    data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-cyan-400 rounded-r-full" />
+                    )}
+                    <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                    <span className="flex-1">{item.label}</span>
+                    {active && <ChevronRight className="h-3 w-3 text-cyan-500 opacity-60" />}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-slate-800 space-y-1">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
+            <span className="text-xs text-slate-500">All systems operational</span>
+          </div>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-slate-400 hover:text-white hover:bg-slate-800 h-9 text-sm px-3"
+            onClick={handleSignOut}
+            data-testid="button-sign-out"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
+      </aside>
+
+      {/* Sidebar overlay on mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main content */}
+      <main className="lg:ml-60 pt-14 lg:pt-0 min-h-screen">
+        <div className="p-6">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

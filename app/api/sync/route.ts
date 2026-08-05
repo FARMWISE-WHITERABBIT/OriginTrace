@@ -1,0 +1,260 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+import { withErrorHandling, ApiError } from '@/lib/api/errors';
+import { emptyAsNull } from '@/lib/api/validation';
+import { requireRole, ROLES } from '@/lib/rbac';
+import type { Json } from '@/lib/supabase/database.types';
+
+const ALLOWED_SYNC_ROLES = ROLES.FIELD_ROLES;
+
+const syncBatchSchema = z.object({
+  local_id: z.string().min(1, 'local_id is required'),
+  batch_id: z.string().optional(),
+  farm_id: z.string().uuid().optional().or(z.string().optional()).or(z.number().optional()),
+  commodity: z.string().optional(),
+  state: z.string().optional(),
+  lga: z.string().optional(),
+  community: z.string().optional(),
+  gps_lat: emptyAsNull(z.number().nullable().optional()),
+  gps_lng: emptyAsNull(z.number().nullable().optional()),
+  bag_count: emptyAsNull(z.number().nullable().optional()),
+  total_weight: emptyAsNull(z.number().nullable().optional()),
+  contributors: z.array(z.object({
+    farm_id: z.string().uuid().optional().or(z.string().optional()).or(z.number().optional()),
+    farmer_name: z.string().optional(),
+    weight_kg: emptyAsNull(z.number().nullable().optional()),
+    bag_count: emptyAsNull(z.number().nullable().optional()),
+  })).optional(),
+  bags: z.array(z.object({
+    serial: z.string().optional(),
+    weight: emptyAsNull(z.number().nullable().optional()),
+    grade: z.string().optional(),
+  })).optional(),
+  notes: z.string().optional(),
+  collected_at: z.string().optional(),
+  target_markets: z.array(z.string()).optional(),
+});
+
+const syncPutSchema = z.object({
+  batches: z.array(syncBatchSchema).min(1, 'At least one batch is required'),
+});
+
+const conflictResolveSchema = z.object({
+  conflict_id: z.string().uuid(),
+  resolution: z.enum(['field', 'server', 'manual']),
+});
+
+export const GET = withErrorHandling(async (request: NextRequest) => {
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user || !profile) return ApiError.unauthorized();
+  
+  const roleError = requireRole(profile, ALLOWED_SYNC_ROLES);
+  if (roleError) return roleError;
+
+  const serviceClient = createServiceClient();
+
+  if (profile.role === 'admin' || profile.role === 'aggregator') {
+    const { data: syncStatus, error } = await serviceClient
+      .from('agent_sync_status')
+      .select(`
+        *,
+        agent:profiles(id, full_name, role)
+      `)
+      .eq('org_id', profile.org_id)
+      .order('last_seen_at', { ascending: false });
+    
+    if (error) return ApiError.internal(error, 'sync/GET/status-all');
+    return NextResponse.json({ sync_status: syncStatus || [] });
+  } else {
+    const { data: syncStatus, error } = await serviceClient
+      .from('agent_sync_status')
+      .select('*')
+      .eq('agent_id', profile.id)
+      .order('last_seen_at', { ascending: false })
+      .limit(1);
+    
+    if (error) return ApiError.internal(error, 'sync/GET/status-agent');
+    return NextResponse.json({ sync_status: syncStatus?.[0] || null });
+  }
+}, 'sync/GET');
+
+export const POST = withErrorHandling(async (request: NextRequest) => {
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user || !profile) return ApiError.unauthorized();
+
+  const roleError = requireRole(profile, ALLOWED_SYNC_ROLES);
+  if (roleError) return roleError;
+
+  const serviceClient = createServiceClient();
+  const body = await request.json();
+  const { pending_batches, pending_bags, is_online } = body;
+  
+  const upsertPayload = {
+    org_id: profile.org_id as string,
+    agent_id: profile.id as string,
+    last_seen_at: new Date().toISOString(),
+    pending_batches: pending_batches || 0,
+    pending_bags: pending_bags || 0,
+    is_online: is_online !== false
+  };
+
+  const { data: syncStatus, error } = await serviceClient
+    .from('agent_sync_status')
+    .upsert(upsertPayload, { onConflict: 'agent_id' })
+    .select()
+    .single();
+  
+  if (error) return ApiError.internal(error, 'sync/POST/status');
+  return NextResponse.json({ sync_status: syncStatus, success: true });
+}, 'sync/POST');
+
+export const PUT = withErrorHandling(async (request: NextRequest) => {
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user || !profile) return ApiError.unauthorized();
+
+  const roleError = requireRole(profile, ALLOWED_SYNC_ROLES);
+  if (roleError) return roleError;
+
+  const serviceClient = createServiceClient();
+  const body = await request.json();
+
+  const parsed = syncPutSchema.safeParse(body);
+  if (!parsed.success) return ApiError.validation(parsed.error);
+
+  const { batches } = parsed.data;
+
+  // Pre-flight Farm Compliance Gate checks
+  const farmIdsToCheck = [
+    ...new Set(
+      batches
+        .flatMap((b: any) => [
+          String(b.farm_id ?? ''),
+          ...((b.contributors || []).map((c: any) => String(c.farm_id ?? ''))),
+        ])
+        .filter((id: string) => !!id && !id.startsWith('temp-') && id !== 'unknown')
+    ),
+  ];
+
+  if (farmIdsToCheck.length > 0) {
+    const { data: farms, error: farmsError } = await serviceClient
+      .from('farms')
+      .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp')
+      .in('id', farmIdsToCheck)
+      .eq('org_id', profile.org_id);
+
+    if (farmsError) return ApiError.internal(farmsError, 'sync/PUT/gate-validation');
+
+    const farmMap = new Map((farms || []).map((f: any) => [String(f.id), f]));
+    const blocked: any[] = [];
+
+    for (const batch of batches as any[]) {
+      const targetMarkets = normalizeMarketCodes(batch.target_markets ?? []);
+      const batchFarmIds = [
+        batch.farm_id ? String(batch.farm_id) : undefined,
+        ...((batch.contributors || []).map((c: any) => c.farm_id ? String(c.farm_id) : undefined)),
+      ].filter((id: string | undefined): id is string => !!id && !id.startsWith('temp-') && id !== 'unknown');
+
+      for (const farmId of batchFarmIds) {
+        const farm = farmMap.get(farmId);
+        if (!farm) continue;
+        const eligibility = checkFarmEligibility(farm, targetMarkets);
+        if (!eligibility.eligible) {
+          blocked.push({
+            local_id: String(batch.local_id),
+            farm_id: farmId,
+            blockers: eligibility.blockers,
+            blocker_codes: eligibility.blocker_codes,
+            warning_codes: eligibility.warning_codes,
+          });
+        }
+      }
+    }
+
+    if (blocked.length > 0) {
+      return NextResponse.json(
+        { error: 'Farm Compliance Gate blocked one or more synced batches', blocked_batches: blocked },
+        { status: 422 }
+      );
+    }
+  }
+
+  const { data: results, error: syncError } = await serviceClient.rpc('sync_batches_atomic', {
+    p_org_id:  profile.org_id,
+    p_user_id: profile.id,
+    p_batches: batches as unknown as Json,
+  });
+
+  if (syncError) return ApiError.internal(syncError, 'sync/PUT/rpc');
+
+  await serviceClient
+    .from('agent_sync_status')
+    .update({ pending_batches: 0, pending_bags: 0, last_seen_at: new Date().toISOString() })
+    .eq('agent_id', profile.id);
+
+  return NextResponse.json({ results: results || [], success: true });
+}, 'sync/PUT');
+
+export const PATCH = withErrorHandling(async (request: NextRequest) => {
+  const { user, profile } = await getAuthenticatedProfile(request);
+  if (!user || !profile) return ApiError.unauthorized();
+  
+  const roleError = requireRole(profile, ROLES.ADMIN_AGGREGATOR);
+  if (roleError) return roleError;
+
+  const body = await request.json();
+  const parsed = conflictResolveSchema.safeParse(body);
+  if (!parsed.success) return ApiError.validation(parsed.error);
+
+  const { conflict_id, resolution } = parsed.data;
+  const serviceClient = createServiceClient();
+
+  const { data: conflict, error: fetchError } = await serviceClient
+    .from('sync_conflicts')
+    .select('*')
+    .eq('id', conflict_id)
+    .eq('org_id', profile.org_id)
+    .single();
+
+  if (fetchError || !conflict) return ApiError.notFound('Conflict');
+
+  if (resolution === 'field') {
+    const fd = conflict.field_data as any;
+    // TODO(schema-drift): 'collection_batches' has no gps_lat/gps_lng/updated_at columns —
+    // this update has always failed at runtime for the 'field' resolution path (accepting the
+    // synced field data over server data). Needs a product decision: collection_batches has no
+    // GPS columns at all, so gps_lat/gps_lng have no destination; drop them, or add columns.
+    const { error: updateError } = await serviceClient
+      .from('collection_batches')
+      .update({
+        farm_id: fd.farm_id,
+        commodity: fd.commodity,
+        notes: fd.notes,
+        total_weight: fd.total_weight,
+        bag_count: fd.bag_count,
+        // GPS is stored on the linked farm boundary; collection_batches has
+        // no GPS or updated_at columns.
+      } as any)
+      .eq('id', conflict.batch_id)
+      .eq('org_id', profile.org_id);
+
+    if (updateError) return ApiError.internal(updateError, 'sync/PATCH/resolve-field');
+  }
+
+  const { error: resolveError } = await serviceClient
+    .from('sync_conflicts')
+    .update({
+      status: 'resolved',
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+      resolution
+    })
+    .eq('id', conflict_id)
+    .eq('org_id', profile.org_id);
+
+  if (resolveError) return ApiError.internal(resolveError, 'sync/PATCH/status');
+
+  return NextResponse.json({ success: true, resolution });
+}, 'sync/PATCH');

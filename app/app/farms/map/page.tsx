@@ -1,0 +1,996 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useOrg } from '@/lib/contexts/org-context';
+import { useToast } from '@/hooks/use-toast';
+import { useOnlineStatus } from '@/components/online-status';
+import { detectMockLocation } from '@/lib/validation/yield-validation';
+import {
+  Navigation,
+  MapPin,
+  Loader2,
+  CheckCircle,
+  Footprints,
+  Satellite,
+  Save,
+  AlertTriangle,
+  Plus,
+  RotateCcw,
+  X,
+  Search,
+  User,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  TreePine,
+  Info,
+} from 'lucide-react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { TierGate } from '@/components/tier-gate';
+
+interface Coordinates { lat: number; lng: number; }
+
+interface BoundaryAnalysisResult {
+  confidence_score: number;
+  confidence_level: 'high' | 'medium' | 'low';
+  flags: {
+    shape_regularity: { score: number; detail: string };
+    vertex_spacing: { score: number; detail: string };
+    area_plausibility: { score: number; detail: string };
+    location_plausibility: { score: number; detail: string };
+    edge_straightness: { score: number; detail: string };
+  };
+  analyzed_at: string;
+}
+
+interface Farm {
+  id: string;
+  local_id?: string;
+  farmer_name: string;
+  community: string;
+  boundary?: any;
+  area_hectares?: number;
+  deforestation_check?: DeforestationResult | null;
+  boundary_analysis?: BoundaryAnalysisResult | null;
+  is_local?: boolean;
+  sync_status?: string;
+}
+
+interface DeforestationResult {
+  deforestation_free: boolean;
+  forest_loss_hectares: number;
+  forest_loss_percentage: number;
+  analysis_date: string;
+  data_source: string;
+  risk_level: 'low' | 'medium' | 'high';
+  verification_status?: 'verified' | 'manual_review_required';
+  manual_review_required?: boolean;
+}
+
+function requiresDeforestationManualReview(result: DeforestationResult | null | undefined) {
+  return !!result && (
+    result.manual_review_required ||
+    result.verification_status === 'manual_review_required' ||
+    /gfw unavailable|manual review/i.test(result.data_source || '')
+  );
+}
+
+const SatelliteMap = dynamic(() => import('./satellite-map'), { ssr: false, loading: () => (
+  <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+)});
+
+function HybridFarmMappingPageInner() {
+  return (
+    <TierGate feature="farm_mapping" requiredTier="starter" featureLabel="Farm Mapping">
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        <HybridFarmMappingContent />
+      </Suspense>
+    </TierGate>
+  );
+}
+
+function HybridFarmMappingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { organization, isLoading: orgLoading } = useOrg();
+  const activeOrganizationIdRef = useRef<number | null>(organization?.id ?? null);
+  activeOrganizationIdRef.current = organization?.id ?? null;
+  const { toast } = useToast();
+  const isOnline = useOnlineStatus();
+
+  const [mode, setMode] = useState<'gps' | 'satellite'>('gps');
+  const [coordinates, setCoordinates] = useState<Coordinates[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null);
+  const [locateOverride, setLocateOverride] = useState<Coordinates | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isCheckingGPS, setIsCheckingGPS] = useState(false);
+  const [gpsSpoofWarning, setGpsSpoofWarning] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
+
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [farmsLoading, setFarmsLoading] = useState(true);
+  const [farmsLoadError, setFarmsLoadError] = useState(false);
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [farmSearch, setFarmSearch] = useState('');
+  const [showFarmPicker, setShowFarmPicker] = useState(false);
+
+  const [deforestationResult, setDeforestationResult] = useState<DeforestationResult | null>(null);
+  const [isCheckingDeforestation, setIsCheckingDeforestation] = useState(false);
+  const [boundaryAnalysis, setBoundaryAnalysis] = useState<BoundaryAnalysisResult | null>(null);
+  const [isAnalyzingBoundary, setIsAnalyzingBoundary] = useState(false);
+  const [showBoundaryDetails, setShowBoundaryDetails] = useState(false);
+
+  const farmIdParam = searchParams.get('farm_id');
+
+  useEffect(() => {
+    const requestedOrganizationId = organization?.id ?? null;
+    let cancelled = false;
+    const isOrganizationActive = () => !cancelled
+      && activeOrganizationIdRef.current === requestedOrganizationId;
+
+    async function loadFarms() {
+      setFarmsLoading(true);
+      setFarmsLoadError(false);
+      try {
+        if (requestedOrganizationId === null) {
+          setFarms([]);
+          setSelectedFarm(null);
+          return;
+        }
+        const { getCachedFarmsFull, cacheFarmsFull } = await import('@/lib/offline/offline-cache');
+        const { getLocalFarmsForOrg } = await import('@/lib/offline/sync-store');
+        const localFarms = await getLocalFarmsForOrg(requestedOrganizationId) as Farm[];
+        const cached = await getCachedFarmsFull(requestedOrganizationId);
+        if (!isOrganizationActive()) return;
+
+        const applyFarms = (serverFarms: Farm[]) => {
+          if (!isOrganizationActive()) return;
+          const merged = [...localFarms, ...serverFarms.filter((farm) => !localFarms.some((local) => local.id === farm.id))];
+          const sorted: Farm[] = merged.sort((a: Farm, b: Farm) =>
+            (a.farmer_name || '').localeCompare(b.farmer_name || '')
+          );
+          setFarms(sorted);
+          if (farmIdParam) {
+            const found = sorted.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+            if (found) {
+              setSelectedFarm(found);
+              const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+              if (ring && ring.length > 1) {
+                setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+              }
+            }
+          }
+        };
+
+        if (cached?.length || localFarms.length) {
+          applyFarms((cached || []) as Farm[]);
+        }
+
+        if (isOnline) {
+          const res = await fetch('/api/farms?limit=1000');
+          if (!res.ok) throw new Error('Failed to load farms');
+          const json = await res.json();
+          const serverFarms = json.farms || [];
+          if (isOrganizationActive()) {
+            await cacheFarmsFull(requestedOrganizationId, serverFarms);
+          }
+          if (!isOrganizationActive()) return;
+          applyFarms(serverFarms);
+        } else if (!cached?.length && localFarms.length === 0) {
+          throw new Error('No cached farms available');
+        }
+      } catch {
+        if (isOrganizationActive()) setFarmsLoadError(true);
+      } finally {
+        if (isOrganizationActive()) setFarmsLoading(false);
+      }
+    }
+    if (!orgLoading) void loadFarms();
+    return () => {
+      cancelled = true;
+    };
+  }, [farmIdParam, isOnline, organization?.id, orgLoading]);
+
+  useEffect(() => {
+    if (farmIdParam && farms.length > 0 && !selectedFarm) {
+      const found = farms.find(f => String(f.id) === farmIdParam || String(f.local_id) === farmIdParam);
+          if (found) {
+            setSelectedFarm(found);
+            const ring = found.boundary?.coordinates?.[0] as [number, number][] | undefined;
+            if (ring && ring.length > 1) {
+              setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+            }
+          }
+    }
+  }, [farmIdParam, farms, selectedFarm]);
+
+  // Silently acquire GPS on mount so the satellite map centers on the user's actual location
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+      },
+      () => {}, // silent fail — permission denied or unavailable
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (selectedFarm?.deforestation_check) {
+      setDeforestationResult(selectedFarm.deforestation_check);
+    } else {
+      setDeforestationResult(null);
+    }
+    if (selectedFarm?.boundary_analysis) {
+      setBoundaryAnalysis(selectedFarm.boundary_analysis);
+    } else {
+      setBoundaryAnalysis(null);
+    }
+  }, [selectedFarm]);
+
+  const checkDeforestation = useCallback(async () => {
+    if (!selectedFarm) return;
+    setIsCheckingDeforestation(true);
+    try {
+      const res = await fetch('/api/deforestation-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farm_id: selectedFarm.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setDeforestationResult(data.result);
+        setSelectedFarm(prev => prev ? { ...prev, deforestation_check: data.result } : prev);
+        const manualReviewRequired = requiresDeforestationManualReview(data.result);
+        toast({
+          title: 'Deforestation Check Complete',
+          description: data.result.deforestation_free
+            ? 'Farm is deforestation-free.'
+            : manualReviewRequired
+              ? 'Satellite data unavailable - manual review is required.'
+              : 'Risk detected - review the results.',
+        });
+      } else {
+        toast({ title: 'Check Failed', description: data.error || 'Could not complete deforestation check.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to run deforestation check.', variant: 'destructive' });
+    } finally {
+      setIsCheckingDeforestation(false);
+    }
+  }, [selectedFarm, toast]);
+
+  const runBoundaryAnalysis = useCallback(async (farmId: string, boundary?: any) => {
+    setIsAnalyzingBoundary(true);
+    try {
+      const payload: any = { farm_id: farmId };
+      if (boundary) payload.boundary = boundary;
+      const res = await fetch('/api/farms/boundary-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setBoundaryAnalysis(data.result);
+        toast({ title: 'Boundary Analysis Complete', description: `Confidence: ${data.result.confidence_score}/100 (${data.result.confidence_level})` });
+        return data.result;
+      } else {
+        toast({ title: 'Analysis Failed', description: data.error || 'Could not analyze boundary.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to run boundary analysis.', variant: 'destructive' });
+    } finally {
+      setIsAnalyzingBoundary(false);
+    }
+    return null;
+  }, [toast]);
+
+  const filteredFarms = farmSearch.trim()
+    ? farms.filter(f =>
+        (f.farmer_name || '').toLowerCase().includes(farmSearch.toLowerCase()) ||
+        (f.community || '').toLowerCase().includes(farmSearch.toLowerCase())
+      ).slice(0, 50)
+    : farms.slice(0, 50);
+
+  const getCurrentLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Not Supported', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+      return;
+    }
+
+    setIsCheckingGPS(true);
+    try {
+      const spoofCheck = await detectMockLocation();
+      if (spoofCheck.isMocked) {
+        setGpsSpoofWarning(true);
+        toast({ title: 'GPS Spoof Detected', description: 'Please disable mock location apps.', variant: 'destructive' });
+        setIsCheckingGPS(false);
+        return;
+      }
+    } catch {}
+    setIsCheckingGPS(false);
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+        setIsLocating(false);
+        toast({ title: 'Location acquired', description: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` });
+      },
+      (err) => {
+        setIsLocating(false);
+        toast({ title: 'Location Error', description: err.message, variant: 'destructive' });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, [toast]);
+
+  const addBoundaryPoint = () => {
+    if (currentLocation) {
+      setCoordinates(prev => [...prev, currentLocation]);
+      toast({ title: 'Point Added', description: `Point ${coordinates.length + 1} added to boundary` });
+    }
+  };
+
+  const removePoint = (index: number) => {
+    setCoordinates(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearBoundary = () => {
+    setCoordinates([]);
+    setCurrentLocation(null);
+  };
+
+  // Spherical excess formula (same as boundary-analysis.ts and PostGIS ST_Area)
+  const calculateArea = (coords: Coordinates[]): number => {
+    if (coords.length < 3) return 0;
+    const R = 6371000; // Earth radius in metres
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    let area = 0;
+    const n = coords.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += toRad(coords[j].lng - coords[i].lng) *
+        (2 + Math.sin(toRad(coords[i].lat)) + Math.sin(toRad(coords[j].lat)));
+    }
+    const hectares = Math.abs((area * R * R) / 2) / 10000;
+    return Math.round(hectares * 100) / 100;
+  };
+
+  const handleSatellitePoints = (points: Coordinates[]) => {
+    setCoordinates(points);
+  };
+
+  // Satellite map center: Locate Me override > farm boundary centroid > GPS > fallback
+  const mapCenter = useMemo((): Coordinates => {
+    if (locateOverride) return locateOverride;
+    const ring = selectedFarm?.boundary?.coordinates?.[0] as [number, number][] | undefined;
+    if (ring && ring.length > 1) {
+      const avgLat = ring.reduce((s, c) => s + c[1], 0) / ring.length;
+      const avgLng = ring.reduce((s, c) => s + c[0], 0) / ring.length;
+      return { lat: avgLat, lng: avgLng };
+    }
+    return currentLocation || { lat: 7.4, lng: 3.9 };
+  }, [selectedFarm, currentLocation, locateOverride]);
+
+  const areaHectares = calculateArea(coordinates);
+
+  const handleSave = async () => {
+    if (!selectedFarm || coordinates.length < 3) return;
+    const requestedOrganizationId = organization?.id ?? null;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
+    setIsSaving(true);
+
+    const boundary = {
+      type: 'Polygon',
+      coordinates: [[...coordinates.map(c => [c.lng, c.lat]), [coordinates[0].lng, coordinates[0].lat]]]
+    };
+
+    try {
+      if (isOnline && !selectedFarm.is_local) {
+        const res = await fetch(`/api/farms/${selectedFarm.id}/boundary`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boundary, area_hectares: areaHectares }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || 'Failed to save boundary');
+        }
+        toast({ title: 'Farm Boundary Saved', description: `${selectedFarm.farmer_name}'s farm boundary (${areaHectares} ha) saved successfully.` });
+        const json = await res.json().catch(() => ({}));
+        if (json.result) setBoundaryAnalysis(json.result);
+        else await runBoundaryAnalysis(selectedFarm.id, boundary);
+        setSavedOffline(false);
+      } else {
+        const { saveBoundaryOffline } = await import('@/lib/offline/sync-store');
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+        await saveBoundaryOffline({
+          org_id: requestedOrganizationId,
+          farm_id: selectedFarm.id,
+          local_farm_id: selectedFarm.is_local ? (selectedFarm.local_id || selectedFarm.id) : undefined,
+          boundary,
+          area_hectares: areaHectares,
+        });
+        if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+        setSelectedFarm(prev => prev ? { ...prev, boundary, area_hectares: areaHectares, has_boundary: true } as any : prev);
+        toast({ title: 'Saved Offline', description: 'Boundary will sync when online.' });
+        setSavedOffline(true);
+      }
+      if (activeOrganizationIdRef.current === requestedOrganizationId) setIsSuccess(true);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        toast({ title: 'Error', description: error.message || 'Failed to save boundary.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (orgLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-md mx-auto py-12 text-center space-y-6">
+        <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+        <h2 className="text-2xl font-bold">{savedOffline ? 'Boundary Queued Offline' : 'Boundary Saved'}</h2>
+        <p className="text-muted-foreground">
+          {savedOffline
+            ? `${selectedFarm?.farmer_name}'s boundary is saved on this device and will sync when online.`
+            : `${selectedFarm?.farmer_name}'s farm has been mapped (${areaHectares} hectares).`}
+        </p>
+        <div className="space-y-3">
+          <Button onClick={() => { setIsSuccess(false); setCoordinates([]); setSelectedFarm(null); setCurrentLocation(null); }} className="w-full" data-testid="button-map-another">
+            Map Another Farm
+          </Button>
+          <Link href="/app" className="block">
+            <Button variant="ghost" className="w-full" data-testid="button-back-dashboard">Back to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div>
+        <h1 className="text-xl font-bold" data-testid="text-page-title">Map Farm Boundary</h1>
+        <p className="text-sm text-muted-foreground">Capture farm boundary using GPS Walk or Satellite Draw</p>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            Select Farmer
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {selectedFarm ? (
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="font-medium text-sm">{selectedFarm.farmer_name}</div>
+                <div className="text-xs text-muted-foreground">{selectedFarm.community}</div>
+                {selectedFarm.is_local && (
+                  <Badge variant="secondary" className="text-xs mt-1">Queued offline</Badge>
+                )}
+                {selectedFarm.boundary && (
+                  <Badge variant="outline" className="text-xs text-amber-600 mt-1">Has existing boundary</Badge>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" aria-label="Change farmer" onClick={() => { setSelectedFarm(null); setCoordinates([]); setDeforestationResult(null); setBoundaryAnalysis(null); setShowBoundaryDetails(false); }} data-testid="button-change-farmer">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={farmSearch}
+                  onChange={(e) => { setFarmSearch(e.target.value); setShowFarmPicker(true); }}
+                  onFocus={() => setShowFarmPicker(true)}
+                  placeholder="Search farmer..."
+                  className="pl-9"
+                  data-testid="input-farm-search"
+                />
+              </div>
+              {showFarmPicker && (
+                <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
+                  {farmsLoading ? (
+                    <div className="p-3 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Loading...</span></div>
+                  ) : farmsLoadError ? (
+                    <div className="p-3 text-sm text-destructive text-center">Failed to load farmers. Please refresh.</div>
+                  ) : filteredFarms.length === 0 ? (
+                    <div className="p-3 text-sm text-muted-foreground text-center">{farmSearch ? 'No farmers match your search' : 'No registered farmers yet'}</div>
+                  ) : (
+                    filteredFarms.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => {
+                          setSelectedFarm(f);
+                          setLocateOverride(null);
+                          setShowFarmPicker(false);
+                          setFarmSearch('');
+                          // Pre-populate boundary points so user can edit rather than re-draw
+                          const ring = f.boundary?.coordinates?.[0] as [number, number][] | undefined;
+                          if (ring && ring.length > 1) {
+                            setCoordinates(ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
+                          } else {
+                            setCoordinates([]);
+                          }
+                        }}
+                        className="w-full text-left p-3 flex items-center justify-between gap-2 hover-elevate"
+                        data-testid={`farm-pick-${f.id}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{f.farmer_name}</div>
+                          <div className="text-xs text-muted-foreground">{f.community}</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {f.is_local && <Badge variant="secondary" className="text-xs">Offline</Badge>}
+                          {f.boundary && <Badge variant="outline" className="text-xs">Mapped</Badge>}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedFarm && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant={mode === 'gps' ? 'default' : 'outline'}
+              onClick={() => { setMode('gps'); setCoordinates([]); }}
+              className="h-14 flex-col gap-1"
+              data-testid="button-mode-gps"
+            >
+              <Footprints className="h-5 w-5" />
+              <span className="text-xs">GPS Walk</span>
+            </Button>
+            <Button
+              variant={mode === 'satellite' ? 'default' : 'outline'}
+              onClick={() => { setMode('satellite'); setCoordinates([]); }}
+              className="h-14 flex-col gap-1"
+              data-testid="button-mode-satellite"
+            >
+              <Satellite className="h-5 w-5" />
+              <span className="text-xs">Satellite Draw</span>
+            </Button>
+          </div>
+
+          {mode === 'gps' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Footprints className="h-4 w-4 text-primary" />
+                  GPS Walk Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Walk the farm boundary and tap to record each corner point. Minimum 3 points needed.
+                </p>
+
+                {gpsSpoofWarning && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    GPS spoofing detected. Please disable mock location.
+                  </div>
+                )}
+
+                {currentLocation && (
+                  <div className="p-3 bg-muted/50 rounded-lg flex items-center gap-2 text-sm">
+                    <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="font-mono text-xs">{currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}</span>
+                    {gpsAccuracy !== null && (
+                      <span className="text-xs text-muted-foreground ml-auto">±{gpsAccuracy}m</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={getCurrentLocation}
+                    disabled={isLocating || isCheckingGPS || gpsSpoofWarning}
+                    variant="outline"
+                    data-testid="button-get-location"
+                  >
+                    {isCheckingGPS ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                    ) : isLocating ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Getting...</>
+                    ) : (
+                      <><Navigation className="h-4 w-4 mr-2" />Get Location</>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={addBoundaryPoint}
+                    disabled={!currentLocation}
+                    data-testid="button-add-point"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Point
+                  </Button>
+                </div>
+
+                {coordinates.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>{coordinates.length} Points</Label>
+                      {coordinates.length >= 3 && (
+                        <Badge variant="outline" data-testid="text-area">{areaHectares} ha</Badge>
+                      )}
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {coordinates.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs font-mono">
+                          <span>#{i + 1}: {c.lat.toFixed(5)}, {c.lng.toFixed(5)}</span>
+                          <Button variant="ghost" size="icon" aria-label="Remove point" onClick={() => removePoint(i)}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="ghost" onClick={clearBoundary} className="w-full" data-testid="button-clear">
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Clear All Points
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {mode === 'satellite' && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Satellite className="h-4 w-4 text-primary" />
+                  Satellite Draw Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Tap on the map to draw your farm boundary on satellite imagery.
+                </p>
+
+                <SatelliteMap
+                  coordinates={coordinates}
+                  onPointsChange={handleSatellitePoints}
+                  center={mapCenter}
+                  satelliteEnabled={!!(organization?.feature_flags as Record<string, boolean> | undefined)?.satellite_overlays}
+                  onLocateMe={() => {
+                    if (!navigator.geolocation) return;
+                    setIsLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setCurrentLocation(loc);
+                        setLocateOverride(loc);
+                        setGpsAccuracy(Math.round(pos.coords.accuracy));
+                        setIsLocating(false);
+                      },
+                      () => {
+                        setIsLocating(false);
+                        toast({ title: 'Could not get location', variant: 'destructive' });
+                      },
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                  }}
+                />
+
+                {coordinates.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{coordinates.length} points</span>
+                    {coordinates.length >= 3 && (
+                      <Badge variant="outline" data-testid="text-satellite-area">{areaHectares} ha</Badge>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={clearBoundary} data-testid="button-clear-satellite">
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {coordinates.length >= 3 && (
+            <div className="pb-4">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="w-full"
+                data-testid="button-save-boundary"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                Save Boundary ({areaHectares} ha)
+              </Button>
+            </div>
+          )}
+
+          {(boundaryAnalysis || isAnalyzingBoundary) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Boundary Confidence
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isAnalyzingBoundary ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing boundary authenticity...
+                  </div>
+                ) : boundaryAnalysis ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            boundaryAnalysis.confidence_level === 'high'
+                              ? 'bg-green-600 text-white'
+                              : boundaryAnalysis.confidence_level === 'medium'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-red-600 text-white'
+                          }
+                          data-testid="badge-boundary-confidence"
+                        >
+                          {boundaryAnalysis.confidence_level === 'high' ? (
+                            <ShieldCheck className="h-3 w-3 mr-1" />
+                          ) : boundaryAnalysis.confidence_level === 'medium' ? (
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                          ) : (
+                            <ShieldAlert className="h-3 w-3 mr-1" />
+                          )}
+                          {boundaryAnalysis.confidence_level.charAt(0).toUpperCase() + boundaryAnalysis.confidence_level.slice(1)} Confidence
+                        </Badge>
+                        <span className="text-sm font-medium" data-testid="text-boundary-score">
+                          {boundaryAnalysis.confidence_score}/100
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBoundaryDetails(!showBoundaryDetails)}
+                        data-testid="button-toggle-boundary-details"
+                      >
+                        {showBoundaryDetails ? 'Hide Details' : 'Show Details'}
+                      </Button>
+                    </div>
+
+                    {showBoundaryDetails && (
+                      <div className="space-y-2">
+                        {Object.entries(boundaryAnalysis.flags).map(([key, flag]) => (
+                          <div key={key} className="p-2 bg-muted/50 rounded-md">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-xs font-medium capitalize">
+                                {key.replace(/_/g, ' ')}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  flag.score >= 70
+                                    ? 'text-green-600'
+                                    : flag.score >= 40
+                                    ? 'text-amber-600'
+                                    : 'text-red-600'
+                                }
+                                data-testid={`badge-flag-${key}`}
+                              >
+                                {flag.score}/100
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1" data-testid={`text-flag-detail-${key}`}>
+                              {flag.detail}
+                            </p>
+                          </div>
+                        ))}
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Analyzed {new Date(boundaryAnalysis.analyzed_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFarm && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => runBoundaryAnalysis(selectedFarm.id)}
+                        disabled={isAnalyzingBoundary}
+                        className="w-full"
+                        data-testid="button-reanalyze-boundary"
+                      >
+                        {isAnalyzingBoundary ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyzing...</>
+                        ) : (
+                          <><RotateCcw className="h-4 w-4 mr-2" />Re-analyze Boundary</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          )}
+
+          {(selectedFarm.boundary || isSuccess) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TreePine className="h-4 w-4 text-primary" />
+                  Deforestation Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {deforestationResult ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {deforestationResult.deforestation_free ? (
+                        <Badge className="bg-green-600 text-white" data-testid="badge-deforestation-free">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Deforestation-Free
+                        </Badge>
+                      ) : requiresDeforestationManualReview(deforestationResult) ? (
+                        <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-manual-review">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Manual Review Required
+                        </Badge>
+                      ) : deforestationResult.risk_level === 'high' ? (
+                        <Badge className="bg-red-600 text-white" data-testid="badge-deforestation-risk">
+                          <ShieldAlert className="h-3 w-3 mr-1" />
+                          Risk Detected
+                        </Badge>
+                      ) : deforestationResult.risk_level === 'medium' ? (
+                        <Badge className="bg-amber-500 text-white" data-testid="badge-deforestation-medium">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Medium Risk
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-blue-500 text-white" data-testid="badge-deforestation-low">
+                          <Info className="h-3 w-3 mr-1" />
+                          Low Risk
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {requiresDeforestationManualReview(deforestationResult)
+                          ? `${deforestationResult.risk_level} country risk`
+                          : `${deforestationResult.risk_level} risk`}
+                      </span>
+                    </div>
+
+                    {requiresDeforestationManualReview(deforestationResult) && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                        <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                        <span data-testid="text-deforestation-manual-review">
+                          Global Forest Watch data was unavailable for this check. The farm is flagged from country risk only, not confirmed forest loss. Review supporting evidence before clearance.
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-2 bg-muted/50 rounded-md">
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Forest Loss' : 'Forest Loss'}
+                        </div>
+                        <div className="text-sm font-medium" data-testid="text-forest-loss-hectares">
+                          {deforestationResult.forest_loss_hectares} ha
+                        </div>
+                      </div>
+                      <div className="p-2 bg-muted/50 rounded-md">
+                        <div className="text-xs text-muted-foreground">
+                          {requiresDeforestationManualReview(deforestationResult) ? 'Observed Loss Percentage' : 'Loss Percentage'}
+                        </div>
+                        <div className="text-sm font-medium" data-testid="text-forest-loss-percentage">
+                          {deforestationResult.forest_loss_percentage}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Source: {deforestationResult.data_source} — Checked{' '}
+                        {new Date(deforestationResult.analysis_date).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={checkDeforestation}
+                      disabled={isCheckingDeforestation}
+                      className="w-full"
+                      data-testid="button-recheck-deforestation"
+                    >
+                      {isCheckingDeforestation ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                      ) : (
+                        <><RotateCcw className="h-4 w-4 mr-2" />Re-check Deforestation Status</>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-amber-600" data-testid="badge-deforestation-pending">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Check Pending
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No deforestation check has been run for this farm yet.
+                    </p>
+                    <Button
+                      onClick={checkDeforestation}
+                      disabled={isCheckingDeforestation}
+                      className="w-full"
+                      data-testid="button-check-deforestation"
+                    >
+                      {isCheckingDeforestation ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</>
+                      ) : (
+                        <><TreePine className="h-4 w-4 mr-2" />Check Deforestation Status</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function HybridFarmMappingPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <HybridFarmMappingPageInner />
+    </Suspense>
+  );
+}

@@ -1,0 +1,153 @@
+import { createAdminClient } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from 'next/server';
+import { validateApiKey } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { emptyAsNull } from '@/lib/api/validation';
+import { z } from 'zod';
+import { enforceTier } from '@/lib/api/tier-guard';
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await validateApiKey(request);
+    if (!auth.valid || !auth.orgId) {
+      return NextResponse.json({ error: 'Invalid or expired API key' }, { status: 401 });
+    }
+
+    const tierError = await enforceTier(auth.orgId, 'enterprise_api');
+    if (tierError) return tierError;
+
+    if (!auth.scopes?.includes('read')) {
+      return NextResponse.json({ error: 'Insufficient scope. Required: read' }, { status: 403 });
+    }
+
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
+
+    const supabase = createAdminClient();
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    let query = supabase
+      .from('collection_batches')
+      .select('id, farm_id, agent_id, status, total_weight, bag_count, notes, collected_at, created_at', { count: 'exact' })
+      .eq('org_id', auth.orgId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data: batches, error, count } = await query;
+
+    if (error) {
+      console.error('V1 Batches GET DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to fetch batches' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      data: batches || [],
+      meta: { total: count || 0, limit, offset },
+    });
+  } catch (error) {
+    console.error('V1 Batches API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+const createBatchSchema = z.object({
+  farm_id: z.string().uuid(),
+  agent_id: z.string().uuid(),
+  status: z.string().optional().default('collecting'),
+  total_weight: z.number().optional().default(0),
+  bag_count: z.number().int().optional().default(0),
+  notes: z.string().optional(),
+  commodity: z.string().optional(),
+  batch_id: z.string().optional(),
+  gps_lat: emptyAsNull(z.number().nullable().optional()),
+  gps_lng: emptyAsNull(z.number().nullable().optional()),
+  gps_accuracy: z.number().optional(),
+  estimated_bags: z.number().int().optional(),
+  estimated_weight: emptyAsNull(z.number().nullable().optional()),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await validateApiKey(request);
+    if (!auth.valid || !auth.orgId) {
+      return NextResponse.json({ error: 'Invalid or expired API key' }, { status: 401 });
+    }
+
+    const tierError = await enforceTier(auth.orgId, 'enterprise_api');
+    if (tierError) return tierError;
+
+    if (!auth.scopes?.includes('write')) {
+      return NextResponse.json({ error: 'Insufficient scope. Required: write' }, { status: 403 });
+    }
+
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
+
+    const body = await request.json();
+    const parsed = createBatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { data: farm } = await supabase
+      .from('farms')
+      .select('id')
+      .eq('id', parsed.data.farm_id)
+      .eq('org_id', auth.orgId)
+      .single();
+
+    if (!farm) {
+      return NextResponse.json({ error: 'Farm not found or does not belong to your organization' }, { status: 404 });
+    }
+
+    // TODO(schema-drift): 'gps_lat', 'gps_lng', 'estimated_bags', 'estimated_weight' are
+    // accepted in the public API request body but have no equivalent columns on
+    // 'collection_batches' — they are currently silently dropped on insert (same as
+    // before this typing pass). 'batch_id' is stored in 'local_id', the closest existing
+    // equivalent (client-supplied external identifier). Needs a product decision on
+    // whether to add columns for the GPS/estimate fields.
+    const { data: batch, error } = await supabase
+      .from('collection_batches')
+      .insert({
+        org_id: auth.orgId,
+        farm_id: parsed.data.farm_id,
+        agent_id: parsed.data.agent_id,
+        status: parsed.data.status,
+        total_weight: parsed.data.total_weight,
+        bag_count: parsed.data.bag_count,
+        notes: parsed.data.notes || null,
+        commodity: parsed.data.commodity || null,
+        local_id: parsed.data.batch_id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('V1 Batches POST DB error:', error.message);
+      return NextResponse.json({ error: 'Failed to create batch' }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: batch }, { status: 201 });
+  } catch (error) {
+    console.error('V1 Batches POST API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -1,0 +1,161 @@
+import { createAdminClient } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { bagCreateSchema, parseBody } from '@/lib/api/validation';
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: 'Supabase is not properly configured' },
+        { status: 500 }
+      );
+    }
+
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const supabaseAdmin = createAdminClient();
+
+    const tierBlock = await enforceTier(profile.org_id, 'bags');
+    if (tierBlock) return tierBlock;
+
+    const { searchParams } = new URL(request.url);
+    const batchIdFilter = searchParams.get('batch_id');
+
+    let query = supabaseAdmin
+      .from('bags')
+      .select('id, serial, status, collection_batch_id, weight_kg, grade, created_at, collection_batches(id, batch_code, farm_id, farms(farmer_name, community))')
+      .eq('org_id', profile.org_id)
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (batchIdFilter) {
+      query = query.eq('collection_batch_id', batchIdFilter);
+    }
+
+    let bags: any[] | null = null;
+    let bagsError: any = null;
+    ({ data: bags, error: bagsError } = await query);
+
+    // weight_kg and grade may not exist on older DB installs — retry without them
+    if (bagsError?.message?.includes('weight_kg') || bagsError?.message?.includes('grade')) {
+      ({ data: bags, error: bagsError } = await supabaseAdmin
+        .from('bags')
+        .select('id, serial, status, collection_batch_id, created_at, collection_batches(id, batch_code, farm_id, farms(farmer_name, community))')
+        .eq('org_id', profile.org_id)
+        .order('created_at', { ascending: false })
+        .limit(500));
+    }
+
+    if (bagsError) {
+      console.error('Bags fetch error:', bagsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch bags', details: bagsError.message },
+        { status: 500 }
+      );
+    }
+
+    type BagRow = {
+      id: string;
+      serial: string;
+      status: string;
+      collection_batch_id: string | null;
+      weight_kg?: number | null;
+      grade?: string | null;
+      created_at: string;
+      collection_batches: {
+        batch_code: string | null;
+        farm_id: string | null;
+        farms: { farmer_name: string | null; community: string | null } | null;
+      }[] | null;
+    };
+
+    const enriched = ((bags as unknown) as BagRow[]).map((b) => {
+      const batch = Array.isArray(b.collection_batches) ? b.collection_batches[0] : b.collection_batches;
+      return {
+        id: b.id,
+        serial: b.serial,
+        status: b.status,
+        collection_batch_id: b.collection_batch_id,
+        batch_code: batch?.batch_code ?? null,
+        weight_kg: b.weight_kg ?? null,
+        grade: b.grade ?? null,
+        farmer_name: batch?.farms?.farmer_name ?? null,
+        community: batch?.farms?.community ?? null,
+        created_at: b.created_at,
+      };
+    });
+
+    return NextResponse.json({ bags: enriched });
+
+  } catch (error) {
+    console.error('Bags API error:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const rawBody = await request.json();
+    const { data: body, error: validationError } = parseBody(bagCreateSchema, rawBody);
+    if (validationError) return validationError;
+    const { count } = body;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: 'Supabase is not properly configured' },
+        { status: 500 }
+      );
+    }
+
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const supabaseAdmin = createAdminClient();
+
+    const tierBlock = await enforceTier(profile.org_id, 'bags');
+    if (tierBlock) return tierBlock;
+
+    const bagRows = Array.from({ length: count }, () => ({
+      org_id: profile.org_id,
+      // `empty` is not a valid bags.status value; unused is the initial state.
+      status: 'unused',
+      serial: crypto.randomUUID(),
+    }));
+
+    const { data: createdBags, error: insertError } = await supabaseAdmin
+      .from('bags')
+      .insert(bagRows)
+      .select('id');
+
+    if (insertError) {
+      console.error('Bags insert error:', insertError);
+      return NextResponse.json({ error: 'Failed to create bags' }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      bags: createdBags,
+      count: createdBags?.length || 0
+    });
+
+  } catch (error) {
+    console.error('Bags create error:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,885 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { StatCardSkeleton } from '@/components/skeletons';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useOrg } from '@/lib/contexts/org-context';
+import {
+  PieDonutChart,
+  VerticalBarChart,
+  HorizontalBarChart,
+  TrendLineChart,
+} from '@/components/charts';
+import {
+  Package, Map, Users, Scale,
+  TrendingUp, TrendingDown, Minus, BarChart3, ShieldCheck,
+  AlertTriangle, Ship, FileText, Activity, MapPin, Leaf, Banknote, Clock,
+} from 'lucide-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { STATUS_COLORS, DECISION_COLORS, DOC_HEALTH_COLORS, VIZ_COLORS } from '@/lib/chart-colors';
+import { runWhenIdle } from '@/lib/utils/idle';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
+
+// Semantic colors for known African export commodities
+const COMMODITY_HUE: Record<string, string> = {
+  cashew:    '#D97706', // amber  — cashew shell colour
+  cocoa:     '#6D3B2A', // dark brown — cocoa bean
+  coffee:    '#92400E', // espresso brown
+  sesame:    '#B45309', // golden amber
+  sheanut:   '#78716C', // stone-grey
+  shea:      '#78716C',
+  palm:      '#EA580C', // orange-red
+  soybean:   '#65A30D', // lime green
+  soya:      '#65A30D',
+  cotton:    '#94A3B8', // slate
+  maize:     '#CA8A04', // golden yellow
+  rubber:    '#475569', // dark slate
+  sorghum:   '#C2410C', // burnt orange
+  unknown:   '#94A3B8',
+};
+
+function commodityColor(name: string, fallbackIndex: number): string {
+  const key = name.toLowerCase().trim();
+  return COMMODITY_HUE[key] ?? VIZ_COLORS[fallbackIndex % VIZ_COLORS.length];
+}
+
+function capitalizeWords(str: string): string {
+  return str
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+const FarmMapOverview = dynamic(() => import('@/components/dashboards/farm-map-overview'), {
+  ssr: false,
+  loading: () => <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center"><div className="text-muted-foreground text-sm">Loading map...</div></div>
+});
+
+type Period = '7d' | '30d' | '90d' | '1y';
+
+interface AnalyticsData {
+  period: string;
+  volumeTrends: Array<{ date: string; weight: number; bags: number; batches: number }>;
+  weightSummary: { current: number; previous: number; trend: number };
+  batchSummary: { current: number; previous: number; trend: number };
+  bagSummary: { current: number; previous: number; trend: number; total: number };
+  farmSummary: { total: number; approved: number; pending: number; rejected: number };
+  compliance: { farmRate: number; batchRate: number; bagRate: number; flaggedBatches: number };
+  agentPerformance: Array<{ id: string; name: string; weight: number; bags: number; batches: number }>;
+  commodityBreakdown?: Array<{ name: string; weight: number; batches: number; complianceRate: number; totalFarms: number }>;
+  gradeDistribution?: Array<{ grade: string; count: number }>;
+  farmComplianceBreakdown?: Array<{ status: string; count: number }>;
+  shipmentDecisions?: Array<{ decision: string; count: number }>;
+  documentHealth?: Array<{ status: string; count: number }>;
+  riskIntelligence?: Array<{ type: string; count: number }>;
+  shipmentScores?: Array<{ id: string; name: string; overall: number; decision: string }>;
+}
+
+const PERIOD_OPTIONS: { value: Period; label: string }[] = [
+  { value: '7d', label: '7 Days' },
+  { value: '30d', label: '30 Days' },
+  { value: '90d', label: '90 Days' },
+  { value: '1y', label: '1 Year' },
+];
+
+const COMPLIANCE_COLORS = STATUS_COLORS;
+
+function TrendIndicator({ value }: { value: number }) {
+  if (value > 0) {
+    return (
+      <span className="flex items-center gap-0.5 text-xs text-green-600 dark:text-green-400" data-testid="trend-up">
+        <TrendingUp className="h-3 w-3" />
+        +{value}%
+      </span>
+    );
+  }
+  if (value < 0) {
+    return (
+      <span className="flex items-center gap-0.5 text-xs text-red-600 dark:text-red-400" data-testid="trend-down">
+        <TrendingDown className="h-3 w-3" />
+        {value}%
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-0.5 text-xs text-muted-foreground" data-testid="trend-flat">
+      <Minus className="h-3 w-3" />
+      0%
+    </span>
+  );
+}
+
+interface AuditScore {
+  overall: number;
+  grade: string;
+  components: Record<string, { score: number; detail: string }>;
+}
+
+interface AlertItem {
+  type: string;
+  label: string;
+  count: number;
+  priority: 'high' | 'medium';
+  href: string;
+  action: string;
+}
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+      <div className="flex-1 h-px bg-border" />
+      <span>{label}</span>
+      <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
+
+export function AdminDashboard() {
+  const tErrors = useTranslations('errors');
+  const [period, setPeriod] = useState<Period>('30d');
+  const [isDeferredLoading, setIsDeferredLoading] = useState(false);
+  const [deferredRestoreVersion, setDeferredRestoreVersion] = useState(0);
+  const { organization } = useOrg();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
+  const [scopedAuditScore, setScopedAuditScore] = useState<{
+    organizationId: number | null;
+    value: AuditScore | null;
+  }>({ organizationId: null, value: null });
+  const [scopedOperationalAlerts, setScopedOperationalAlerts] = useState<{
+    organizationId: number | null;
+    value: AlertItem[];
+  }>({ organizationId: null, value: [] });
+  const auditScore = Object.is(scopedAuditScore.organizationId, organizationId)
+    ? scopedAuditScore.value
+    : null;
+  const operationalAlerts = Object.is(scopedOperationalAlerts.organizationId, organizationId)
+    ? scopedOperationalAlerts.value
+    : [];
+  const {
+    data: analytics,
+    error: analyticsError,
+    loading: isLoading,
+    refetch: refetchAnalytics,
+    setData: setAnalytics,
+  } = useApiResource<AnalyticsData>(
+    organization ? `/api/analytics?period=${period}&section=dashboard` : null,
+    {
+      enabled: !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id, period],
+      showErrorToast: false,
+    },
+  );
+
+  useEffect(() => {
+    if (!organizationId || isLoading || analytics?.period !== period) {
+      setIsDeferredLoading(false);
+      return;
+    }
+    setIsDeferredLoading(true);
+  }, [analytics?.period, isLoading, organizationId, period]);
+
+  useEffect(() => {
+    const resumeDeferredFetch = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsDeferredLoading(true);
+        setDeferredRestoreVersion((version) => version + 1);
+      }
+    };
+    window.addEventListener('pageshow', resumeDeferredFetch);
+    return () => window.removeEventListener('pageshow', resumeDeferredFetch);
+  }, []);
+
+  useEffect(() => {
+    if (!organizationId || isLoading || !isDeferredLoading) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    const requestOrganizationId = organizationId;
+    const cancelIdle = runWhenIdle(() => {
+      if (cancelled || controller.signal.aborted) return;
+      Promise.all([
+        fetch(`/api/analytics?period=${period}&section=strategic`, { signal: controller.signal }),
+        fetch('/api/audit-readiness', { signal: controller.signal }),
+        fetch('/api/alerts', { signal: controller.signal }),
+      ])
+        .then(async ([strategicRes, auditRes, alertsRes]) => {
+          const [strategic, audit, alertsJson] = await Promise.all([
+            strategicRes.ok ? strategicRes.json() : Promise.resolve(null),
+            auditRes.ok ? auditRes.json() : Promise.resolve(null),
+            alertsRes.ok ? alertsRes.json() : Promise.resolve(null),
+          ]);
+          if (
+            cancelled ||
+            controller.signal.aborted ||
+            activeOrganizationIdRef.current !== requestOrganizationId
+          ) return;
+          if (strategic) {
+            setAnalytics(prev => prev ? { ...prev, ...strategic, period: prev.period } : strategic);
+          }
+          if (audit) {
+            setScopedAuditScore({ organizationId: requestOrganizationId, value: audit });
+          }
+          if (alertsJson) {
+            setScopedOperationalAlerts({
+              organizationId: requestOrganizationId,
+              value: alertsJson.alerts ?? [],
+            });
+          }
+        })
+        .catch((error) => {
+          if (!cancelled && !controller.signal.aborted) {
+            console.error('Failed to fetch deferred dashboard data:', error);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsDeferredLoading(false);
+        });
+    });
+    const cancelDeferredFetch = () => {
+      cancelled = true;
+      controller.abort();
+      cancelIdle();
+    };
+    window.addEventListener('pagehide', cancelDeferredFetch, { once: true });
+    return () => {
+      window.removeEventListener('pagehide', cancelDeferredFetch);
+      cancelDeferredFetch();
+    };
+  }, [deferredRestoreVersion, isDeferredLoading, isLoading, organizationId, period, setAnalytics]);
+
+  const overallComplianceRate = analytics
+    ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
+    : 0;
+
+  const activeShipments = analytics?.shipmentDecisions
+    ? analytics.shipmentDecisions.reduce((s, d) => s + d.count, 0)
+    : 0;
+
+  const complianceColor = overallComplianceRate >= 80 ? 'green' : overallComplianceRate >= 50 ? 'amber' : 'red';
+
+  const statCards = [
+    {
+      title: 'Total Farms',
+      value: analytics?.farmSummary.total || 0,
+      icon: Map,
+      description: `${analytics?.farmSummary.approved || 0} approved`,
+      trend: null as number | null,
+      iconClass: 'icon-bg-emerald',
+      accentClass: 'card-accent-emerald',
+      href: '/app/farms',
+      action: analytics?.farmSummary.pending ? `${analytics.farmSummary.pending} pending review` : 'View all farms',
+    },
+    {
+      title: 'Collection Volume',
+      value: `${(analytics?.weightSummary.current || 0).toLocaleString()} kg`,
+      icon: Scale,
+      description: `${analytics?.batchSummary.current || 0} batches collected`,
+      trend: analytics?.weightSummary.trend ?? null,
+      iconClass: 'icon-bg-blue',
+      accentClass: 'card-accent-blue',
+      href: '/app/inventory',
+      action: 'View inventory',
+    },
+    {
+      title: 'Active Shipments',
+      value: activeShipments,
+      icon: Ship,
+      description: 'Recent shipments tracked',
+      trend: null as number | null,
+      iconClass: 'icon-bg-violet',
+      accentClass: 'card-accent-violet',
+      href: '/app/shipments?status=pending',
+      action: 'View active shipments',
+    },
+    {
+      title: 'Compliance Rate',
+      value: `${overallComplianceRate}%`,
+      icon: ShieldCheck,
+      description: 'Avg across farms/batches/bags',
+      trend: null as number | null,
+      iconClass: `icon-bg-${complianceColor}`,
+      accentClass: `card-accent-${complianceColor}`,
+      href: analytics?.farmSummary.pending
+        ? '/app/farms?status=pending'
+        : analytics?.compliance.flaggedBatches
+        ? '/app/yield-alerts'
+        : '/app/farms',
+      action: overallComplianceRate < 100 ? 'Review compliance' : 'All compliant',
+    },
+  ];
+
+  const OPERATIONAL_ALERT_ICONS: Record<string, any> = {
+    stale_disbursements: Banknote,
+    awaiting_payment_shipments: Clock,
+    low_escrow: AlertTriangle,
+  };
+
+  const flagItems = [
+    ...(analytics?.compliance.flaggedBatches
+      ? [{ label: `${analytics.compliance.flaggedBatches} batch${analytics.compliance.flaggedBatches !== 1 ? 'es' : ''} with yield anomalies`, priority: 'high' as const, icon: AlertTriangle, href: '/app/yield-alerts', action: 'Review' }]
+      : []),
+    ...(analytics?.farmSummary.pending
+      ? [{ label: `${analytics.farmSummary.pending} farm${analytics.farmSummary.pending !== 1 ? 's' : ''} pending compliance review`, priority: 'medium' as const, icon: Activity, href: '/app/farms', action: 'Review' }]
+      : []),
+    ...(analytics?.farmSummary.rejected
+      ? [{ label: `${analytics.farmSummary.rejected} farm${analytics.farmSummary.rejected !== 1 ? 's' : ''} rejected`, priority: 'high' as const, icon: AlertTriangle, href: '/app/farms?status=rejected', action: 'View' }]
+      : []),
+    ...((analytics?.documentHealth || []).filter(d => d.status === 'Expired').map(d => ({
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expired`, priority: 'high' as const, icon: FileText, href: '/app/documents?status=expired', action: 'Renew',
+    }))),
+    ...((analytics?.documentHealth || []).filter(d => d.status === 'Expiring Soon').map(d => ({
+      label: `${d.count} document${d.count !== 1 ? 's' : ''} expiring soon`, priority: 'medium' as const, icon: FileText, href: '/app/documents?status=expiring_soon', action: 'Review',
+    }))),
+    ...operationalAlerts.map(a => ({
+      label: a.label,
+      priority: a.priority,
+      icon: OPERATIONAL_ALERT_ICONS[a.type] ?? AlertTriangle,
+      href: a.href,
+      action: a.action,
+    })),
+  ].sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
+
+  const commodityPieData = (analytics?.commodityBreakdown || []).map((c, i) => ({
+    name: capitalizeWords(c.name),
+    value: Math.round(c.weight),
+    color: commodityColor(c.name, i),
+  }));
+
+  const complianceDonutData = (analytics?.farmComplianceBreakdown || []).map(item => ({
+    name: item.status,
+    value: item.count,
+    color: COMPLIANCE_COLORS[item.status] || '#94a3b8',
+  }));
+
+  const gradeBarData = (analytics?.gradeDistribution || []).map(g => ({
+    grade: g.grade,
+    count: g.count,
+  }));
+
+  const shipmentDecisionData = (analytics?.shipmentDecisions || []).map(d => ({
+    name: d.decision,
+    value: d.count,
+    color: DECISION_COLORS[d.decision] || '#94a3b8',
+  }));
+
+  const agentBarData = (analytics?.agentPerformance || []).slice(0, 10).map(a => ({
+    name: a.name,
+    weight: Math.round(a.weight),
+  }));
+
+  const docHealthData = (analytics?.documentHealth || []).map(d => ({
+    name: d.status,
+    value: d.count,
+    color: DOC_HEALTH_COLORS[d.status] || '#94a3b8',
+  }));
+
+  const volumeTrendData = (analytics?.volumeTrends || []).map(v => ({
+    date: v.date,
+    weight: v.weight,
+    bags: v.bags,
+  }));
+
+  const loadingPlaceholder = (
+    <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+      Loading chart...
+    </div>
+  );
+  const isStrategicPending = isLoading || (isDeferredLoading && !analytics?.commodityBreakdown);
+
+  if (!isLoading && analyticsError && !analytics) {
+    return (
+      <Card role="alert" className="border-destructive/40" data-testid="admin-dashboard-load-error">
+        <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <AlertTriangle className="h-9 w-9 text-destructive" />
+          <div>
+            <h2 className="font-medium">{tErrors('unableToLoadAnalytics')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{analyticsError}</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => void refetchAnalytics()}>
+            {tErrors('tryAgain')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6" data-testid="admin-dashboard">
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight" data-testid="text-dashboard-title">Operations Overview</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Real-time supply chain intelligence</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-xs text-green-600 dark:text-green-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+            Live
+          </div>
+          <div className="segmented-control" data-testid="period-selector">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className="segmented-control-item"
+                data-active={period === opt.value}
+                onClick={() => setPeriod(opt.value)}
+                data-testid={`button-period-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stat-cards-row">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : statCards.map((stat) => (
+          <Link key={stat.title} href={stat.href} className="group cursor-pointer" data-testid={`stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Card className={`h-full transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 ${stat.accentClass}`}>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${stat.iconClass}`}>
+                  <stat.icon className="h-4 w-4" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight tabular-nums" data-testid={`value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {stat.value}
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    {stat.trend !== null && <TrendIndicator value={stat.trend} />}
+                  </div>
+                  <p className="text-xs text-muted-foreground hover:text-primary mt-1.5 transition-colors duration-150 cursor-pointer">
+                    {stat.action} →
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+
+      {/* Audit Readiness Score */}
+      {auditScore && (
+        <Card data-testid="audit-readiness-card" className="card-accent-green">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-green shrink-0">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  Audit Readiness Score
+                </CardTitle>
+                <CardDescription className="mt-1">Platform-wide readiness across farm data, batch records, lab coverage, documents, and shipment outcomes</CardDescription>
+              </div>
+              <Badge
+                variant="secondary"
+                className={`text-base font-bold px-3 py-1 shrink-0 ${
+                  auditScore.grade === 'A' ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' :
+                  auditScore.grade === 'B' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                  auditScore.grade === 'C' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' :
+                  'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                }`}
+                data-testid="audit-grade"
+              >
+                {auditScore.grade} · {auditScore.overall}/100
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
+              {Object.entries(auditScore.components).map(([key, comp]) => (
+                <div key={key}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    <span className="font-semibold">{comp.score}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${comp.score}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <SectionDivider label="Collection Analytics" />
+
+      {/* Volume Trends + Commodity Distribution */}
+      <div className="grid gap-4 lg:grid-cols-3" data-testid="row-volume-commodity">
+        <Card className="lg:col-span-2" data-testid="chart-volume-trends">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Volume Trends</CardTitle>
+                  <CardDescription className="text-xs mt-0">Collection weight and bag count over time</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/inventory" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : (
+              <TrendLineChart
+                data={volumeTrendData}
+                xKey="date"
+                series={[
+                  { dataKey: 'weight', label: 'Weight (kg)' },
+                  { dataKey: 'bags', label: 'Bags', color: '#16a34a' },
+                ]}
+                height={280}
+                xTickFormatter={(val) => {
+                  if (period === '1y') return val;
+                  const d = new Date(val);
+                  return `${d.getMonth() + 1}/${d.getDate()}`;
+                }}
+                valueFormatter={(v) => v.toLocaleString()}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-commodity-distribution">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <Package className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Commodity Distribution</CardTitle>
+                  <CardDescription className="text-xs mt-0">Weight by commodity type</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isStrategicPending ? loadingPlaceholder : commodityPieData.length > 0 ? (
+              <>
+                <PieDonutChart
+                  data={commodityPieData}
+                  donut
+                  height={220}
+                  showLabels={false}
+                  showLegend={false}
+                  labelFormatter={(name, value) => `${value.toLocaleString()} kg`}
+                />
+                {/* Commodity breakdown list — typed, coloured, properly capitalised */}
+                <div className="mt-3 space-y-1.5">
+                  {(() => {
+                    const total = commodityPieData.reduce((s, c) => s + c.value, 0);
+                    return commodityPieData.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: c.color }}
+                          />
+                          <span className="truncate font-medium text-foreground/80">{c.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {c.value.toLocaleString()} kg
+                          </span>
+                          <span className="text-xs font-semibold text-foreground tabular-nums w-10 text-right">
+                            {total > 0 ? Math.round((c.value / total) * 100) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No commodity data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Active Flags + Shipment Readiness */}
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-flags-shipments">
+        <Card data-testid="card-active-flags" className="card-accent-amber">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Active Flags Requiring Action</CardTitle>
+                  <CardDescription className="text-xs mt-0">Issues needing immediate attention</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : flagItems.length > 0 ? (
+              <div className="space-y-1.5">
+                {flagItems.map((flag, idx) => (
+                  <Link
+                    key={idx}
+                    href={flag.href}
+                    className="flex items-center gap-3 p-3 rounded-md border border-transparent hover:border-border hover:bg-muted/60 transition-all duration-150 group cursor-pointer"
+                    data-testid={`flag-item-${idx}`}
+                  >
+                    <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${
+                      flag.priority === 'high' ? 'bg-red-50 dark:bg-red-950/50' : 'bg-amber-50 dark:bg-amber-950/50'
+                    }`}>
+                      <flag.icon className={`h-3.5 w-3.5 ${
+                        flag.priority === 'high'
+                          ? 'text-red-500 dark:text-red-400'
+                          : 'text-amber-500 dark:text-amber-400'
+                      }`} />
+                    </div>
+                    <span className="text-sm flex-1 leading-snug">{flag.label}</span>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                        flag.priority === 'high'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                      }`}
+                      data-testid={`badge-priority-${idx}`}
+                    >
+                      {flag.action} →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <div className="h-10 w-10 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-green-500" />
+                </div>
+                <p className="text-sm font-medium">All clear — no active flags</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-shipment-readiness">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0">
+                  <Ship className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Shipment Readiness Summary</CardTitle>
+                  <CardDescription className="text-xs mt-0">Go / Conditional / No-Go distribution</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/shipments" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : shipmentDecisionData.length > 0 ? (
+              <PieDonutChart
+                data={shipmentDecisionData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No shipment data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <SectionDivider label="Compliance & Quality" />
+
+      {/* Compliance + Grade Distribution */}
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-compliance-grade">
+        <Card data-testid="chart-compliance-breakdown">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Compliance Status Breakdown</CardTitle>
+                  <CardDescription className="text-xs mt-0">Farm compliance distribution</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/farms" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View farms →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isStrategicPending ? loadingPlaceholder : complianceDonutData.length > 0 ? (
+              <PieDonutChart
+                data={complianceDonutData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No compliance data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-grade-distribution">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Grade Distribution</CardTitle>
+                  <CardDescription className="text-xs mt-0">Bag grades across inventory</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isStrategicPending ? loadingPlaceholder : gradeBarData.length > 0 ? (
+              <VerticalBarChart
+                data={gradeBarData}
+                dataKey="count"
+                categoryKey="grade"
+                height={280}
+                barLabel="Count"
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No grade data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Farm Polygon Overview Map */}
+      <Card data-testid="farm-map-overview">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-emerald shrink-0">
+                <MapPin className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Farm Polygon Overview</CardTitle>
+                <CardDescription className="text-xs mt-0">GPS-mapped farm boundaries — colour coded by compliance status</CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/app/farms/map">View Full Map →</a>
+            </Button>
+          </div>
+        </CardHeader>
+        <div className="border-t border-border/50 mx-6 mb-0" />
+        <CardContent className="p-0 pb-4 px-4 pt-4">
+          <FarmMapOverview />
+        </CardContent>
+      </Card>
+
+      <SectionDivider label="Agent Performance" />
+
+      {/* Agent Performance + Document Health */}
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="row-agent-docs">
+        <Card data-testid="chart-agent-performance">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0">
+                  <Users className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Agent Performance</CardTitle>
+                  <CardDescription className="text-xs mt-0">Top agents by collection weight (kg)</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : agentBarData.length > 0 ? (
+              <HorizontalBarChart
+                data={agentBarData}
+                dataKey="weight"
+                categoryKey="name"
+                height={280}
+                barLabel="Weight (kg)"
+                color="#16a34a"
+                valueFormatter={(v) => `${v.toLocaleString()} kg`}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No agent data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="chart-document-health">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-amber shrink-0">
+                  <FileText className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Document Health</CardTitle>
+                  <CardDescription className="text-xs mt-0">Expiring and expired documents needing attention</CardDescription>
+                </div>
+              </div>
+              <Link href="/app/documents" className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
+                View all →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? loadingPlaceholder : docHealthData.length > 0 ? (
+              <PieDonutChart
+                data={docHealthData}
+                donut
+                height={280}
+                showLabels={false}
+              />
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+                No document data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

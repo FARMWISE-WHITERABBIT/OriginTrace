@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/document-expiry",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/subscription-expiry",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/webhook-retry",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/nurture-drip",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/reminder-check",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

@@ -1,0 +1,307 @@
+/**
+ * POST /api/shipments/[id]/advance-stage
+ *
+ * Advances a shipment to the next pipeline stage (or a specified target stage).
+ * Validates the gate conditions for the current stage before allowing advancement.
+ *
+ * Request body:
+ *   { note?: string }
+ *   (target_stage is always current_stage + 1 — stages cannot be skipped)
+ *
+ * Roles allowed: admin, logistics_coordinator
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
+import { emitEvent } from '@/lib/services/events';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
+import {
+  validateStageGate,
+  validateReadinessHardGate,
+  buildStageHistoryEntry,
+  buildStageCompletionData,
+  STAGE_TO_LEGACY_STATUS,
+  STAGE_DEFINITIONS,
+  type ShipmentForGate,
+} from '@/lib/services/shipment-stages';
+import { getEscrowStatus } from '@/lib/services/escrow';
+import { subscribeShipmentToTerminal49 } from '@/lib/services/terminal49';
+import type { Json } from '@/lib/supabase/database.types';
+import { checkFarmEligibility, type FarmRecord } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+
+const ALLOWED_ROLES = ['admin', 'logistics_coordinator'];
+
+const advanceStageSchema = z.object({
+  note: z.string().max(500).optional(),
+});
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServiceClient();
+
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    if (!ALLOWED_ROLES.includes(profile.role)) {
+      return NextResponse.json(
+        { error: 'Only admins and logistics coordinators can advance shipment stages.' },
+        { status: 403 }
+      );
+    }
+
+    const shipmentId = params.id;
+    const body = await request.json().catch(() => ({}));
+    const parsed = advanceStageSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', fields: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    const { note } = parsed.data;
+
+    // ── Fetch shipment with all gate-relevant fields ───────────────────────────
+    const { data: shipment, error: fetchError } = await supabase
+      .from('shipments')
+      .select(`
+        id, current_stage, stage_data, stage_history,
+        compliance_profile_id, purchase_order_number,
+        inspection_body, inspection_result,
+        clearing_agent_name, customs_declaration_number, exit_certificate_number,
+        freight_forwarder_name, vessel_name, etd, eta,
+        container_number, container_seal_number,
+        actual_departure_date, bill_of_lading_number,
+        actual_arrival_date, shipment_outcome,
+        target_regulations,
+        readiness_score, readiness_decision,
+        buyer_company, buyer_contact,
+        shipment_code, doc_status
+      `)
+      .eq('id', shipmentId)
+      .eq('org_id', profile.org_id)
+      .single();
+
+    if (fetchError || !shipment) {
+      return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    }
+
+    const currentStage: number = shipment.current_stage ?? 1;
+    const targetStage = currentStage + 1;
+
+    if (currentStage >= 9) {
+      return NextResponse.json(
+        { error: 'Shipment is already at Stage 9 (Close). No further stages to advance.' },
+        { status: 400 }
+      );
+    }
+
+    // ── Validate gate conditions ───────────────────────────────────────────────
+    const shipmentForGate = { ...shipment, doc_status: shipment.doc_status ?? {} } as unknown as ShipmentForGate;
+    const stageGate = validateStageGate(shipmentForGate, targetStage);
+    const readinessGate = validateReadinessHardGate(shipmentForGate, targetStage);
+
+    // Check for escrow dispute hold
+    const escrowStatus = await getEscrowStatus(shipmentId);
+    const escrowBlocker = escrowStatus.hasOpenDispute
+      ? [`ESCROW_DISPUTE_HOLD: Escrow has an active dispute (${escrowStatus.openDispute?.reason ?? 'reason unspecified'}). Resolve the dispute before advancing.`]
+      : [];
+
+    const gateResult = {
+      valid: stageGate.valid && readinessGate.valid && !escrowStatus.hasOpenDispute,
+      blockers: [...stageGate.blockers, ...readinessGate.blockers, ...escrowBlocker],
+      warnings: [...stageGate.warnings, ...readinessGate.warnings],
+    };
+
+    if (!gateResult.valid) {
+      return NextResponse.json(
+        {
+          error: `Stage gate check failed. Complete the requirements for Stage ${currentStage} before advancing.`,
+          blockers: gateResult.blockers,
+          warnings: gateResult.warnings,
+          currentStage,
+          targetStage,
+        },
+        { status: 400 }
+      );
+    }
+
+    // ── Soft farm compliance check (stage 3+ only) ────────────────────────────
+    // At documentation stage and beyond, surface any EUDR eligibility issues
+    // as warnings. Collection is never blocked — but the operator should see
+    // compliance gaps before a document leaves the building.
+    const farmComplianceWarnings: Array<{
+      farmId: string;
+      status: string;
+      blockers: string[];
+      blocker_codes: string[];
+      warnings: string[];
+      warning_codes: string[];
+    }> = [];
+
+    if (targetStage >= 3) {
+      const { data: shipmentItems } = await supabase
+        .from('shipment_items')
+        .select('batch_id')
+        .eq('shipment_id', shipmentId)
+        .not('batch_id', 'is', null);
+
+      const batchIds = (shipmentItems ?? []).map((i: any) => i.batch_id).filter(Boolean);
+
+      if (batchIds.length > 0) {
+        const { data: batches } = await supabase
+          .from('collection_batches')
+          .select('farm_id')
+          .in('id', batchIds);
+
+        const farmIds = [...new Set((batches ?? []).map((b: any) => b.farm_id).filter(Boolean))];
+
+        if (farmIds.length > 0) {
+          const { data: farmRows } = await supabase
+            .from('farms')
+            .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp, conflict_status')
+            .in('id', farmIds)
+            .eq('org_id', profile.org_id);
+
+          const targetMarkets = normalizeMarketCodes(shipment.target_regulations ?? ['EU']);
+
+          for (const farm of farmRows ?? []) {
+            const eligibility = checkFarmEligibility(farm as unknown as FarmRecord, targetMarkets);
+            if (!eligibility.eligible || eligibility.warnings.length > 0) {
+              farmComplianceWarnings.push({
+                farmId: String(farm.id),
+                status: eligibility.status,
+                blockers: eligibility.blockers,
+                blocker_codes: eligibility.blocker_codes,
+                warnings: eligibility.warnings,
+                warning_codes: eligibility.warning_codes,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // ── Build updated stage tracking data ─────────────────────────────────────
+    const historyEntry = buildStageHistoryEntry(currentStage, targetStage, user.id, note);
+    const updatedStageHistory = [
+      ...((shipment.stage_history as Record<string, unknown>[]) ?? []),
+      historyEntry,
+    ];
+    const updatedStageData = buildStageCompletionData(
+      (shipment.stage_data as Record<string, unknown>) ?? {},
+      currentStage
+    );
+    const newLegacyStatus = STAGE_TO_LEGACY_STATUS[targetStage] ?? 'in_transit';
+
+    // ── Persist stage advancement ──────────────────────────────────────────────
+    const { data: updated, error: updateError } = await supabase
+      .from('shipments')
+      .update({
+        current_stage: targetStage,
+        stage_data: updatedStageData as unknown as Json,
+        stage_history: updatedStageHistory as unknown as Json,
+        status: newLegacyStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', shipmentId)
+      .eq('org_id', profile.org_id)
+      .select('id, current_stage, status, stage_history, stage_data, shipment_code')
+      .single();
+
+    if (updateError) {
+      console.error('Error advancing shipment stage:', updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // ── Container tracking (best-effort, non-blocking) ─────────────────────────
+    // Completing stage 6 (Container Stuffing) means container_number is now
+    // confirmed — start Terminal49 tracking for visibility. Fire-and-forget,
+    // same discipline as dispatchWebhookEvent: any failure (missing API key,
+    // network, provider error) is logged inside subscribeShipmentToTerminal49
+    // and never blocks the stage advancement. This creates tracking only;
+    // escrow auto-release stays opt-in via POST /api/shipments/[id]/tracking.
+    if (currentStage === 6) {
+      void subscribeShipmentToTerminal49({
+        shipmentId,
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        containerNumber: shipment.container_number,
+        billOfLadingNumber: shipment.bill_of_lading_number,
+      }).catch((err) =>
+        console.error('[terminal49] subscribe rejected (non-blocking):', err)
+      );
+    }
+
+    // ── Audit log ─────────────────────────────────────────────────────────────
+    await logAuditEvent({
+      orgId: profile.org_id,
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'shipment.stage_advanced',
+      resourceType: 'shipment',
+      resourceId: shipmentId,
+      metadata: {
+        previousStage: currentStage,
+        newStage: targetStage,
+        stageName: STAGE_DEFINITIONS.find((d) => d.stage === targetStage)?.name,
+        legacyStatus: newLegacyStatus,
+        note,
+        gateWarnings: gateResult.warnings,
+        farmComplianceWarnings: farmComplianceWarnings.length > 0 ? farmComplianceWarnings : undefined,
+      },
+    });
+
+    // ── Cross-layer propagation ────────────────────────────────────────────────
+    await emitEvent(
+      {
+        name: 'shipment.stage_advanced',
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        payload: {
+          shipmentId,
+          previousStage: currentStage,
+          newStage: targetStage,
+          shipmentCode: shipment.shipment_code ?? undefined,
+          buyerEmail: shipment.buyer_contact ?? undefined,
+          escrowEnabled: !!escrowStatus.escrow,
+        },
+      },
+      supabase
+    );
+
+    // ── External webhook ───────────────────────────────────────────────────────
+    dispatchWebhookEvent(profile.org_id, 'shipment.updated', {
+      shipment_id: shipmentId,
+      event: 'stage_advanced',
+      previous_stage: currentStage,
+      new_stage: targetStage,
+      legacy_status: newLegacyStatus,
+    });
+
+    const stageDef = STAGE_DEFINITIONS.find((d) => d.stage === targetStage);
+
+    return NextResponse.json({
+      success: true,
+      shipment: updated,
+      transition: {
+        from: currentStage,
+        to: targetStage,
+        stageName: stageDef?.name,
+        stageDescription: stageDef?.description,
+        legacyStatus: newLegacyStatus,
+      },
+      warnings: gateResult.warnings,
+      farmComplianceWarnings: farmComplianceWarnings.length > 0 ? farmComplianceWarnings : undefined,
+    });
+  } catch (error) {
+    console.error('Advance stage error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

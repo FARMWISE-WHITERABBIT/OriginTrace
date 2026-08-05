@@ -1,0 +1,305 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
+interface Organization {
+  id: number;
+  name: string;
+  commodity_types: string[];
+  slug?: string;
+  subscription_status?: string;
+  logo_url?: string;
+  settings?: Record<string, unknown>;
+  invite_code?: string;
+  active_lgas?: string[];
+  commodities?: unknown[];
+  subscription_tier?: string;
+  feature_flags?: Record<string, boolean>;
+  agent_seat_limit?: number;
+  monthly_collection_limit?: number;
+  data_region?: string;
+  brand_colors?: { primary?: string; secondary?: string; accent?: string } | null;
+  preferred_currency?: string;
+}
+
+interface Profile {
+  id: number;
+  user_id: string;
+  org_id?: number;
+  role: string;
+  full_name: string;
+  email?: string;
+  assigned_state?: string;
+  assigned_lga?: string;
+}
+
+interface ImpersonationState {
+  isImpersonating: boolean;
+  orgId?: number;
+  orgName?: string;
+  expiresAt?: string;
+}
+
+interface OrgContextType {
+  organization: Organization | null;
+  profile: Profile | null;
+  isLoading: boolean;
+  isConfigured: boolean;
+  isSystemAdmin: boolean;
+  impersonation: ImpersonationState;
+  setOrganization: (org: Organization | null) => void;
+  refreshProfile: () => Promise<void>;
+  startImpersonation: (orgId: number) => Promise<boolean>;
+  stopImpersonation: () => Promise<boolean>;
+}
+
+const OrgContext = createContext<OrgContextType | undefined>(undefined);
+
+export function OrgProvider({ children }: { children: ReactNode }) {
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+  const [impersonation, setImpersonation] = useState<ImpersonationState>({ isImpersonating: false });
+  const supabase = createClient();
+  const isConfigured = supabase !== null;
+  const pathname = usePathname();
+  const isSuperadminRoute = pathname?.startsWith('/superadmin');
+  const didRequestInitialProfileRef = useRef(false);
+  const profileAbortRef = useRef<AbortController | null>(null);
+  const impersonationQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const refreshProfile = async () => {
+    profileAbortRef.current?.abort();
+    const controller = new AbortController();
+    profileAbortRef.current = controller;
+    const isCurrentRequest = () => (
+      profileAbortRef.current === controller && !controller.signal.aborted
+    );
+    setIsLoading(true);
+    setProfile(null);
+    setOrganization(null);
+    setIsSystemAdmin(false);
+
+    if (!supabase) {
+      if (isCurrentRequest()) setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!isCurrentRequest()) return;
+      if (!user) {
+        setProfile(null);
+        setOrganization(null);
+        setIsSystemAdmin(false);
+        setImpersonation({ isImpersonating: false });
+        return;
+      }
+
+      let response = await fetch('/api/profile', { signal: controller.signal });
+      if (!isCurrentRequest()) return;
+      if (response.status === 503) {
+        await new Promise(r => setTimeout(r, 2000));
+        if (!isCurrentRequest()) return;
+        response = await fetch('/api/profile', { signal: controller.signal });
+        if (!isCurrentRequest()) return;
+      }
+      if (!response.ok) {
+        if (response.status !== 401 && response.status !== 503) {
+          try {
+            const errorData = await response.json();
+            if (!isCurrentRequest()) return;
+            console.error('Profile API error:', errorData);
+          } catch {
+            if (!isCurrentRequest()) return;
+            console.error('Profile API error: status', response.status);
+          }
+        }
+        if (!isCurrentRequest()) return;
+        setProfile(null);
+        setOrganization(null);
+        setIsSystemAdmin(false);
+        return;
+      }
+
+      const data = await response.json();
+      if (!isCurrentRequest()) return;
+      setImpersonation(data.impersonation || { isImpersonating: false });
+      
+      if (data.profile) {
+        setProfile(data.profile as Profile);
+        setIsSystemAdmin(data.isSystemAdmin || false);
+        
+        const hydrateOrgTier = (org: any): Organization | null => {
+          if (!org) return null;
+          const s = org.settings || {};
+          // Resolve tier: explicit column first, then settings JSONB fallback, then default
+          // VALID tiers only — reject legacy values like 'trial', 'free', 'growth'
+          const VALID_TIERS = ['starter', 'basic', 'pro', 'enterprise'];
+          const rawTier = org.subscription_tier || s.subscription_tier;
+          // null/unset means billing not yet configured — pass through as undefined
+          // so hasTierAccess() grants full access rather than capping at 'starter'
+          const resolvedTier = VALID_TIERS.includes(rawTier) ? rawTier : undefined;
+          return {
+            ...org,
+            subscription_tier: resolvedTier,
+            subscription_status: org.subscription_status || 'active',
+            feature_flags: org.feature_flags || s.feature_flags || {},
+            agent_seat_limit: org.agent_seat_limit ?? s.agent_seat_limit ?? 5,
+            monthly_collection_limit: org.monthly_collection_limit ?? s.monthly_collection_limit ?? 1000,
+            data_region: org.data_region || s.data_region,
+            preferred_currency: (org.preferred_currency as string) || (s.preferred_currency as string) || 'NGN',
+            settings: { ...s, preferred_currency: (org.preferred_currency as string) || (s.preferred_currency as string) || 'NGN' },
+          } as Organization;
+        };
+
+        setOrganization(hydrateOrgTier(data.organization));
+      } else {
+        console.warn('No profile found for user:', user.id);
+        setProfile(null);
+        setOrganization(null);
+        setIsSystemAdmin(false);
+      }
+    } catch (error) {
+      if (!isCurrentRequest()) return;
+      console.error('Failed to fetch profile:', error);
+      setProfile(null);
+      setOrganization(null);
+      setIsSystemAdmin(false);
+    } finally {
+      if (isCurrentRequest()) setIsLoading(false);
+    }
+  };
+
+  const refreshProfileRef = useRef(refreshProfile);
+  refreshProfileRef.current = refreshProfile;
+
+  function enqueueImpersonationOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = impersonationQueueRef.current.then(operation, operation);
+    impersonationQueueRef.current = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
+  const startImpersonation = (orgId: number): Promise<boolean> => (
+    enqueueImpersonationOperation(async () => {
+      try {
+        const response = await fetch('/api/impersonate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'start', org_id: orgId })
+        });
+
+        if (!response.ok) return false;
+
+        const data = await response.json();
+        setImpersonation({
+          isImpersonating: true,
+          orgId: data.impersonation.org_id,
+          orgName: data.impersonation.org_name,
+          expiresAt: data.impersonation.expires_at
+        });
+        await refreshProfile();
+        return true;
+      } catch (error) {
+        console.error('Failed to start impersonation:', error);
+        return false;
+      }
+    })
+  );
+
+  const stopImpersonation = (): Promise<boolean> => (
+    enqueueImpersonationOperation(async () => {
+      try {
+        const response = await fetch('/api/impersonate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'stop' })
+        });
+        if (!response.ok) {
+          console.error('Failed to stop impersonation: status', response.status);
+          return false;
+        }
+        setImpersonation({ isImpersonating: false });
+        await refreshProfile();
+        return true;
+      } catch (error) {
+        console.error('Failed to stop impersonation:', error);
+        return false;
+      }
+    })
+  );
+
+  useEffect(() => {
+    const abortProfileOnPageHide = () => profileAbortRef.current?.abort();
+    const refreshProfileAfterRestore = (event: PageTransitionEvent) => {
+      if (!event.persisted || isSuperadminRoute) return;
+      setIsLoading(true);
+      void refreshProfileRef.current();
+    };
+    window.addEventListener('pagehide', abortProfileOnPageHide);
+    window.addEventListener('pageshow', refreshProfileAfterRestore);
+    return () => {
+      window.removeEventListener('pagehide', abortProfileOnPageHide);
+      window.removeEventListener('pageshow', refreshProfileAfterRestore);
+      profileAbortRef.current?.abort();
+    };
+  }, [isSuperadminRoute]);
+
+  useEffect(() => {
+    if (isSuperadminRoute) {
+      profileAbortRef.current?.abort();
+      setIsLoading(false);
+      return;
+    }
+
+    didRequestInitialProfileRef.current = true;
+    refreshProfile();
+
+    if (!supabase) {
+      return () => profileAbortRef.current?.abort();
+    }
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION' && didRequestInitialProfileRef.current) return;
+      if (!isSuperadminRoute) {
+        refreshProfile();
+      }
+    });
+
+    return () => {
+      profileAbortRef.current?.abort();
+      subscription.unsubscribe();
+    };
+  }, [isSuperadminRoute]);
+
+  return (
+    <OrgContext.Provider value={{ 
+      organization, 
+      profile, 
+      isLoading, 
+      isConfigured,
+      isSystemAdmin,
+      impersonation,
+      setOrganization,
+      refreshProfile,
+      startImpersonation,
+      stopImpersonation
+    }}>
+      {children}
+    </OrgContext.Provider>
+  );
+}
+
+export function useOrg() {
+  const context = useContext(OrgContext);
+  if (context === undefined) {
+    throw new Error('useOrg must be used within an OrgProvider');
+  }
+  return context;
+}

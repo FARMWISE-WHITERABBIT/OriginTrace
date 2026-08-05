@@ -1,0 +1,151 @@
+import { createAdminClient } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedProfile } from '@/lib/api-auth';
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createAdminClient();
+    const { user, profile } = await getAuthenticatedProfile(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+
+    const ddsAllowedRoles = ['admin', 'compliance_officer'];
+    if (!ddsAllowedRoles.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    const orgId = profile.org_id;
+    const shipmentId = request.nextUrl.searchParams.get('shipment_id');
+    const commodity = request.nextUrl.searchParams.get('commodity');
+    const format = request.nextUrl.searchParams.get('format') || 'json';
+
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name, slug, settings')
+      .eq('id', orgId)
+      .single();
+
+    let farmQuery = supabase
+      .from('farms')
+      .select('id, farmer_name, community, state_id, states(name), commodity, area_hectares, boundary, compliance_status, deforestation_check, created_at')
+      .eq('org_id', orgId)
+      .eq('compliance_status', 'approved');
+
+    if (commodity && commodity !== 'all') {
+      farmQuery = farmQuery.eq('commodity', commodity);
+    }
+
+    const { data: farms } = await farmQuery;
+
+    let shipmentData = null;
+    if (shipmentId) {
+      const { data: shipment } = await supabase
+        .from('shipments')
+        .select('id, destination_country, commodity, status, readiness_score, readiness_decision, created_at')
+        .eq('id', shipmentId)
+        .eq('org_id', orgId)
+        .single();
+      shipmentData = shipment;
+    }
+
+    const farmList = farms || [];
+    const farmsWithBoundaries = farmList.filter(f => f.boundary && typeof f.boundary === 'object');
+
+    const ddsDocument = {
+      document_type: 'EUDR_Due_Diligence_Statement',
+      version: '1.0',
+      generated_at: new Date().toISOString(),
+      reference_number: `DDS-${orgId}-${Date.now().toString(36).toUpperCase()}`,
+
+      operator: {
+        name: org?.name || 'Unknown',
+        identifier: org?.slug || '',
+      },
+
+      commodity: commodity && commodity !== 'all' ? commodity : farmList.map(f => f.commodity).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || 'Not specified',
+
+      // TODO(schema-drift): 'country' no longer exists on 'farms' — this app is Nigeria-only, so we fall back to state name.
+      country_of_origin: farmList.map(f => f.states?.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
+
+      geolocation: {
+        total_plots: farmList.length,
+        plots_with_coordinates: farmsWithBoundaries.length,
+        coverage_percentage: farmList.length > 0 ? Math.round((farmsWithBoundaries.length / farmList.length) * 100) : 0,
+        plots: farmsWithBoundaries.map(f => ({
+          plot_id: f.id,
+          community: f.community,
+          state: f.states?.name,
+          area_hectares: f.area_hectares,
+          coordinates: f.boundary,
+        })),
+      },
+
+      deforestation_free_declaration: {
+        statement: 'The commodities covered by this due diligence statement have been produced on land that has not been subject to deforestation after 31 December 2020, in accordance with EU Regulation 2023/1115.',
+        total_farms_checked: farmList.filter(f => f.deforestation_check).length,
+        farms_deforestation_free: farmList.filter(f => {
+          const check = f.deforestation_check as { deforestation_free?: boolean; risk_level?: string } | null;
+          return check && (check.deforestation_free === true || check.risk_level === 'low');
+        }).length,
+        farms_pending_check: farmList.filter(f => !f.deforestation_check).length,
+      },
+
+      traceability: {
+        total_smallholders: farmList.length,
+        total_area_hectares: Math.round(farmList.reduce((s, f) => s + (f.area_hectares || 0), 0) * 100) / 100,
+        compliance_rate: farmList.length > 0 ? Math.round((farmList.filter(f => f.compliance_status === 'approved').length / farmList.length) * 100) : 0,
+      },
+
+      shipment: shipmentData ? {
+        id: shipmentData.id,
+        destination_country: shipmentData.destination_country,
+        commodity: shipmentData.commodity,
+        readiness_score: shipmentData.readiness_score,
+        // TODO(schema-drift): 'compliance_score' no longer exists on 'shipments' — needs product decision (was this merged into readiness_score/score_breakdown?).
+        compliance_score: null,
+        decision: shipmentData.readiness_decision,
+      } : null,
+
+      date_of_statement: new Date().toISOString().split('T')[0],
+    };
+
+    if (format === 'geojson') {
+      const geojson = {
+        type: 'FeatureCollection',
+        properties: {
+          document_type: ddsDocument.document_type,
+          reference_number: ddsDocument.reference_number,
+          operator: ddsDocument.operator,
+          generated_at: ddsDocument.generated_at,
+        },
+        features: farmsWithBoundaries.map(f => ({
+          type: 'Feature',
+          properties: {
+            plot_id: f.id,
+            community: f.community,
+            state: f.states?.name,
+            commodity: f.commodity,
+            area_hectares: f.area_hectares,
+            compliance_status: f.compliance_status,
+          },
+          geometry: f.boundary,
+        })),
+      };
+      return NextResponse.json(geojson, {
+        headers: {
+          'Content-Disposition': `attachment; filename="dds-${ddsDocument.reference_number}.geojson"`,
+        },
+      });
+    }
+
+    return NextResponse.json(ddsDocument, {
+      headers: {
+        'Content-Disposition': `attachment; filename="dds-${ddsDocument.reference_number}.json"`,
+      },
+    });
+  } catch (error) {
+    console.error('DDS API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

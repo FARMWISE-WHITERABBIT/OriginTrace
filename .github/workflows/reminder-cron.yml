@@ -1,0 +1,34 @@
+name: Hourly Reminder Check
+
+# Runs every hour — handles 24h, 1h meeting reminders and no-show detection.
+# Vercel Hobby plan only allows once-per-day crons, so this GitHub Action
+# provides the hourly cadence for free.
+#
+# Required secrets (set in GitHub → Settings → Secrets → Actions):
+#   CRON_SECRET        — must match CRON_SECRET in your Vercel environment
+#   PRODUCTION_URL     — e.g. https://origintrace.trade
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour on the hour
+  workflow_dispatch:       # allows manual trigger from GitHub UI
+
+jobs:
+  reminder-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call reminder-check endpoint
+        run: |
+          HTTP_STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X GET "${{ secrets.PRODUCTION_URL }}/api/cron/reminder-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP status: $HTTP_STATUS"
+          echo "Response: $(cat /tmp/response.json)"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Cron job returned non-200 status: $HTTP_STATUS"
+            exit 1
+          fi

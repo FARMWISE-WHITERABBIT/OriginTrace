@@ -1,0 +1,573 @@
+import Link from 'next/link';
+import Image from 'next/image';
+import { MarketingNav } from '@/components/marketing/nav';
+import { MarketingFooter } from '@/components/marketing/footer';
+import { getAllPosts } from '@/lib/blog';
+import { BlogCarousel } from '@/components/marketing/blog-carousel';
+import { FadeIn } from '@/components/marketing/motion';
+import HeroBackground from '@/components/marketing/hero-background';
+import { CapabilitySlider } from '@/components/marketing/capability-slider';
+import { WhyChooseSection } from '@/components/marketing/why-choose-section';
+import { IndustriesTabsClient } from '@/components/marketing/industries-tabs';
+import { ComplianceStack } from '@/components/marketing/compliance-stack';
+import { ReadinessModal } from '@/components/marketing/readiness-modal';
+import { FaqSection } from '@/components/marketing/faq-section';
+import {
+  Shield,
+  ChevronRight,
+  Check,
+  MapPin,
+  Mail,
+  Phone,
+  Wifi,
+  QrCode,
+} from 'lucide-react';
+
+/* ─────────────────────────────────────────────────────────────────
+   DATA CONSTANTS — unchanged from original
+   ───────────────────────────────────────────────────────────────── */
+
+
+const whyChooseFeatures = [
+  {
+    title: 'Know your compliance status before you load',
+    body: 'Run your shipment against EU, UK, US, China, and UAE requirements in one check. Resolve gaps before you book freight — not at the border.',
+    icon: <Shield className="w-4 h-4" />,
+  },
+  {
+    title: 'Prove origin down to the source',
+    body: 'GPS-verified registration for every farm plot or extraction site. Every batch traces back to a verified location — not a declaration.',
+    icon: <MapPin className="w-4 h-4" />,
+  },
+  {
+    title: 'Capture data where there is no signal',
+    body: 'Field agents log collections in full offline mode. Data syncs automatically when connectivity returns — no gaps, no manual re-entry.',
+    icon: <Wifi className="w-4 h-4" />,
+  },
+  {
+    title: 'Give buyers proof, not promises',
+    body: 'Share a QR-linked traceability record and compliance evidence directly with your buyer. Close deals faster with verified data.',
+    icon: <QrCode className="w-4 h-4" />,
+  },
+  {
+    title: 'Get paid when compliance is confirmed',
+    body: 'Your buyer pays into escrow. Funds release automatically when the shipment is verified. No chasing. No trust-based risk.',
+    icon: <Check className="w-4 h-4" />,
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   INDUSTRIES / COMMODITIES TABS SECTION
+   ───────────────────────────────────────────────────────────────── */
+
+function IndustriesTabSection() {
+  return (
+    <section
+      className="section-spacing"
+      style={{
+        background: 'var(--color--gray-7)',
+        borderRadius: '2rem 2rem 0 0',
+        marginTop: '-2rem',
+        position: 'relative',
+        zIndex: 1,
+      }}
+    >
+      <div className="mk-container-lg">
+        <FadeIn>
+          <div className="section-header--left margin-bottom margin-xlarge">
+            <span
+              className="pre-title margin-bottom margin-medium"
+              style={{ background: 'transparent', border: '1px solid var(--mk-border)', color: 'var(--mk-text-muted)' }}
+            >
+              Industries We Serve
+            </span>
+            <h2 className="text-display-lg" style={{ color: 'var(--mk-text-primary)', maxWidth: '28rem' }}>
+              Traceability built for{' '}
+              <span className="text-mk-muted">the commodities Africa exports</span>
+            </h2>
+          </div>
+        </FadeIn>
+
+        <IndustriesTabsClient />
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   COUNTER SECTION (Mivora counter-section)
+   ───────────────────────────────────────────────────────────────── */
+
+
+/* ─────────────────────────────────────────────────────────────────
+   TESTIMONIALS SECTION (Mivora testimonial-section — dark)
+   ───────────────────────────────────────────────────────────────── */
+
+
+/* ─────────────────────────────────────────────────────────────────
+   CERTIFICATION MARQUEE
+   ───────────────────────────────────────────────────────────────── */
+
+const certifications = [
+  'EUDR Compliant',
+  'FSMA 204 Ready',
+  'Rainforest Alliance',
+  'Fairtrade Certified',
+  'ISO 22000',
+  'GlobalG.A.P.',
+  'UK Environment Act',
+  'CS3D Ready',
+  'GACC Registered',
+  'USDA Organic',
+];
+
+function CertificationMarquee() {
+  const doubled = [...certifications, ...certifications];
+  return (
+    <section
+      className="section-bordered"
+      style={{ paddingBlock: '2.5rem', background: 'var(--mk-surface-gray)' }}
+    >
+      <div className="mk-marquee-wrap">
+        <div className="mk-marquee-track">
+          {doubled.map((cert, i) => (
+            <div
+              key={i}
+              className="mk-cert-item"
+              aria-hidden={i >= certifications.length}
+            >
+              <span className="mk-cert-dot" aria-hidden />
+              {cert}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   PAGE COMPONENT
+   ───────────────────────────────────────────────────────────────── */
+
+export default function HomePage() {
+  const allPosts = getAllPosts();
+  const featuredPost = allPosts[0];
+
+  /* Schema markup */
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'OriginTrace',
+    url: 'https://origintrace.trade',
+    logo: 'https://origintrace.trade/images/logo-green.png',
+    description: 'Trust infrastructure for origin-sensitive supply chains. Supply chain traceability, compliance verification, and export readiness platform.',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'hello@origintrace.trade',
+      contactType: 'sales',
+    },
+  };
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'OriginTrace',
+    url: 'https://origintrace.trade',
+    description: 'Trust infrastructure for origin-sensitive supply chains.',
+  };
+
+  return (
+    <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+      <MarketingNav />
+
+      <main>
+
+        {/* ═══════════════════════════════════════════════════════
+            1. HERO
+            ═══════════════════════════════════════════════════════ */}
+        <section className="mk-hero">
+          <HeroBackground videoSrc="https://gnvcvvsnnesieugnzmrz.supabase.co/storage/v1/object/public/media/hero-background.mp4" />
+          <div className="mk-hero__overlay" />
+
+          <div className="mk-hero__content">
+            <div className="mk-container-lg">
+              {/* Two-col on desktop, stacked on mobile — both columns visible */}
+              <div
+                className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
+                style={{ alignItems: 'stretch', height: '100%', minHeight: '65vh' }}
+              >
+                {/* LEFT — headline, subtitle, CTA — vertically centered */}
+                <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
+                  <FadeIn delay={0.1}>
+                    <h1
+                      className="text-display-2xl margin-bottom margin-large"
+                      data-testid="text-hero-headline"
+                      style={{ color: '#ffffff', maxWidth: '14ch', fontFamily: 'var(--font-display)' }}
+                    >
+                      Know you're compliant before you export.
+                    </h1>
+                  </FadeIn>
+
+                  <FadeIn delay={0.2}>
+                    <p
+                      className="margin-bottom margin-xlarge"
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                    >
+                      From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, UK, US, China, and UAE requirements, and gives buyers the proof they need to clear your shipment.
+                    </p>
+                  </FadeIn>
+
+                  <FadeIn delay={0.3}>
+                    <div className="flex flex-wrap gap-3">
+                      <ReadinessModal />
+                      <Link href="#how-it-works" className="btn-mk-ghost btn-mk-lg">
+                        See How It Works
+                      </Link>
+                    </div>
+                  </FadeIn>
+
+                  <FadeIn delay={0.35}>
+                    <Link
+                      href="/importers"
+                      data-testid="link-hero-buyer-routing"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        marginTop: '1.25rem',
+                        fontSize: '0.875rem',
+                        color: 'rgba(255,255,255,0.62)',
+                      }}
+                    >
+                      I&apos;m a buyer / importer <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </FadeIn>
+                </div>
+
+                {/* RIGHT — card, visible on all sizes */}
+                <div className="hero-right-col flex flex-col justify-end pb-0">
+                  {featuredPost && (
+                  <FadeIn delay={0.5} direction="up">
+                    <div
+                      className="hero-detail-wrap w-full mx-auto lg:ml-auto lg:mr-0"
+                    >
+                      {/* ── 1. IMAGE ── */}
+                      <Link href={`/blog/${featuredPost.slug}`} style={{ display: 'block', textDecoration: 'none' }}>
+                        <div
+                          style={{
+                            height: '180px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderRadius: '0.5rem',
+                          }}
+                        >
+                          {featuredPost.coverImage ? (
+                            <img
+                              src={featuredPost.coverImage}
+                              alt={featuredPost.coverImageAlt || featuredPost.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-br ${featuredPost.coverGradient}`} />
+                          )}
+                          {/* Category + date chips */}
+                          <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', display: 'flex', gap: '0.4rem' }}>
+                            <span style={{ background: 'var(--mk-green)', color: '#fff', fontSize: '0.625rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {featuredPost.category}
+                            </span>
+                            <span style={{ background: 'rgba(20,20,20,0.72)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backdropFilter: 'blur(4px)' }}>
+                              {featuredPost.date}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* ── 2. TITLE ── */}
+                      <div style={{ padding: '0.75rem 0 0.5rem' }}>
+                        <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--mk-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>
+                          Latest Insight
+                        </p>
+                        <Link href={`/blog/${featuredPost.slug}`} style={{ textDecoration: 'none' }}>
+                          <p
+                            className="font-semibold leading-snug"
+                            style={{ fontSize: '0.9375rem', color: 'var(--mk-text-primary)', letterSpacing: '-0.01em', maxWidth: '30ch', lineHeight: 1.45 }}
+                          >
+                            {featuredPost.title}
+                          </p>
+                        </Link>
+                      </div>
+
+                      {/* ── 3. META ROW ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--mk-text-muted)' }}>{featuredPost.readingTime}</span>
+                        <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'var(--mk-text-muted)' }} aria-hidden />
+                        <Link href="/blog" style={{ fontSize: '0.75rem', color: 'var(--mk-green)', fontWeight: 600, textDecoration: 'none' }}>
+                          View all insights →
+                        </Link>
+                      </div>
+
+                      {/* Decorative corner elements */}
+                      <img
+                        src="/images/6836fc56a91aed0e5c1c5871_hero-left-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-left-decorative"
+                        width={25}
+                        height={25}
+                      />
+                      <img
+                        src="/images/6836fc56293581224cd8c720_hero-right-shape.svg"
+                        alt=""
+                        aria-hidden
+                        className="hero-right-decorative"
+                        width={25}
+                        height={25}
+                      />
+                    </div>
+                  </FadeIn>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            2. ABOUT / MISSION
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-white" style={{ paddingTop: 'var(--section-md)', paddingBottom: 'var(--section-md)' }}>
+          <div className="mk-container-sm">
+            {/* Centered header */}
+            <FadeIn>
+              <div className="section-header">
+                {/* Sun / starburst icon — matches Mivora */}
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 36 36"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="margin-bottom margin-medium"
+                  aria-hidden
+                  style={{ color: 'var(--mk-text-muted)' }}
+                >
+                  <circle cx="18" cy="18" r="5" stroke="currentColor" strokeWidth="1.5" />
+                  <line x1="18" y1="2"  x2="18" y2="7"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="18" y1="29" x2="18" y2="34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="2"  y1="18" x2="7"  y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29" y1="18" x2="34" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="6.34"  y1="6.34"  x2="9.87"  y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="26.13" y1="26.13" x2="29.66" y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="29.66" y1="6.34"  x2="26.13" y2="9.87"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="9.87"  y1="26.13" x2="6.34"  y2="29.66" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+
+                <span className="pre-title margin-bottom margin-medium">The Problem We Solve</span>
+
+                <h2 className="text-display-lg section-header__title" style={{ maxWidth: '26ch' }}>
+                  The problem is not{' '}
+                  <span className="text-mk-muted">production.</span>{' '}
+                  It is{' '}
+                  <span className="text-mk-brand">proof.</span>
+                </h2>
+
+                <p className="section-header__body">
+                  Your commodity clears the field or the mine. Then it hits a wall — unverifiable
+                  declarations, missing documentation, and compliance gaps that stop it at the
+                  border. Buyers want proof. Regulators demand data. Exporters with systems win
+                  the contract. OriginTrace gives you the infrastructure to prove your chain,
+                  from first collection to final payment.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* 3-column image grid — wider than text column, center card taller */}
+          <div className="mk-container-lg" style={{ marginTop: '3rem' }}>
+            {/* Desktop: 3-col staggered */}
+            <div className="hidden md:grid" style={{
+              gridTemplateColumns: '1fr 1.15fr 1fr', gap: '1rem',
+              alignItems: 'center', marginBottom: '3rem',
+            }}>
+              <FadeIn delay={0.1} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+              </FadeIn>
+              <FadeIn delay={0.22} direction="up">
+                <div style={{ height: '640px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+              <FadeIn delay={0.34} direction="up">
+                <div style={{ height: '480px', borderRadius: '1.25rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </FadeIn>
+            </div>
+
+            {/* Mobile: 3 images in a row — side images shorter, centre taller (staggered) */}
+            <div className="block md:hidden" style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-pixabay-50707.jpg')", backgroundSize: 'cover', backgroundPosition: 'left center' }} />
+                <div style={{ flex: 1, height: '220px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/pexels-zeal-creative-studios-58866141-31283908.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ flex: 1, height: '160px', borderRadius: '1rem', overflow: 'hidden', backgroundImage: "url('/images/lagos-apapa-port.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              </div>
+            </div>
+
+            {/* CTA — centered pill button */}
+            <FadeIn delay={0.44}>
+              <div className="flex justify-center" style={{ marginBottom: '3rem' }}>
+                <Link href="/solutions" className="btn-mk-primary" data-testid="button-learn-more">
+                  See the platform
+                </Link>
+              </div>
+            </FadeIn>
+
+            {/* Feature items — 3-col grid below CTA */}
+            <FadeIn delay={0.55}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+                {[
+                  { label: 'GPS Verified Origin' },
+                  { label: 'Compliance Ready' },
+                  { label: 'Secured Payments' },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden style={{ color: 'var(--mk-text-muted)', flexShrink: 0 }}>
+                      <line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="8" x2="24.4" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3.6" y1="20" x2="24.4" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-secondary)', fontWeight: 500, lineHeight: 1.4 }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            3b. COMMODITIES / INDUSTRIES TABS
+            ═══════════════════════════════════════════════════════ */}
+        <IndustriesTabSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            4. CAPABILITIES (sliding cards)
+            ═══════════════════════════════════════════════════════ */}
+        <section id="how-it-works" className="section-spacing section-dark">
+          <div className="mk-container-lg">
+            <CapabilitySlider />
+          </div>
+        </section>
+
+
+
+
+        {/* ═══════════════════════════════════════════════════════
+            6. WHY CHOOSE — accordion + image
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-gray">
+          <div className="mk-container-lg">
+            <WhyChooseSection features={whyChooseFeatures} />
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            7. COMPLIANCE COVERAGE — sticky stack
+            ═══════════════════════════════════════════════════════ */}
+        <ComplianceStack />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12. BLOG — 2-up carousel
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing-sm section-white mk-blog-section">
+          <div className="mk-container-lg">
+            <BlogCarousel posts={allPosts} />
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12b. FAQ
+            ═══════════════════════════════════════════════════════ */}
+        <FaqSection />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            12c. CERTIFICATION / COMPLIANCE MARQUEE (below FAQ)
+            ═══════════════════════════════════════════════════════ */}
+        <CertificationMarquee />
+
+
+        {/* ═══════════════════════════════════════════════════════
+            13. FINAL CTA
+            ═══════════════════════════════════════════════════════ */}
+        <section className="section-spacing section-dark">
+          <div className="mk-container-sm">
+            <FadeIn>
+              <div
+                className="flex flex-col items-center text-center"
+                style={{ maxWidth: '40rem', marginInline: 'auto' }}
+              >
+                <span className="pre-title margin-bottom margin-large">
+                  Get Started
+                </span>
+
+                <h2
+                  className="text-display-lg text-mk-on-dark margin-bottom margin-medium"
+                  data-testid="text-final-cta-headline"
+                >
+                  The pilot is open. Places are limited.
+                </h2>
+
+                <p
+                  className="margin-bottom margin-xlarge-2"
+                  style={{ color: 'var(--mk-text-on-dark-2)', lineHeight: 1.7, fontSize: '1.0625rem' }}
+                >
+                  OriginTrace is working with a select group of exporters in Nigeria and
+                  West Africa. Apply now to get your supply chain compliance-ready before
+                  your next export season.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 margin-bottom margin-large-2">
+                  <Link
+                    href="/demo"
+                    className="btn-mk-primary btn-mk-lg"
+                    data-testid="button-get-started"
+                  >
+                    Apply for Early Access
+                    <ChevronRight className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/demo"
+                    className="btn-mk-ghost btn-mk-lg"
+                    data-testid="button-schedule-call"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Book a 30-min Walkthrough
+                  </Link>
+                </div>
+
+                <a
+                  href="mailto:hello@origintrace.trade"
+                  className="mk-contact-link flex items-center gap-2 text-sm"
+                  style={{ textDecoration: 'none' }}
+                  data-testid="link-contact-email"
+                >
+                  <Mail className="h-4 w-4" />
+                  hello@origintrace.trade
+                </a>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+      </main>
+
+      <MarketingFooter />
+    </div>
+  );
+}
