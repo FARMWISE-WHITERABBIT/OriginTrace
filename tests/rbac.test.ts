@@ -108,6 +108,10 @@ describe('hasAccess — buyer is isolated to /app/buyer/*', () => {
     expect(hasAccess('buyer', '/app/buyer/traceability')).toBe(true);
   });
 
+  it('allows buyer on /app/buyer/compliance', () => {
+    expect(hasAccess('buyer', '/app/buyer/compliance')).toBe(true);
+  });
+
   const blockedFromBuyer = [
     '/app',
     '/app/farmers',

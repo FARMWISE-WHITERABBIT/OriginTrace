@@ -259,6 +259,7 @@ const buyerNavigation: NavigationConfig = {
       allowedRoles: ['buyer'],
       items: [
         { title: 'Traceability', url: '/app/buyer/traceability', icon: Database, tourId: 'nav-buyer-traceability', allowedRoles: ['buyer'] },
+        { title: 'Compliance', url: '/app/buyer/compliance', icon: ShieldCheck, tourId: 'nav-buyer-compliance', allowedRoles: ['buyer'] },
         { title: 'Documents', url: '/app/buyer/documents', icon: FolderOpen, tourId: 'nav-buyer-documents', allowedRoles: ['buyer'] },
       ],
     },

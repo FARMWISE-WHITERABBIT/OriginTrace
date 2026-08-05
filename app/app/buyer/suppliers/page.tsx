@@ -15,6 +15,8 @@ interface SupplyChainLink {
   status: string;
   invited_at: string;
   accepted_at: string | null;
+  invited_email?: string | null;
+  invited_org_name?: string | null;
   exporter_org?: {
     id: string;
     name: string;
@@ -55,8 +57,8 @@ export default function BuyerSuppliersPage() {
   useEffect(() => { fetchLinks(); }, []);
 
   const handleInvite = async () => {
-    if (!inviteData.exporter_org_name) {
-      toast({ title: 'Missing fields', description: 'Organization name is required.', variant: 'destructive' });
+    if (!inviteData.exporter_org_name || !inviteData.exporter_email) {
+      toast({ title: 'Missing fields', description: 'Organization name and contact email are required.', variant: 'destructive' });
       return;
     }
     setIsCreating(true);
@@ -102,7 +104,9 @@ export default function BuyerSuppliersPage() {
   const filteredLinks = links.filter(l => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return l.exporter_org?.name?.toLowerCase().includes(q) || l.status.includes(q);
+    return l.exporter_org?.name?.toLowerCase().includes(q)
+      || l.invited_org_name?.toLowerCase().includes(q)
+      || l.status.includes(q);
   });
 
   return (
@@ -122,7 +126,10 @@ export default function BuyerSuppliersPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Invite Supplier</DialogTitle>
-              <DialogDescription>Send an invitation to connect with an exporter organization.</DialogDescription>
+              <DialogDescription>
+                Already on OriginTrace? We&apos;ll connect you directly. Not yet? We&apos;ll email them a link to
+                create their account and join your supply chain.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -136,7 +143,7 @@ export default function BuyerSuppliersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Contact Email (optional)</Label>
+                <Label htmlFor="email">Contact Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -145,6 +152,9 @@ export default function BuyerSuppliersPage() {
                   onChange={e => setInviteData(d => ({ ...d, exporter_email: e.target.value }))}
                   data-testid="input-exporter-email"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Used to send a signup link if this exporter doesn&apos;t already have an OriginTrace account.
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -190,6 +200,7 @@ export default function BuyerSuppliersPage() {
           {filteredLinks.map(link => {
             const config = STATUS_CONFIG[link.status] || STATUS_CONFIG.pending;
             const StatusIcon = config.icon;
+            const isAwaitingSignup = !link.exporter_org && !!link.invited_org_name;
             return (
               <Card key={link.id} className="card-accent-blue transition-shadow hover:shadow-md" data-testid={`card-supplier-${link.id}`}>
                 <CardContent className="py-4">
@@ -201,16 +212,22 @@ export default function BuyerSuppliersPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium" data-testid={`text-supplier-name-${link.id}`}>
-                            {link.exporter_org?.name || 'Unknown Exporter'}
+                            {link.exporter_org?.name || link.invited_org_name || 'Unknown Exporter'}
                           </span>
                           <Badge variant={config.variant} data-testid={`badge-supplier-status-${link.id}`}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {config.label}
                           </Badge>
+                          {isAwaitingSignup && (
+                            <Badge variant="outline" data-testid={`badge-awaiting-signup-${link.id}`}>
+                              Signup link sent
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           Invited {new Date(link.invited_at).toLocaleDateString()}
                           {link.accepted_at && ` · Accepted ${new Date(link.accepted_at).toLocaleDateString()}`}
+                          {isAwaitingSignup && link.invited_email && ` · ${link.invited_email}`}
                         </p>
                       </div>
                     </div>

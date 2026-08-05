@@ -756,6 +756,7 @@ export type Database = {
       }
       compliance_profiles: {
         Row: {
+          buyer_org_id: string | null
           created_at: string | null
           custom_rules: Json | null
           destination_market: string
@@ -771,6 +772,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          buyer_org_id?: string | null
           created_at?: string | null
           custom_rules?: Json | null
           destination_market: string
@@ -786,6 +788,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          buyer_org_id?: string | null
           created_at?: string | null
           custom_rules?: Json | null
           destination_market?: string
@@ -801,6 +804,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_profiles_buyer_org_id_fkey"
+            columns: ["buyer_org_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "compliance_profiles_org_id_fkey"
             columns: ["org_id"]
@@ -4691,28 +4701,40 @@ export type Database = {
         Row: {
           accepted_at: string | null
           buyer_org_id: string
-          exporter_org_id: string
+          exporter_org_id: string | null
           id: string
+          invite_expires_at: string | null
+          invite_token: string | null
           invited_at: string | null
           invited_by: string | null
+          invited_email: string | null
+          invited_org_name: string | null
           status: string | null
         }
         Insert: {
           accepted_at?: string | null
           buyer_org_id: string
-          exporter_org_id: string
+          exporter_org_id?: string | null
           id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
           invited_at?: string | null
           invited_by?: string | null
+          invited_email?: string | null
+          invited_org_name?: string | null
           status?: string | null
         }
         Update: {
           accepted_at?: string | null
           buyer_org_id?: string
-          exporter_org_id?: string
+          exporter_org_id?: string | null
           id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
           invited_at?: string | null
           invited_by?: string | null
+          invited_email?: string | null
+          invited_org_name?: string | null
           status?: string | null
         }
         Relationships: [
@@ -6352,14 +6374,6 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
-      }
-      scan_farm_boundary_conflicts: {
-        Args: { p_min_overlap_ratio?: number; p_org_id: string }
-        Returns: {
-          farm_a_id: string
-          farm_b_id: string
-          overlap_ratio: number
-        }[]
       }
       sync_batches_atomic: {
         Args: { p_batches: Json; p_org_id: string; p_user_id: string }

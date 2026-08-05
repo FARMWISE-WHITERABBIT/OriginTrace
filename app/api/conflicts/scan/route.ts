@@ -81,7 +81,12 @@ export async function POST(request: NextRequest) {
     let postgisDetected: any[] | null = null;
     let postgisError: { message?: string } | null = null;
     if (allBoundariesHavePostgisGeometry) {
-      const rpcResult = await supabaseAdmin.rpc(
+      // `scan_farm_boundary_conflicts` is defined in
+      // supabase/migrations/20260720_120000_fix_boundary_conflicts.sql but that
+      // migration has not been applied to the live DB (pre-existing drift,
+      // unrelated to this change) — the type cast documents that gap since the
+      // fallback below already tolerates the RPC being unavailable.
+      const rpcResult = await (supabaseAdmin.rpc as any)(
         'scan_farm_boundary_conflicts',
         { p_org_id: profile.org_id, p_min_overlap_ratio: 0.10 },
       );

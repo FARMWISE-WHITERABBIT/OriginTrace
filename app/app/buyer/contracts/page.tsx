@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Search, FileCheck, Calendar, Package, Info } from 'lucide-react';
 
@@ -63,7 +63,8 @@ export default function BuyerContractsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [newContract, setNewContract] = useState({
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const emptyContractForm = {
     exporter_org_id: '',
     compliance_profile_id: '',
     commodity: '',
@@ -72,8 +73,32 @@ export default function BuyerContractsPage() {
     destination_port: '',
     quality_requirements: '',
     notes: '',
-  });
+  };
+  const [newContract, setNewContract] = useState(emptyContractForm);
   const { toast } = useToast();
+
+  const openCreateDialog = () => {
+    setEditingContractId(null);
+    setNewContract(emptyContractForm);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (contract: Contract) => {
+    setEditingContractId(contract.id);
+    setNewContract({
+      exporter_org_id: contract.exporter_org?.id || '',
+      compliance_profile_id: contract.compliance_profile_id || '',
+      commodity: contract.commodity || '',
+      quantity_mt: contract.quantity_mt != null ? String(contract.quantity_mt) : '',
+      delivery_deadline: contract.delivery_deadline ? contract.delivery_deadline.slice(0, 10) : '',
+      destination_port: contract.destination_port || '',
+      quality_requirements: contract.quality_requirements && Object.keys(contract.quality_requirements).length > 0
+        ? JSON.stringify(contract.quality_requirements)
+        : '',
+      notes: contract.notes || '',
+    });
+    setDialogOpen(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -99,41 +124,51 @@ export default function BuyerContractsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleCreate = async () => {
-    if (!newContract.exporter_org_id || !newContract.commodity) {
-      toast({ title: 'Missing fields', description: 'Exporter and commodity are required.', variant: 'destructive' });
+  const handleSave = async () => {
+    const isEditing = !!editingContractId;
+    if (!isEditing && !newContract.exporter_org_id) {
+      toast({ title: 'Missing fields', description: 'Exporter is required.', variant: 'destructive' });
+      return;
+    }
+    if (!newContract.commodity) {
+      toast({ title: 'Missing fields', description: 'Commodity is required.', variant: 'destructive' });
       return;
     }
     setIsCreating(true);
     try {
       const body: Record<string, unknown> = {
-        exporter_org_id: newContract.exporter_org_id,
         commodity: newContract.commodity,
         notes: newContract.notes || undefined,
         destination_port: newContract.destination_port || undefined,
         delivery_deadline: newContract.delivery_deadline || undefined,
+        compliance_profile_id: newContract.compliance_profile_id || (isEditing ? null : undefined),
       };
-      if (newContract.compliance_profile_id) {
-        body.compliance_profile_id = newContract.compliance_profile_id;
-      }
+      if (!isEditing) body.exporter_org_id = newContract.exporter_org_id;
       if (newContract.quantity_mt) body.quantity_mt = parseFloat(newContract.quantity_mt);
       if (newContract.quality_requirements) {
         try { body.quality_requirements = JSON.parse(newContract.quality_requirements); } catch { /* skip */ }
       }
+      if (isEditing) body.contract_id = editingContractId;
 
       const response = await fetch('/api/contracts', {
-        method: 'POST',
+        method: isEditing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || 'Failed to create contract');
+        throw new Error(err.error || `Failed to ${isEditing ? 'update' : 'create'} contract`);
       }
       const data = await response.json();
-      toast({ title: 'Contract created', description: `Contract ${data.contract?.contract_reference || ''} created.` });
+      toast({
+        title: isEditing ? 'Contract updated' : 'Contract created',
+        description: isEditing
+          ? `Contract ${data.contract?.contract_reference || ''} updated.`
+          : `Contract ${data.contract?.contract_reference || ''} created.`,
+      });
       setDialogOpen(false);
-      setNewContract({ exporter_org_id: '', compliance_profile_id: '', commodity: '', quantity_mt: '', delivery_deadline: '', destination_port: '', quality_requirements: '', notes: '' });
+      setEditingContractId(null);
+      setNewContract(emptyContractForm);
       fetchData();
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
@@ -179,16 +214,18 @@ export default function BuyerContractsPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage purchase contracts with your suppliers</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-new-contract">
-              <Plus className="h-4 w-4 mr-2" />
-              New Contract
-            </Button>
-          </DialogTrigger>
+          <Button onClick={openCreateDialog} data-testid="button-new-contract">
+            <Plus className="h-4 w-4 mr-2" />
+            New Contract
+          </Button>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>New Contract</DialogTitle>
-              <DialogDescription>Create a purchase contract with a linked exporter.</DialogDescription>
+              <DialogTitle>{editingContractId ? 'Edit Contract' : 'New Contract'}</DialogTitle>
+              <DialogDescription>
+                {editingContractId
+                  ? 'Update the terms of this draft contract.'
+                  : 'Create a purchase contract with a linked exporter.'}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -200,6 +237,7 @@ export default function BuyerContractsPage() {
                     exporter_org_id: v,
                     compliance_profile_id: '',
                   }))}
+                  disabled={!!editingContractId}
                 >
                   <SelectTrigger data-testid="select-exporter">
                     <SelectValue placeholder="Select linked exporter" />
@@ -212,6 +250,9 @@ export default function BuyerContractsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {editingContractId && (
+                  <p className="text-xs text-muted-foreground">The exporter on a contract can&apos;t be changed after creation.</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>{t('complianceProfile')}</Label>
@@ -277,9 +318,9 @@ export default function BuyerContractsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-contract">Cancel</Button>
-              <Button onClick={handleCreate} disabled={isCreating} data-testid="button-confirm-contract">
+              <Button onClick={handleSave} disabled={isCreating} data-testid="button-confirm-contract">
                 {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Create Contract
+                {editingContractId ? 'Save Changes' : 'Create Contract'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -301,7 +342,7 @@ export default function BuyerContractsPage() {
             <p className="text-sm text-muted-foreground mb-4 max-w-md">
               Create a contract with one of your linked exporters to start tracking deliveries.
             </p>
-            <Button onClick={() => setDialogOpen(true)} data-testid="button-create-first-contract">
+            <Button onClick={openCreateDialog} data-testid="button-create-first-contract">
               <Plus className="h-4 w-4 mr-2" />
               Create First Contract
             </Button>
@@ -375,6 +416,11 @@ export default function BuyerContractsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {contract.status === 'draft' && (
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(contract)} data-testid={`button-edit-${contract.id}`}>
+                        Edit
+                      </Button>
+                    )}
                     {contract.status === 'draft' && (
                       <Button variant="outline" size="sm" onClick={() => handleStatusChange(contract.id, 'active')} data-testid={`button-activate-${contract.id}`}>
                         Activate
