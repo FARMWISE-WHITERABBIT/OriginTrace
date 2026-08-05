@@ -93,16 +93,18 @@ export async function GET(request: NextRequest) {
 
     let contracts: any[] = [];
     let complianceProfileOptions: ReturnType<typeof toComplianceProfileSummary>[] = [];
+    let total = 0;
 
     if (buyerProfile) {
-      const { data, error } = await supabaseAdmin
+      const { data, error, count } = await supabaseAdmin
         .from('contracts')
-        .select('*, exporter_org:organizations!contracts_exporter_org_id_fkey(id, name, slug)')
+        .select('*, exporter_org:organizations!contracts_exporter_org_id_fkey(id, name, slug)', { count: 'exact' })
         .eq('buyer_org_id', buyerProfile.buyer_org_id)
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
       contracts = data || [];
+      total = count ?? contracts.length;
 
       const { data: activeLinks, error: linksError } = await supabaseAdmin
         .from('supply_chain_links')
@@ -131,6 +133,7 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false });
       if (error) throw error;
       contracts = data || [];
+      total = contracts.length;
     }
 
     const selectedProfileIds = [
@@ -175,7 +178,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       contracts,
       compliance_profile_options: buyerProfile ? complianceProfileOptions : [],
-      pagination: { page, limit, total: contracts.length },
+      pagination: { page, limit, total },
     });
   } catch (error) {
     console.error('Contracts GET error:', error);
@@ -335,7 +338,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: buyerProfile } = await supabaseAdmin
       .from('buyer_profiles')
-      .select('buyer_org_id')
+      .select('buyer_org_id, role')
       .eq('user_id', user.id)
       .single();
 
@@ -350,6 +353,10 @@ export async function PATCH(request: NextRequest) {
 
     if (!isBuyer && !isExporter) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    if (isBuyer && buyerProfile.role !== 'buyer_admin') {
+      return NextResponse.json({ error: 'Only buyer admins can modify this contract' }, { status: 403 });
     }
 
     if (shipment_id && isExporter) {

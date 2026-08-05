@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,17 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { Sprout, Plus, X, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Sprout, Plus, Calendar, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-const inputTypes = [
-  { value: 'fertilizer', label: 'Fertilizer' },
-  { value: 'pesticide', label: 'Pesticide' },
-  { value: 'herbicide', label: 'Herbicide' },
-  { value: 'seed', label: 'Seed' },
-  { value: 'organic_amendment', label: 'Organic Amendment' },
-];
-const units = ['kg', 'liters', 'bags', 'units'];
+import { useTranslations } from 'next-intl';
+import { useApiResource } from '@/hooks/use-api-resource';
 
 const emptyForm = () => ({
   input_type: 'fertilizer', product_name: '', quantity: '', unit: 'kg',
@@ -28,19 +21,28 @@ const emptyForm = () => ({
 });
 
 export default function FarmerInputsPage() {
-  const [inputs, setInputs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const t = useTranslations('farmer');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
+  const { toast } = useToast();
+
+  const inputTypes = [
+    { value: 'fertilizer', label: t('inputFertilizer') },
+    { value: 'pesticide', label: t('inputPesticide') },
+    { value: 'herbicide', label: t('inputHerbicide') },
+    { value: 'seed', label: t('inputSeed') },
+    { value: 'organic_amendment', label: t('inputOrganicAmendment') },
+  ];
+  const units = ['kg', 'liters', 'bags', 'units'];
+
+  const { data, loading, error, refetch, setData } = useApiResource<{ inputs: any[] }>('/api/farmer/inputs');
+  const inputs = data?.inputs || [];
+
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetch('/api/farmer/inputs').then(r => r.json())
-      .then(d => setInputs(d.inputs || [])).catch(console.error).finally(() => setLoading(false));
-  }, []);
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm()); setShowForm(true); };
   const openEdit = (input: any) => {
@@ -75,20 +77,20 @@ export default function FarmerInputsPage() {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
       if (res.ok) {
-        const data = await res.json();
-        const updated = data.input;
+        const resData = await res.json();
+        const updated = resData.input;
         if (editingId) {
-          setInputs(prev => prev.map(i => i.id === editingId ? updated : i));
-          toast({ title: 'Input updated' });
+          setData(prev => (prev ? { inputs: prev.inputs.map(i => i.id === editingId ? updated : i) } : prev));
+          toast({ title: t('inputUpdatedToast') });
         } else {
-          setInputs(prev => [updated, ...prev]);
-          toast({ title: 'Input recorded' });
+          setData(prev => (prev ? { inputs: [updated, ...prev.inputs] } : { inputs: [updated] }));
+          toast({ title: t('inputRecordedToast') });
         }
         setShowForm(false); setEditingId(null); setForm(emptyForm());
       } else {
-        toast({ title: 'Error', description: 'Failed to save input', variant: 'destructive' });
+        toast({ title: tErrors('generic'), variant: 'destructive' });
       }
-    } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }); }
+    } catch { toast({ title: tErrors('generic'), variant: 'destructive' }); }
     finally { setSubmitting(false); }
   };
 
@@ -96,19 +98,31 @@ export default function FarmerInputsPage() {
     if (!deleteId) return;
     const res = await fetch(`/api/farmer/inputs/${deleteId}`, { method: 'DELETE' });
     if (res.ok) {
-      setInputs(prev => prev.filter(i => i.id !== deleteId));
-      toast({ title: 'Input deleted' });
-    } else { toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' }); }
+      setData(prev => (prev ? { inputs: prev.inputs.filter(i => i.id !== deleteId) } : prev));
+      toast({ title: t('inputDeletedToast') });
+    } else { toast({ title: tErrors('generic'), variant: 'destructive' }); }
     setDeleteId(null);
   };
 
-  if (loading) return <div className="text-center py-12 text-muted-foreground">Loading inputs...</div>;
+  if (loading) return <div className="text-center py-12 text-muted-foreground">{tCommon('loading')}</div>;
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+        <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-inputs">
+          {tErrors('tryAgain')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-inputs-title">
-          <Sprout className="h-5 w-5 text-[#2E7D6B]" />Agricultural Inputs
+          <Sprout className="h-5 w-5 text-[#2E7D6B]" />{t('agriculturalInputs')}
         </h2>
         <Button size="sm" onClick={openCreate} data-testid="button-add-input">
           <Plus className="h-4 w-4" />
@@ -120,8 +134,8 @@ export default function FarmerInputsPage() {
           <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
             <Sprout className="h-6 w-6 text-muted-foreground" />
           </div>
-          <p className="font-medium text-sm">No inputs recorded yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Log fertilizers, pesticides, and other inputs using the + button above.</p>
+          <p className="font-medium text-sm">{t('noInputsYet')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('noInputsHint')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -133,12 +147,12 @@ export default function FarmerInputsPage() {
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1">
                       <Calendar className="h-3 w-3" />
-                      {input.application_date ? new Date(input.application_date).toLocaleDateString() : '—'}
+                      {input.application_date ? new Date(input.application_date).toLocaleDateString('en-GB') : '—'}
                     </span>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(input)} aria-label="Edit input">
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(input)} aria-label={t('editInputAria')}>
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setDeleteId(input.id)} aria-label="Delete input">
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setDeleteId(input.id)} aria-label={t('deleteInputAria')}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
@@ -146,7 +160,7 @@ export default function FarmerInputsPage() {
                 {input.product_name && <div className="font-medium text-sm">{input.product_name}</div>}
                 <div className="text-xs text-muted-foreground mt-1">
                   {input.quantity && `${input.quantity} ${input.unit || ''}`}
-                  {input.area_applied_hectares && ` on ${input.area_applied_hectares} ha`}
+                  {input.area_applied_hectares && ` ${t('onAreaHa', { area: input.area_applied_hectares })}`}
                 </div>
                 {input.notes && <div className="text-xs text-muted-foreground mt-1 italic">{input.notes}</div>}
               </CardContent>
@@ -159,27 +173,27 @@ export default function FarmerInputsPage() {
       <Dialog open={showForm} onOpenChange={open => { if (!open) { setShowForm(false); setEditingId(null); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Input' : 'Record Input'}</DialogTitle>
+            <DialogTitle>{editingId ? t('editInput') : t('addInput')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-1">
             <div className="space-y-1">
-              <Label className="text-xs">Input Type</Label>
+              <Label className="text-xs">{t('inputType')}</Label>
               <Select value={form.input_type} onValueChange={v => setForm(f => ({ ...f, input_type: v }))}>
                 <SelectTrigger data-testid="select-input-type"><SelectValue /></SelectTrigger>
-                <SelectContent>{inputTypes.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                <SelectContent>{inputTypes.map(it => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Product Name</Label>
+              <Label className="text-xs">{t('productName')}</Label>
               <Input value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. NPK 15-15-15" data-testid="input-product-name" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Quantity</Label>
+                <Label className="text-xs">{t('quantity')}</Label>
                 <Input type="number" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0" data-testid="input-quantity" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Unit</Label>
+                <Label className="text-xs">{t('unit')}</Label>
                 <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
                   <SelectTrigger data-testid="select-unit"><SelectValue /></SelectTrigger>
                   <SelectContent>{units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
@@ -188,23 +202,23 @@ export default function FarmerInputsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Date</Label>
+                <Label className="text-xs">{t('applicationDate')}</Label>
                 <Input type="date" value={form.application_date} onChange={e => setForm(f => ({ ...f, application_date: e.target.value }))} data-testid="input-date" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Area (ha)</Label>
+                <Label className="text-xs">{t('areaApplied')}</Label>
                 <Input type="number" step="0.1" value={form.area_applied_hectares} onChange={e => setForm(f => ({ ...f, area_applied_hectares: e.target.value }))} placeholder="0" data-testid="input-area" />
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Notes</Label>
-              <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Optional notes" />
+              <Label className="text-xs">{t('notes')}</Label>
+              <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('optionalNotes')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>{tCommon('cancel')}</Button>
             <Button onClick={handleSubmit} disabled={submitting} data-testid="button-submit-input">
-              {submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Record Input'}
+              {submitting ? tCommon('savingEllipsis') : editingId ? t('saveChanges') : t('addInput')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -214,9 +228,9 @@ export default function FarmerInputsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={open => { if (!open) setDeleteId(null); }}
-        title="Delete input record?"
-        description="This will permanently remove this input record. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t('deleteInputTitle')}
+        description={t('deleteInputDescription')}
+        confirmLabel={tCommon('delete')}
         variant="destructive"
         onConfirm={() => { handleDelete(); }}
       />
