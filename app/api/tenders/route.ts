@@ -68,20 +68,29 @@ export async function GET(request: NextRequest) {
     let totalCount = 0;
 
     if (buyerProfile) {
-      const { data } = await supabaseAdmin
+      const { data, count } = await supabaseAdmin
         .from('tenders')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('buyer_org_id', buyerProfile.buyer_org_id)
         .order('created_at', { ascending: false })
-      .range(from, to);
+        .range(from, to);
       tenders = data || [];
+      totalCount = count ?? tenders.length;
 
-      for (const tender of tenders) {
-        const { count } = await supabaseAdmin
+      const tenderIds = tenders.map((tender) => tender.id);
+      if (tenderIds.length > 0) {
+        const { data: bids } = await supabaseAdmin
           .from('tender_bids')
-          .select('id', { count: 'exact', head: true })
-          .eq('tender_id', tender.id);
-        tender.bid_count = count || 0;
+          .select('tender_id')
+          .in('tender_id', tenderIds);
+
+        const bidCounts = new Map<string, number>();
+        for (const bid of bids || []) {
+          bidCounts.set(bid.tender_id, (bidCounts.get(bid.tender_id) || 0) + 1);
+        }
+        for (const tender of tenders) {
+          tender.bid_count = bidCounts.get(tender.id) || 0;
+        }
       }
     } else if (exporterProfile) {
       const { data: publicTenders } = await supabaseAdmin
@@ -106,6 +115,7 @@ export async function GET(request: NextRequest) {
         seen.add(t.id);
         return true;
       });
+      totalCount = tenders.length;
 
       for (const tender of tenders) {
         const { data: myBid } = await supabaseAdmin
