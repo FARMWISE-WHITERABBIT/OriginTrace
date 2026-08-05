@@ -5794,6 +5794,14 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      scan_farm_boundary_conflicts: {
+        Args: { p_min_overlap_ratio?: number; p_org_id: string }
+        Returns: {
+          farm_a_id: string
+          farm_b_id: string
+          overlap_ratio: number
+        }[]
+      }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
