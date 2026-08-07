@@ -197,26 +197,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TODO(schema-drift): supabase/migrations/20260526_offline_field_work.sql (adds farms.local_id)
+    // has never been applied to the live DB — database.types.ts regenerated from live schema on
+    // 2026-08-05 still has no local_id on farms. Including this key unconditionally makes every
+    // farm insert fail ("column local_id does not exist"). Only send it when provided so normal
+    // (online, no local_id) registration keeps working; offline-sync idempotency for farms stays
+    // broken until the migration is actually applied.
+    const insertPayload: Record<string, unknown> = {
+      org_id: profile.org_id,
+      farmer_name,
+      farmer_id: farmer_id,
+      phone: phone || null,
+      community,
+      state_id: state_id || null,
+      lga_id: lga_id || null,
+      commodity: commodity || null,
+      boundary: boundary || null,
+      area_hectares: area_hectares || null,
+      legality_doc_url: legality_doc_url || null,
+      consent_timestamp: consent_timestamp || null,
+      consent_signature: consent_signature || null,
+      created_by: profile.user_id,
+      compliance_status: 'pending',
+    };
+    if (local_id) insertPayload.local_id = local_id;
+
     const { data: farm, error: insertError } = await supabaseAdmin
       .from('farms')
-      .insert({
-        org_id: profile.org_id,
-        farmer_name,
-        farmer_id: farmer_id,
-        phone: phone || null,
-        community,
-        local_id: local_id || null,
-        state_id: state_id || null,
-        lga_id: lga_id || null,
-        commodity: commodity || null,
-        boundary: boundary || null,
-        area_hectares: area_hectares || null,
-        legality_doc_url: legality_doc_url || null,
-        consent_timestamp: consent_timestamp || null,
-        consent_signature: consent_signature || null,
-        created_by: profile.user_id,
-        compliance_status: 'pending',
-      })
+      .insert(insertPayload as any)
       .select()
       .single();
 
@@ -324,10 +332,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
       }
 
+      // Legality Document (proof of land ownership) is intentionally not required here:
+      // there is no UI anywhere that lets a user set legality_doc_url, so requiring it
+      // made every farm permanently unapprovable. Re-add once an upload flow exists.
       const missing: string[] = [];
       if (!existingFarm.farmer_id?.trim()) missing.push('National ID');
       if (existingFarm.area_hectares == null || Number(existingFarm.area_hectares) <= 0) missing.push('Area (Hectares)');
-      if (!existingFarm.legality_doc_url?.trim()) missing.push('Legality Document');
       const boundary = existingFarm.boundary as { type?: string; coordinates?: unknown[][][] } | null;
       if (boundary?.type !== 'Polygon' || !Array.isArray(boundary.coordinates?.[0]) || boundary.coordinates[0].length < 4) {
         missing.push('GPS Boundary');

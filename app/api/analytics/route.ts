@@ -220,10 +220,14 @@ export async function GET(request: NextRequest) {
         result.batchSummary = { current: batches.length, previous: prevBatches.length, trend: calcTrend(batches.length, prevBatches.length) };
         result.bagSummary = { current: currentBags, previous: previousBags, trend: calcTrend(currentBags, previousBags), total: totalBagsCount };
         result.farmSummary = { total: totalFarmsCount, approved: approvedFarmsCount, pending: pendingFarmsCount, rejected: rejectedFarmsCount };
+        // null (not 0 or 100) when there's nothing to measure yet — an empty org isn't
+        // "0% compliant" or "100% compliant", it just has no data, and averaging these
+        // three rates elsewhere should skip nulls rather than let an arbitrary default
+        // pull the number toward a misleading pass or fail.
         result.compliance = {
-          farmRate: totalFarmsCount > 0 ? Math.round((approvedFarmsCount / totalFarmsCount) * 100) : 0,
-          batchRate: batches.length > 0 ? Math.round(((batches.length - flaggedCount) / batches.length) * 100) : 100,
-          bagRate: totalBagsCount > 0 ? Math.round((compliantBagsCount / totalBagsCount) * 100) : 100,
+          farmRate: totalFarmsCount > 0 ? Math.round((approvedFarmsCount / totalFarmsCount) * 100) : null,
+          batchRate: batches.length > 0 ? Math.round(((batches.length - flaggedCount) / batches.length) * 100) : null,
+          bagRate: totalBagsCount > 0 ? Math.round((compliantBagsCount / totalBagsCount) * 100) : null,
           flaggedBatches: flaggedCount,
         };
         result.agentPerformance = agents;
@@ -234,7 +238,7 @@ export async function GET(request: NextRequest) {
         result.batchSummary = { current: 0, previous: 0, trend: 0 };
         result.bagSummary = { current: 0, previous: 0, trend: 0, total: 0 };
         result.farmSummary = { total: 0, approved: 0, pending: 0, rejected: 0 };
-        result.compliance = { farmRate: 0, batchRate: 0, bagRate: 0, flaggedBatches: 0 };
+        result.compliance = { farmRate: null, batchRate: null, bagRate: null, flaggedBatches: 0 };
         result.agentPerformance = [];
       }
     }

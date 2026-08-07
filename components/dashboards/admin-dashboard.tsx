@@ -69,7 +69,7 @@ interface AnalyticsData {
   batchSummary: { current: number; previous: number; trend: number };
   bagSummary: { current: number; previous: number; trend: number; total: number };
   farmSummary: { total: number; approved: number; pending: number; rejected: number };
-  compliance: { farmRate: number; batchRate: number; bagRate: number; flaggedBatches: number };
+  compliance: { farmRate: number | null; batchRate: number | null; bagRate: number | null; flaggedBatches: number };
   agentPerformance: Array<{ id: string; name: string; weight: number; bags: number; batches: number }>;
   commodityBreakdown?: Array<{ name: string; weight: number; batches: number; complianceRate: number; totalFarms: number }>;
   gradeDistribution?: Array<{ grade: string; count: number }>;
@@ -115,9 +115,9 @@ function TrendIndicator({ value }: { value: number }) {
 }
 
 interface AuditScore {
-  overall: number;
+  overall: number | null;
   grade: string;
-  components: Record<string, { score: number; detail: string }>;
+  components: Record<string, { score: number; detail: string; applicable?: boolean }>;
 }
 
 interface AlertItem {
@@ -255,15 +255,23 @@ export function AdminDashboard() {
     };
   }, [deferredRestoreVersion, isDeferredLoading, isLoading, organizationId, period, setAnalytics]);
 
-  const overallComplianceRate = analytics
-    ? Math.round(((analytics.compliance.farmRate + analytics.compliance.batchRate + analytics.compliance.bagRate) / 3))
-    : 0;
+  // Average only the rates that actually have data behind them — a rate with no
+  // denominator (no farms/batches/bags yet) is "no data", not 0% or 100% compliant,
+  // and shouldn't silently drag the average toward either extreme.
+  const applicableComplianceRates = analytics
+    ? [analytics.compliance.farmRate, analytics.compliance.batchRate, analytics.compliance.bagRate].filter(
+        (r): r is number => r !== null && r !== undefined
+      )
+    : [];
+  const overallComplianceRate = applicableComplianceRates.length > 0
+    ? Math.round(applicableComplianceRates.reduce((s, r) => s + r, 0) / applicableComplianceRates.length)
+    : null;
 
   const activeShipments = analytics?.shipmentDecisions
     ? analytics.shipmentDecisions.reduce((s, d) => s + d.count, 0)
     : 0;
 
-  const complianceColor = overallComplianceRate >= 80 ? 'green' : overallComplianceRate >= 50 ? 'amber' : 'red';
+  const complianceColor = overallComplianceRate === null ? 'neutral' : overallComplianceRate >= 80 ? 'green' : overallComplianceRate >= 50 ? 'amber' : 'red';
 
   const statCards = [
     {
@@ -301,9 +309,11 @@ export function AdminDashboard() {
     },
     {
       title: 'Compliance Rate',
-      value: `${overallComplianceRate}%`,
+      value: overallComplianceRate === null ? '—' : `${overallComplianceRate}%`,
       icon: ShieldCheck,
-      description: 'Avg across farms/batches/bags',
+      description: overallComplianceRate === null
+        ? 'No farms, batches, or bags recorded yet'
+        : `Avg across ${applicableComplianceRates.length} of 3 measures`,
       trend: null as number | null,
       iconClass: `icon-bg-${complianceColor}`,
       accentClass: `card-accent-${complianceColor}`,
@@ -312,7 +322,9 @@ export function AdminDashboard() {
         : analytics?.compliance.flaggedBatches
         ? '/app/yield-alerts'
         : '/app/farms',
-      action: overallComplianceRate < 100 ? 'Review compliance' : 'All compliant',
+      action: overallComplianceRate === null
+        ? 'Register a farm to begin'
+        : overallComplianceRate < 100 ? 'Review compliance' : 'All compliant',
     },
   ];
 
@@ -474,12 +486,12 @@ export function AdminDashboard() {
 
       {/* Audit Readiness Score */}
       {auditScore && (
-        <Card data-testid="audit-readiness-card" className="card-accent-green">
+        <Card data-testid="audit-readiness-card" className={auditScore.overall === null ? 'card-accent-neutral' : 'card-accent-green'}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-green shrink-0">
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${auditScore.overall === null ? 'icon-bg-neutral' : 'icon-bg-green'}`}>
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                   Audit Readiness Score
@@ -492,11 +504,12 @@ export function AdminDashboard() {
                   auditScore.grade === 'A' ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' :
                   auditScore.grade === 'B' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
                   auditScore.grade === 'C' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' :
+                  auditScore.grade === 'N/A' ? 'bg-muted text-muted-foreground' :
                   'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
                 }`}
                 data-testid="audit-grade"
               >
-                {auditScore.grade} · {auditScore.overall}/100
+                {auditScore.overall === null ? 'No data yet' : `${auditScore.grade} · ${auditScore.overall}/100`}
               </Badge>
             </div>
           </CardHeader>
@@ -506,13 +519,15 @@ export function AdminDashboard() {
                 <div key={key}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <span className="font-semibold">{comp.score}%</span>
+                    <span className="font-semibold">{comp.applicable === false ? 'No data' : `${comp.score}%`}</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${comp.score}%` }}
-                    />
+                    {comp.applicable !== false && (
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${comp.score >= 80 ? 'bg-green-500' : comp.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        style={{ width: `${comp.score}%` }}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

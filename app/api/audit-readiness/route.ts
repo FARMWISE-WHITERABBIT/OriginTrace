@@ -20,11 +20,12 @@ export interface AuditReadinessComponent {
   detail: string;
   numerator: number;
   denominator: number;
+  applicable: boolean; // false when denominator is 0 — nothing to measure yet, so it's excluded from the overall score rather than counted as a fail
 }
 
 export interface AuditReadinessScore {
-  overall: number;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  overall: number | null; // null when no component has any data yet
+  grade: 'A' | 'B' | 'C' | 'D' | 'F' | 'N/A';
   components: {
     farmDataCompleteness: AuditReadinessComponent;
     batchRecordQuality:   AuditReadinessComponent;
@@ -48,7 +49,8 @@ function pct(num: number, den: number): number {
   return Math.round((num / den) * 100);
 }
 
-function toGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+function toGrade(score: number | null): 'A' | 'B' | 'C' | 'D' | 'F' | 'N/A' {
+  if (score === null) return 'N/A';
   if (score >= 90) return 'A';
   if (score >= 75) return 'B';
   if (score >= 60) return 'C';
@@ -86,6 +88,7 @@ export async function GET(request: NextRequest) {
       score:       pct(completeFarms, totalFarms),
       numerator:   completeFarms,
       denominator: totalFarms,
+      applicable:  totalFarms > 0,
       detail:      totalFarms === 0
         ? 'No farms registered'
         : `${completeFarms} of ${totalFarms} farms have boundary, deforestation check, and consent on file`,
@@ -106,6 +109,7 @@ export async function GET(request: NextRequest) {
       score:       pct(completeBatches, totalBatches),
       numerator:   completeBatches,
       denominator: totalBatches,
+      applicable:  totalBatches > 0,
       detail:      totalBatches === 0
         ? 'No batches recorded'
         : `${completeBatches} of ${totalBatches} batches have weight, bag count, and farm link`,
@@ -139,6 +143,7 @@ export async function GET(request: NextRequest) {
       score:       pct(coveredByLab, totalShipped),
       numerator:   coveredByLab,
       denominator: totalShipped,
+      applicable:  totalShipped > 0,
       detail:      totalShipped === 0
         ? 'No shipped shipments in last 12 months'
         : `${coveredByLab} of ${totalShipped} shipments (last 12m) have lab results attached`,
@@ -165,6 +170,7 @@ export async function GET(request: NextRequest) {
       score:       pct(healthyDocs, totalDocs),
       numerator:   healthyDocs,
       denominator: totalDocs,
+      applicable:  totalDocs > 0,
       detail:      totalDocs === 0
         ? 'No compliance documents uploaded'
         : `${healthyDocs} of ${totalDocs} documents are active and not expiring within 30 days`,
@@ -184,19 +190,31 @@ export async function GET(request: NextRequest) {
       score:       pct(acceptedOutcomes, totalOutcomes),
       numerator:   acceptedOutcomes,
       denominator: totalOutcomes,
+      applicable:  totalOutcomes > 0,
       detail:      totalOutcomes === 0
         ? 'No shipment outcomes recorded in last 12 months'
         : `${acceptedOutcomes} of ${totalOutcomes} shipments accepted at destination (last 12m)`,
     };
 
     // ── Weighted overall score ─────────────────────────────────────────────────
-    const overall = Math.round(
-      farmDataCompleteness.score * WEIGHTS.farmDataCompleteness +
-      batchRecordQuality.score   * WEIGHTS.batchRecordQuality +
-      labTestCoverage.score      * WEIGHTS.labTestCoverage +
-      documentHealth.score       * WEIGHTS.documentHealth +
-      cleanShipmentRate.score    * WEIGHTS.cleanShipmentRate
-    );
+    // Components with nothing to measure yet (applicable=false) are excluded from
+    // the weighted average and its weight renormalized across the rest, rather than
+    // being counted as a 0% fail — a brand-new org with no shipments yet shouldn't
+    // be graded "F" on lab coverage it has no way to have earned.
+    const allComponents = [
+      { comp: farmDataCompleteness, weight: WEIGHTS.farmDataCompleteness },
+      { comp: batchRecordQuality,   weight: WEIGHTS.batchRecordQuality },
+      { comp: labTestCoverage,      weight: WEIGHTS.labTestCoverage },
+      { comp: documentHealth,       weight: WEIGHTS.documentHealth },
+      { comp: cleanShipmentRate,    weight: WEIGHTS.cleanShipmentRate },
+    ];
+    const applicableComponents = allComponents.filter((c) => c.comp.applicable);
+    const applicableWeight = applicableComponents.reduce((sum, c) => sum + c.weight, 0);
+    const overall = applicableWeight > 0
+      ? Math.round(
+          applicableComponents.reduce((sum, c) => sum + c.comp.score * c.weight, 0) / applicableWeight
+        )
+      : null;
 
     const response: AuditReadinessScore = {
       overall,

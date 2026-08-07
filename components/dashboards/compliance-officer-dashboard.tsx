@@ -37,9 +37,9 @@ interface ComplianceStats {
 }
 
 interface AuditScore {
-  overall: number;
+  overall: number | null;
   grade: string;
-  components: Record<string, { score: number; detail: string }>;
+  components: Record<string, { score: number; detail: string; applicable?: boolean }>;
 }
 
 export function ComplianceOfficerDashboard() {
@@ -199,12 +199,17 @@ export function ComplianceOfficerDashboard() {
                   auditScore.grade === 'A' ? 'border-green-500 text-green-700' :
                   auditScore.grade === 'B' ? 'border-blue-500 text-blue-700' :
                   auditScore.grade === 'C' ? 'border-amber-500 text-amber-700' :
+                  auditScore.grade === 'N/A' ? 'border-border text-muted-foreground' :
                   'border-red-500 text-red-700'
                 }`} data-testid="audit-grade">
                   {auditScore.grade}
                 </div>
                 <div>
-                  <p className="text-3xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
+                  {auditScore.overall === null ? (
+                    <p className="text-lg font-medium text-muted-foreground">Not enough data yet</p>
+                  ) : (
+                    <p className="text-3xl font-bold" data-testid="audit-overall">{auditScore.overall}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
+                  )}
                   <p className="text-sm text-muted-foreground">Overall audit readiness</p>
                 </div>
               </div>
@@ -213,9 +218,9 @@ export function ComplianceOfficerDashboard() {
                   <div key={key}>
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      <span className="font-medium">{comp.score}%</span>
+                      <span className="font-medium">{comp.applicable === false ? 'No data' : `${comp.score}%`}</span>
                     </div>
-                    <Progress value={comp.score} className="h-1.5" />
+                    <Progress value={comp.applicable === false ? 0 : comp.score} className="h-1.5" />
                   </div>
                 ))}
               </div>
