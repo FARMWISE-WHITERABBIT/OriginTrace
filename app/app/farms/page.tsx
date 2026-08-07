@@ -65,10 +65,11 @@ const COMPLETENESS_FIELDS: Array<{ key: keyof Farm; weight: number; label: strin
   // These fields mirror the server-side approval gate. Phone is useful for
   // farmer contact, but it is not a compliance prerequisite and must not make
   // an otherwise complete farm impossible to approve.
-  { key: 'farmer_id',       weight: 25, label: 'Farmer ID' },
-  { key: 'area_hectares',   weight: 25, label: 'Area (ha)' },
-  { key: 'boundary',        weight: 25, label: 'GPS Boundary' },
-  { key: 'legality_doc_url',weight: 25, label: 'Legality Doc' },
+  // Legality Doc (proof of ownership) is intentionally excluded — no UI sets
+  // legality_doc_url yet, so requiring it made every farm unapprovable.
+  { key: 'farmer_id',       weight: 34, label: 'Farmer ID' },
+  { key: 'area_hectares',   weight: 33, label: 'Area (ha)' },
+  { key: 'boundary',        weight: 33, label: 'GPS Boundary' },
 ];
 
 function computeCompleteness(farm: Farm): { score: number; missing: string[] } {

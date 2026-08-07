@@ -424,6 +424,10 @@ function HybridFarmMappingContent() {
         const json = await res.json().catch(() => ({}));
         if (json.result) setBoundaryAnalysis(json.result);
         else await runBoundaryAnalysis(selectedFarm.id, boundary);
+        // EUDR requires deforestation-free geolocation proof — run it automatically as
+        // soon as a boundary exists, rather than requiring a separate manual click.
+        // Fire-and-forget: it toasts its own result and shouldn't block the success screen.
+        void checkDeforestation();
         setSavedOffline(false);
       } else {
         const { saveBoundaryOffline } = await import('@/lib/offline/sync-store');

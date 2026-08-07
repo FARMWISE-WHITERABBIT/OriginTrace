@@ -332,10 +332,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
       }
 
+      // Legality Document (proof of land ownership) is intentionally not required here:
+      // there is no UI anywhere that lets a user set legality_doc_url, so requiring it
+      // made every farm permanently unapprovable. Re-add once an upload flow exists.
       const missing: string[] = [];
       if (!existingFarm.farmer_id?.trim()) missing.push('National ID');
       if (existingFarm.area_hectares == null || Number(existingFarm.area_hectares) <= 0) missing.push('Area (Hectares)');
-      if (!existingFarm.legality_doc_url?.trim()) missing.push('Legality Document');
       const boundary = existingFarm.boundary as { type?: string; coordinates?: unknown[][][] } | null;
       if (boundary?.type !== 'Polygon' || !Array.isArray(boundary.coordinates?.[0]) || boundary.coordinates[0].length < 4) {
         missing.push('GPS Boundary');
