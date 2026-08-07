@@ -200,6 +200,7 @@
   .card-accent-green   { @apply border-t-2 border-t-green-500; }
   .card-accent-amber   { @apply border-t-2 border-t-amber-500; }
   .card-accent-red     { @apply border-t-2 border-t-red-500; }
+  .card-accent-neutral { @apply border-t-2 border-t-border; }
 
   /* Icon badge backgrounds */
   .icon-bg-emerald { @apply bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400; }
