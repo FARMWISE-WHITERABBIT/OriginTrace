@@ -447,7 +447,7 @@ function PaymentsHub() {
       {showOnboarding && <KycOnboardingOverlay onDismiss={() => setShowOnboarding(false)} />}
       <div className="space-y-4">
         <HubHeader
-          onReceive={() => router.push('/app/shipments')}
+          onReceive={() => setTab('receivables')}
           onPayFarmers={() => setTab('disbursements')}
         />
 

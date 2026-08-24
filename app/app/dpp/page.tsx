@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,8 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   revoked: { label: 'Revoked', variant: 'destructive', icon: XCircle },
 };
 
-export default function DPPPage() {
+function DPPPage() {
+  const searchParams = useSearchParams();
   const [dpps, setDpps] = useState<DPP[]>([]);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +119,17 @@ export default function DPPPage() {
     fetchDpps();
     fetchFinishedGoods();
   }, [organization, orgLoading]);
+
+  // Arriving from a "Generate DPP" link on a pedigree page — pre-fill and
+  // open the dialog instead of dropping the finished good the user picked.
+  useEffect(() => {
+    const finishedGoodId = searchParams.get('finished_good_id');
+    if (finishedGoodId) {
+      setForm(s => ({ ...s, finished_good_id: finishedGoodId }));
+      setDialogOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleCreate = async () => {
     if (!form.finished_good_id) {
@@ -359,5 +372,13 @@ export default function DPPPage() {
         )}
       </div>
     </TierGate>
+  );
+}
+
+export default function DPPPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <DPPPage />
+    </Suspense>
   );
 }

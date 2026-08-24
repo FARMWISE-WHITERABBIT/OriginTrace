@@ -175,6 +175,15 @@ function LabResultsPageInner() {
 
   useEffect(() => { fetchResults(); }, [fetchResults]);
 
+  // Arriving from "Upload Lab Result" on a shipment page — open the dialog
+  // instead of dropping the user on the plain list with the form still closed.
+  useEffect(() => {
+    if (prefillBatchId || prefillShipmentId) {
+      setDialogOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillBatchId, prefillShipmentId]);
+
   const toggleMarket = (m: string) => {
     setForm((f) => ({
       ...f,

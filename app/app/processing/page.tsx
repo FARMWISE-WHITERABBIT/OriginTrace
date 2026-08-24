@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,9 +62,10 @@ interface CommodityMaster {
   metadata?: Record<string, unknown>;
 }
 
-export default function ProcessingPage() {
+function ProcessingPage() {
   const tErrors = useTranslations('errors');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [creating, setCreating] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
@@ -207,6 +208,29 @@ export default function ProcessingPage() {
     setProcessingCompliance({});
     setSheetOpen(false);
   }, [organization?.id]);
+
+  // Arriving from "Add to Processing Run" on the Inventory list or a batch
+  // detail page — pre-select those batches and open the sheet instead of
+  // dropping the user's selection on the plain Processing Runs list.
+  useEffect(() => {
+    if (availableBatches.length === 0) return;
+    const batchIdsParam = searchParams.get('batch_ids');
+    const batchIdParam = searchParams.get('batch_id');
+    const requestedIds = batchIdsParam
+      ? batchIdsParam.split(',').filter(Boolean)
+      : batchIdParam
+        ? [batchIdParam]
+        : [];
+    if (requestedIds.length === 0) return;
+
+    const availableIds = new Set(availableBatches.map((b) => b.id));
+    const matchedIds = requestedIds.filter((id) => availableIds.has(id));
+    if (matchedIds.length > 0) {
+      setSelectedBatches(matchedIds);
+      setSheetOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableBatches, searchParams]);
 
   async function createProcessingRun() {
     if (!newRun.facility_name || !newRun.input_weight_kg || !newRun.output_weight_kg) {
@@ -731,5 +755,13 @@ export default function ProcessingPage() {
       </Card>
     </div>
     </TierGate>
+  );
+}
+
+export default function ProcessingPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <ProcessingPage />
+    </Suspense>
   );
 }

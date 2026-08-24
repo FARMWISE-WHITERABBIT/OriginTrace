@@ -2059,7 +2059,7 @@ export default function ShipmentDetailPage() {
               <CardDescription>Pesticide residue and quality test results for this shipment</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/app/lab-results?prefillShipmentId=${shipmentId}`}>
+              <Link href={`/app/lab-results?shipment_id=${shipmentId}`}>
                 <Plus className="h-4 w-4 mr-1" /> Upload Lab Result
               </Link>
             </Button>
