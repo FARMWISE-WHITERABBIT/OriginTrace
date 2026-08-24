@@ -155,8 +155,7 @@ export function formatTracesPayload(
     country: 'NG', // Nigeria — derive from org settings if multi-country
     areaHectares: f.area_hectares ?? 0,
     geoJson: (f.boundary as Record<string, unknown>) ?? {},
-    deforestationFree: f.deforestation_check?.risk_level !== 'failed' &&
-                       f.deforestation_check?.risk_level !== 'high',
+    deforestationFree: f.deforestation_check?.risk_level !== 'high',
     productionStartDate: '2021-01-01', // Post-EUDR cutoff default; refine with actual data
   }));
 

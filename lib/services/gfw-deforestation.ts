@@ -1,30 +1,13 @@
 import { createHash } from 'crypto';
+import type { DeforestationResult, GfwPolygon } from './deforestation-types';
+
+export type { DeforestationResult, GfwPolygon } from './deforestation-types';
 
 export const GFW_DATA_API_BASE_URL = 'https://data-api.globalforestwatch.org';
 export const GFW_TREE_COVER_LOSS_DATASET = 'umd_tree_cover_loss';
 export const GFW_TREE_COVER_LOSS_VERSION = 'v1.9';
 export const GFW_TREE_COVER_LOSS_SQL =
   'SELECT SUM(area__ha) AS total_area_ha FROM results WHERE umd_tree_cover_loss__year >= 2021';
-
-type CoordinatePair = [number, number];
-
-export interface GfwPolygon {
-  type: 'Polygon';
-  coordinates: CoordinatePair[][];
-}
-
-export interface DeforestationResult {
-  deforestation_free: boolean;
-  forest_loss_hectares: number;
-  forest_loss_percentage: number;
-  analysis_date: string;
-  data_source: string;
-  risk_level: 'low' | 'medium' | 'high';
-  verification_status?: 'verified' | 'manual_review_required';
-  manual_review_required?: boolean;
-  gfw_dataset?: string;
-  gfw_version?: string;
-}
 
 type FetchLike = typeof fetch;
 type GfwApiKeyLabel = 'explicit' | 'company' | 'fallback';

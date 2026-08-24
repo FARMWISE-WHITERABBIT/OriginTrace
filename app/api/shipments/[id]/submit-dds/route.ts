@@ -36,6 +36,7 @@ const submitDdsSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('download'),
     commodity: z.string().optional(),
+    compliance_override_reason: z.string().trim().min(10, 'Override reason must be at least 10 characters').optional(),
   }),
   z.object({
     mode: z.literal('reference'),
@@ -44,6 +45,7 @@ const submitDdsSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('api'),
     commodity: z.string().optional(),
+    compliance_override_reason: z.string().trim().min(10, 'Override reason must be at least 10 characters').optional(),
   }),
 ]);
 
@@ -188,8 +190,18 @@ export async function POST(
       }
     }
 
-    // ── Soft compliance check — warn, never block ─────────────────────────────
+    // ── Real compliance gate ────────────────────────────────────────────────
+    // A farm with an unresolved blocker (e.g. HIGH deforestation risk for an
+    // EU/UK-bound shipment) stops DDS generation unless an admin supplies a
+    // documented override — same pattern as batch creation
+    // (app/api/batch-contributions/route.ts) and offline sync
+    // (app/api/sync/route.ts).
     const targetMarkets = normalizeMarketCodes(shipment.target_regulations ?? ['EU']);
+    const overrideReason = 'compliance_override_reason' in data ? data.compliance_override_reason : undefined;
+    const override = overrideReason
+      ? { reason: overrideReason, actorRole: profile.role as string }
+      : undefined;
+
     const complianceWarnings: Array<{
       farmId: string;
       status: string;
@@ -198,9 +210,10 @@ export async function POST(
       warnings: string[];
       warning_codes: string[];
     }> = [];
+    const blockedFarms: Array<{ farmId: string; blockers: string[]; blocker_codes: string[] }> = [];
 
     for (const farm of farms) {
-      const eligibility = checkFarmEligibility(farm as unknown as FarmRecord, targetMarkets);
+      const eligibility = checkFarmEligibility(farm as unknown as FarmRecord, targetMarkets, override);
       if (!eligibility.eligible || eligibility.warnings.length > 0) {
         complianceWarnings.push({
           farmId: String((farm as any).id),
@@ -211,16 +224,24 @@ export async function POST(
           warning_codes: eligibility.warning_codes,
         });
       }
+      if (!eligibility.eligible) {
+        blockedFarms.push({
+          farmId: String((farm as any).id),
+          blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
+        });
+      }
     }
 
     // Log the compliance state at DDS generation time — creates an auditable record
-    // of whether the operator knew about non-compliant farms before generating the document.
+    // of whether the operator knew about non-compliant farms before generating the document,
+    // and of any override that was applied.
     if (complianceWarnings.length > 0) {
       await logAuditEvent({
         orgId: profile.org_id,
         actorId: user.id,
         actorEmail: user.email,
-        action: 'dds.compliance_warnings_present',
+        action: blockedFarms.length > 0 ? 'dds.compliance_blocked' : 'dds.compliance_warnings_present',
         resourceType: 'shipment',
         resourceId: shipmentId,
         metadata: {
@@ -228,9 +249,19 @@ export async function POST(
           nonCompliantCount: complianceWarnings.length,
           complianceWarnings,
           targetMarkets,
-          note: 'DDS generated despite compliance warnings — operator chose to proceed.',
+          overrideApplied: !!override,
         },
       });
+    }
+
+    if (blockedFarms.length > 0 && (data.mode === 'download' || data.mode === 'api')) {
+      return NextResponse.json(
+        {
+          error: 'Farm Compliance Gate blocked DDS submission',
+          blocked_farms: blockedFarms,
+        },
+        { status: 422 }
+      );
     }
 
     // Determine commodity from request or org defaults

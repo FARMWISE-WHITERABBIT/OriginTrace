@@ -9,9 +9,9 @@ import {
   GFW_TREE_COVER_LOSS_DATASET,
   GFW_TREE_COVER_LOSS_VERSION,
   queryGfwTreeCoverLoss,
-  type DeforestationResult,
-  type GfwPolygon,
 } from '@/lib/services/gfw-deforestation';
+import { queryWhispDeforestation, resumePendingWhispCheck } from '@/lib/services/whisp-deforestation';
+import type { DeforestationResult, GfwPolygon } from '@/lib/services/deforestation-types';
 import { z } from 'zod';
 import type { Json } from '@/lib/supabase/database.types';
 
@@ -42,6 +42,8 @@ const deforestationCheckBodySchema = z.object({
   farm_id: z.union([z.string(), z.number()]).optional(),
   polygon: polygonSchema.optional(),
   country_code: z.string().length(2).optional(),
+  /** Only used for the polygon-only path — a farm_id lookup reads farms.commodity instead. */
+  commodity: z.string().optional(),
 }).refine(
   (val) => val.farm_id !== undefined || val.polygon !== undefined,
   { message: 'Either farm_id or polygon is required' }
@@ -126,11 +128,12 @@ export async function POST(request: NextRequest) {
     let farmPolygon = polygon;
     let farmAreaHectares = 0;
     let farmId = farm_id;
+    let commodity = parsed.data.commodity;
 
     if (farm_id) {
       const { data: farm, error: farmError } = await supabaseAdmin
         .from('farms')
-        .select('id, boundary, area_hectares, org_id')
+        .select('id, boundary, area_hectares, org_id, commodity')
         .eq('id', String(farm_id))
         .single();
 
@@ -150,17 +153,29 @@ export async function POST(request: NextRequest) {
 
       farmPolygon = farm.boundary as typeof farmPolygon;
       farmAreaHectares = farm.area_hectares || 0;
+      commodity = farm.commodity || commodity;
     }
 
     let result: DeforestationResult;
 
     if (farmPolygon && farmPolygon.type === 'Polygon' && farmPolygon.coordinates) {
-      const gfwResult = await queryGfwTreeCoverLoss(farmPolygon as GfwPolygon);
-      if (gfwResult) {
-        result = gfwResult;
+      // WHISP first — purpose-built for EUDR (proper forest baseline +
+      // post-cutoff disturbance layers + commodity-specific classification).
+      // Falls back to the GFW tree-cover-loss query, then the static
+      // country-risk table, if WHISP is unavailable or unconfigured.
+      const whispResult = await queryWhispDeforestation(farmPolygon as GfwPolygon, commodity, {
+        plotId: farmId ? String(farmId) : 'adhoc',
+      });
+      if (whispResult) {
+        result = whispResult;
       } else {
-        const area = farmAreaHectares > 0 ? farmAreaHectares : calculatePolygonAreaHectares(farmPolygon);
-        result = getFallbackResult(area, country_code || 'NG');
+        const gfwResult = await queryGfwTreeCoverLoss(farmPolygon as GfwPolygon);
+        if (gfwResult) {
+          result = gfwResult;
+        } else {
+          const area = farmAreaHectares > 0 ? farmAreaHectares : calculatePolygonAreaHectares(farmPolygon);
+          result = getFallbackResult(area, country_code || 'NG');
+        }
       }
     } else {
       const area = farmAreaHectares > 0 ? farmAreaHectares : 1;
@@ -272,16 +287,32 @@ export async function GET(request: NextRequest) {
 
     const { data: farm, error: farmError } = await supabaseAdmin
       .from('farms')
-      .select('id, deforestation_check')
+      .select('id, deforestation_check, commodity')
       .eq('id', farmId)
       .eq('org_id', profile.org_id)
       .single();
 
     if (farmError || !farm) return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
 
+    let result = farm.deforestation_check as DeforestationResult | null;
+
+    // Opportunistically resolve a still-running WHISP job the next time
+    // someone looks at this farm's check, instead of needing a dedicated
+    // cron slot for it.
+    if (result?.whisp_status === 'pending' && result.whisp_token) {
+      const resolved = await resumePendingWhispCheck(result.whisp_token, farm.commodity || undefined);
+      if (resolved) {
+        result = resolved;
+        await supabaseAdmin
+          .from('farms')
+          .update({ deforestation_check: resolved as unknown as Json })
+          .eq('id', farmId);
+      }
+    }
+
     return NextResponse.json({
       farm_id: farm.id,
-      result: farm.deforestation_check || null,
+      result: result || null,
     });
 
   } catch (error) {

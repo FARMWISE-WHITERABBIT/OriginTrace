@@ -8,7 +8,7 @@
  * Gate rules:
  * - compliance_status = 'rejected'   → always blocked (admin override allowed)
  * - boundary_geo IS NULL             → blocked for EUDR-bound batches
- * - deforestation_check failed       → blocked for EU/UK-bound batches
+ * - deforestation risk = HIGH        → blocked for EU/UK-bound batches
  * - consent_timestamp IS NULL        → blocked for EUDR batches
  */
 
@@ -17,11 +17,11 @@ export type EligibilityCode =
   | 'FARM_REJECTED'
   | 'UNRESOLVED_BOUNDARY_CONFLICT'
   | 'MISSING_GPS_BOUNDARY'
-  | 'FAILED_DEFORESTATION_CHECK'
+  | 'HIGH_DEFORESTATION_RISK'
+  | 'MEDIUM_DEFORESTATION_RISK'
   | 'MISSING_FARMER_CONSENT'
   | 'PENDING_COMPLIANCE_REVIEW'
   | 'DEFORESTATION_CHECK_PENDING'
-  | 'HIGH_DEFORESTATION_RISK'
   | 'OVERRIDE_NON_ADMIN'
   | 'OVERRIDE_REASON_TOO_SHORT'
   | 'ADMIN_OVERRIDE_APPLIED';
@@ -31,7 +31,7 @@ export interface FarmRecord {
   compliance_status: 'pending' | 'approved' | 'rejected';
   boundary_geo: unknown | null;          // non-null means GPS captured
   deforestation_check: {
-    risk_level?: 'low' | 'medium' | 'high' | 'failed' | null;
+    risk_level?: 'low' | 'medium' | 'high' | null;
     check_date?: string;
     data_source?: string;
   } | null;
@@ -119,11 +119,11 @@ export function checkFarmEligibility(
     );
   }
 
-  // ── Rule 3: Failed deforestation check → blocked for EU/UK markets ────────
-  if (isDeforestationMarket && farm.deforestation_check?.risk_level === 'failed') {
+  // ── Rule 3: HIGH deforestation risk → blocked for EU/UK markets ──────────
+  if (isDeforestationMarket && farm.deforestation_check?.risk_level === 'high') {
     addBlocker(
-      'FAILED_DEFORESTATION_CHECK',
-      'Farm has a FAILED deforestation check. EU/UK-bound batches cannot include produce from this farm until an administrator reviews and resolves the deforestation finding.'
+      'HIGH_DEFORESTATION_RISK',
+      `Farm has a HIGH deforestation risk rating (source: ${farm.deforestation_check?.data_source ?? 'unknown'}). EU/UK-bound batches cannot include produce from this farm until an administrator reviews and either resolves the finding or applies a documented override.`
     );
   }
 
@@ -144,8 +144,8 @@ export function checkFarmEligibility(
     addWarning('DEFORESTATION_CHECK_PENDING', 'Deforestation check has not been run for this farm. Run the check before shipping to the EU or UK.');
   }
 
-  if (farm.deforestation_check?.risk_level === 'high' && !blockers.some((b) => b.includes('deforestation'))) {
-    addWarning('HIGH_DEFORESTATION_RISK', 'Farm has a HIGH deforestation risk rating. Ensure additional due diligence is documented.');
+  if (farm.deforestation_check?.risk_level === 'medium') {
+    addWarning('MEDIUM_DEFORESTATION_RISK', 'Farm has a MEDIUM deforestation risk rating. Ensure additional due diligence is documented before shipping.');
   }
 
   // ── Admin override ────────────────────────────────────────────────────────

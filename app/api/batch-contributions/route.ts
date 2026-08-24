@@ -112,17 +112,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
-    // Compliance gate is advisory at collection time — collection is never blocked.
-    // Eligibility warnings are returned in the response and logged for the audit trail.
+    // Real gate: a farm with an unresolved blocker (e.g. HIGH deforestation
+    // risk for an EU/UK-bound batch) cannot be added unless an admin
+    // supplies a documented override — same pattern as app/api/sync/route.ts.
     const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
-    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets);
+    const override = compliance_override_reason
+      ? { reason: compliance_override_reason, actorRole: profile.role as string }
+      : undefined;
+    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets, override);
 
-    if (eligibility.warnings.length > 0 || !eligibility.eligible) {
+    if (eligibility.warnings.length > 0 || !eligibility.eligible || eligibility.status === 'conditional') {
       await logAuditEvent({
         orgId: batch.org_id,
         actorId: user.id,
         actorEmail: user.email,
-        action: 'farm.compliance_warning',
+        action: eligibility.eligible ? 'farm.compliance_warning' : 'farm.compliance_blocked',
         resourceType: 'farm',
         resourceId: farm_id,
         metadata: {
@@ -132,9 +136,19 @@ export async function POST(request: NextRequest) {
           blocker_codes: eligibility.blocker_codes,
           warnings: eligibility.warnings,
           warning_codes: eligibility.warning_codes,
-          note: 'Collection not blocked; compliance check deferred to export stage.',
         },
       });
+    }
+
+    if (!eligibility.eligible) {
+      return NextResponse.json(
+        {
+          error: 'Farm Compliance Gate blocked this contribution',
+          blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
+        },
+        { status: 422 }
+      );
     }
 
     const complianceStatus =
