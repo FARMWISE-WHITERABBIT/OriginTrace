@@ -199,7 +199,7 @@ export default function BatchDetailPage({ params: paramsPromise }: { params: Pro
         </div>
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           {!processingRun && canDispatch && (
-            <Link href={`/app/dispatch?batch=${batch.id}`}>
+            <Link href={`/app/inventory?tab=dispatch&batch=${batch.id}`}>
               <Button size="sm" variant="outline">
                 <Truck className="h-3.5 w-3.5 mr-1.5" />Dispatch
               </Button>

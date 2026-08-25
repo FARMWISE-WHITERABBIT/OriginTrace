@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, BadgeCheck, AlertTriangle, CheckCircle, Landmark } from 'lucide-react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { useTranslations } from 'next-intl';
+import { DocumentUpload, type UploadResult } from '@/components/document-upload';
 
 const EMPTY_KYC_FORM = {
   cac_registration_number: '',
@@ -244,15 +245,14 @@ export function KycPaymentsContent({ orgId: _orgId }: { orgId: string }) {
             <Label>Director ID Number</Label>
             <Input value={form.director_id_number} onChange={(e) => setForm((f) => ({ ...f, director_id_number: e.target.value }))} />
           </div>
-          <div className="col-span-2">
-            <Label>Director ID Document URL</Label>
-            <Input
-              type="url"
-              placeholder="https://storage.example.com/director-id.pdf"
-              value={form.director_id_url}
-              onChange={(e) => setForm((f) => ({ ...f, director_id_url: e.target.value }))}
+          <div className="col-span-2 space-y-2">
+            <Label>Director ID Document</Label>
+            <DocumentUpload
+              currentFileName={form.director_id_url ? 'Director ID Document' : null}
+              currentFileUrl={form.director_id_url || null}
+              onUploadComplete={(result: UploadResult) => setForm((f) => ({ ...f, director_id_url: result.url }))}
+              onClear={() => setForm((f) => ({ ...f, director_id_url: '' }))}
             />
-            <p className="text-xs text-muted-foreground mt-1">Upload to your document vault first, then paste the URL here.</p>
           </div>
         </CardContent>
       </Card>
