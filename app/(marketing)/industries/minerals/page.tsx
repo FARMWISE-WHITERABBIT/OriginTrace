@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import React from 'react';
 import { MarketingNav } from '@/components/marketing/nav';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn } from '@/components/marketing/motion';
@@ -72,6 +73,11 @@ const roles = [
 export default function MineralsPage() {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+      <BreadcrumbSchema items={[
+            { name: 'Home', url: 'https://origintrace.trade' },
+            { name: 'Industries', url: 'https://origintrace.trade/industries' },
+            { name: 'Minerals Traceability & Compliance', url: 'https://origintrace.trade/industries/minerals' },
+          ]} />
       <MarketingNav />
 
       <main>

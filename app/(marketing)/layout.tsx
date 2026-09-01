@@ -8,9 +8,10 @@ const organizationSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
-      '@type': 'Organization',
+      '@type': ['Organization', 'LocalBusiness'],
       '@id': 'https://origintrace.trade/#organization',
       name: 'OriginTrace',
+      legalName: 'OriginTrace Global Trade Technology Ltd',
       url: 'https://origintrace.trade',
       logo: {
         '@type': 'ImageObject',
@@ -21,6 +22,13 @@ const organizationSchema = {
       description: 'Supply chain compliance and traceability platform for agricultural exporters in Africa and beyond. EUDR, GACC, UK due diligence, and global buyer-ready documentation.',
       areaServed: ['NG', 'GH', 'KE', 'ET', 'CI', 'CM'],
       knowsAbout: ['EUDR compliance', 'China GACC registration', 'supply chain traceability', 'agricultural export compliance', 'deforestation-free certification'],
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: '23 Egbu Road',
+        addressLocality: 'Owerri',
+        addressRegion: 'Imo State',
+        addressCountry: 'NG',
+      },
       contactPoint: {
         '@type': 'ContactPoint',
         email: 'hello@origintrace.trade',

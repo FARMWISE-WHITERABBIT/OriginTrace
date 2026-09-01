@@ -154,33 +154,13 @@ export default function HomePage() {
   const allPosts = getAllPosts();
   const featuredPost = allPosts[0];
 
-  /* Schema markup */
-  const organizationSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'OriginTrace',
-    url: 'https://origintrace.trade',
-    logo: 'https://origintrace.trade/images/logo-green.png',
-    description: 'Trust infrastructure for origin-sensitive supply chains. Supply chain traceability, compliance verification, and export readiness platform.',
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'hello@origintrace.trade',
-      contactType: 'sales',
-    },
-  };
-
-  const websiteSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'OriginTrace',
-    url: 'https://origintrace.trade',
-    description: 'Trust infrastructure for origin-sensitive supply chains.',
-  };
-
   return (
     <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+      {/* Organization + WebSite JSON-LD is injected once, site-wide, by
+          app/(marketing)/layout.tsx — this page previously duplicated it
+          with a second, differently-worded Organization/WebSite block,
+          asserting conflicting descriptions and contactPoint types for the
+          same @id on the same page. Removed rather than reconciled. */}
       <MarketingNav />
 
       <main>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn } from '@/components/marketing/motion';
@@ -71,6 +72,11 @@ export default function ChinaCompliancePage() {
   return (
     <>
       <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+        <BreadcrumbSchema items={[
+            { name: 'Home', url: 'https://origintrace.trade' },
+            { name: 'Compliance Hub', url: 'https://origintrace.trade/compliance' },
+            { name: 'China GACC Compliance', url: 'https://origintrace.trade/compliance/china' },
+          ]} />
         <MarketingNav />
 
         <main>
