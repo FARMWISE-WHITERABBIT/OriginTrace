@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = '1 April 2026';
-const COMPANY = 'WhiteRabbit Agro Limited';
+const COMPANY = 'OriginTrace Global Trade Technology Ltd';
+const RC_NUMBER = '9811709';
+const REGISTERED_ADDRESS = '23 Egbu Road, Owerri, Imo State, Nigeria';
+const OPERATING_ADDRESS = 'Lagos, Nigeria';
 const PLATFORM = 'OriginTrace';
 const EMAIL = 'legal@origintrace.trade';
 
@@ -30,7 +33,7 @@ export default function TermsOfService() {
               Terms of Service
             </h1>
             <p className="text-slate-500 mt-2 text-sm">
-              Effective date: {EFFECTIVE_DATE} · {COMPANY}
+              Effective date: {EFFECTIVE_DATE} · {COMPANY} · RC {RC_NUMBER}
             </p>
           </div>
         </div>
@@ -74,7 +77,7 @@ export default function TermsOfService() {
 
               <section id="section-1">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">1. Acceptance of Terms</h2>
-                <p>By accessing or using the {PLATFORM} platform (&ldquo;Platform&rdquo;), operated by {COMPANY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;), you agree to be bound by these Terms of Service. If you are accessing the Platform on behalf of an organisation, you represent that you have authority to bind that organisation to these terms.</p>
+                <p>By accessing or using the {PLATFORM} platform (&ldquo;Platform&rdquo;), operated by {COMPANY} (RC {RC_NUMBER}) (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;), a private company limited by shares incorporated in the Federal Republic of Nigeria, you agree to be bound by these Terms of Service. If you are accessing the Platform on behalf of an organisation, you represent that you have authority to bind that organisation to these terms.</p>
               </section>
 
               <section id="section-2">
@@ -139,6 +142,11 @@ export default function TermsOfService() {
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">13. Contact</h2>
                 <p>For questions about these Terms, contact us at{' '}
                   <a href={`mailto:${EMAIL}`} className="text-green-700 dark:text-green-400 underline underline-offset-2 hover:text-green-800">{EMAIL}</a>.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  {COMPANY} (RC {RC_NUMBER})<br />
+                  Registered office: {REGISTERED_ADDRESS}<br />
+                  Operating office: {OPERATING_ADDRESS}
                 </p>
               </section>
 
