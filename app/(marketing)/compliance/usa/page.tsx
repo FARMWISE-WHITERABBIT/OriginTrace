@@ -150,7 +150,7 @@ export default function USACompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                       >
                         The Lacey Act prohibits trade in agricultural commodities harvested in violation of foreign or domestic law. USDA National Organic Program certification requires documented chain-of-custody from farm to export. OriginTrace provides the farm-level evidence both frameworks require.
                       </p>

@@ -105,7 +105,7 @@ export default function UAECompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                       >
                         The UAE applies ESMA food safety standards and origin-of-goods requirements to agricultural imports. Shipments without documented origin traceability face delays, inspection, or rejection at Jebel Ali and other UAE ports of entry. OriginTrace builds the verified origin record UAE authorities require.
                       </p>

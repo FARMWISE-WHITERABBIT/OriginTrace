@@ -150,7 +150,7 @@ export default function UKCompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                       >
                         The UK Environment Act 2021 prohibits large businesses from using forest-risk commodities unless they have conducted due diligence to ensure they come from legally harvested land. OriginTrace gives you the farm-level evidence trail the regulations require.
                       </p>

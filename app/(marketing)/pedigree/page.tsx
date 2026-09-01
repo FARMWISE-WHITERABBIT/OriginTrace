@@ -122,7 +122,7 @@ export default function PedigreePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                     >
                       A pedigree certificate is only as strong as the data behind it. OriginTrace generates tamper-evident, QR-linked pedigree records and Digital Product Passports from a verified source-to-export record — not from self-declaration.
                     </p>
@@ -215,7 +215,7 @@ export default function PedigreePage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-3" style={{ gap: '1.5rem' }}>
               {verificationCards.map((card, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="mk-card" style={{ padding: '2rem' }}>
@@ -248,7 +248,7 @@ export default function PedigreePage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-2" style={{ gap: '1.5rem' }}>
               {beneficiaryCards.map((card, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="mk-card" style={{ padding: '2rem' }}>

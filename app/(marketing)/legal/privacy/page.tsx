@@ -4,7 +4,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | OriginTrace',
+  title: 'Privacy Policy',
   description: 'How OriginTrace collects, uses, and protects your personal data.',
 };
 

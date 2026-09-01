@@ -159,7 +159,7 @@ export default function ComplianceHubPage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                       >
                         Five major import markets — the EU, UK, US, China, and UAE — have each introduced or tightened origin traceability and due diligence requirements for agricultural and mineral commodities. OriginTrace checks your shipment against all of them before you book freight.
                       </p>

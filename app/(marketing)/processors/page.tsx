@@ -136,7 +136,7 @@ export default function ProcessorsPage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                     >
                       Processing is where most traceability records break down. OriginTrace maintains chain-of-custody through every transformation — sorting, drying, hulling, grading, and blending — so the pedigree record that reaches your buyer reflects what actually happened.
                     </p>
@@ -187,7 +187,7 @@ export default function ProcessorsPage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-2" style={{ gap: '1.5rem' }}>
               {processingControls.map((control, i) => {
                 const Icon = iconMap[control.iconName];
                 return (
@@ -301,7 +301,7 @@ export default function ProcessorsPage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-3" style={{ gap: '1.5rem' }}>
               {commodityRecovery.map((commodity, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="mk-card" style={{ padding: '2rem' }}>
@@ -329,13 +329,12 @@ export default function ProcessorsPage() {
             {/* Panel 1 */}
             <FadeIn>
               <div
+                className="mk-grid-2"
                 style={{
                   background: 'var(--color--gray-1)',
                   borderRadius: '1rem',
                   padding: '3rem',
                   marginBottom: '1.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
                   gap: '3rem',
                   alignItems: 'center',
                 }}
@@ -373,13 +372,12 @@ export default function ProcessorsPage() {
             {/* Panel 2 */}
             <FadeIn delay={0.1}>
               <div
+                className="mk-grid-2"
                 style={{
                   background: 'rgba(255,255,255,0.03)',
                   border: '1px solid var(--mk-border)',
                   borderRadius: '1rem',
                   padding: '3rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
                   gap: '3rem',
                   alignItems: 'center',
                 }}

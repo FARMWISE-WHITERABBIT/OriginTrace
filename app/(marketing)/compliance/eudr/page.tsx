@@ -132,7 +132,7 @@ export default function EUDRCompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
                       >
                         The EU Deforestation Regulation requires GPS-verified, deforestation-free origin for seven commodity groups. Operators must submit a due diligence statement before placing covered commodities on the EU market. Deadline: December 2025 for large operators.
                       </p>
