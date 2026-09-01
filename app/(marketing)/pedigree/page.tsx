@@ -106,7 +106,7 @@ export default function PedigreePage() {
                   <FadeIn delay={0.1}>
                     <span
                       className="pre-title margin-bottom margin-medium"
-                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                     >
                       Pedigree & Digital Product Passport
                     </span>
