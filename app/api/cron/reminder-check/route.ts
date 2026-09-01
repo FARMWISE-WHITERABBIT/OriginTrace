@@ -7,12 +7,26 @@ import { buildNoShowRecoveryEmail } from '@/lib/email/templates';
 
 /**
  * GET /api/cron/reminder-check
- * Runs every hour (see vercel.json).
+ * Runs once daily at 07:00 UTC (see vercel.json) — NOT hourly. A previous
+ * version of this comment claimed hourly execution; the schedule was never
+ * that frequent, which silently broke the timing assumptions below.
  *
  * Three responsibilities per run:
- *  1. Send 24h WhatsApp + email reminder for upcoming meetings
- *  2. Send 1h WhatsApp reminder for imminent meetings
- *  3. Detect no-shows (meeting time passed 30+ min ago), send recovery messages
+ *  1. Send a "day before" WhatsApp + email reminder for meetings roughly
+ *     12-36h away (widened from a narrow 23-25h band so a single daily
+ *     pass is guaranteed to catch every meeting at least once, regardless
+ *     of what time of day it was booked relative to the 07:00 UTC run).
+ *  2. Send a 1h-before WhatsApp reminder for imminent meetings. NOTE: this
+ *     is only reachable if the cron happens to run 55-65 minutes before a
+ *     meeting, which a once-daily schedule essentially never satisfies —
+ *     this reminder will not fire for the vast majority of bookings as
+ *     currently deployed. Fixing this for real needs either a more
+ *     frequent cron (Vercel plan-dependent) or replacing it with a
+ *     same-day-morning reminder instead of a true 1h one — a scheduling
+ *     decision, not something to silently reinterpret here.
+ *  3. Detect no-shows (meeting time passed 30+ min ago), send recovery
+ *     messages. Also only checked once daily, so detection can lag by up
+ *     to ~24h.
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -30,9 +44,11 @@ export async function GET(request: NextRequest) {
 
   const results = { reminders_24h: 0, reminders_1h: 0, no_shows: 0 };
 
-  // ── 1. 24h reminder window: meeting is 23-25 hours away ─────────────────────
-  const window24hStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
-  const window24hEnd   = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+  // ── 1. "Day before" reminder window: meeting is 12-36 hours away ────────────
+  // Widened from the original 23-25h band (see file header) so this always
+  // overlaps with the next daily run, whatever time the meeting was booked for.
+  const window24hStart = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const window24hEnd   = new Date(now.getTime() + 36 * 60 * 60 * 1000);
 
   const { data: jobs24h } = await supabase
     .from('lead_nurture_jobs')
