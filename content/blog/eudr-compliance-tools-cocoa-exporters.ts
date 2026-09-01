@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'The EU Deforestation Regulation (EUDR) applies from 30 December 2026 for large and medium operators, and from 30 June 2027 for micro and small ones — both dates pushed back a year by the second delay, Regulation (EU) 2025/2650, adopted in December 2025. For cocoa exporters — particularly those sourcing from West Africa — the extra time changes the deadline, not the destination: this regulation is still the most significant change to export compliance in a generation. The question most exporters are asking is not "do I need to comply?" but "how do I actually do it?" This guide answers that question practically.',
+      text: 'The [EU Deforestation Regulation (EUDR)](/blog/eudr-regulation-complete-guide) applies from 30 December 2026 for large and medium operators, and from 30 June 2027 for micro and small ones — both dates pushed back a year by the second delay, Regulation (EU) 2025/2650, adopted in December 2025. For cocoa exporters — particularly those sourcing from West Africa — the extra time changes the deadline, not the destination: this regulation is still the most significant change to export compliance in a generation. The question most exporters are asking is not "do I need to comply?" but "how do I actually do it?" This guide answers that question practically.',
     },
     {
       type: 'callout',
@@ -153,7 +153,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'European cocoa buyers — chocolate manufacturers, grinders, commodity traders — are increasingly requiring their suppliers to demonstrate EUDR readiness before signing contracts. This means you may be asked to share your GPS polygon coverage rate (what percentage of your supply base is mapped), your traceability methodology, and evidence that you have submitted or can generate due diligence statements. Some buyers are also requesting access to a supplier portal where they can independently verify your traceability data rather than relying solely on documents you provide.',
+      text: 'European cocoa buyers — chocolate manufacturers, grinders, commodity traders — are increasingly requiring their suppliers to demonstrate EUDR readiness before signing contracts. This means you may be asked to share your GPS polygon coverage rate (what percentage of your supply base is mapped), your traceability methodology, and evidence that you have submitted or can generate due diligence statements. Some buyers are also requesting access to a supplier portal where they can independently verify your traceability data rather than relying solely on documents you provide — see our [EUDR readiness guide for cocoa importers](/blog/eudr-cocoa-compliance-importers-readiness-guide) for exactly what they\'re being told to demand. Rainforest Alliance certification is often part of the same ask now too — our [certification guide](/blog/rainforest-alliance-certification-nigerian-ghanaian-exporters) covers why.',
     },
     {
       type: 'h2',

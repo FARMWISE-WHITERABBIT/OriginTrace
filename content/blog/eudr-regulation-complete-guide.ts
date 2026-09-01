@@ -245,6 +245,10 @@ export const post: BlogPost = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'If cocoa is your commodity, our [practical guide to EUDR compliance tools for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) turns this roadmap into a concrete field workflow — GPS polygon mapping, batch traceability, and DDS data packs. Importing cocoa into the EU rather than exporting it? Our [EUDR readiness guide for cocoa importers](/blog/eudr-cocoa-compliance-importers-readiness-guide) covers the operator-side obligations instead.',
+    },
+    {
       type: 'faq',
       items: [
         {

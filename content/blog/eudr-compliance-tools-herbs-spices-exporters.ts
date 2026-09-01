@@ -129,7 +129,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'One important exception. Cocoa is on the EUDR Annex I list, so if your business exports cocoa alongside ginger or hibiscus, the deforestation rules genuinely apply to that side of your book: farm geolocation, deforestation-free verification, and a due diligence statement. After the second delay under Reg (EU) 2025/2650, the deadlines are 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises. The farm-mapping and batch-tracking muscle you build for spice buyers transfers directly — see our EUDR compliance guide for the full picture.',
+      text: 'One important exception. Cocoa is on the EUDR Annex I list, so if your business exports cocoa alongside ginger or hibiscus, the deforestation rules genuinely apply to that side of your book: farm geolocation, deforestation-free verification, and a due diligence statement. After the second delay under Reg (EU) 2025/2650, the deadlines are 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises. The farm-mapping and batch-tracking muscle you build for spice buyers transfers directly — see our [EUDR compliance guide](/blog/eudr-regulation-complete-guide) for the full picture.',
     },
     {
       type: 'h2',
@@ -145,6 +145,10 @@ export const post: BlogPost = {
         'Keep batch-level records linking each export lot to its source farmers, so any failed test or buyer query can be traced in minutes.',
         'Ask each EU buyer for their current spec sheet — private requirements move faster than regulation, and guessing is how contracts get lost.',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Selling to an EU importer rather than exporting yourself? Our [importer-side guide to the same rules](/blog/eudr-herbs-spices-compliance-importers-readiness-guide) covers exactly what they\'re being told to demand from you. And if sesame is also in your portfolio, its EU story runs on a similar non-EUDR, food-safety track — see our [sesame export compliance guide](/blog/sesame-seed-export-compliance-guide).',
     },
     {
       type: 'faq',

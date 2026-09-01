@@ -131,7 +131,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'If the same African suppliers also sell you cocoa, the deforestation rules genuinely apply to that trade. Cocoa is in Annex I, so cocoa lots need farm geolocation, deforestation-free verification, and a due diligence statement. After the second delay under Reg (EU) 2025/2650, the obligations bite on 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises. Under the EU\'s country benchmarking (CIR 2025/1093), Ghana is rated low risk while Nigeria and Côte d\'Ivoire are standard risk. Keep the two compliance tracks separate: EUDR diligence for cocoa, plant-health and food-safety diligence for spices.',
+      text: 'If the same African suppliers also sell you cocoa, the [deforestation rules](/blog/eudr-regulation-complete-guide) genuinely apply to that trade. Cocoa is in Annex I, so cocoa lots need farm geolocation, deforestation-free verification, and a due diligence statement. After the second delay under Reg (EU) 2025/2650, the obligations bite on 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises. Under the EU\'s country benchmarking (CIR 2025/1093), Ghana is rated low risk while Nigeria and Côte d\'Ivoire are standard risk. Keep the two compliance tracks separate: EUDR diligence for cocoa, plant-health and food-safety diligence for spices.',
     },
     {
       type: 'h2',
@@ -154,6 +154,10 @@ export const post: BlogPost = {
         'Score your current suppliers against the Tier 1 list above — in a supply market this tight, know which relationships to deepen and which to replace before the season starts.',
         'If you also buy cocoa, run its EUDR readiness as a separate track with its own deadline plan (30 December 2026 for most operators).',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Our [exporter-side companion guide](/blog/eudr-compliance-tools-herbs-spices-exporters-practical-guide) shows exactly what your suppliers should already be doing on their end. And the verification workflow in [how to check a supplier\'s EUDR-ready claim](/blog/how-to-verify-supplier-eudr-claims) applies just as well to spot-checking a spice supplier\'s phytosanitary and lab documentation.',
     },
     {
       type: 'faq',

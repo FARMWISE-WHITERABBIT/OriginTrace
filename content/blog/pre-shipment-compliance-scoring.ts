@@ -17,7 +17,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'A container of agricultural commodities turned away at a European or Chinese port is not a compliance problem — it is a business crisis. By that point, you have paid for the freight, the insurance, and the logistics to move the cargo halfway around the world. Rerouting or disposing of a refused container costs tens of thousands of dollars and can permanently damage your relationship with the buyer.',
+      text: 'A container of agricultural commodities turned away at a European or Chinese port is not a compliance problem — it is a business crisis. By that point, you have paid for the freight, the insurance, and the logistics to move the cargo halfway around the world. Rerouting or disposing of a refused container costs tens of thousands of dollars and can permanently damage your relationship with the buyer. For food commodities specifically, our [farm-to-fork traceability guide](/blog/food-supply-chain-traceability) covers the hazard-specific data (allergens, mycotoxins, residues) that compounds this risk.',
     },
     {
       type: 'paragraph',
@@ -94,7 +94,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Can you trace every kilogram in this container back to its source farms? Is the chain of custody unbroken from farm to export lot? Are the farm GPS coordinates linked to the batch records that link to this shipment? A traceability gap — even a partial one — can create problems if the shipment is selected for enhanced inspection.',
+      text: 'Can you trace every kilogram in this container back to its source farms? Is the [chain of custody](/blog/supply-chain-traceability-global-trade) unbroken from farm to export lot? Are the farm GPS coordinates linked to the batch records that link to this shipment? A traceability gap — even a partial one — can create problems if the shipment is selected for enhanced inspection.',
     },
     {
       type: 'h3',

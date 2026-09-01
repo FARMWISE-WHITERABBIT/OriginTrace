@@ -17,7 +17,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'You source sesame seeds or gum arabic from producers in Northern Nigeria. You have buyers in China — or you are building those relationships now. You know your product, you understand your market, and you are running a real export business out of Lagos. What you may not have fully solved yet is the compliance and traceability side: specifically, China\'s GACC Decree 248 facility registration requirement and the growing demand from Chinese buyers for documented, traceable supply chains.',
+      text: 'You source sesame seeds or gum arabic from producers in Northern Nigeria. You have buyers in China — or you are building those relationships now. You know your product, you understand your market, and you are running a real export business out of Lagos. What you may not have fully solved yet is the compliance and traceability side: specifically, [China\'s GACC Decree 248 facility registration requirement](/blog/how-to-export-to-china-gacc-registration-guide) and the growing demand from Chinese buyers for documented, traceable supply chains.',
     },
     {
       type: 'paragraph',
@@ -93,7 +93,7 @@ export const post: BlogPost = {
       items: [
         'GACC category: food additive / food ingredient (rather than grain/oilseed). Different documentation requirements apply — confirm with NAFDAC which specific category your product falls under.',
         'Buyer specifications: Chinese food and pharmaceutical buyers of gum arabic often have very specific purity, particle size, and moisture content requirements. Your lab testing must demonstrate compliance with Chinese GB standards.',
-        'EU market parallel: Gum arabic (E414) is an approved food additive in the EU and does not face EUDR restrictions. However, food-grade gum arabic exported to the EU does require a HACCP-certified facility and proof of compliance with EU maximum contaminant levels.',
+        'EU market parallel: Gum arabic (E414) is an approved food additive in the EU and does not face EUDR restrictions. However, food-grade gum arabic exported to the EU does require a HACCP-certified facility and proof of compliance with EU maximum contaminant levels — sesame faces a comparable non-EUDR, food-safety-driven regime on the EU side; see our [sesame export compliance guide](/blog/sesame-seed-eudr-export-compliance-guide) for the detail.',
         'Traceability expectations: High-specification gum arabic buyers in China and Europe increasingly want to know the sourcing region and whether the product is wild-harvested or from managed plantations. Regional source documentation adds commercial value.',
       ],
     },

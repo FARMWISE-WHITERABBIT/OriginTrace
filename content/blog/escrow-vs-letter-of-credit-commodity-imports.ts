@@ -17,7 +17,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'Every importer buying from a new African supplier hits the same fork in the road. Option one: wire money upfront by bank transfer and trust that a container actually shows up — which is where every trade-fraud story you\'ve ever heard begins. Option two: open a letter of credit and watch a straightforward commodity deal disappear into bank paperwork, fees, and weeks of back-and-forth. Neither feels right, because neither is.',
+      text: 'Every importer buying from a new African supplier hits the same fork in the road. Option one: wire money upfront by bank transfer and trust that a container actually shows up — which is where every trade-fraud story you\'ve ever heard begins (see our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy) before you get anywhere near that decision). Option two: open a letter of credit and watch a straightforward commodity deal disappear into bank paperwork, fees, and weeks of back-and-forth. Neither feels right, because neither is.',
     },
     {
       type: 'paragraph',
@@ -120,7 +120,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Most comparisons stop at your own risk. The stronger argument for escrow is on the other side of the ocean. On open-account terms, an African exporter commonly waits three to four months — from the day the container leaves the farm gate until your payment clears — to see their money. That entire time, their working capital is sitting on the water. They can\'t buy the next season\'s crop, can\'t pay farmers promptly, and can\'t afford to say no to a faster-paying buyer than you.',
+      text: 'Most comparisons stop at your own risk. The stronger argument for escrow is on the other side of the ocean — see the exporter\'s side of this same story in [Get Paid at Loading, Not Arrival](/blog/milestone-escrow-exporters-get-paid-at-loading). On open-account terms, an African exporter commonly waits three to four months — from the day the container leaves the farm gate until your payment clears — to see their money. That entire time, their working capital is sitting on the water. They can\'t buy the next season\'s crop, can\'t pay farmers promptly, and can\'t afford to say no to a faster-paying buyer than you.',
     },
     {
       type: 'paragraph',

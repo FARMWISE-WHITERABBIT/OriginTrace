@@ -17,7 +17,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'Food supply chains are among the most complex and consequential in global trade. A single contaminated batch of groundnuts can trigger a recall affecting products in thirty countries. A mislabelled shipment of sesame seeds can violate allergen regulations in the EU and result in market suspension. The stakes of supply chain failure in food are measured not just in financial terms but in public health terms — which is why food traceability has attracted the most intensive regulatory attention of any product category.',
+      text: 'Food supply chains are among the most complex and consequential in global trade. A single contaminated batch of groundnuts can trigger a recall affecting products in thirty countries. A mislabelled shipment of sesame seeds can violate allergen regulations in the EU and result in market suspension. The stakes of supply chain failure in food are measured not just in financial terms but in public health terms — which is why food traceability has attracted the most intensive regulatory attention of any product category, and why [pre-shipment compliance scoring](/blog/pre-shipment-compliance-scoring-prevent-rejection) exists as a last check before the container leaves.',
     },
     {
       type: 'paragraph',
@@ -138,7 +138,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Digital traceability systems solve these problems. When traceability data is captured digitally — even in offline-capable mobile apps that sync when connectivity is available — it becomes queryable, shareable, and persistent. A buyer conducting due diligence can receive a traceability report for a specific consignment within the same business day. A regulator requesting EUDR documentation can be provided with GPS farm data, chain-of-custody records, and compliance certificates in a structured, verifiable format.',
+      text: 'Digital traceability systems solve these problems. When traceability data is captured digitally — even in [offline-capable mobile apps](/blog/offline-first-traceability-low-connectivity-regions) that sync when connectivity is available — it becomes queryable, shareable, and persistent. A buyer conducting due diligence can receive a traceability report for a specific consignment within the same business day. A regulator requesting EUDR documentation can be provided with GPS farm data, chain-of-custody records, and compliance certificates in a structured, verifiable format.',
     },
     {
       type: 'h2',

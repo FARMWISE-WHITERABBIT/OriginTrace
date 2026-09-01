@@ -35,7 +35,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The common thread running through all of these barriers is not capital scarcity — it is verifiability. When businesses cannot prove where goods came from, demonstrate that they meet regulatory standards, or produce the documentation a bank needs to extend a letter of credit, trade either does not happen or happens at enormous cost. Supply chain traceability is the missing infrastructure that turns unverifiable trade into verifiable trade — and verifiable trade into financed trade.',
+      text: 'The common thread running through all of these barriers is not capital scarcity — it is verifiability. When businesses cannot prove where goods came from, demonstrate that they meet regulatory standards, or produce the documentation a bank needs to extend a letter of credit, trade either does not happen or happens at enormous cost. [Supply chain traceability](/blog/supply-chain-transparency-new-entry-ticket-global-trade) is the missing infrastructure that turns unverifiable trade into verifiable trade — and verifiable trade into financed trade.',
     },
     {
       type: 'h2',
@@ -161,7 +161,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The connection between supply chain verifiability and trade finance access is not theoretical. It is embedded in how trade finance instruments actually work. A letter of credit is issued against documentation that verifies shipment, origin, and quality. A bank assessing a pre-export finance request is evaluating whether the underlying trade is real, whether the goods have a buyer, and whether the exporter can deliver. A trade finance provider pricing country risk is, at least in part, pricing the risk of documentation failure — goods detained at customs, certificates rejected, shipments returned.',
+      text: 'The connection between supply chain verifiability and trade finance access is not theoretical. It is embedded in how trade finance instruments actually work. A [letter of credit](/blog/escrow-vs-letter-of-credit-commodity-imports) is issued against documentation that verifies shipment, origin, and quality. A bank assessing a pre-export finance request is evaluating whether the underlying trade is real, whether the goods have a buyer, and whether the exporter can deliver. A trade finance provider pricing country risk is, at least in part, pricing the risk of documentation failure — goods detained at customs, certificates rejected, shipments returned.',
     },
     {
       type: 'paragraph',

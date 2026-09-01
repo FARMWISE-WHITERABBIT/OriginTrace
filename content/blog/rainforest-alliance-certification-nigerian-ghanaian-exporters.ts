@@ -111,7 +111,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'It is important to be clear: Rainforest Alliance certification alone does not satisfy EUDR. The EU Deforestation Regulation requires something very specific: GPS polygon coordinates for every farm in your supply chain, plus a due diligence statement submitted to the EU Information System. Rainforest Alliance\'s environmental assessment is not designed to produce those GPS polygon records in the format EUDR requires.',
+      text: 'It is important to be clear: Rainforest Alliance certification alone does not satisfy [EUDR](/blog/eudr-regulation-complete-guide). The EU Deforestation Regulation requires something very specific: GPS polygon coordinates for every farm in your supply chain, plus a due diligence statement submitted to the EU Information System. Rainforest Alliance\'s environmental assessment is not designed to produce those GPS polygon records in the format EUDR requires — our [practical guide to EUDR compliance tools for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) covers exactly what that separate GPS polygon workflow looks like.',
     },
     {
       type: 'paragraph',
@@ -133,7 +133,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'For cashew exporters in Nigeria\'s Kogi, Enugu, and Oyo states targeting EU buyers, the most common buyer requirements are: HACCP certification for processing facilities, Fairtrade certification for cooperatives wishing to access the fair-trade premium market, and documented chain of custody from nut collection through kernel processing to export. For sesame targeting China, GACC registration is the dominant compliance requirement alongside phytosanitary certification from NAQS (National Agricultural Quarantine Service).',
+      text: 'For cashew exporters in Nigeria\'s Kogi, Enugu, and Oyo states targeting EU buyers, the most common buyer requirements are: HACCP certification for processing facilities, Fairtrade certification for cooperatives wishing to access the fair-trade premium market, and documented chain of custody from nut collection through kernel processing to export. For sesame targeting China, [GACC registration](/blog/gacc-compliance-traceability-sesame-gum-arabic-nigeria) is the dominant compliance requirement alongside phytosanitary certification from NAQS (National Agricultural Quarantine Service).',
     },
     {
       type: 'h2',

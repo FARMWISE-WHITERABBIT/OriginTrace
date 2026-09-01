@@ -80,7 +80,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The process hasn\'t changed since the deadline passed — it\'s just more urgent. Decree 248 covers a very wide range of categories: meat, seafood, dairy, edible oils, nuts and seeds (including sesame), cocoa products, beverages, and most processed foods. It also captures upstream facilities — cooperatives, processors, cold stores — not just finished-goods manufacturers.',
+      text: 'The process hasn\'t changed since the deadline passed — it\'s just more urgent. Decree 248 covers a very wide range of categories: meat, seafood, dairy, edible oils, nuts and seeds (including sesame), cocoa products, beverages, and most processed foods. It also captures upstream facilities — cooperatives, processors, cold stores — not just finished-goods manufacturers. Our [full GACC registration walkthrough](/blog/how-to-export-to-china-gacc-registration-guide) covers the process in more depth if you\'re starting from scratch.',
     },
     {
       type: 'numbered',

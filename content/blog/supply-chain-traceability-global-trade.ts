@@ -90,7 +90,7 @@ export const post: BlogPost = {
     {
       type: 'bullets',
       items: [
-        'Shipment refusal: a single consignment held at port while documentation is assembled can wipe out the margin on the entire shipment — and risk the buyer relationship',
+        'Shipment refusal: a single consignment held at port while documentation is assembled can wipe out the margin on the entire shipment — and risk the buyer relationship (a [pre-shipment compliance check](/blog/pre-shipment-compliance-scoring-prevent-rejection) is what catches this before the container is loaded)',
         'Regulatory fines: EUDR fines start at 4% of annual EU turnover; FSMA penalties can reach $10,000 per violation per day',
         'Recall costs: a food recall without lot-level traceability forces a whole-batch withdrawal — the average cost of a food recall in the US exceeds $10 million when reputational and operational costs are included',
         'Lost contracts: buyers conducting supply chain due diligence increasingly require verified traceability as a condition of sourcing; exporters without it are delisted',
@@ -108,7 +108,7 @@ export const post: BlogPost = {
         'Farm-level identity and mapping. Every farm or plot in your supply chain must be registered with a unique identifier, and ideally GPS-mapped. This is the foundation on which all downstream traceability rests. Without it, you cannot link an export lot back to a specific origin.',
         'Lot identification at every transfer point. From the farm gate through aggregation, processing, storage, and loading, each transfer of custody must be tied to a specific lot identifier. Lot IDs are the thread that connects origin data to export documentation.',
         'Document management linked to lots. Certificates of origin, phytosanitary certificates, quality test reports, inspection records, and compliance certificates must be linked to the specific lots they cover — not stored in folders by date or email thread.',
-        'Digital traceability records. Paper-based records cannot be queried, audited, or shared efficiently. Digital systems that capture traceability data at each point — including offline-capable mobile collection for field operations with poor connectivity — are now the baseline requirement.',
+        'Digital traceability records. Paper-based records cannot be queried, audited, or shared efficiently. Digital systems that capture traceability data at each point — including [offline-capable mobile collection](/blog/offline-first-traceability-low-connectivity-regions) for field operations with poor connectivity — are now the baseline requirement.',
         'Audit-ready reporting. Traceability data has no value unless it can be presented to a buyer or regulator in a format they can verify. The ability to generate a complete chain-of-custody report for any consignment, within hours of a request, is the operational test of an effective traceability system.',
       ],
     },

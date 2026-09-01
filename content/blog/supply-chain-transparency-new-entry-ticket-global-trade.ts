@@ -21,7 +21,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The shift has been building for years, but 2026 has made it unavoidable. As import regulations in every major market have tightened, buyers have learned that sourcing from suppliers who cannot demonstrate supply chain transparency puts their own business at regulatory and reputational risk. The result is a new and permanent reality: traceability data is now the entry ticket to serious global trade. Without it, you are not competing — you are invisible.',
+      text: 'The shift has been building for years, but 2026 has made it unavoidable. As import regulations in every major market have tightened, buyers have learned that sourcing from suppliers who cannot demonstrate supply chain transparency puts their own business at regulatory and reputational risk. The result is a new and permanent reality: [traceability data](/blog/supply-chain-traceability-global-trade) is now the entry ticket to serious global trade. Without it, you are not competing — you are invisible.',
     },
     {
       type: 'h2',
@@ -126,7 +126,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen.',
+      text: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen — the same records a buyer would check in our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy).',
     },
     {
       type: 'cta',

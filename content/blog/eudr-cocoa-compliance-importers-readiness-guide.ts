@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'Most of the discussion around the EU Deforestation Regulation focuses on exporters in producing countries — the farmers, cooperatives, and trading companies in Ghana, Ivory Coast, or Nigeria who are scrambling to collect GPS data. But the regulation places equally significant obligations on the other end of the supply chain: the companies that import cocoa into the European Union.',
+      text: 'Most of the discussion around the [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide) focuses on exporters in producing countries — the farmers, cooperatives, and trading companies in Ghana, Ivory Coast, or Nigeria who are scrambling to collect GPS data. But the regulation places equally significant obligations on the other end of the supply chain: the companies that import cocoa into the European Union.',
     },
     {
       type: 'paragraph',
@@ -85,7 +85,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'In practice, the best suppliers are now providing this data through a supplier portal or as a data export from their traceability platform — a structured file that you can use directly in your own due diligence system rather than manually reviewing hundreds of paper documents.',
+      text: 'In practice, the best suppliers are now providing this data through a supplier portal or as a data export from their traceability platform — a structured file that you can use directly in your own due diligence system rather than manually reviewing hundreds of paper documents. Our [guide to verifying a supplier\'s "EUDR-ready" claim](/blog/how-to-verify-supplier-eudr-claims) walks through how to independently check what a supplier hands you, and our [practical guide for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) shows you exactly what a well-run supplier\'s data pipeline looks like on their end.',
     },
     {
       type: 'h2',

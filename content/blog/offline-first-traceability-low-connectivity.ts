@@ -21,7 +21,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Those paper forms then have to be entered into a system when the agent returns to town — days later, by someone else, with room for transcription errors and missing data. The result is that the traceability chain that EU buyers and regulators require has a fragile link right at the point where it matters most: the farm.',
+      text: 'Those paper forms then have to be entered into a system when the agent returns to town — days later, by someone else, with room for transcription errors and missing data. The result is that the [traceability chain](/blog/supply-chain-traceability-global-trade) that EU buyers and regulators require has a fragile link right at the point where it matters most: the farm.',
     },
     {
       type: 'h2',
@@ -63,7 +63,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'EUDR and GACC both require GPS data collected at the farm level. The only way to reliably collect that data in rural West Africa is with a tool that works when there is no internet. If your traceability tool requires connectivity, you have two options: pay for satellite data connectivity for every field agent (expensive), or accept that data from offline areas will be collected on paper and entered later (unreliable and creates gaps in your compliance chain).',
+      text: 'EUDR and GACC both require GPS data collected at the farm level. The only way to reliably collect that data in rural West Africa is with a tool that works when there is no internet — the same gap our [food traceability guide](/blog/food-supply-chain-traceability) flags as the weakest link in most exporters\' chains. If your traceability tool requires connectivity, you have two options: pay for satellite data connectivity for every field agent (expensive), or accept that data from offline areas will be collected on paper and entered later (unreliable and creates gaps in your compliance chain).',
     },
     {
       type: 'paragraph',

@@ -22,7 +22,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Here\'s the part that surprises people: none of this has anything to do with deforestation. Sesame isn\'t covered by EUDR at all. The rules that decide whether your container clears Rotterdam or Piraeus are food safety rules — and if you sell to China, a completely separate facility registration regime. This guide walks through both stacks, and the traceability backbone that lets you pass them with the same data.',
+      text: 'Here\'s the part that surprises people: none of this has anything to do with deforestation. Sesame isn\'t covered by EUDR at all — [same story as ginger](/blog/eudr-compliance-tools-herbs-spices-exporters-practical-guide). The rules that decide whether your container clears Rotterdam or Piraeus are food safety rules — and if you sell to China, a completely separate facility registration regime. This guide walks through both stacks, and the traceability backbone that lets you pass them with the same data.',
     },
     {
       type: 'callout',
@@ -103,7 +103,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'China is the world\'s largest sesame buyer, and it runs a completely different gate. Under GACC Decree 248, overseas facilities that process, store, or export food to China must be registered with Chinese customs. That\'s facility-level, not company-level: your cleaning plant and your export warehouse each need their own registration.',
+      text: 'China is the world\'s largest sesame buyer, and it runs a completely different gate. Under GACC Decree 248, overseas facilities that process, store, or export food to China must be registered with Chinese customs. That\'s facility-level, not company-level: your cleaning plant and your export warehouse each need their own registration. Our [sesame- and gum-arabic-specific GACC guide](/blog/gacc-compliance-traceability-sesame-gum-arabic-nigeria) goes deeper on what Chinese buyers are asking for beyond the registration number itself.',
     },
     {
       type: 'callout',

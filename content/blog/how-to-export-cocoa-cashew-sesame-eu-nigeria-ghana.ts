@@ -39,7 +39,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Cocoa is one of the seven commodities directly regulated by the EU Deforestation Regulation (EUDR). From December 30, 2026, every operator placing cocoa or cocoa-derived products on the EU market must submit a due diligence statement confirming the cocoa is deforestation-free and legally produced. This means your EU buyer cannot accept your cocoa unless you provide them with traceable farm data.',
+      text: 'Cocoa is one of the seven commodities directly regulated by the [EU Deforestation Regulation](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) (EUDR). From December 30, 2026, every operator placing cocoa or cocoa-derived products on the EU market must submit a due diligence statement confirming the cocoa is deforestation-free and legally produced. This means your EU buyer cannot accept your cocoa unless you provide them with traceable farm data.',
     },
     {
       type: 'bullets',
@@ -150,7 +150,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Sesame is not covered by EUDR. However, EU border controls on Nigerian sesame have become stricter in recent years following multiple RASFF (Rapid Alert System for Food and Feed) notifications for sesame from Nigeria and other African origins. The primary issue is ethylene oxide residues — a pesticide widely used for post-harvest treatment that is banned for use on food in the EU.',
+      text: 'Sesame is not covered by EUDR. However, EU border controls on Nigerian sesame have become stricter in recent years following multiple RASFF (Rapid Alert System for Food and Feed) notifications for sesame from Nigeria and other African origins — including the 50% Salmonella check rate covered in our [dedicated sesame compliance guide](/blog/sesame-seed-eudr-export-compliance-guide). The primary issue here specifically is ethylene oxide residues — a pesticide widely used for post-harvest treatment that is banned for use on food in the EU.',
     },
     {
       type: 'callout',
