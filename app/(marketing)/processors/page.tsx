@@ -136,7 +136,7 @@ export default function ProcessorsPage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       Processing is where most traceability records break down. OriginTrace maintains chain-of-custody through every transformation — sorting, drying, hulling, grading, and blending — so the pedigree record that reaches your buyer reflects what actually happened.
                     </p>

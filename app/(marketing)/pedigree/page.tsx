@@ -122,7 +122,7 @@ export default function PedigreePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       A pedigree certificate is only as strong as the data behind it. OriginTrace generates tamper-evident, QR-linked pedigree records and Digital Product Passports from a verified source-to-export record — not from self-declaration.
                     </p>

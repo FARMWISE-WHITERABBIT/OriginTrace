@@ -214,7 +214,7 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, UK, US, China, and UAE requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
@@ -239,7 +239,7 @@ export default function HomePage() {
                         gap: '0.375rem',
                         marginTop: '1.25rem',
                         fontSize: '0.875rem',
-                        color: 'var(--mk-text-on-dark-2)',
+                        color: 'var(--mk-text-on-dark)',
                       }}
                     >
                       I&apos;m a buyer / importer <ChevronRight className="h-3.5 w-3.5" />

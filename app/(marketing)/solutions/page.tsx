@@ -194,7 +194,7 @@ export default function SolutionsPage() {
                         fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)',
                         lineHeight: 1.75,
                         maxWidth: '40ch',
-                        color: 'var(--mk-text-on-dark-2)',
+                        color: 'var(--mk-text-on-dark)',
                       }}
                     >
                       OriginTrace is the traceability and compliance infrastructure for

@@ -105,7 +105,7 @@ export default function ChinaCompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark-2)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                       >
                         China&apos;s General Administration of Customs requires overseas food and agricultural exporters to be registered on the GACC system before their goods can clear Chinese customs. Origin traceability is a registration prerequisite. OriginTrace builds the farm-level record GACC requires.
                       </p>
