@@ -9,6 +9,7 @@
     "start": "next start",
     "check": "tsc",
     "check:migrations": "tsx scripts/check-migrations.ts",
+    "check:db": "tsx scripts/check-db.ts",
     "preflight": "tsx scripts/check-migrations.ts && tsc && next build",
     "gen:types": "tsx scripts/gen-types.ts",
     "skills:sync": "tsx scripts/sync-skills.ts",

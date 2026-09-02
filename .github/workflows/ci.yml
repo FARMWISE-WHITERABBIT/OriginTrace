@@ -91,3 +91,101 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # db-schema-check (STUB — not yet active)
+  #
+  # scripts/check-db.ts diffs the live Postgres schema (via `npm run check:db`).
+  # It is intentionally NOT wired up below because doing so requires a new
+  # GitHub Actions secret holding a live DB connection string, which is a
+  # credential-provisioning action outside an agent's authority.
+  #
+  # To activate, a human with repo admin access must:
+  #   1. Add a repository secret named SUPABASE_DB_URL containing a Postgres
+  #      connection string, e.g.
+  #      postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+  #      (Settings -> Secrets and variables -> Actions -> New repository secret)
+  #   2. Uncomment the job below.
+  #
+  # db-schema-check:
+  #   name: DB Schema Check
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #
+  #     - name: Install dependencies
+  #       run: npm ci
+  #
+  #     - name: Check live DB schema
+  #       run: npm run check:db
+  #       env:
+  #         SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # e2e-authenticated (NOT WIRED — blocked on missing local-Supabase CI infra)
+  #
+  # tests/e2e/farm-approval.spec.ts and tests/e2e/boundary-conflicts.spec.ts
+  # exercise the real farmer/farm CREATE flow (POST /api/farms) and are exactly
+  # the specs that would have caught the local_id regression. They are
+  # deliberately NOT appended to the "Run marketing smoke tests" step above —
+  # doing so would not add real protection:
+  #
+  #   1. Both specs call page.request.post('/api/farms', ...) relying on the
+  #      Supabase session cookie set by tests/e2e/auth.setup.ts. That only
+  #      happens under the `chromium` Playwright project (storageState:
+  #      tests/e2e/.auth/admin.json, dependencies: ['setup']) — NOT the
+  #      `chromium-public` project the e2e-smoke job currently runs, which has
+  #      no auth. Run them under chromium-public as-is and every create-farm
+  #      call 401s, `!createResp.ok()` is true, and the spec calls
+  #      `test.skip(...)` — the job would go green on every run, including a
+  #      100%-broken create flow. That is worse than not running them: it
+  #      reads as coverage while providing none.
+  #   2. tests/e2e/auth.setup.ts calls assertLocalE2eEnvironment(), which
+  #      hard-requires NEXT_PUBLIC_SUPABASE_URL to be exactly
+  #      http://127.0.0.1:54321 or http://localhost:54321 (see
+  #      tests/e2e/helpers/local-environment.ts) — a real local Supabase CLI
+  #      (Docker) instance, not the placeholder URL this job's "Build app" /
+  #      "Start app" steps use today, and not the real gnvcvvsnnesieugnzmrz
+  #      project either (that origin is intentionally NOT in the allowlist, so
+  #      these mutating tests can never target the live/shared DB).
+  #   3. Once pointed at a local instance, auth.setup.ts logs in as
+  #      admin@demo.test via the real Supabase Auth REST API — that user only
+  #      exists after `npm run seed:qa` (+ `npm run seed:qa:data` for its org)
+  #      have been run against that instance. Neither script runs anywhere in
+  #      this workflow today.
+  #   4. This job never starts a Postgres/Supabase instance at all today —
+  #      only the Next.js app, against a placeholder Supabase URL. Standing
+  #      one up (Docker/`supabase start` + replaying supabase/migrations/) is
+  #      itself unverified for this repo: CLAUDE.md documents that migration
+  #      history has known drift from what was actually run against the live
+  #      DB (several migrations were historically applied by hand and never
+  #      matched a from-scratch replay). Wiring an unverified from-scratch
+  #      migration replay into a job that gates every PR risks blocking all
+  #      merges on an infra problem unrelated to the PR's own change.
+  #
+  # None of this needs a new secret (a local `supabase start` instance uses
+  # the CLI's published, non-secret default anon/service-role keys), so it is
+  # within an agent's authority to build — it just could not be verified from
+  # this sandbox (no docker/supabase CLI available here) and was judged too
+  # large/unverified a change to land in a job that blocks main. To activate:
+  #   1. Add steps to provision a local Supabase instance (e.g.
+  #      `supabase/setup-cli` + `supabase start`) before "Build app", and
+  #      confirm supabase/migrations/ replays cleanly from empty on CI.
+  #   2. Point NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY at that
+  #      instance (http://127.0.0.1:54321) for the build/start/test steps.
+  #   3. Run `npm run seed:qa && npm run seed:qa:data` against it.
+  #   4. Change the "Run marketing smoke tests" step's command to drop
+  #      `--project=chromium-public` (or add a second step) so
+  #      `tests/e2e/farm-approval.spec.ts tests/e2e/boundary-conflicts.spec.ts`
+  #      run under the `chromium` project, which pulls in the `setup` project
+  #      (auth.setup.ts) automatically via its `dependencies`.
+  # ---------------------------------------------------------------------------

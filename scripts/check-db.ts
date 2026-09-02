@@ -5,7 +5,17 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const dbUrl = `postgresql://postgres:CloudNineC69@db.daahttcxnboazhazaocc.supabase.co:5432/postgres`;
+const dbUrl = process.env.SUPABASE_DB_URL;
+
+if (!dbUrl) {
+  console.error(
+    'Error: SUPABASE_DB_URL is not set.\n' +
+    '  Set it in .env.local (or the environment) to a Postgres connection string, e.g.\n' +
+    '  SUPABASE_DB_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres\n' +
+    '  This matches the convention used by scripts/apply-migrations.ts and scripts/apply-schema.ts.'
+  );
+  process.exit(1);
+}
 
 async function checkDb() {
   const client = new Client({ connectionString: dbUrl });
