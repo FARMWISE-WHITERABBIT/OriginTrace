@@ -2583,6 +2583,7 @@ export type Database = {
           id: string
           legality_doc_url: string | null
           lga_id: string | null
+          local_id: string | null
           org_id: string
           phone: string | null
           state_id: string | null
@@ -2610,6 +2611,7 @@ export type Database = {
           id?: string
           legality_doc_url?: string | null
           lga_id?: string | null
+          local_id?: string | null
           org_id: string
           phone?: string | null
           state_id?: string | null
@@ -2637,6 +2639,7 @@ export type Database = {
           id?: string
           legality_doc_url?: string | null
           lga_id?: string | null
+          local_id?: string | null
           org_id?: string
           phone?: string | null
           state_id?: string | null
