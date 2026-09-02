@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'If your sourcing checklist for African ginger or turmeric has an "EUDR due diligence statement" line on it, you can cross it off. The EU Deforestation Regulation (Reg (EU) 2023/1115) covers a closed list of commodities in Annex I — cattle, cocoa, coffee, oil palm, rubber, soya, and wood, plus derived products — and no herb or spice is on it. There is no DDS to file for ginger. No geolocation mandate. No deforestation cut-off date.',
+      text: 'If your sourcing checklist for African ginger, turmeric, or [hibiscus](/blog/nigerian-hibiscus-export-compliance-buyers-guide) has an "EUDR due diligence statement" line on it, you can cross it off. The EU Deforestation Regulation (Reg (EU) 2023/1115) covers a closed list of commodities in Annex I — cattle, cocoa, coffee, oil palm, rubber, soya, and wood, plus derived products — and no herb or spice is on it. There is no DDS to file for ginger. No geolocation mandate. No deforestation cut-off date.',
     },
     {
       type: 'paragraph',

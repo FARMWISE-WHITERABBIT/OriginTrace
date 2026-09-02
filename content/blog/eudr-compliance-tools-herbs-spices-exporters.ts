@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'If you export ginger, turmeric, or hibiscus and someone has told you to start preparing EUDR due diligence statements, take a breath. They\'re wrong. The EU Deforestation Regulation (Reg (EU) 2023/1115) has a closed list of commodities in Annex I: cattle, cocoa, coffee, oil palm, rubber, soya, and wood — plus products derived from them. Ginger isn\'t on it. Turmeric isn\'t on it. No herb or spice is.',
+      text: 'If you export ginger, turmeric, or [hibiscus](/blog/nigerian-hibiscus-export-compliance-buyers-guide) and someone has told you to start preparing EUDR due diligence statements, take a breath. They\'re wrong. The EU Deforestation Regulation (Reg (EU) 2023/1115) has a closed list of commodities in Annex I: cattle, cocoa, coffee, oil palm, rubber, soya, and wood — plus products derived from them. Ginger isn\'t on it. Turmeric isn\'t on it. No herb or spice is.',
     },
     {
       type: 'paragraph',

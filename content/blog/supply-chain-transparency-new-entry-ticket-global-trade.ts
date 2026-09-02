@@ -65,6 +65,10 @@ export const post: BlogPost = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'One correction worth making on that table: FSMA 204 only applies to a defined "Food Traceability List" of high-risk foods, and cocoa, coffee, sesame, and hibiscus generally aren\'t on it. The rule that actually governs most West African commodity imports into the US is FSVP — [our guide to what it requires](/blog/fda-fsvp-importing-west-african-commodities-guide) covers the difference.',
+    },
+    {
       type: 'h2',
       text: 'The Practical Gap: What Most West African Exporters Are Missing',
     },

@@ -236,7 +236,7 @@ export const post: BlogPost = {
         },
         {
           q: 'How do I check my GACC registration status?',
-          a: 'Check your application status in the CIFER system, or ask your national competent authority, which submitted on your behalf. GACC also publishes lists of approved overseas enterprises — your Chinese importer can verify your number appears before your first shipment moves.',
+          a: 'Check your application status in the CIFER system, or ask your national competent authority, which submitted on your behalf. GACC also publishes lists of approved overseas enterprises at its [public query site](/blog/how-to-verify-supplier-gacc-registration-china-buyers) — your Chinese importer can verify your number appears before your first shipment moves.',
         },
         {
           q: 'What happens if I export to China without GACC registration?',

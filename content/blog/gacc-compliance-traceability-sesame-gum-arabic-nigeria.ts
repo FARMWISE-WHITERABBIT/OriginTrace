@@ -130,7 +130,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The typical Lagos-based sesame or gum arabic trading company sources product through a network of agents and middlemen in producing states — Jigawa for sesame, Borno for gum arabic. Product moves through buying agents, aggregators, truckers, and Lagos warehouses before hitting the container. At each step, a little information gets lost: who supplied it, where exactly it came from, what the original quality was.',
+      text: 'The typical Lagos-based sesame or gum arabic trading company sources product through a network of agents and middlemen in producing states — Jigawa for sesame, Borno for gum arabic. Product moves through buying agents, aggregators, truckers, and Lagos warehouses before hitting the container. At each step, a little information gets lost: who supplied it, where exactly it came from, what the original quality was. Your Chinese buyers can — and increasingly do — [check your GACC registration independently](/blog/how-to-verify-supplier-gacc-registration-china-buyers) before they ever ask you for a document, so the gap is visible from their side even if you never mention it.',
     },
     {
       type: 'paragraph',

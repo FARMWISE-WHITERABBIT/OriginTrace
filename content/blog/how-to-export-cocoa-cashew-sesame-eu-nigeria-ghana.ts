@@ -198,7 +198,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Yes. Since Brexit, the UK operates its own import documentation requirements that are separate from EU requirements. UK import controls on food and agricultural products have been phased in since 2021. For Nigerian and Ghanaian exporters, this typically means separate phytosanitary certificates endorsed for UK entry, UK-specific certificates of conformity where required, and compliance with UK Environmental Act due diligence requirements (separate from EUDR). Check with your UK buyer on their specific documentation requirements.',
+      text: 'Yes for phytosanitary and food-safety documentation — UK import controls on food and agricultural products have been phased in since 2021 and require separate certificates endorsed for UK entry. On deforestation-style due diligence specifically, note that the [UK\'s own forest-risk commodity rules aren\'t actually in force yet](/blog/uk-forest-risk-commodities-not-in-force-buyers-guide), unlike EUDR — don\'t assume a UK buyer\'s due diligence request has the same legal footing as an EU one until you check.',
     },
     {
       type: 'cta',

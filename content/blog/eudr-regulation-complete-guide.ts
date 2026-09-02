@@ -92,7 +92,7 @@ export const post: BlogPost = {
       items: [
         'Cattle — live animals, fresh and processed meat, leather and hides, gelatin, collagen',
         'Cocoa — raw cocoa beans, cocoa butter, cocoa powder, cocoa paste, chocolate and chocolate preparations',
-        'Coffee — raw and roasted coffee beans, ground coffee, soluble coffee, coffee extracts',
+        'Coffee — raw and roasted coffee beans, ground coffee, soluble coffee, coffee extracts (see our [buyer\'s guide to Cameroon and Côte d\'Ivoire robusta](/blog/coffee-eudr-cameroon-cote-divoire-buyers-guide))',
         'Palm oil — crude and refined palm oil, palm kernel oil, palm fatty acid distillates, products containing palm oil',
         'Soy — soybeans, soy meal, soy flour, soy protein, soy oil, lecithin, livestock products fed with soy',
         'Wood — all timber, wood-based panels, pulp, paper, printed products, furniture made from wood',
