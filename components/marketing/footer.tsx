@@ -137,7 +137,7 @@ export function MarketingFooter() {
 
             {/* Attribution */}
             <p className="mk-footer-panel__attr">
-              &copy; 2026 OriginTrace. All rights reserved.
+              &copy; 2026 OriginTrace Global Trade Technology Ltd (RC 9811709). All rights reserved.
             </p>
           </div>
 
@@ -172,10 +172,10 @@ export function MarketingFooter() {
               <div className="mk-footer-col">
                 <h4 className="mk-footer-col__heading">Address</h4>
                 <address className="mk-footer-col__address">
-                  <p>OriginTrace Ltd.</p>
-                  <p>Lagos, Nigeria</p>
-                  <p style={{ marginTop: '0.5rem' }}>Serving West Africa,</p>
-                  <p>East Africa &amp; Europe</p>
+                  <p>OriginTrace Global Trade Technology Ltd</p>
+                  <p>RC 9811709</p>
+                  <p style={{ marginTop: '0.5rem' }}>Registered: Owerri, Imo State, Nigeria</p>
+                  <p>Operations: Lagos, Nigeria</p>
                 </address>
               </div>
             </div>

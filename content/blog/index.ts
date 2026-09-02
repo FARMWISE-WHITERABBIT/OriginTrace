@@ -1,3 +1,8 @@
+import { post as coffeeEudrBuyers } from './coffee-eudr-cameroon-cote-divoire-buyers-guide';
+import { post as hibiscusBuyers } from './nigerian-hibiscus-export-compliance-buyers-guide';
+import { post as gaccBuyerVerify } from './how-to-verify-supplier-gacc-registration-china-buyers';
+import { post as fsvpUsaBuyers } from './fda-fsvp-importing-west-african-commodities-guide';
+import { post as ukForestRiskBuyers } from './uk-forest-risk-commodities-not-in-force-buyers-guide';
 import { post as africaTradeFinance } from './africa-trade-finance-gap-supply-chain-traceability';
 import { post as howToExportChina } from './how-to-export-to-china-gacc-registration-guide';
 import { post as supplyChainTraceability } from './supply-chain-traceability-global-trade';
@@ -27,6 +32,11 @@ import { post as dubaiReexportEuRules } from './dubai-reexport-eu-rules-african-
 import type { BlogPost } from '@/lib/blog';
 
 export const posts: BlogPost[] = [
+  coffeeEudrBuyers,
+  hibiscusBuyers,
+  gaccBuyerVerify,
+  fsvpUsaBuyers,
+  ukForestRiskBuyers,
   milestoneEscrowExporters,
   escrowVsLc,
   verifySupplierEudr,

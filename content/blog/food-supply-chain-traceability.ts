@@ -17,7 +17,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'Food supply chains are among the most complex and consequential in global trade. A single contaminated batch of groundnuts can trigger a recall affecting products in thirty countries. A mislabelled shipment of sesame seeds can violate allergen regulations in the EU and result in market suspension. The stakes of supply chain failure in food are measured not just in financial terms but in public health terms — which is why food traceability has attracted the most intensive regulatory attention of any product category.',
+      text: 'Food supply chains are among the most complex and consequential in global trade. A single contaminated batch of groundnuts can trigger a recall affecting products in thirty countries. A mislabelled shipment of sesame seeds can violate allergen regulations in the EU and result in market suspension. The stakes of supply chain failure in food are measured not just in financial terms but in public health terms — which is why food traceability has attracted the most intensive regulatory attention of any product category, and why [pre-shipment compliance scoring](/blog/pre-shipment-compliance-scoring-prevent-rejection) exists as a last check before the container leaves.',
     },
     {
       type: 'paragraph',
@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Why Food Traceability Is Different From Other Industries',
+      text: 'Why Is Food Traceability Different From Other Industries?',
     },
     {
       type: 'paragraph',
@@ -93,6 +93,13 @@ export const post: BlogPost = {
       text: 'Food traceability is only as strong as its weakest link. If your farm-level data is thorough but your processing records do not document which incoming lots were used in which outgoing lots, the entire chain breaks at that point. Regulators and buyers require an unbroken audit trail — gaps cannot be retroactively filled.',
     },
     {
+      type: 'cta',
+      heading: 'Find Your Weakest Link Before a Regulator Does',
+      text: 'OriginTrace links farm data through processing to your export lots, so the chain of custody stays intact instead of breaking at aggregation.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
       type: 'h2',
       text: 'Lot Traceability vs. Batch Traceability',
     },
@@ -118,7 +125,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'GPS and Geolocation in Food Traceability',
+      text: 'Why Does GPS Matter for Food Traceability?',
     },
     {
       type: 'paragraph',
@@ -138,7 +145,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Digital traceability systems solve these problems. When traceability data is captured digitally — even in offline-capable mobile apps that sync when connectivity is available — it becomes queryable, shareable, and persistent. A buyer conducting due diligence can receive a traceability report for a specific consignment within the same business day. A regulator requesting EUDR documentation can be provided with GPS farm data, chain-of-custody records, and compliance certificates in a structured, verifiable format.',
+      text: 'Digital traceability systems solve these problems. When traceability data is captured digitally — even in [offline-capable mobile apps](/blog/offline-first-traceability-low-connectivity-regions) that sync when connectivity is available — it becomes queryable, shareable, and persistent. A buyer conducting due diligence can receive a traceability report for a specific consignment within the same business day. A regulator requesting EUDR documentation can be provided with GPS farm data, chain-of-custody records, and compliance certificates in a structured, verifiable format.',
     },
     {
       type: 'h2',
@@ -149,11 +156,29 @@ export const post: BlogPost = {
       text: 'OriginTrace is purpose-built for the food export supply chains that operate across Africa, Southeast Asia, and Latin America — supply chains that start at smallholder farms, run through multi-layered aggregation networks, and must meet complex, simultaneous regulatory requirements across different destination markets. The platform handles farm registration and GPS mapping, buying centre lot intake and aggregation records, processing lot management and document linking, and export compliance documentation for EUDR, GACC, FSMA, and other frameworks — in a single integrated system that works in low-connectivity field environments and generates audit-ready reports on demand.',
     },
     {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: "What's the difference between lot traceability and batch traceability?",
+          a: 'A lot is a defined quantity of product collected, processed, or shipped under uniform conditions from a defined source — the unit of identity in a traceable supply chain. A batch is a set of products manufactured together in one production run, more commonly used at the processing stage. Lot-level traceability is the actual goal: following a specific quantity from origin to final sale via a persistent identifier, with batch records linked both backward to source lots and forward to export lots.',
+        },
+        {
+          q: 'Where does food traceability usually break down first?',
+          a: "At the aggregation layer — buying centres and collection points where product from multiple farms is pooled. Once beans, seeds, or nuts from fifty farms sit in one heap without per-farm weighting records and a lot identifier that carries the originating farm data forward, no amount of paperwork afterward can reconstruct which specific farms a given export lot actually came from.",
+        },
+        {
+          q: 'Do I need GPS polygon data for every crop, or just EUDR-covered commodities?',
+          a: "Legally, GPS polygon mapping is an EUDR requirement only for its seven covered commodities (cattle, cocoa, coffee, oil palm, rubber, soya, wood) on farms of 4 hectares or more. But GACC increasingly cross-checks submitted origin claims against satellite data regardless of commodity, and buyers across markets are asking for GPS-anchored traceability as a quality and fraud-prevention signal even where no law requires it.",
+        },
+      ],
+    },
+    {
       type: 'cta',
       heading: 'Start Building Farm-to-Export Traceability',
       text: 'OriginTrace gives food exporters the tools to capture, manage, and prove their supply chain from farm to shipment — meeting EUDR, GACC, FSMA, and buyer due diligence requirements in one platform.',
-      buttonText: 'Explore Agriculture Solutions',
-      href: '/industries/agriculture',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
   ],
 };

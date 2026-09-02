@@ -154,33 +154,13 @@ export default function HomePage() {
   const allPosts = getAllPosts();
   const featuredPost = allPosts[0];
 
-  /* Schema markup */
-  const organizationSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'OriginTrace',
-    url: 'https://origintrace.trade',
-    logo: 'https://origintrace.trade/images/logo-green.png',
-    description: 'Trust infrastructure for origin-sensitive supply chains. Supply chain traceability, compliance verification, and export readiness platform.',
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'hello@origintrace.trade',
-      contactType: 'sales',
-    },
-  };
-
-  const websiteSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'OriginTrace',
-    url: 'https://origintrace.trade',
-    description: 'Trust infrastructure for origin-sensitive supply chains.',
-  };
-
   return (
     <div className="min-h-screen" style={{ background: 'var(--color--gray-8)', overflowX: 'clip' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+      {/* Organization + WebSite JSON-LD is injected once, site-wide, by
+          app/(marketing)/layout.tsx — this page previously duplicated it
+          with a second, differently-worded Organization/WebSite block,
+          asserting conflicting descriptions and contactPoint types for the
+          same @id on the same page. Removed rather than reconciled. */}
       <MarketingNav />
 
       <main>
@@ -214,7 +194,7 @@ export default function HomePage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       From GPS-mapped farm plots to mine extraction sites — OriginTrace verifies origin, scores compliance against EU, UK, US, China, and UAE requirements, and gives buyers the proof they need to clear your shipment.
                     </p>
@@ -239,7 +219,7 @@ export default function HomePage() {
                         gap: '0.375rem',
                         marginTop: '1.25rem',
                         fontSize: '0.875rem',
-                        color: 'rgba(255,255,255,0.62)',
+                        color: 'var(--mk-text-on-dark)',
                       }}
                     >
                       I&apos;m a buyer / importer <ChevronRight className="h-3.5 w-3.5" />

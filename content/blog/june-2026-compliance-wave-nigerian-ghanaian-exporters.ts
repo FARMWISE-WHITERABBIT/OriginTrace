@@ -43,7 +43,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'China\'s General Administration of Customs (GACC) uses Decree 248 to control which overseas food facilities can export to China. Every facility that handles food destined for China — producer, processor, cold store, packaging plant — must be registered on the CIFER system and approved by GACC.',
+      text: 'China\'s General Administration of Customs (GACC) uses Decree 248 to control which overseas food facilities can export to China. Every facility that handles food destined for China — producer, processor, cold store, packaging plant — must be registered on the CIFER system and approved by GACC. Our [full GACC registration walkthrough](/blog/how-to-export-to-china-gacc-registration-guide) covers the process end to end if you\'re starting from scratch.',
     },
     {
       type: 'paragraph',
@@ -84,7 +84,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The EU Deforestation Regulation (Regulation (EU) 2023/1115) requires that cocoa, coffee, soy, palm oil, rubber, cattle, and wood products entering the EU are deforestation-free — produced on land not deforested after 31 December 2020. It\'s been postponed twice; Regulation (EU) 2025/2650 fixed the current dates at 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises.',
+      text: 'The [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide) (Regulation (EU) 2023/1115) requires that cocoa, coffee, soy, palm oil, rubber, cattle, and wood products entering the EU are deforestation-free — produced on land not deforested after 31 December 2020. It\'s been postponed twice; Regulation (EU) 2025/2650 fixed the current dates at 30 December 2026 for large and medium operators and 30 June 2027 for micro and small enterprises.',
     },
     {
       type: 'paragraph',

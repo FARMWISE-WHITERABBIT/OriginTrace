@@ -3107,9 +3107,6 @@
   .compliance-framework-grid > div:first-child {
     min-height: 200px !important;
   }
-  .eudr-who-grid {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 

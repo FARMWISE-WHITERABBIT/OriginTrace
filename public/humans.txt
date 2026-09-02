@@ -1,0 +1,10 @@
+/* TEAM */
+Built by OriginTrace Global Trade Technology Ltd.
+Site: https://origintrace.trade
+Contact: hello@origintrace.trade
+
+/* SITE */
+Last update: 2026-09-01
+Standards: HTML5, CSS3
+Components: Next.js, React, TypeScript, Tailwind CSS
+Software: Supabase, Vercel

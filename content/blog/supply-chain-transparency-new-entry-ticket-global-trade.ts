@@ -21,11 +21,11 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The shift has been building for years, but 2026 has made it unavoidable. As import regulations in every major market have tightened, buyers have learned that sourcing from suppliers who cannot demonstrate supply chain transparency puts their own business at regulatory and reputational risk. The result is a new and permanent reality: traceability data is now the entry ticket to serious global trade. Without it, you are not competing — you are invisible.',
+      text: 'The shift has been building for years, but 2026 has made it unavoidable. As import regulations in every major market have tightened, buyers have learned that sourcing from suppliers who cannot demonstrate supply chain transparency puts their own business at regulatory and reputational risk. The result is a new and permanent reality: [traceability data](/blog/supply-chain-traceability-global-trade) is now the entry ticket to serious global trade. Without it, you are not competing — you are invisible.',
     },
     {
       type: 'h2',
-      text: 'What Buyers Are Actually Checking Before They Buy',
+      text: 'What Are Buyers Actually Checking Before They Buy?',
     },
     {
       type: 'paragraph',
@@ -51,7 +51,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'How Each Major Import Market Is Enforcing Transparency',
+      text: 'How Is Each Major Import Market Enforcing Transparency?',
     },
     {
       type: 'table',
@@ -63,6 +63,10 @@ export const post: BlogPost = {
         ['United States', 'FSMA 204 Food Traceability Rule', 'Key Data Elements (KDEs), Critical Tracking Events (CTEs), lot-level records', 'Fresh produce, seafood, cheese, nut butters, herbs, leafy greens'],
         ['UAE / Gulf States', 'ESMA, Halal, Emirates Conformity Assessment', 'Halal certification (for applicable products), ESMA standards documentation, origin declaration', 'Meat, dairy, processed food, cocoa products'],
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'One correction worth making on that table: FSMA 204 only applies to a defined "Food Traceability List" of high-risk foods, and cocoa, coffee, sesame, and hibiscus generally aren\'t on it. The rule that actually governs most West African commodity imports into the US is FSVP — [our guide to what it requires](/blog/fda-fsvp-importing-west-african-commodities-guide) covers the difference.',
     },
     {
       type: 'h2',
@@ -109,24 +113,18 @@ export const post: BlogPost = {
       ],
     },
     {
-      type: 'h2',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'h3',
-      text: 'Which Nigerian export commodities have the most urgent traceability requirements right now?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Cocoa exporters face the most immediate pressure from both EUDR (EU buyers) and GACC (China buyers). Sesame exporters face GACC registration requirements for China access. Cashew exporters targeting Europe and China face certification and traceability requirements from buyers. Timber exporters face EUDR compliance. All of these are urgent in 2026.',
-    },
-    {
-      type: 'h3',
-      text: 'How can a small Nigerian cooperative compete on traceability with larger exporters?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen.',
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'Which Nigerian export commodities have the most urgent traceability requirements right now?',
+          a: 'Cocoa exporters face the most immediate pressure from both EUDR (EU buyers) and GACC (China buyers). Sesame exporters face GACC registration requirements for China access. Cashew exporters targeting Europe and China face certification and traceability requirements from buyers. Timber exporters face EUDR compliance. All of these are urgent in 2026.',
+        },
+        {
+          q: 'How can a small Nigerian cooperative compete on traceability with larger exporters?',
+          a: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen — the same records a buyer would check in our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy).',
+        },
+      ],
     },
     {
       type: 'cta',

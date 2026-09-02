@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn } from '@/components/marketing/motion';
@@ -98,6 +99,11 @@ export default function EUDRCompliancePage() {
     <>
       <FAQSchema faqs={faqs} />
       <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+        <BreadcrumbSchema items={[
+            { name: 'Home', url: 'https://origintrace.trade' },
+            { name: 'Compliance Hub', url: 'https://origintrace.trade/compliance' },
+            { name: 'EUDR Compliance for Exporters', url: 'https://origintrace.trade/compliance/eudr' },
+          ]} />
         <MarketingNav />
 
         <main>
@@ -116,7 +122,7 @@ export default function EUDRCompliancePage() {
                     <FadeIn delay={0.1}>
                       <span
                         className="pre-title margin-bottom margin-medium"
-                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                       >
                         EU Deforestation Regulation
                       </span>
@@ -132,7 +138,7 @@ export default function EUDRCompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                       >
                         The EU Deforestation Regulation requires GPS-verified, deforestation-free origin for seven commodity groups. Operators must submit a due diligence statement before placing covered commodities on the EU market. Deadline: December 2025 for large operators.
                       </p>
@@ -184,7 +190,7 @@ export default function EUDRCompliancePage() {
               </FadeIn>
 
               <FadeIn delay={0.1}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }} className="eudr-who-grid">
+                <div className="mk-grid-3" style={{ gap: '1.5rem' }}>
                   {/* EU Importers */}
                   <div className="mk-card" style={{ padding: '2rem' }}>
                     <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
@@ -228,7 +234,7 @@ export default function EUDRCompliancePage() {
             <div className="mk-container-lg">
               <FadeIn>
                 <div className="section-header" style={{ marginBottom: '3rem' }}>
-                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>How OriginTrace Helps</span>
+                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--mk-text-on-dark)' }}>How OriginTrace Helps</span>
                   <h2 className="text-display-lg" style={{ color: '#ffffff' }}>Built for every step of EUDR compliance.</h2>
                 </div>
               </FadeIn>

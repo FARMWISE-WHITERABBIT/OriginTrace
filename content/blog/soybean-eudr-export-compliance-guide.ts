@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'Soybean is one of the seven commodities explicitly listed in the EU Deforestation Regulation. Unlike sesame or ginger, which are not on the EUDR commodity list at all, soy has no grey area — if you export soybeans, soy meal, soy oil, soy flour, or any product containing soy into the European Union, EUDR compliance is a legal requirement.',
+      text: 'Soybean is one of the seven commodities explicitly listed in the [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide). Unlike sesame or ginger, which are not on the EUDR commodity list at all, soy has no grey area — if you export soybeans, soy meal, soy oil, soy flour, or any product containing soy into the European Union, EUDR compliance is a legal requirement.',
     },
     {
       type: 'paragraph',
@@ -153,7 +153,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'But you can only tell that story if you have the data to back it up. GPS polygons, farmer registries, deforestation check records, and DDS documentation are what converts a narrative into verified evidence that an EU compliance team will accept.',
+      text: 'But you can only tell that story if you have the data to back it up. GPS polygons, farmer registries, deforestation check records, and DDS documentation are what converts a narrative into verified evidence that an EU compliance team will accept — our [practical guide to EUDR compliance tools](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) covers the same polygon-mapping and batch-traceability workflow in detail, and it applies just as directly to soy as it does to cocoa.',
     },
     {
       type: 'faq',

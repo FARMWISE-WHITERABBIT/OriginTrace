@@ -39,7 +39,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Cocoa is one of the seven commodities directly regulated by the EU Deforestation Regulation (EUDR). From December 30, 2026, every operator placing cocoa or cocoa-derived products on the EU market must submit a due diligence statement confirming the cocoa is deforestation-free and legally produced. This means your EU buyer cannot accept your cocoa unless you provide them with traceable farm data.',
+      text: 'Cocoa is one of the seven commodities directly regulated by the [EU Deforestation Regulation](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) (EUDR). From December 30, 2026, every operator placing cocoa or cocoa-derived products on the EU market must submit a due diligence statement confirming the cocoa is deforestation-free and legally produced. This means your EU buyer cannot accept your cocoa unless you provide them with traceable farm data.',
     },
     {
       type: 'bullets',
@@ -150,7 +150,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Sesame is not covered by EUDR. However, EU border controls on Nigerian sesame have become stricter in recent years following multiple RASFF (Rapid Alert System for Food and Feed) notifications for sesame from Nigeria and other African origins. The primary issue is ethylene oxide residues — a pesticide widely used for post-harvest treatment that is banned for use on food in the EU.',
+      text: 'Sesame is not covered by EUDR. However, EU border controls on Nigerian sesame have become stricter in recent years following multiple RASFF (Rapid Alert System for Food and Feed) notifications for sesame from Nigeria and other African origins — including the 50% Salmonella check rate covered in our [dedicated sesame compliance guide](/blog/sesame-seed-eudr-export-compliance-guide). The primary issue here specifically is ethylene oxide residues — a pesticide widely used for post-harvest treatment that is banned for use on food in the EU.',
     },
     {
       type: 'callout',
@@ -173,32 +173,22 @@ export const post: BlogPost = {
       ],
     },
     {
-      type: 'h2',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'h3',
-      text: 'What is the fastest way to get a certificate of origin in Nigeria for export?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Certificates of origin for Nigerian exports are issued by either the Nigerian Export Promotion Council (NEPC) or the Nigerian Customs Service (NCS), depending on the commodity and destination market requirements. NEPC is generally used for Form A certificates (for EU GSP preferences) and general preferential origin certificates. Standard processing is 2–5 business days; expedited issuance is possible for time-sensitive shipments. Begin the application before your vessel booking, not after.',
-    },
-    {
-      type: 'h3',
-      text: 'How far in advance should I begin EUDR farm mapping before my first EU shipment?',
-    },
-    {
-      type: 'paragraph',
-      text: 'At minimum, 6 months before your intended shipment date. GPS polygon mapping of all source farms, verification of deforestation-free status through satellite data, and compilation of the due diligence statement are not quick processes — especially for supply chains with dozens or hundreds of smallholder farms. Exporters who are building this for the first time should plan for 6–12 months of preparation.',
-    },
-    {
-      type: 'h3',
-      text: 'Do I need different documents for the UK and the EU after Brexit?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Yes. Since Brexit, the UK operates its own import documentation requirements that are separate from EU requirements. UK import controls on food and agricultural products have been phased in since 2021. For Nigerian and Ghanaian exporters, this typically means separate phytosanitary certificates endorsed for UK entry, UK-specific certificates of conformity where required, and compliance with UK Environmental Act due diligence requirements (separate from EUDR). Check with your UK buyer on their specific documentation requirements.',
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'What is the fastest way to get a certificate of origin in Nigeria for export?',
+          a: 'Certificates of origin for Nigerian exports are issued by either the Nigerian Export Promotion Council (NEPC) or the Nigerian Customs Service (NCS), depending on the commodity and destination market requirements. NEPC is generally used for Form A certificates (for EU GSP preferences) and general preferential origin certificates. Standard processing is 2–5 business days; expedited issuance is possible for time-sensitive shipments. Begin the application before your vessel booking, not after.',
+        },
+        {
+          q: 'How far in advance should I begin EUDR farm mapping before my first EU shipment?',
+          a: 'At minimum, 6 months before your intended shipment date. GPS polygon mapping of all source farms, verification of deforestation-free status through satellite data, and compilation of the due diligence statement are not quick processes — especially for supply chains with dozens or hundreds of smallholder farms. Exporters who are building this for the first time should plan for 6–12 months of preparation.',
+        },
+        {
+          q: 'Do I need different documents for the UK and the EU after Brexit?',
+          a: 'Yes for phytosanitary and food-safety documentation — UK import controls on food and agricultural products have been phased in since 2021 and require separate certificates endorsed for UK entry. On deforestation-style due diligence specifically, note that the [UK\'s own forest-risk commodity rules aren\'t actually in force yet](/blog/uk-forest-risk-commodities-not-in-force-buyers-guide), unlike EUDR — don\'t assume a UK buyer\'s due diligence request has the same legal footing as an EU one until you check.',
+        },
+      ],
     },
     {
       type: 'cta',

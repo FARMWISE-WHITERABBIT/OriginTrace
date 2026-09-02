@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { sendEmail } from '@/lib/email/resend-client';
 import { upsertHubSpotContact } from '@/lib/hubspot';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -46,12 +47,24 @@ export async function POST(request: NextRequest) {
       <p style="margin-top:24px;font-size:12px;color:#888">Submitted via origintrace.trade/${source === 'calculator' ? 'compliance calculator' : 'demo'}</p>
     `;
 
-    await sendEmail({
+    // This is the only signal the team gets that a lead came in — HubSpot and
+    // the nurture job are backups, but there's no lead dashboard (see
+    // docs/BUYER-PROVISIONING-RUNBOOK.md), so a silently failed send here
+    // means the lead can go completely unnoticed. Surface failures to Sentry
+    // instead of only console.error, which nothing monitors.
+    const internalNotifyResult = await sendEmail({
       to: notifyAddress,
       subject: `[Lead] ${full_name} — ${organization_type || 'Demo Request'}`,
       html: internalHtml,
       replyTo: email,
     });
+    if (!internalNotifyResult.success) {
+      Sentry.captureMessage('Demo lead internal notification email failed to send', {
+        level: 'error',
+        tags: { source: source || 'demo' },
+        extra: { notifyAddress, leadEmail: email, leadName: full_name, error: internalNotifyResult.error },
+      });
+    }
 
     // ── Auto-reply with Cal.com booking CTA ───────────────────────────────────
     const firstName = full_name.split(' ')[0];

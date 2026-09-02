@@ -18,7 +18,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'paragraph',
-      text: 'If you export cocoa, coffee, or rubber to Europe, you\'ve now heard this news twice: the EU Deforestation Regulation (EUDR, Regulation (EU) 2023/1115) has been delayed again. Regulation (EU) 2025/2650, published in December 2025, moved the compliance date to 30 December 2026 for large and medium operators — and 30 June 2027 for micro and small enterprises.',
+      text: 'If you export cocoa, coffee, or rubber to Europe, you\'ve now heard this news twice: the [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide) (EUDR, Regulation (EU) 2023/1115) has been delayed again. Regulation (EU) 2025/2650, published in December 2025, moved the compliance date to 30 December 2026 for large and medium operators — and 30 June 2027 for micro and small enterprises.',
     },
     {
       type: 'paragraph',
@@ -179,6 +179,10 @@ export const post: BlogPost = {
         'November: run a dry-run data package for one consignment and have your EU buyer review it against their DDS requirements.',
         'December: close the gaps the dry run exposed. You want zero surprises on the 30th.',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'If cocoa is what you export, our [practical guide to EUDR compliance tools for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) turns each item on this timeline into an actual field workflow — polygon mapping, batch traceability, and the DDS data pack your buyer needs.',
     },
     {
       type: 'faq',

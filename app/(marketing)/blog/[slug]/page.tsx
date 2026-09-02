@@ -6,6 +6,7 @@ import { getAllPosts, getPostBySlug, getRecentPosts } from '@/lib/blog';
 import type { BlogSection } from '@/lib/blog';
 import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Clock, ArrowRight, ChevronRight, ArrowLeft, AlertTriangle, Info, Lightbulb, CalendarClock } from 'lucide-react';
@@ -318,6 +319,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
+      <BreadcrumbSchema items={[
+        { name: 'Home', url: 'https://origintrace.trade' },
+        { name: 'Insights', url: 'https://origintrace.trade/blog' },
+        { name: post.title, url: `https://origintrace.trade/blog/${post.slug}` },
+      ]} />
       <MarketingNav />
 
       <main className="pt-24 pb-20 md:pb-28">

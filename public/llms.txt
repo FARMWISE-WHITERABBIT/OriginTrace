@@ -1,0 +1,43 @@
+# OriginTrace
+
+> Trust infrastructure for origin-sensitive supply chains: farm-to-export traceability, pre-shipment compliance scoring, and buyer-ready documentation for agricultural exporters in Africa and beyond.
+
+OriginTrace helps agricultural cooperatives, aggregators, and exporters prove where a commodity came from and that it meets the import rules of the market it's headed to — GPS farm-boundary mapping, batch-level chain of custody from farm through processing, dispatch, and shipment, automated due-diligence statement generation, and a compliance score that flags problems before a shipment leaves port instead of after a buyer rejects it. Built for real conditions in producing countries: works offline, on any smartphone, in low-connectivity regions. A separate buyer-facing product (supplier verification, contracts, tenders, traceability) is provisioned by request, not self-serve signup.
+
+## Compliance
+
+- [Compliance Hub](https://origintrace.trade/compliance): Overview of all supported import-market regulatory regimes.
+- [EU EUDR](https://origintrace.trade/compliance/eudr): Deforestation Regulation compliance — geolocation/polygon plot data, due diligence statements, the Dec 2025/2026 enforcement deadlines.
+- [UK Environment Act (UKDDS)](https://origintrace.trade/compliance/uk): UK due diligence requirements for forest-risk commodities.
+- [US Lacey Act & USDA NOP](https://origintrace.trade/compliance/usa): US import compliance for timber/agricultural products and organic certification chain of custody.
+- [China GACC](https://origintrace.trade/compliance/china): China General Administration of Customs registration and traceability requirements.
+- [UAE Import Compliance](https://origintrace.trade/compliance/uae): UAE/ESMA import documentation requirements.
+
+## Product
+
+- [Solutions](https://origintrace.trade/solutions): Platform capabilities overview — farm registration, batch tracking, shipments, compliance scoring, documents.
+- [For Importers](https://origintrace.trade/importers): Buyer-side value proposition — supplier verification, milestone escrow, traceability into your own supply chain.
+- [Pedigree](https://origintrace.trade/pedigree): Product-level chain-of-custody and digital product passport feature.
+- [Processors](https://origintrace.trade/processors): Processing-run tracking for aggregators/processors between farm and shipment.
+- [API Documentation](https://origintrace.trade/api-docs): Enterprise REST API — batches, shipments, farm data, authentication, rate limiting.
+
+## Industries
+
+- [Agriculture](https://origintrace.trade/industries/agriculture)
+- [Timber & Wood](https://origintrace.trade/industries/timber)
+- [Textiles](https://origintrace.trade/industries/textiles)
+- [Minerals](https://origintrace.trade/industries/minerals)
+
+## Insights
+
+- [Blog](https://origintrace.trade/blog): Guides on EUDR/GACC/UK/US compliance deadlines, export documentation, escrow vs. letters of credit, and market-specific rules (Dubai re-export, China GACC, etc.) for exporters and importers.
+
+## Company
+
+- [Terms of Service](https://origintrace.trade/legal/terms)
+- [Privacy Policy](https://origintrace.trade/legal/privacy)
+- [Request a Demo](https://origintrace.trade/demo)
+
+## Optional
+
+- [Sitemap](https://origintrace.trade/sitemap.xml): Full, exhaustive URL list including every blog post.

@@ -120,7 +120,7 @@ export default function ProcessorsPage() {
                   <FadeIn delay={0.1}>
                     <span
                       className="pre-title margin-bottom margin-medium"
-                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                     >
                       Processing & Chain-of-Custody
                     </span>
@@ -136,7 +136,7 @@ export default function ProcessorsPage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       Processing is where most traceability records break down. OriginTrace maintains chain-of-custody through every transformation — sorting, drying, hulling, grading, and blending — so the pedigree record that reaches your buyer reflects what actually happened.
                     </p>
@@ -187,7 +187,7 @@ export default function ProcessorsPage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-2" style={{ gap: '1.5rem' }}>
               {processingControls.map((control, i) => {
                 const Icon = iconMap[control.iconName];
                 return (
@@ -229,40 +229,40 @@ export default function ProcessorsPage() {
 
             <FadeIn delay={0.2}>
               <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '2rem' }}>
-                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Live Dashboard</p>
+                <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-on-dark-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Live Dashboard</p>
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#ffffff', marginBottom: '1.5rem' }}>Processing Run Summary</h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', padding: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Input Batches</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Input Batches</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>12 batches</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Total Weight</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Total Weight</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>24,500 kg</span>
                     </div>
                   </div>
 
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', padding: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Output Product</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Output Product</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>Cocoa Butter</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Output Weight</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Output Weight</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>10,045 kg</span>
                     </div>
                   </div>
 
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', padding: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Recovery Rate</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Recovery Rate</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>41.0%</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Expected Range</span>
-                      <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>38% – 45%</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Expected Range</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--mk-text-on-dark-2)' }}>38% – 45%</span>
                     </div>
                   </div>
 
@@ -278,7 +278,7 @@ export default function ProcessorsPage() {
 
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', padding: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Source Farms</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)' }}>Source Farms</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#ffffff' }}>347 farms traced</span>
                     </div>
                   </div>
@@ -301,7 +301,7 @@ export default function ProcessorsPage() {
               </div>
             </FadeIn>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+            <div className="mk-grid-3" style={{ gap: '1.5rem' }}>
               {commodityRecovery.map((commodity, i) => (
                 <FadeIn key={i} delay={i * 0.1}>
                   <div className="mk-card" style={{ padding: '2rem' }}>
@@ -329,13 +329,12 @@ export default function ProcessorsPage() {
             {/* Panel 1 */}
             <FadeIn>
               <div
+                className="mk-grid-2"
                 style={{
                   background: 'var(--color--gray-1)',
                   borderRadius: '1rem',
                   padding: '3rem',
                   marginBottom: '1.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
                   gap: '3rem',
                   alignItems: 'center',
                 }}
@@ -373,13 +372,12 @@ export default function ProcessorsPage() {
             {/* Panel 2 */}
             <FadeIn delay={0.1}>
               <div
+                className="mk-grid-2"
                 style={{
                   background: 'rgba(255,255,255,0.03)',
                   border: '1px solid var(--mk-border)',
                   borderRadius: '1rem',
                   padding: '3rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
                   gap: '3rem',
                   alignItems: 'center',
                 }}

@@ -4,12 +4,15 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { MarketingFooter } from '@/components/marketing/footer';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | OriginTrace',
+  title: 'Privacy Policy',
   description: 'How OriginTrace collects, uses, and protects your personal data.',
 };
 
 const EFFECTIVE_DATE = '1 April 2026';
-const COMPANY = 'WhiteRabbit Agro Limited';
+const COMPANY = 'OriginTrace Global Trade Technology Ltd';
+const RC_NUMBER = '9811709';
+const REGISTERED_ADDRESS = '23 Egbu Road, Owerri, Imo State, Nigeria';
+const OPERATING_ADDRESS = 'Lagos, Nigeria';
 const EMAIL = 'privacy@origintrace.trade';
 
 const TOC = [
@@ -46,7 +49,7 @@ export default function PrivacyPolicy() {
               Privacy Policy
             </h1>
             <p className="text-slate-500 mt-2 text-sm">
-              Effective date: {EFFECTIVE_DATE} · {COMPANY}
+              Effective date: {EFFECTIVE_DATE} · {COMPANY} · RC {RC_NUMBER}
             </p>
           </div>
         </div>
@@ -77,7 +80,7 @@ export default function PrivacyPolicy() {
 
               <section id="section-1">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">1. Who We Are</h2>
-                <p>{COMPANY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates the OriginTrace agricultural traceability platform. We are the data controller for personal data processed through the Platform. Our registered address is Lagos, Nigeria.</p>
+                <p>{COMPANY} (RC {RC_NUMBER}) (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates the OriginTrace agricultural traceability platform. We are the data controller for personal data processed through the Platform. Our registered office is {REGISTERED_ADDRESS}; our operating office is {OPERATING_ADDRESS}.</p>
               </section>
 
               <section id="section-2">
@@ -148,7 +151,11 @@ export default function PrivacyPolicy() {
                 <p>Data protection enquiries:{' '}
                   <a href={`mailto:${EMAIL}`} className="text-green-700 dark:text-green-400 underline underline-offset-2 hover:text-green-800">{EMAIL}</a>
                 </p>
-                <p className="mt-2">{COMPANY}, Lagos, Nigeria.</p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {COMPANY} (RC {RC_NUMBER})<br />
+                  Registered office: {REGISTERED_ADDRESS}<br />
+                  Operating office: {OPERATING_ADDRESS}
+                </p>
               </section>
 
               {/* Cross-links */}

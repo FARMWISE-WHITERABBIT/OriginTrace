@@ -22,7 +22,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Since 2022, GACC has required every overseas food production and processing enterprise to register before exporting to China. No valid GACC registration number, no entry — your goods get refused at the port, no matter how good they are. This guide walks you through the whole process: working out whether you need to register, how to do it, and how to stay compliant once you\'re approved.',
+      text: 'Since 2022, GACC has required every overseas food production and processing enterprise to register before exporting to China. No valid GACC registration number, no entry — your goods get refused at the port, no matter how good they are. This guide walks you through the whole process: working out whether you need to register, how to do it, and how to stay compliant once you\'re approved. If you\'ve already missed a registration deadline, see [what to do now](/blog/china-gacc-compliance-deadline-june-2026) instead.',
     },
     {
       type: 'callout',
@@ -171,7 +171,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Traceability is not an optional add-on to GACC compliance — it is embedded in the regulation\'s core requirements. GACC expects that registered enterprises can trace any product lot back to its source: the farm, plot, or collection point from which it originated. In the event of a food safety incident, GACC will require you to identify the affected batch, its origin, and all entities in the supply chain it passed through.',
+      text: 'Traceability is not an optional add-on to GACC compliance — it is embedded in the regulation\'s core requirements. GACC expects that registered enterprises can trace any product lot back to its source: the farm, plot, or collection point from which it originated. In the event of a food safety incident, GACC will require you to identify the affected batch, its origin, and all entities in the supply chain it passed through. If sesame or gum arabic is your product, our [dedicated guide for Nigerian sesame and gum arabic exporters](/blog/gacc-compliance-traceability-sesame-gum-arabic-nigeria) covers the commodity-specific documentation Chinese buyers are actually asking for.',
     },
     {
       type: 'paragraph',
@@ -236,7 +236,7 @@ export const post: BlogPost = {
         },
         {
           q: 'How do I check my GACC registration status?',
-          a: 'Check your application status in the CIFER system, or ask your national competent authority, which submitted on your behalf. GACC also publishes lists of approved overseas enterprises — your Chinese importer can verify your number appears before your first shipment moves.',
+          a: 'Check your application status in the CIFER system, or ask your national competent authority, which submitted on your behalf. GACC also publishes lists of approved overseas enterprises at its [public query site](/blog/how-to-verify-supplier-gacc-registration-china-buyers) — your Chinese importer can verify your number appears before your first shipment moves.',
         },
         {
           q: 'What happens if I export to China without GACC registration?',

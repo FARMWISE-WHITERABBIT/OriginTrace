@@ -192,7 +192,7 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
                 {/* Body */}
                 <p style={{
                   fontSize: '0.875rem',
-                  color: 'rgba(255,255,255,0.55)',
+                  color: 'var(--mk-text-on-dark-2)',
                   lineHeight: 1.75,
                   flex: 1,
                   marginBottom: '1.5rem',
@@ -206,7 +206,7 @@ export function CapabilitySlider({ capabilities }: { capabilities?: Capability[]
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
                     fontSize: '0.8125rem', fontWeight: 600,
-                    color: 'rgba(255,255,255,0.75)',
+                    color: 'var(--mk-text-on-dark)',
                     border: '1px solid rgba(255,255,255,0.2)',
                     borderRadius: '9999px', padding: '0.4rem 1rem',
                     width: 'fit-content', textDecoration: 'none',

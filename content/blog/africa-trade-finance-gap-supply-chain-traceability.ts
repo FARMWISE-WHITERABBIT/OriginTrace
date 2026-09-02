@@ -35,7 +35,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The common thread running through all of these barriers is not capital scarcity — it is verifiability. When businesses cannot prove where goods came from, demonstrate that they meet regulatory standards, or produce the documentation a bank needs to extend a letter of credit, trade either does not happen or happens at enormous cost. Supply chain traceability is the missing infrastructure that turns unverifiable trade into verifiable trade — and verifiable trade into financed trade.',
+      text: 'The common thread running through all of these barriers is not capital scarcity — it is verifiability. When businesses cannot prove where goods came from, demonstrate that they meet regulatory standards, or produce the documentation a bank needs to extend a letter of credit, trade either does not happen or happens at enormous cost. [Supply chain traceability](/blog/supply-chain-transparency-new-entry-ticket-global-trade) is the missing infrastructure that turns unverifiable trade into verifiable trade — and verifiable trade into financed trade.',
     },
     {
       type: 'h2',
@@ -54,6 +54,13 @@ export const post: BlogPost = {
       variant: 'info',
       title: 'The Scale of the Financing Gap',
       text: 'Banks in many African markets finance just 25% of goods trade, compared to 60–80% financing rates in developed economies. The continent faces an annual trade finance gap of $100–120 billion, with SMEs — which comprise 80–90% of African businesses — bearing the brunt of this shortage. Globally, half of all SME trade finance requests are rejected outright.',
+    },
+    {
+      type: 'cta',
+      heading: 'Get Your Farms Mapped and Your Documents in One Place',
+      text: 'The exporters closing this gap fastest are the ones who can hand a bank or buyer verified GPS origin data and a complete document trail — not a promise.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
     {
       type: 'paragraph',
@@ -157,11 +164,11 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Where Verifiable Supply Chains Change the Equation',
+      text: 'How Do Verifiable Supply Chains Change the Trade Finance Equation?',
     },
     {
       type: 'paragraph',
-      text: 'The connection between supply chain verifiability and trade finance access is not theoretical. It is embedded in how trade finance instruments actually work. A letter of credit is issued against documentation that verifies shipment, origin, and quality. A bank assessing a pre-export finance request is evaluating whether the underlying trade is real, whether the goods have a buyer, and whether the exporter can deliver. A trade finance provider pricing country risk is, at least in part, pricing the risk of documentation failure — goods detained at customs, certificates rejected, shipments returned.',
+      text: 'The connection between supply chain verifiability and trade finance access is not theoretical. It is embedded in how trade finance instruments actually work. A [letter of credit](/blog/escrow-vs-letter-of-credit-commodity-imports) is issued against documentation that verifies shipment, origin, and quality. A bank assessing a pre-export finance request is evaluating whether the underlying trade is real, whether the goods have a buyer, and whether the exporter can deliver. A trade finance provider pricing country risk is, at least in part, pricing the risk of documentation failure — goods detained at customs, certificates rejected, shipments returned.',
     },
     {
       type: 'paragraph',
@@ -198,11 +205,29 @@ export const post: BlogPost = {
       text: 'Africa does not need to solve the entire $100 billion trade finance gap before its exporters can benefit from better access. Each exporter who moves from opaque to traceable supply chains becomes more financeable, more compliant with destination market regulations, and more competitive in the premium and institutional buyer segments that pay the highest prices. The aggregate effect of many exporters making that transition is a market that looks less risky from the outside — and that attracts more of the capital that is currently sitting on the sidelines.',
     },
     {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: "Why is Africa's trade finance gap so large if the continent trades hundreds of billions of dollars a year?",
+          a: "The gap isn't primarily about capital scarcity — it's about verifiability. Banks in many African markets finance just 25% of goods trade, versus 60–80% in developed economies, because correspondent banks and lenders can't independently verify the origin, quality, or compliance status of what's being traded. When that verification is missing, banks price the uncertainty through higher costs, tighter terms, or outright rejection rather than simply lending less.",
+        },
+        {
+          q: 'Does better supply chain traceability actually help exporters access trade finance?',
+          a: "Yes, directly. Trade finance instruments — letters of credit, pre-export finance, export credit — are all issued against documentation that verifies shipment, origin, and quality. An exporter who can produce GPS-verified farm origin data and lot-level chain-of-custody records reduces a lender's documentation risk, which is exactly the risk correspondent banks and financiers are pricing in when they decline or discount African trade finance applications.",
+        },
+        {
+          q: 'Why do African exporters under-use their EU trade preferences even when tariff savings are significant?',
+          a: "Rules of origin compliance, not tariff levels, is the real barrier. Proving a product's origin under frameworks like the EU's EBA preferences requires documenting the source and proportion of every input — data most exporters don't have digitally. Uganda, for example, used about 92% of its available EU preferences for animal and vegetable oils in 2018, but only 5.1% of its COMESA preferences for the same category, because the administrative burden of proving origin varies sharply between frameworks.",
+        },
+      ],
+    },
+    {
       type: 'cta',
-      heading: 'Build the Infrastructure That Makes Your Supply Chain Financeable',
+      heading: 'See How Ready Your Supply Chain Is to Finance',
       text: 'OriginTrace helps agricultural exporters across Africa and Southeast Asia build GPS-verified, lot-traceable, compliance-ready supply chains — the infrastructure that closes the trust gap and opens the door to global market access and trade finance.',
-      buttonText: 'Explore the Platform',
-      href: '/solutions',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
     {
       type: 'references',

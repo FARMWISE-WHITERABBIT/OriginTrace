@@ -173,7 +173,7 @@ export default function ImportersPage() {
                   <FadeIn delay={0.1}>
                     <span
                       className="pre-title margin-bottom margin-medium"
-                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                     >
                       For Importers & Buyers
                     </span>
@@ -189,7 +189,7 @@ export default function ImportersPage() {
                   <FadeIn delay={0.2}>
                     <p
                       className="margin-bottom margin-xlarge"
-                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '42ch', color: 'rgba(255,255,255,0.62)' }}
+                      style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '42ch', color: 'var(--mk-text-on-dark)' }}
                     >
                       You carry the compliance liability and the payment risk — your supplier carries the data. OriginTrace closes that gap: your exporters document farms, lab tests, certificates, and shipments at origin, and you verify all of it from one buyer workspace before your money is on the water.
                     </p>

@@ -45,7 +45,7 @@ export const post: BlogPost = {
       type: 'callout',
       variant: 'tip',
       title: 'New to the regulation itself?',
-      text: 'This post assumes you know the basics of EUDR. If you want the full picture — commodities covered, the three-step due diligence process, what goes into a DDS — start with our EUDR compliance hub at origintrace.trade/compliance/eudr, then come back here.',
+      text: 'This post assumes you know the basics of EUDR. If you want the full picture — commodities covered, the three-step due diligence process, what goes into a DDS — start with our [EUDR readiness guide for cocoa importers](/blog/eudr-cocoa-compliance-importers-readiness-guide), then come back here.',
     },
     {
       type: 'h2',
@@ -65,7 +65,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'You don\'t need a satellite team to test a supplier\'s claim. You need an afternoon, a sample of their data, and a healthy level of suspicion. Here\'s the workflow we recommend to importers:',
+      text: 'You don\'t need a satellite team to test a supplier\'s claim. You need an afternoon, a sample of their data, and a healthy level of suspicion. This workflow checks whether the geodata is real — if you also need to confirm the company itself is legitimate before you wire a deposit, see our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy). Here\'s the workflow we recommend to importers:',
     },
     {
       type: 'numbered',

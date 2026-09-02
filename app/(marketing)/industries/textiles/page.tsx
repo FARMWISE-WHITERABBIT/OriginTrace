@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import React from 'react';
 import { MarketingNav } from '@/components/marketing/nav';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn } from '@/components/marketing/motion';
@@ -71,6 +72,11 @@ const roles = [
 export default function TextilesPage() {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+      <BreadcrumbSchema items={[
+            { name: 'Home', url: 'https://origintrace.trade' },
+            { name: 'Industries', url: 'https://origintrace.trade/industries' },
+            { name: 'Textiles Traceability & Compliance', url: 'https://origintrace.trade/industries/textiles' },
+          ]} />
       <MarketingNav />
 
       <main>
@@ -85,9 +91,9 @@ export default function TextilesPage() {
               <div className="hero-content-grid grid lg:grid-cols-[55fr_45fr] gap-6 lg:gap-12"
                    style={{ alignItems: 'stretch', height: '100%', minHeight: '40vh' }}>
                 <div className="hero-left-col flex flex-col justify-center py-16 lg:py-8">
-                  <FadeIn delay={0.1}><span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}>Textiles</span></FadeIn>
+                  <FadeIn delay={0.1}><span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}>Textiles</span></FadeIn>
                   <FadeIn delay={0.15}><h1 className="text-display-2xl margin-bottom margin-large" style={{ color: '#ffffff', fontFamily: 'var(--font-display)', maxWidth: '16ch' }}>Fibre origin traceability for forced labour compliance.</h1></FadeIn>
-                  <FadeIn delay={0.2}><p className="margin-bottom margin-xlarge" style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}>Cotton and natural fibres face growing forced labour due diligence requirements — US UFLPA, EU CSRD, UK Modern Slavery Act. OriginTrace traces fibre origin from the growing region through ginning and processing, giving buyers the verified sourcing data they need to clear imports.</p></FadeIn>
+                  <FadeIn delay={0.2}><p className="margin-bottom margin-xlarge" style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}>Cotton and natural fibres face growing forced labour due diligence requirements — US UFLPA, EU CSRD, UK Modern Slavery Act. OriginTrace traces fibre origin from the growing region through ginning and processing, giving buyers the verified sourcing data they need to clear imports.</p></FadeIn>
                   <FadeIn delay={0.3}><Link href="/demo" className="btn-mk-primary btn-mk-lg">See how it works for textiles <ChevronRight className="h-5 w-5" /></Link></FadeIn>
                 </div>
                 <div className="hero-right-col flex flex-col justify-end pb-0">
@@ -162,7 +168,7 @@ export default function TextilesPage() {
           <div className="mk-container-lg">
             <FadeIn>
               <div className="section-header--left margin-bottom margin-xlarge">
-                <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>Who It&apos;s For</span>
+                <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--mk-text-on-dark)' }}>Who It&apos;s For</span>
                 <h2 className="text-display-lg" style={{ color: '#ffffff', marginTop: '0.75rem' }}>Built for textile exporters and their compliance-sensitive buyers.</h2>
               </div>
             </FadeIn>
@@ -187,14 +193,14 @@ export default function TextilesPage() {
                         <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--mk-green-mid)' }}>{role.label}</span>
                       </div>
                       <h3 style={{ fontSize: 'clamp(1.125rem, 2vw, 1.375rem)', fontWeight: 700, color: '#ffffff', lineHeight: 1.35, marginBottom: '1rem', maxWidth: '28ch' }}>{role.headline}</h3>
-                      <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>{role.body}</p>
+                      <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-on-dark-2)', lineHeight: 1.75, marginBottom: '1.75rem', maxWidth: '44ch' }}>{role.body}</p>
                       <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
                         {role.features.map((f, j) => (
                           <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
                             <span style={{ marginTop: '0.2rem', width: '1rem', height: '1rem', borderRadius: '50%', background: 'rgba(46,125,107,0.2)', border: '1px solid var(--mk-green-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <Check className="w-2.5 h-2.5" style={{ color: 'var(--mk-green-mid)' }} />
                             </span>
-                            <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{f}</span>
+                            <span style={{ fontSize: '0.875rem', color: 'var(--mk-text-on-dark-2)', lineHeight: 1.55 }}>{f}</span>
                           </li>
                         ))}
                       </ul>
@@ -202,8 +208,8 @@ export default function TextilesPage() {
                     <div className="mk-role-stats">
                       {role.stats.map((s, j) => (
                         <div key={j}>
-                          <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
-                          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
+                          <p style={{ fontSize: '0.6875rem', color: 'var(--mk-text-on-dark-2)', lineHeight: 1.45, marginBottom: '0.5rem' }}>{s.label}</p>
+                          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--mk-text-on-dark)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{s.value}</p>
                         </div>
                       ))}
                     </div>

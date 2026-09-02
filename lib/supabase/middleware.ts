@@ -169,20 +169,20 @@ export async function updateSession(request: NextRequest) {
   const isSuperadminPage = pathname.startsWith('/superadmin');
   const isSuperadminLogin = pathname === '/superadmin/login';
   const isResetPasswordPage = pathname === '/auth/reset-password';
-  const isPublicPage =
-    ['/', '/solutions', '/pedigree', '/demo', '/importers', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
-    pathname.startsWith('/verify') ||
-    pathname.startsWith('/compliance') ||
-    pathname.startsWith('/industries') ||
-    pathname.startsWith('/legal') ||
-    pathname.startsWith('/pedigree') ||
-    pathname.startsWith('/farmer/activate');
+  // Only /app/* and /superadmin/* (besides its own login) actually require a
+  // session. Everything else this proxy sees is either a marketing/public
+  // route the matcher didn't already exclude (e.g. a typo'd or removed URL)
+  // or a route this file gates more precisely further down. Gating those on
+  // an explicit public-page allowlist meant any URL missing from that list —
+  // including plain 404s — silently redirected to /auth/login instead of
+  // rendering a real 404 (confirmed live on origintrace.trade).
+  const isProtectedPage = pathname.startsWith('/app') || (isSuperadminPage && !isSuperadminLogin);
 
   // API routes do their own auth
   if (isApiRoute) return supabaseResponse;
 
   // Unauthenticated redirect
-  if (!user && !isAuthPage && !isPublicPage && !isResetPasswordPage) {
+  if (!user && !isAuthPage && isProtectedPage && !isResetPasswordPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
     return NextResponse.redirect(url);

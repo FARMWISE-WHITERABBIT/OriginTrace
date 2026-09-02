@@ -52,11 +52,11 @@ export function ReadinessModal() {
                   <Image src="/images/logo-white.png" alt="OriginTrace" width={160} height={40} style={{ height: '32px', width: 'auto' }} />
                 </div>
 
-                <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>Export Readiness Tool</p>
+                <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--mk-text-on-dark-2)' }}>Export Readiness Tool</p>
                 <h2 className="text-2xl font-bold leading-tight mb-4" style={{ color: '#fff' }}>
                   Know your compliance gaps<br />before your buyer does.
                 </h2>
-                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.62)' }}>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--mk-text-on-dark-2)' }}>
                   12 questions. Instant score. A prioritised action plan built for African agri and mineral exporters.
                 </p>
 
@@ -68,14 +68,14 @@ export function ReadinessModal() {
                   ].map(({ icon, label }) => (
                     <div key={label} className="flex items-center gap-3">
                       <span className="text-base">{icon}</span>
-                      <span className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>{label}</span>
+                      <span className="text-sm" style={{ color: 'var(--mk-text-on-dark)' }}>{label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Bottom badge */}
-              <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <div className="text-xs" style={{ color: 'var(--mk-text-on-dark-2)' }}>
                 Trusted by exporters across West & Central Africa
               </div>
             </div>

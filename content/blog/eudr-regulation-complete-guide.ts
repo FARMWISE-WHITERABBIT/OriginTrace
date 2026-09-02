@@ -92,7 +92,7 @@ export const post: BlogPost = {
       items: [
         'Cattle — live animals, fresh and processed meat, leather and hides, gelatin, collagen',
         'Cocoa — raw cocoa beans, cocoa butter, cocoa powder, cocoa paste, chocolate and chocolate preparations',
-        'Coffee — raw and roasted coffee beans, ground coffee, soluble coffee, coffee extracts',
+        'Coffee — raw and roasted coffee beans, ground coffee, soluble coffee, coffee extracts (see our [buyer\'s guide to Cameroon and Côte d\'Ivoire robusta](/blog/coffee-eudr-cameroon-cote-divoire-buyers-guide))',
         'Palm oil — crude and refined palm oil, palm kernel oil, palm fatty acid distillates, products containing palm oil',
         'Soy — soybeans, soy meal, soy flour, soy protein, soy oil, lecithin, livestock products fed with soy',
         'Wood — all timber, wood-based panels, pulp, paper, printed products, furniture made from wood',
@@ -243,6 +243,10 @@ export const post: BlogPost = {
         'Engage your EU buyers: understand exactly what data format they need to complete their DDS — coordinates, document references, supply chain entity information',
         'Run a compliance test shipment: before the 30 December 2026 deadline makes it mandatory, test the full process with a single consignment to identify and resolve gaps before they cause a customs hold',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'If cocoa is your commodity, our [practical guide to EUDR compliance tools for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) turns this roadmap into a concrete field workflow — GPS polygon mapping, batch traceability, and DDS data packs. Importing cocoa into the EU rather than exporting it? Our [EUDR readiness guide for cocoa importers](/blog/eudr-cocoa-compliance-importers-readiness-guide) covers the operator-side obligations instead.',
     },
     {
       type: 'faq',

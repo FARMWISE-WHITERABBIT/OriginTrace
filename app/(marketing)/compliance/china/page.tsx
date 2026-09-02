@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing/nav';
+import { BreadcrumbSchema } from '@/components/marketing/breadcrumb-schema';
 import { MarketingFooter } from '@/components/marketing/footer';
 import HeroBackground from '@/components/marketing/hero-background';
 import { FadeIn } from '@/components/marketing/motion';
@@ -71,6 +72,11 @@ export default function ChinaCompliancePage() {
   return (
     <>
       <div className="min-h-screen overflow-x-hidden" style={{ background: 'var(--color--gray-8)' }}>
+        <BreadcrumbSchema items={[
+            { name: 'Home', url: 'https://origintrace.trade' },
+            { name: 'Compliance Hub', url: 'https://origintrace.trade/compliance' },
+            { name: 'China GACC Compliance', url: 'https://origintrace.trade/compliance/china' },
+          ]} />
         <MarketingNav />
 
         <main>
@@ -89,7 +95,7 @@ export default function ChinaCompliancePage() {
                     <FadeIn delay={0.1}>
                       <span
                         className="pre-title margin-bottom margin-medium"
-                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                       >
                         China Compliance
                       </span>
@@ -105,7 +111,7 @@ export default function ChinaCompliancePage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                       >
                         China&apos;s General Administration of Customs requires overseas food and agricultural exporters to be registered on the GACC system before their goods can clear Chinese customs. Origin traceability is a registration prerequisite. OriginTrace builds the farm-level record GACC requires.
                       </p>
@@ -157,7 +163,7 @@ export default function ChinaCompliancePage() {
               </FadeIn>
 
               <FadeIn delay={0.1}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }} className="eudr-who-grid">
+                <div className="mk-grid-3" style={{ gap: '1.5rem' }}>
                   <div className="mk-card" style={{ padding: '2rem' }}>
                     <div className="mk-card__icon" style={{ marginBottom: '1rem' }}>
                       <Globe className="h-6 w-6" style={{ color: 'var(--mk-green)' }} />
@@ -198,7 +204,7 @@ export default function ChinaCompliancePage() {
             <div className="mk-container-lg">
               <FadeIn>
                 <div className="section-header" style={{ marginBottom: '3rem' }}>
-                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}>How OriginTrace Helps</span>
+                  <span className="pre-title margin-bottom margin-medium" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--mk-text-on-dark)' }}>How OriginTrace Helps</span>
                   <h2 className="text-display-lg" style={{ color: '#ffffff' }}>Built for every step of GACC compliance.</h2>
                 </div>
               </FadeIn>

@@ -143,7 +143,7 @@ export default function ComplianceHubPage() {
                     <FadeIn delay={0.1}>
                       <span
                         className="pre-title margin-bottom margin-medium"
-                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.7)' }}
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--mk-text-on-dark)' }}
                       >
                         Compliance
                       </span>
@@ -159,7 +159,7 @@ export default function ComplianceHubPage() {
                     <FadeIn delay={0.2}>
                       <p
                         className="margin-bottom margin-xlarge"
-                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'rgba(255,255,255,0.62)' }}
+                        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                       >
                         Five major import markets — the EU, UK, US, China, and UAE — have each introduced or tightened origin traceability and due diligence requirements for agricultural and mineral commodities. OriginTrace checks your shipment against all of them before you book freight.
                       </p>
