@@ -13,6 +13,10 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
+    const { enforceTier } = await import('@/lib/api/tier-guard');
+    const tierBlock = await enforceTier(profile.org_id, 'pedigree');
+    if (tierBlock) return tierBlock;
+
     // Finished good — lookup by UUID or pedigree_code
     let query = supabase
       .from('finished_goods')

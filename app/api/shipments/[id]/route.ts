@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { computeShipmentReadiness } from '@/lib/services/shipment-scoring';
 import type { ShipmentScoreInput, ComplianceProfile } from '@/lib/services/shipment-scoring';
 import type { FarmBoundaryAnalysis } from '@/lib/services/scoring/types';
+import { normalizeBuyerRequirementKey } from '@/lib/compliance/buyer-profile';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
+import type { Json, TablesInsert } from '@/lib/supabase/database.types';
+import { requireRole, ROLES } from '@/lib/rbac';
 
 const shipmentPatchSchema = z.object({
+  // ── Original fields ────────────────────────────────────────────────────────
   status: z.string().optional(),
   destination_country: z.string().optional(),
   destination_port: z.string().optional(),
@@ -17,10 +22,82 @@ const shipmentPatchSchema = z.object({
   estimated_ship_date: z.string().optional(),
   doc_status: z.record(z.any()).optional(),
   storage_controls: z.record(z.any()).optional(),
+
+  // ── Stage data (set by advance-stage endpoint; also patchable here) ────────
+  stage_data: z.record(z.any()).optional(),
+
+  // ── Freight & Vessel (Stage 5) ─────────────────────────────────────────────
+  freight_forwarder_name: z.string().optional(),
+  freight_forwarder_contact: z.string().optional(),
+  shipping_line: z.string().optional(),
+  vessel_name: z.string().optional(),
+  imo_number: z.string().optional(),
+  voyage_number: z.string().optional(),
+  booking_reference: z.string().optional(),
+  port_of_loading: z.string().optional(),
+  port_of_discharge: z.string().optional(),
+  etd: z.string().optional(),
+  eta: z.string().optional(),
+  actual_departure_date: z.string().optional(),
+  actual_arrival_date: z.string().optional(),
+  bill_of_lading_number: z.string().optional(),
+
+  // ── Container (Stage 6) ────────────────────────────────────────────────────
+  container_number: z.string().optional(),
+  container_seal_number: z.string().optional(),
+  container_type: z.enum(['20FT', '40FT', '40HC', 'Reefer']).optional(),
+
+  // ── Customs & Clearance (Stage 4) ─────────────────────────────────────────
+  clearing_agent_name: z.string().optional(),
+  clearing_agent_contact: z.string().optional(),
+  customs_declaration_number: z.string().optional(),
+  exit_certificate_number: z.string().optional(),
+
+  // ── Pre-shipment Inspection (Stage 2) ─────────────────────────────────────
+  inspection_body: z.string().optional(),
+  inspection_date: z.string().optional(),
+  inspection_certificate_number: z.string().optional(),
+  inspection_result: z.enum(['pass', 'fail', 'conditional']).optional(),
+
+  // ── Commercial (Stage 1) ───────────────────────────────────────────────────
+  purchase_order_number: z.string().optional(),
+  purchase_order_date: z.string().optional(),
+  contract_price_per_mt: emptyAsNull(z.number().nullable().optional()),
+  total_shipment_value_usd: emptyAsNull(z.number().nullable().optional()),
+
+  // ── Costs (entered at respective stages) ──────────────────────────────────
+  freight_cost_usd: emptyAsNull(z.number().nullable().optional()),
+  customs_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  inspection_fees_ngn: emptyAsNull(z.number().nullable().optional()),
+  phyto_lab_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  certification_costs_ngn: emptyAsNull(z.number().nullable().optional()),
+  port_handling_charges_ngn: emptyAsNull(z.number().nullable().optional()),
+  freight_insurance_usd: emptyAsNull(z.number().nullable().optional()),
+  usd_ngn_rate: emptyAsNull(z.number().positive().nullable().optional()),
+  gross_weight_kg: emptyAsNull(z.number().nullable().optional()),
+
+  // ── Outcome (Stage 9 close) ────────────────────────────────────────────────
+  shipment_outcome: z.enum(['accepted', 'rejected', 'conditional']).optional(),
+  rejection_reason: z.string().optional(),
+  outcome_recorded_at: z.string().optional(),
+
+  // ── Pre-notification status (all markets) ─────────────────────────────────
+  prenotif_eu_traces: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_eu_traces_ref: z.string().optional(),
+  prenotif_uk_ipaffs: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_uk_ipaffs_ref: z.string().optional(),
+  prenotif_us_fda: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_us_fda_ref: z.string().optional(),
+  prenotif_cn_gacc: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_cn_gacc_ref: z.string().optional(),
+  prenotif_uae_esma: z.enum(['not_filed', 'filed', 'confirmed']).optional(),
+  prenotif_uae_esma_ref: z.string().optional(),
+
+  // ── Item management ────────────────────────────────────────────────────────
   add_items: z.array(z.object({
     item_type: z.enum(['batch', 'finished_good']),
-    batch_id: z.number().optional(),
-    finished_good_id: z.number().optional(),
+    batch_id: emptyAsNull(z.number().nullable().optional()),
+    finished_good_id: emptyAsNull(z.number().nullable().optional()),
   })).optional(),
   remove_items: z.array(z.number()).optional(),
 });
@@ -38,10 +115,8 @@ export async function GET(
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
-    if (!shipmentRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const roleError = requireRole(profile, ROLES.SHIPMENT_ROLES);
+    if (roleError) return roleError;
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
     if (!hasAccess) {
@@ -62,7 +137,8 @@ export async function GET(
     const { data: items, error: itemsError } = await supabase
       .from('shipment_items')
       .select('*')
-      .eq('shipment_id', shipment.id);
+      .eq('shipment_id', shipment.id)
+      .eq('org_id', profile.org_id);
 
     if (itemsError) {
       console.error('Error fetching shipment items:', itemsError);
@@ -86,15 +162,21 @@ export async function GET(
     const bulkBatchPromise = batchIds.length > 0
       ? supabase
           .from('collection_batches')
-          .select('*, farm:farms(id, farmer_name, community, area_hectares, compliance_status)')
+          .select('*, farm:farms(id, farmer_name, community, area_hectares, compliance_status, boundary)')
           .in('id', batchIds)
+          .eq('org_id', profile.org_id)
       : Promise.resolve({ data: [] });
 
+    // TODO(schema-drift): column 'farm_id' does not exist on 'bags' (bags link to a farm only
+    // indirectly, via their collection_batch's farm_id) — removed from the select below since
+    // selecting it fails the whole query. bags_with_farm_link below already tolerated a missing
+    // farm_id (falls back to 0), so this preserves existing behavior while fixing the query.
     const bulkBagsPromise = batchIds.length > 0
       ? supabase
           .from('bags')
-          .select('id, farm_id, collection_batch_id')
+          .select('id, collection_batch_id')
           .in('collection_batch_id', batchIds)
+          .eq('org_id', profile.org_id)
       : Promise.resolve({ data: [] });
 
     const bulkFgPromise = finishedGoodIds.length > 0
@@ -102,6 +184,7 @@ export async function GET(
           .from('finished_goods')
           .select('*')
           .in('id', finishedGoodIds)
+          .eq('org_id', profile.org_id)
       : Promise.resolve({ data: [] });
 
     const complianceProfilePromise = shipment.compliance_profile_id
@@ -109,6 +192,7 @@ export async function GET(
           .from('compliance_profiles')
           .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
           .eq('id', shipment.compliance_profile_id)
+          .eq('org_id', profile.org_id)
           .single()
       : Promise.resolve({ data: null });
 
@@ -120,6 +204,8 @@ export async function GET(
       { data: coldChainData },
       { data: lots },
       { data: cpData },
+      { data: shipmentDocuments },
+      { data: shipmentLabResults },
     ] = await Promise.all([
       bulkBatchPromise,
       bulkBagsPromise,
@@ -139,6 +225,17 @@ export async function GET(
         .eq('shipment_id', shipment.id)
         .eq('org_id', profile.org_id),
       complianceProfilePromise,
+      supabase
+        .from('documents')
+        .select('document_type, title, status')
+        .eq('org_id', profile.org_id)
+        .eq('linked_entity_type', 'shipment')
+        .eq('linked_entity_id', shipment.id),
+      supabase
+        .from('lab_results')
+        .select('result')
+        .eq('org_id', profile.org_id)
+        .eq('shipment_id', shipment.id),
     ]);
 
     for (const b of (batchesData || [])) {
@@ -181,16 +278,23 @@ export async function GET(
           enrichedItem.batch_data = batch;
           const bags = bagsByBatchId.get(String(batch.id)) || [];
           const bagCount = bags.length;
-          const bagsWithFarmLink = bags.filter((b: any) => b.farm_id).length;
-          const hasGps = !!(batch.farm?.community); // farm GPS tracked via boundary polygon
+          const linkedFarm = Array.isArray(batch.farm) ? batch.farm[0] : batch.farm;
+          // Bags point to collection_batches; they do not have a farm_id of
+          // their own. A bag is farm-linked when its parent batch resolves to
+          // a tenant-scoped farm.
+          const hasFarmLink = !!batch.farm_id && !!linkedFarm;
+          const bagsWithFarmLink = hasFarmLink ? bagCount : 0;
+          const hasGps = !!(linkedFarm?.boundary?.type === 'Polygon' && linkedFarm?.boundary?.coordinates?.[0]?.length >= 4);
+          const derivedFarmCount = hasFarmLink ? 1 : 0;
+          const derivedTraceabilityComplete = hasFarmLink && (bagCount === 0 || bagsWithFarmLink === bagCount);
 
           if (batch.farm_id) farmIds.push(String(batch.farm_id));
 
           scoreItems.push({
             item_type: 'batch',
             weight_kg: item.weight_kg || 0,
-            farm_count: item.farm_count || 0,
-            traceability_complete: item.traceability_complete || false,
+            farm_count: item.farm_count || derivedFarmCount,
+            traceability_complete: item.traceability_complete || derivedTraceabilityComplete,
             compliance_status: item.compliance_status || 'pending',
             batch_data: {
               has_gps: hasGps,
@@ -277,7 +381,8 @@ export async function GET(
       const { data: farmsWithChecks } = await supabase
         .from('farms')
         .select('id, deforestation_check, boundary_analysis')
-        .in('id', uniqueFarmIds);
+        .in('id', uniqueFarmIds)
+        .eq('org_id', profile.org_id);
 
       if (farmsWithChecks) {
         farmDeforestationChecks = farmsWithChecks
@@ -308,13 +413,32 @@ export async function GET(
       return si;
     });
 
+    const storedDocStatus = shipment.doc_status
+      && typeof shipment.doc_status === 'object'
+      && !Array.isArray(shipment.doc_status)
+      ? Object.fromEntries(
+          Object.entries(shipment.doc_status).filter(
+            (entry): entry is [string, boolean] => typeof entry[1] === 'boolean'
+          )
+        )
+      : {};
+    const derivedDocStatus: Record<string, boolean> = { ...storedDocStatus };
+    for (const document of shipmentDocuments || []) {
+      if (document.status && document.status !== 'active') continue;
+      derivedDocStatus[normalizeBuyerRequirementKey(document.document_type)] = true;
+      derivedDocStatus[normalizeBuyerRequirementKey(document.title)] = true;
+    }
+    if ((shipmentLabResults || []).some((result) => result.result === 'pass')) {
+      derivedDocStatus.lab_test_certificate = true;
+    }
+
     const scoreInput: ShipmentScoreInput = {
       shipment: {
         id: shipment.id,
         destination_country: shipment.destination_country || null,
         target_regulations: shipment.target_regulations || [],
-        doc_status: shipment.doc_status || {},
-        storage_controls: shipment.storage_controls || {},
+        doc_status: derivedDocStatus,
+        storage_controls: ((shipment as unknown as Record<string, unknown>).storage_controls as Record<string, boolean> | undefined) || {},
         estimated_ship_date: shipment.estimated_ship_date || null,
       },
       items: scoreItemsWithFarmIds,
@@ -328,23 +452,42 @@ export async function GET(
       farm_boundary_analyses: farmBoundaryAnalyses,
     };
 
+    console.info('[Shipment Traceability]', {
+      shipment_id: shipment.id,
+      batch_items: scoreItemsWithFarmIds.filter((item) => item.item_type === 'batch').length,
+      linked_farms: uniqueFarmIds.length,
+      linked_bags: scoreItemsWithFarmIds
+        .filter((item) => item.item_type === 'batch')
+        .reduce((sum, item) => sum + (item.batch_data?.bags_with_farm_link || 0), 0),
+    });
+
     const readiness = computeShipmentReadiness(scoreInput);
 
     // Auto-persist score if null or shipment is recent (within 7 days = stale demo data)
     const isStale = !shipment.readiness_score ||
-      (new Date().getTime() - new Date(shipment.created_at).getTime() < 7 * 24 * 60 * 60 * 1000 &&
+      (new Date().getTime() - new Date(shipment.created_at ?? 0).getTime() < 7 * 24 * 60 * 60 * 1000 &&
        shipment.readiness_score !== Math.round(readiness.overall_score));
     if (isStale) {
       supabase.from('shipments').update({
         readiness_score: Math.round(readiness.overall_score),
         readiness_decision: readiness.decision,
-        risk_flags: readiness.risk_flags,
-        score_breakdown: readiness.dimensions,
+        risk_flags: readiness.risk_flags as unknown as Json,
+        score_breakdown: readiness.dimensions as unknown as Json,
         updated_at: new Date().toISOString(),
-      }).eq('id', shipment.id).then(() => {/* fire-and-forget */});
+      })
+        .eq('id', shipment.id)
+        .eq('org_id', profile.org_id)
+        .then(() => {/* fire-and-forget */});
     }
 
-    return NextResponse.json({ shipment, items: enrichedItems, readiness });
+    return NextResponse.json({
+      shipment: {
+        ...shipment,
+        compliance_profile: cpData || null,
+      },
+      items: enrichedItems,
+      readiness,
+    });
 
   } catch (error) {
     console.error('Shipment detail API error:', error);
@@ -365,10 +508,8 @@ export async function PATCH(
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
-    if (!shipmentRoles.includes(profile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const roleError = requireRole(profile, ROLES.SHIPMENT_ROLES);
+    if (roleError) return roleError;
 
     const hasAccess = await checkTierAccess(supabase, profile.org_id);
     if (!hasAccess) {
@@ -399,9 +540,38 @@ export async function PATCH(
     const { add_items, remove_items, ...updateFields } = parsed.data;
 
     const allowedFields = [
+      // Original fields
       'status', 'destination_country', 'destination_port', 'buyer_company',
       'buyer_contact', 'target_regulations', 'notes', 'estimated_ship_date',
       'doc_status', 'storage_controls',
+      // Stage data
+      'stage_data',
+      // Freight & Vessel (Stage 5)
+      'freight_forwarder_name', 'freight_forwarder_contact', 'shipping_line',
+      'vessel_name', 'imo_number', 'voyage_number', 'booking_reference',
+      'port_of_loading', 'port_of_discharge', 'etd', 'eta',
+      'actual_departure_date', 'actual_arrival_date', 'bill_of_lading_number',
+      // Container (Stage 6)
+      'container_number', 'container_seal_number', 'container_type',
+      // Customs & Clearance (Stage 4)
+      'clearing_agent_name', 'clearing_agent_contact',
+      'customs_declaration_number', 'exit_certificate_number',
+      // Pre-shipment Inspection (Stage 2)
+      'inspection_body', 'inspection_date', 'inspection_certificate_number', 'inspection_result',
+      // Commercial (Stage 1)
+      'purchase_order_number', 'purchase_order_date',
+      'contract_price_per_mt', 'total_shipment_value_usd',
+      // Costs
+      'freight_cost_usd', 'customs_fees_ngn', 'inspection_fees_ngn',
+      'certification_costs_ngn', 'port_handling_charges_ngn', 'freight_insurance_usd',
+      // Outcome (Stage 9)
+      'shipment_outcome', 'rejection_reason', 'outcome_recorded_at',
+      // Pre-notifications
+      'prenotif_eu_traces', 'prenotif_eu_traces_ref',
+      'prenotif_uk_ipaffs', 'prenotif_uk_ipaffs_ref',
+      'prenotif_us_fda', 'prenotif_us_fda_ref',
+      'prenotif_cn_gacc', 'prenotif_cn_gacc_ref',
+      'prenotif_uae_esma', 'prenotif_uae_esma_ref',
     ] as const;
 
     const updateData: Record<string, any> = {};
@@ -437,7 +607,7 @@ export async function PATCH(
           const { data: batch } = await supabase
             .from('collection_batches')
             .select('*, farm:farms(id, farmer_name, community)')
-            .eq('id', addItem.batch_id)
+            .eq('id', String(addItem.batch_id))
             .eq('org_id', profile.org_id)
             .single();
 
@@ -453,12 +623,15 @@ export async function PATCH(
           const { data: fg } = await supabase
             .from('finished_goods')
             .select('*')
-            .eq('id', addItem.finished_good_id)
+            .eq('id', String(addItem.finished_good_id))
             .single();
 
           if (fg) {
             itemInsert.weight_kg = fg.weight_kg || 0;
-            itemInsert.farm_count = fg.farm_count || 0;
+            // TODO(schema-drift): column 'farm_count' does not exist on 'finished_goods' — no
+            // equivalent column exists, so this always falls back to 0 (same as before this
+            // typed-client migration, when the property access was silently 'undefined').
+            itemInsert.farm_count = ((fg as unknown as Record<string, unknown>).farm_count as number | undefined) || 0;
             itemInsert.traceability_complete = !!fg.pedigree_verified;
             itemInsert.compliance_status = fg.pedigree_verified ? 'approved' : 'pending';
           }
@@ -466,7 +639,7 @@ export async function PATCH(
 
         const { error: insertError } = await supabase
           .from('shipment_items')
-          .insert(itemInsert);
+          .insert(itemInsert as TablesInsert<'shipment_items'>);
 
         if (insertError) {
           console.error('Error adding shipment item:', insertError);
@@ -480,8 +653,9 @@ export async function PATCH(
       const { error: deleteError } = await supabase
         .from('shipment_items')
         .delete()
-        .in('id', remove_items)
-        .eq('shipment_id', id);
+        .in('id', remove_items.map(String))
+        .eq('shipment_id', id)
+        .eq('org_id', profile.org_id);
 
       if (deleteError) {
         console.error('Error removing shipment items:', deleteError);
@@ -505,7 +679,8 @@ export async function PATCH(
     const { data: currentItems } = await supabase
       .from('shipment_items')
       .select('*')
-      .eq('shipment_id', id);
+      .eq('shipment_id', id)
+      .eq('org_id', profile.org_id);
 
     let patchComplianceProfile: ComplianceProfile | undefined;
     if (updatedShipment.compliance_profile_id) {
@@ -513,6 +688,7 @@ export async function PATCH(
         .from('compliance_profiles')
         .select('id, name, destination_market, regulation_framework, required_documents, required_certifications, geo_verification_level, min_traceability_depth, custom_rules')
         .eq('id', updatedShipment.compliance_profile_id)
+        .eq('org_id', profile.org_id)
         .single();
       if (cpData) {
         patchComplianceProfile = cpData as ComplianceProfile;
@@ -524,8 +700,10 @@ export async function PATCH(
         id: updatedShipment.id,
         destination_country: updatedShipment.destination_country,
         target_regulations: updatedShipment.target_regulations || [],
-        doc_status: updatedShipment.doc_status || {},
-        storage_controls: updatedShipment.storage_controls || {},
+        // TODO(schema-drift): columns 'doc_status' / 'storage_controls' do not exist on the
+        // live 'shipments' table — see note above in GET.
+        doc_status: ((updatedShipment as unknown as Record<string, unknown>).doc_status as Record<string, boolean> | undefined) || {},
+        storage_controls: ((updatedShipment as unknown as Record<string, unknown>).storage_controls as Record<string, boolean> | undefined) || {},
         estimated_ship_date: updatedShipment.estimated_ship_date,
       },
       items: (currentItems || []).map((item: any) => ({
@@ -545,9 +723,9 @@ export async function PATCH(
       .update({
         readiness_score: Math.round(readinessResult.overall_score),
         readiness_decision: readinessResult.decision,
-        risk_flags: readinessResult.risk_flags,
+        risk_flags: readinessResult.risk_flags as unknown as Json,
         remediation_items: readinessResult.remediation_items,
-        score_breakdown: readinessResult.dimensions,
+        score_breakdown: readinessResult.dimensions as unknown as Json,
       })
       .eq('id', id)
       .eq('org_id', profile.org_id);
@@ -577,7 +755,8 @@ async function updateShipmentTotals(supabase: any, shipmentId: string, orgId: st
   const { data: allItems } = await supabase
     .from('shipment_items')
     .select('weight_kg')
-    .eq('shipment_id', shipmentId);
+    .eq('shipment_id', shipmentId)
+    .eq('org_id', orgId);
 
   const totalWeight = (allItems || []).reduce((sum: number, i: any) => sum + (i.weight_kg || 0), 0);
   const totalItems = (allItems || []).length;

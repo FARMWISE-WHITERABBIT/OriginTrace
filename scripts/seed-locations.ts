@@ -66,11 +66,10 @@ async function seedLocations() {
     auth: { autoRefreshToken: false, persistSession: false }
   });
 
-  console.log('Checking existing states...');
+  console.log('Ensuring Nigerian states...');
   const { data: existingStates, error: checkError } = await supabase
     .from('states')
-    .select('id')
-    .limit(1);
+    .select('id, name');
 
   if (checkError) {
     console.error('Error checking states:', checkError.message);
@@ -78,35 +77,51 @@ async function seedLocations() {
     process.exit(1);
   }
 
-  if (existingStates && existingStates.length > 0) {
-    console.log('States already exist in database. Skipping seed.');
-    process.exit(0);
+  const existingStateNames = new Set((existingStates || []).map(state => state.name));
+  const missingStates = NIGERIAN_STATES.filter(state => !existingStateNames.has(state.name));
+  let statesForLgas = existingStates || [];
+
+  if (missingStates.length > 0) {
+    console.log(`Inserting ${missingStates.length} missing states...`);
+    const { data: insertedStates, error: statesError } = await supabase
+      .from('states')
+      .insert(missingStates)
+      .select('id, name');
+
+    if (statesError) {
+      console.error('Error inserting states:', statesError.message);
+      process.exit(1);
+    }
+
+    statesForLgas = [...statesForLgas, ...(insertedStates || [])];
+  } else {
+    console.log('States already seeded.');
   }
-
-  console.log('Inserting Nigerian states...');
-  const { data: insertedStates, error: statesError } = await supabase
-    .from('states')
-    .insert(NIGERIAN_STATES)
-    .select();
-
-  if (statesError) {
-    console.error('Error inserting states:', statesError.message);
-    process.exit(1);
-  }
-
-  console.log(`Inserted ${insertedStates?.length || 0} states`);
 
   const stateIdMap: Record<string, number> = {};
-  insertedStates?.forEach(state => {
+  statesForLgas.forEach(state => {
     stateIdMap[state.name] = state.id;
   });
 
+  const { data: existingLgas, error: lgaCheckError } = await supabase
+    .from('lgas')
+    .select('name, state_id');
+
+  if (lgaCheckError) {
+    console.error('Error checking LGAs:', lgaCheckError.message);
+    process.exit(1);
+  }
+
+  const existingLgaKeys = new Set((existingLgas || []).map(lga => `${lga.state_id}:${lga.name}`));
   const lgasToInsert: { name: string; state_id: number }[] = [];
   for (const [stateName, lgas] of Object.entries(SAMPLE_LGAS)) {
     const stateId = stateIdMap[stateName];
     if (stateId) {
       lgas.forEach(lgaName => {
-        lgasToInsert.push({ name: lgaName, state_id: stateId });
+        const key = `${stateId}:${lgaName}`;
+        if (!existingLgaKeys.has(key)) {
+          lgasToInsert.push({ name: lgaName, state_id: stateId });
+        }
       });
     }
   }
@@ -124,8 +139,8 @@ async function seedLocations() {
   }
 
   console.log('Seed completed successfully!');
-  console.log(`States: ${insertedStates?.length || 0}`);
-  console.log(`LGAs: ${lgasToInsert.length}`);
+  console.log(`States available: ${statesForLgas.length}`);
+  console.log(`LGAs inserted: ${lgasToInsert.length}`);
 }
 
 seedLocations();

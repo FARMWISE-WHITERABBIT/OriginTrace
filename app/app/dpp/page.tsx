@@ -63,6 +63,7 @@ export default function DPPPage() {
   const [dpps, setDpps] = useState<DPP[]>([]);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState({
@@ -79,26 +80,36 @@ export default function DPPPage() {
       setIsLoading(false);
       return;
     }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch('/api/dpp');
+      setLoadError(null);
+      const response = await fetch('/api/dpp', { signal: controller.signal });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
       setDpps(data.dpps || []);
     } catch (error) {
       console.error('Failed to fetch DPPs:', error);
+      setLoadError('Digital Product Passports could not be loaded. Please refresh or check API access.');
     } finally {
+      window.clearTimeout(timeout);
       setIsLoading(false);
     }
   };
 
   const fetchFinishedGoods = async () => {
+    if (orgLoading || !organization) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch('/api/finished-goods');
+      const response = await fetch('/api/finished-goods', { signal: controller.signal });
       if (!response.ok) return;
       const data = await response.json();
       setFinishedGoods(data.finishedGoods || []);
     } catch (error) {
       console.error('Failed to fetch finished goods:', error);
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 
@@ -252,6 +263,15 @@ export default function DPPPage() {
 
         {isLoading || orgLoading ? (
           <div className="space-y-3">{Array.from({length:4}).map((_,i)=><div key={i} className="border border-border rounded-xl p-4 bg-card"><div className="flex items-center gap-4"><div className="h-10 w-10 rounded-md bg-muted animate-pulse shrink-0"/><div className="flex-1 space-y-2"><div className="flex items-center gap-2"><div className="h-4 w-36 bg-muted animate-pulse rounded"/><div className="h-5 w-14 bg-muted animate-pulse rounded-full"/></div><div className="h-3 w-48 bg-muted animate-pulse rounded"/></div></div></div>)}</div>
+        ) : loadError ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <XCircle className="h-12 w-12 text-destructive mb-4" />
+              <h3 className="text-lg font-medium mb-1">DPPs unavailable</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">{loadError}</p>
+              <Button onClick={fetchDpps}>Retry</Button>
+            </CardContent>
+          </Card>
         ) : dpps.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -273,12 +293,12 @@ export default function DPPPage() {
               const StatusIcon = statusConf.icon;
 
               return (
-                <Card key={dpp.id} data-testid={`card-dpp-${dpp.id}`}>
+                <Card key={dpp.id} className="card-accent-blue transition-shadow hover:shadow-md" data-testid={`card-dpp-${dpp.id}`}>
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-md icon-bg-blue flex items-center justify-center shrink-0">
+                          <FileText className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

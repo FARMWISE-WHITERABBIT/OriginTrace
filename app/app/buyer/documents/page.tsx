@@ -128,23 +128,23 @@ export default function BuyerDocumentsPage() {
 
       {!isLoading && documents.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
+          <Card className="card-accent-blue transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">Total Documents</p>
+              <p className="text-xs text-muted-foreground">Total Documents</p>
               <p className="text-2xl font-semibold mt-1" data-testid="text-total-documents">{documents.length}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-accent-emerald transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">Active</p>
+              <p className="text-xs text-muted-foreground">Active</p>
               <p className="text-2xl font-semibold mt-1" data-testid="text-active-documents">
                 {documents.filter(d => d.status === 'active').length}
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-accent-violet transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <CardContent className="pt-4 pb-4">
-              <p className="text-sm text-muted-foreground">Exporters</p>
+              <p className="text-xs text-muted-foreground">Exporters</p>
               <p className="text-2xl font-semibold mt-1" data-testid="text-total-exporters">{exporters.length}</p>
             </CardContent>
           </Card>

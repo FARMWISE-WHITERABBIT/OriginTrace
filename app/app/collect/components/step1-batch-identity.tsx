@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ interface Step1Props {
 }
 
 export function Step1BatchIdentity({ logic }: Step1Props) {
+  const [capturedAt, setCapturedAt] = useState<string | null>(null);
   const {
     locLoading, states, selectedState, setSelectedState,
     selectedLGA, setSelectedLGA, filteredLGAs,
@@ -20,6 +22,10 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
     commodityOptions, commodityMaster, grade, setGrade,
     batchId, gpsLat, gpsLng, isOnline,
   } = logic;
+
+  useEffect(() => {
+    setCapturedAt(new Date().toLocaleString());
+  }, []);
 
   // Derive grade options from the selected commodity's master entry
   const selectedCommodityObj = commodityMaster.find(
@@ -67,6 +73,9 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
               data-testid="select-lga"
             >
               <option value="">Select LGA</option>
+              {selectedState && filteredLGAs.length === 0 && (
+                <option value="" disabled>No LGAs configured for selected state</option>
+              )}
               {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
           </div>
@@ -121,7 +130,7 @@ export function Step1BatchIdentity({ logic }: Step1Props) {
               {gpsLat.toFixed(4)}, {gpsLng?.toFixed(4)}
             </div>
           )}
-          <div className="text-xs text-muted-foreground">{new Date().toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground">{capturedAt || '\u00a0'}</div>
         </div>
       </CardContent>
     </Card>

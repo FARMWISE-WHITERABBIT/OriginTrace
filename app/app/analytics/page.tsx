@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useOrg } from '@/lib/contexts/org-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, TrendingUp, TrendingDown, Printer, BarChart3, ShieldCheck, DollarSign, Search } from 'lucide-react';
+import { AlertTriangle, RefreshCw, TrendingUp, TrendingDown, Printer, BarChart3, ShieldCheck, DollarSign, Search } from 'lucide-react';
 import {
   PieDonutChart,
   VerticalBarChart,
@@ -18,6 +18,9 @@ import {
   TrendLineChart,
 } from '@/components/charts';
 import { TierGate } from '@/components/tier-gate';
+import { VIZ_COLORS, STATUS_COLORS } from '@/lib/chart-colors';
+import { useApiResource } from '@/hooks/use-api-resource';
+import { useTranslations } from 'next-intl';
 
 type Period = '7d' | '30d' | '90d' | '1y';
 
@@ -30,37 +33,48 @@ export default function AnalyticsPage() {
 }
 
 function AnalyticsContent() {
-  const { organization, profile } = useOrg();
+  const tErrors = useTranslations('errors');
+  const { organization, isLoading: orgLoading } = useOrg();
   const [period, setPeriod] = useState<Period>('30d');
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('operations');
+  const { data, error, loading: analyticsLoading, refetch } = useApiResource<any>(
+    organization ? `/api/analytics?period=${period}&section=all` : null,
+    {
+      enabled: !!organization?.id,
+      scopeKey: organization?.id,
+      deps: [organization?.id, period],
+      showErrorToast: false,
+    },
+  );
 
-  const fetchAnalytics = useCallback(async () => {
-    if (!organization) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/analytics?period=${period}&section=all`);
-      if (res.ok) {
-        const result = await res.json();
-        setData(result);
-      }
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [organization, period]);
+  const resourceEnabled = !!organization?.id;
+  const isLoading = orgLoading || (resourceEnabled && analyticsLoading);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
-
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]" data-testid="analytics-loading">
         <div className="space-y-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({length:4}).map((_,i)=><div key={i} className="border border-border rounded-xl p-4 bg-card space-y-2"><div className="h-3 w-20 bg-muted animate-pulse rounded"/><div className="h-7 w-24 bg-muted animate-pulse rounded"/></div>)}</div><div className="border border-border rounded-xl p-6 bg-card"><div className="h-48 bg-muted animate-pulse rounded"/></div></div>
       </div>
+    );
+  }
+
+  if (error || !resourceEnabled || !data) {
+    return (
+      <Card className="mx-auto max-w-xl" data-testid="analytics-error">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
+          <h2 className="text-lg font-semibold">{tErrors('unableToLoadAnalytics')}</h2>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            {error || tErrors('analyticsUnavailable')}
+          </p>
+          {resourceEnabled && (
+            <Button className="mt-4" variant="outline" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {tErrors('tryAgain')}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
@@ -71,18 +85,12 @@ function AnalyticsContent() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-analytics-title">Analytics & Intelligence</h1>
           <p className="text-sm text-muted-foreground">Strategic insights across your supply chain operations</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-[130px]" data-testid="select-analytics-period">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2">
+          <div className="segmented-control" data-testid="select-analytics-period">
+            {([['7d','7 Days'],['30d','30 Days'],['90d','90 Days'],['1y','1 Year']] as const).map(([val, label]) => (
+              <button key={val} className="segmented-control-item" data-active={period === val} onClick={() => setPeriod(val)}>{label}</button>
+            ))}
+          </div>
           <Button variant="outline" size="sm" onClick={() => window.print()} data-testid="button-print-analytics">
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -135,7 +143,7 @@ function AnalyticsContent() {
                 <TrendLineChart
                   data={(data.volumeTrends || []).map((v: any) => ({ date: v.date, value: v.weight }))}
                   xKey="date"
-                  series={[{ dataKey: 'value', label: 'Weight (kg)', color: '#2E7D6B' }]}
+                  series={[{ dataKey: 'value', label: 'Weight (kg)', color: VIZ_COLORS[0] }]}
                   height={280}
                 />
               </CardContent>
@@ -196,7 +204,7 @@ function AnalyticsContent() {
                     dataKey="value"
                     categoryKey="name"
                     height={160}
-                    colors={['#2E7D6B', '#E5E7EB']}
+                    colors={[VIZ_COLORS[0], VIZ_COLORS[1]]}
                   />
                 </div>
               </CardContent>
@@ -496,16 +504,16 @@ function AnalyticsContent() {
 
 function StatCard({ title, value, trend, testId }: { title: string; value: string | number; trend?: number; testId: string }) {
   return (
-    <Card data-testid={testId}>
+    <Card className="card-accent-blue transition-shadow hover:shadow-sm" data-testid={testId}>
       <CardContent className="pt-4 pb-3">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{title}</p>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-2xl font-bold" data-testid={`${testId}-value`}>{value}</p>
+        <p className="text-xs text-muted-foreground font-medium">{title}</p>
+        <div className="flex items-center justify-between mt-1 gap-2">
+          <p className="text-2xl font-bold tracking-tight" data-testid={`${testId}-value`}>{value}</p>
           {trend !== undefined && trend !== null && (
-            <Badge variant={trend >= 0 ? 'default' : 'destructive'} className={`text-xs ${trend >= 0 ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : ''}`} data-testid={`${testId}-trend`}>
+            <span className={`flex items-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${trend >= 0 ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`} data-testid={`${testId}-trend`}>
               {trend >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               {trend > 0 ? '+' : ''}{trend}%
-            </Badge>
+            </span>
           )}
         </div>
       </CardContent>
@@ -515,9 +523,9 @@ function StatCard({ title, value, trend, testId }: { title: string; value: strin
 
 function MiniStat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
-    <div className="p-3 rounded-lg bg-muted/50" data-testid={testId}>
+    <div className="p-3 rounded-lg bg-muted/40 border border-border/50" data-testid={testId}>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold mt-0.5">{value}</p>
+      <p className="text-lg font-semibold tracking-tight mt-0.5">{value}</p>
     </div>
   );
 }

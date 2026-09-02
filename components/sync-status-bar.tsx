@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, AlertCircle, CheckCircle, Loader2, Package, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useOrg } from '@/lib/contexts/org-context';
 
 interface SyncStats {
   pending: number;
   syncing: number;
   synced: number;
   error: number;
+  conflict?: number;
 }
 
 interface SyncStatusBarProps {
@@ -17,9 +19,22 @@ interface SyncStatusBarProps {
 }
 
 export function SyncStatusBar({ onSync }: SyncStatusBarProps) {
+  const { organization } = useOrg();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
   const [isOnline, setIsOnline] = useState(true);
-  const [syncStats, setSyncStats] = useState<SyncStats>({ pending: 0, syncing: 0, synced: 0, error: 0 });
-  const [cachedFarmCount, setCachedFarmCount] = useState(0);
+  const [scopedData, setScopedData] = useState<{
+    orgId: number | null;
+    syncStats: SyncStats;
+    cachedFarmCount: number;
+  }>({ orgId: null, syncStats: { pending: 0, syncing: 0, synced: 0, error: 0 }, cachedFarmCount: 0 });
+  const syncStats = organizationId !== null && scopedData.orgId === organizationId
+    ? scopedData.syncStats
+    : { pending: 0, syncing: 0, synced: 0, error: 0 };
+  const cachedFarmCount = organizationId !== null && scopedData.orgId === organizationId
+    ? scopedData.cachedFarmCount
+    : 0;
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
@@ -40,40 +55,62 @@ export function SyncStatusBar({ onSync }: SyncStatusBarProps) {
   }, []);
 
   useEffect(() => {
+    const requestedOrganizationId = organizationId;
     const loadStats = async () => {
+      if (requestedOrganizationId === null) {
+        setScopedData({ orgId: null, syncStats: { pending: 0, syncing: 0, synced: 0, error: 0 }, cachedFarmCount: 0 });
+        return;
+      }
+      let nextStats: SyncStats = { pending: 0, syncing: 0, synced: 0, error: 0 };
+      let nextCachedFarmCount = 0;
       try {
         const { getSyncStats } = await import('@/lib/offline/sync-store');
-        const stats = await getSyncStats();
-        setSyncStats(stats);
+        nextStats = await getSyncStats(requestedOrganizationId);
       } catch (error) {
         console.error('Failed to load sync stats:', error);
       }
 
       try {
         const { getCachedFarms } = await import('@/lib/offline/sync-store');
-        const farms = await getCachedFarms();
-        setCachedFarmCount(farms.length);
+        const farms = await getCachedFarms(requestedOrganizationId);
+        nextCachedFarmCount = farms.length;
       } catch {
-        setCachedFarmCount(0);
+        nextCachedFarmCount = 0;
+      }
+
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        setScopedData({
+          orgId: requestedOrganizationId,
+          syncStats: nextStats,
+          cachedFarmCount: nextCachedFarmCount,
+        });
       }
     };
 
-    loadStats();
+    void loadStats();
     const interval = setInterval(loadStats, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [organizationId]);
 
   const handleSync = async () => {
-    if (!isOnline || isSyncing) return;
+    const requestedOrganizationId = organizationId;
+    if (!isOnline || isSyncing || requestedOrganizationId === null) return;
+    const isOrganizationActive = () => activeOrganizationIdRef.current === requestedOrganizationId;
 
     setIsSyncing(true);
     try {
-      const { syncPendingBatches } = await import('@/lib/offline/sync-service');
-      await syncPendingBatches();
+      const { syncFieldWorkQueue } = await import('@/lib/offline/sync-service');
+      await syncFieldWorkQueue(requestedOrganizationId, isOrganizationActive);
+      if (!isOrganizationActive()) return;
 
       const { getSyncStats } = await import('@/lib/offline/sync-store');
-      const stats = await getSyncStats();
-      setSyncStats(stats);
+      const stats = await getSyncStats(requestedOrganizationId);
+      if (!isOrganizationActive()) return;
+      setScopedData((current) => ({
+        orgId: requestedOrganizationId,
+        syncStats: stats,
+        cachedFarmCount: current.orgId === requestedOrganizationId ? current.cachedFarmCount : 0,
+      }));
 
       onSync?.();
     } catch (error) {
@@ -90,7 +127,7 @@ export function SyncStatusBar({ onSync }: SyncStatusBarProps) {
       {totalPending > 0 && (
         <Badge variant="secondary" className="gap-1" data-testid="badge-pending-count">
           <Package className="h-3 w-3 text-orange-500" />
-          {totalPending} {totalPending === 1 ? 'Batch' : 'Batches'} Pending
+          {totalPending} {totalPending === 1 ? 'Item' : 'Items'} Pending
         </Badge>
       )}
 

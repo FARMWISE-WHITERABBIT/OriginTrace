@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
-import { parsePagination } from '@/lib/api/validation';
+import { parsePagination, emptyAsNull } from '@/lib/api/validation';
 
 const shipmentCreateSchema = z.object({
   destination_country: z.string().min(1, 'Destination country is required'),
@@ -14,21 +14,21 @@ const shipmentCreateSchema = z.object({
   destination_port: z.string().optional(),
   notes: z.string().optional(),
   estimated_ship_date: z.string().optional(),
-  compliance_profile_id: z.number().optional(),
-  contract_id: z.number().optional(),
-  document_ids: z.array(z.number()).optional(),
+  compliance_profile_id: emptyAsNull(z.string().uuid().nullable().optional()),
+  contract_id: emptyAsNull(z.string().uuid().nullable().optional()),
+  document_ids: z.array(z.string().uuid()).optional(),
 });
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -95,12 +95,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
-    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer'];
+    const shipmentWriteRoles = ['admin', 'logistics_coordinator', 'compliance_officer', 'aggregator'];
     if (!shipmentWriteRoles.includes(profile.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -130,19 +130,19 @@ export async function POST(request: NextRequest) {
       'create_shipment_atomic',
       {
         p_org_id:               profile.org_id,
-        p_created_by:           profile.id,
+        p_created_by:           user.id,
         p_shipment_code:        shipmentCode,
         p_destination_country:  destination_country,
         p_commodity:            commodity,
-        p_buyer_company:        buyer_company        ?? null,
-        p_buyer_contact:        buyer_contact        ?? null,
-        p_target_regulations:   target_regulations   ?? null,
-        p_destination_port:     destination_port     ?? null,
-        p_notes:                notes                ?? null,
-        p_estimated_ship_date:  estimated_ship_date  ?? null,
-        p_compliance_profile_id: compliance_profile_id ?? null,
-        p_contract_id:          contract_id          ?? null,
-        p_document_ids:         document_ids         ?? null,
+        p_buyer_company:        buyer_company        ?? undefined,
+        p_buyer_contact:        buyer_contact        ?? undefined,
+        p_target_regulations:   target_regulations   ?? undefined,
+        p_destination_port:     destination_port     ?? undefined,
+        p_notes:                notes                ?? undefined,
+        p_estimated_ship_date:  estimated_ship_date  ?? undefined,
+        p_compliance_profile_id: compliance_profile_id ?? undefined,
+        p_contract_id:          contract_id          ?? undefined,
+        p_document_ids:         document_ids         ?? undefined,
       }
     );
 

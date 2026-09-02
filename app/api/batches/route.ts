@@ -1,29 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { logAuditEvent } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { createServiceClient, getAuthenticatedProfile } from '@/lib/api-auth';
 import { parsePagination } from '@/lib/api/validation';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+import { emitEvent } from '@/lib/services/events';
 
 const batchCreateSchema = z.object({
   farm_id: z.union([z.string(), z.number()]).transform(v => String(v)),
   bags: z.array(z.object({
     serial: z.string().optional(),
-    weight: z.number().optional(),
+    weight: emptyAsNull(z.number().nullable().optional()),
     grade: z.string().optional(),
     is_compliant: z.boolean().optional(),
   })).optional(),
   notes: z.string().optional(),
   local_id: z.string().optional(),
   collected_at: z.string().optional(),
+  // Admin override fields for farm compliance gate
+  compliance_override_reason: z.string().trim().min(10, 'Override reason must be at least 10 characters').optional(),
+  target_markets: z.array(z.string()).optional(),
 });
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
@@ -83,7 +89,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
@@ -101,18 +107,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { farm_id, bags, notes, local_id, collected_at } = parsed.data;
-    
+    const { farm_id, bags, notes, local_id, collected_at, compliance_override_reason, target_markets } = parsed.data;
+
+    // Fetch farm to verify ownership
     const { data: farm, error: farmError } = await supabase
       .from('farms')
-      .select('id')
+      .select('id, compliance_status')
       .eq('id', farm_id)
       .eq('org_id', profile.org_id)
       .single();
-    
+
     if (farmError || !farm) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
+
+    const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
+
+    // Compliance checks are deferred to the shipment/export stage — not blocked at collection
+    // If admin used override, log it before proceeding
+    if (compliance_override_reason) {
+      await logAuditEvent({
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'farm.compliance_gate.overridden',
+        resourceType: 'farm',
+        resourceId: farm_id,
+        metadata: {
+          overrideReason: compliance_override_reason,
+          actorRole: profile.role,
+          overrideWarnings: [],
+        },
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     
     const totalWeight = bags?.reduce((sum: number, bag: any) => sum + (bag.weight || 0), 0) || 0;
     const bagCount = bags?.length || 0;
@@ -146,7 +174,9 @@ export async function POST(request: NextRequest) {
             .from('bags')
             .update({
               collection_batch_id: batch.id,
-              weight: bag.weight,
+              // The canonical bags column is weight_kg. Writing the legacy
+              // `weight` name silently leaves bags unweighted in production.
+              weight_kg: bag.weight,
               grade: bag.grade,
               is_compliant: bag.is_compliant !== false,
               status: 'collected'
@@ -167,6 +197,25 @@ export async function POST(request: NextRequest) {
       metadata: { farm_id, bag_count: bagCount, total_weight: totalWeight },
     });
 
+    // Cross-layer propagation: update farm last_collection_date, log propagation event
+    await emitEvent(
+      {
+        name: 'batch.created',
+        orgId: profile.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        payload: {
+          batchId: batch.id,
+          farmId: farm_id,
+          farmComplianceStatus: farm.compliance_status,
+          totalWeight: totalWeight,
+          bagCount: bagCount,
+          targetMarkets: resolvedTargetMarkets,
+        },
+      },
+      supabase
+    );
+
     dispatchWebhookEvent(profile.org_id, 'batch.created', {
       batch_id: batch.id, farm_id, bag_count: bagCount, total_weight: totalWeight,
     });
@@ -183,7 +232,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     
-    const { user, profile } = await getAuthenticatedProfile();
+    const { user, profile } = await getAuthenticatedProfile(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });

@@ -14,10 +14,21 @@ export async function PATCH(
     if (!profile?.org_id) return NextResponse.json({ error: 'No organization' }, { status: 403 });
 
     const body = await request.json();
-    const allowed = ['facility_name', 'facility_location', 'notes'];
-    const updates: Record<string, string> = {};
+    const allowed = [
+      'facility_name', 'facility_location', 'notes',
+      // Dispatch output fields
+      'dispatch_destination', 'dispatch_vehicle_ref',
+      'dispatch_driver_phone', 'dispatched_output_at', 'dispatch_notes',
+      'dispatch_driver_name', 'expected_arrival_at', 'dispatch_recorded_at',
+    ];
+    const updates: Record<string, any> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
+    }
+
+    // Auto-set dispatch_recorded_at when dispatched_output_at is being set
+    if ('dispatched_output_at' in updates && !('dispatch_recorded_at' in updates)) {
+      updates.dispatch_recorded_at = new Date().toISOString();
     }
 
     const { error } = await supabase

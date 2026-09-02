@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { initializePayment, generateReference } from '@/lib/payments/paystack';
 import { logSuperadminAction } from '@/lib/superadmin-audit';
 import { sendEmail } from '@/lib/email/resend-client';
+import { getSystemAdmin } from '@/lib/superadmin-rbac';
 
 const createLinkSchema = z.object({
   org_id:         z.string().uuid(),
@@ -19,11 +20,6 @@ const createLinkSchema = z.object({
   note:           z.string().max(500).optional(),
 });
 
-async function isSuperAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data } = await supabase.from('profiles').select('role').eq('user_id', userId).single();
-  return data?.role === 'superadmin';
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient();
@@ -31,8 +27,10 @@ export async function POST(request: NextRequest) {
     if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabaseAdmin = createAdminClient();
-    if (!(await isSuperAdmin(supabaseAdmin, user.id))) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const adminRecord = await getSystemAdmin(user.id);
+    if (!adminRecord) return NextResponse.json({ error: 'Forbidden: Superadmin access required' }, { status: 403 });
+    if (!['platform_admin', 'finance_manager'].includes(adminRecord.role)) {
+      return NextResponse.json({ error: 'Forbidden: only platform_admin or finance_manager may generate payment links' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -46,8 +44,8 @@ export async function POST(request: NextRequest) {
     const { data: org } = await supabaseAdmin.from('organizations').select('id, name, subscription_tier').eq('id', org_id).single();
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
 
-    const { data: adminProfile } = await supabaseAdmin.from('profiles').select('email, full_name').eq('org_id', org_id).eq('role', 'admin').limit(1).single();
-    const adminEmail = adminProfile?.email || '';
+    const { data: adminProfile } = await supabaseAdmin.from('profiles').select('user_id, full_name').eq('org_id', org_id).eq('role', 'admin').limit(1).single();
+    const adminEmail = adminProfile ? (await supabaseAdmin.auth.admin.getUserById(adminProfile.user_id)).data?.user?.email || '' : '';
     const reference  = generateReference(org_id, tier);
     const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://origintrace.trade';
 
@@ -100,7 +98,7 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const supabaseAdmin = createAdminClient();
-    if (!(await isSuperAdmin(supabaseAdmin, user.id))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!(await getSystemAdmin(user.id))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const orgId = new URL(request.url).searchParams.get('org_id');
     let query = supabaseAdmin.from('payment_links').select('*, organizations(name)').order('created_at', { ascending: false });
     if (orgId) query = (query as any).eq('org_id', orgId);

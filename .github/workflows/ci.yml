@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -25,6 +25,12 @@ jobs:
 
       - name: Type check
         run: npm run check
+
+      - name: Migration hygiene
+        run: npm run check:migrations
+
+      - name: Skills in sync (.agents -> .claude)
+        run: npm run skills:check
 
       - name: Run tests
         run: npm test
@@ -68,15 +74,15 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
-          PORT: 3000
+          PORT: 5000
 
       - name: Wait for server
-        run: npx wait-on http://localhost:3000 --timeout 60000
+        run: npx wait-on http://localhost:5000 --timeout 60000
 
       - name: Run marketing smoke tests
         run: npx playwright test tests/e2e/marketing.spec.ts --project=chromium-public
         env:
-          E2E_BASE_URL: http://localhost:3000
+          E2E_BASE_URL: http://localhost:5000
 
       - name: Upload Playwright report
         if: failure()

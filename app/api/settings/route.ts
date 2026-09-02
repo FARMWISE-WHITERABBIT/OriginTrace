@@ -1,36 +1,37 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { emptyAsNull } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { cookies } from 'next/headers';
-import { z } from 'zod';
+import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 const settingsPatchSchema = z.object({
   name: z.string().min(2).optional(),
-  logo_url: z.string().url().nullable().optional(),
+  logo_url: emptyAsNull(z.string().url().nullable().optional()),
   settings: z.record(z.any()).optional(),
   active_lgas: z.array(z.string()).optional(),
   commodity_types: z.array(z.string()).optional(),
   commodities: z.array(z.string()).optional(),
   brand_colors: z.object({
-    primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    secondary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    accent: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    primary: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
+    secondary: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
+    accent: emptyAsNull(z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional()),
   }).nullable().optional(),
 });
 
 const IMPERSONATION_COOKIE = 'origintrace_impersonation';
 
-async function getImpersonatedOrgId(): Promise<number | null> {
+async function getImpersonatedOrgId(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     const impersonationCookie = cookieStore.get(IMPERSONATION_COOKIE);
-    
-    if (impersonationCookie) {
-      const data = JSON.parse(impersonationCookie.value);
-      if (new Date(data.expires_at) > new Date()) {
-        return data.org_id;
-      }
+    if (!impersonationCookie) return null;
+    // Cookie is HMAC-signed — must use verifyCookiePayload, not JSON.parse
+    const data = await verifyCookiePayload<{ org_id: string; expires_at: string }>(impersonationCookie.value);
+    if (data && new Date(data.expires_at) > new Date()) {
+      return data.org_id;
     }
   } catch (error) {
     console.error('Error reading impersonation cookie:', error);
@@ -173,6 +174,7 @@ export async function PATCH(request: NextRequest) {
 
     const parsed = settingsPatchSchema.safeParse(body);
     if (!parsed.success) {
+      console.error('Settings validation error:', parsed.error.flatten());
       return NextResponse.json(
         { error: 'Validation failed', fields: parsed.error.flatten().fieldErrors },
         { status: 400 }
@@ -198,7 +200,7 @@ export async function PATCH(request: NextRequest) {
         .eq('id', orgId)
         .single();
       
-      updates.settings = { ...(currentOrg?.settings || {}), ...settings };
+      updates.settings = { ...((currentOrg?.settings as Record<string, unknown>) || {}), ...settings };
     }
     
     if (active_lgas !== undefined) {

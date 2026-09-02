@@ -11,102 +11,123 @@ interface Farm {
   id: string;
   farmer_name: string;
   community: string;
-  compliance_status: 'pending' | 'approved' | 'flagged';
+  compliance_status: string | null;
   boundary: {
     type: string;
     coordinates: number[][][];
   } | null;
-  area_hectares?: number;
+  area_hectares?: number | null;
 }
 
-function MapContent({ farms }: { farms: Farm[] }) {
-  const [leafletLoaded, setLeafletLoaded] = useState(false);
-  const [LeafletComponents, setLeafletComponents] = useState<any>(null);
+import Map, { Source, Layer, Popup } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useMemo } from 'react';
 
-  useEffect(() => {
-    import('react-leaflet').then((mod) => {
-      // @ts-ignore - CSS import for leaflet
-      import('leaflet/dist/leaflet.css');
-      setLeafletComponents({
-        MapContainer: mod.MapContainer,
-        TileLayer: mod.TileLayer,
-        Polygon: mod.Polygon,
-        Popup: mod.Popup,
-      });
-      setLeafletLoaded(true);
-    });
-  }, []);
+function MapContent({ farms }: { farms: Farm[] }) {
+  const [hoverInfo, setHoverInfo] = useState<{
+    lngLat: [number, number];
+    farm: Farm;
+  } | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved':
-        return '#2D5A27';
-      case 'flagged':
-        return '#ef4444';
-      default:
-        return '#eab308';
+      case 'approved': return '#2D5A27';
+      case 'flagged':  return '#ef4444';
+      default:         return '#eab308';
     }
   };
 
-  if (!leafletLoaded || !LeafletComponents) {
-    return (
-      <div className="flex items-center justify-center h-[300px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const { MapContainer, TileLayer, Polygon, Popup } = LeafletComponents;
+  const geojsonData = useMemo(() => {
+    return {
+      type: 'FeatureCollection',
+      features: farms.filter(f => f.boundary?.coordinates?.[0]).map(farm => ({
+        type: 'Feature',
+        properties: {
+          id: farm.id,
+          farmer_name: farm.farmer_name,
+          community: farm.community,
+          area_hectares: farm.area_hectares,
+          compliance_status: farm.compliance_status || 'pending',
+          color: getStatusColor(farm.compliance_status || 'pending')
+        },
+        geometry: {
+          type: 'Polygon',
+          coordinates: farm.boundary!.coordinates
+        }
+      }))
+    };
+  }, [farms]);
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border shadow-sm h-[300px]">
-      <MapContainer 
-        center={[7.3775, 3.9470] as [number, number]} 
-        zoom={6} 
-        style={{ height: '100%', width: '100%' }}
+    <div className="rounded-xl overflow-hidden border border-border shadow-sm h-[300px] relative">
+      <Map
+        initialViewState={{
+          longitude: 3.9470,
+          latitude: 7.3775,
+          zoom: 6
+        }}
+        mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+        interactiveLayerIds={['farms-fill']}
+        onMouseMove={(e) => {
+          if (e.features && e.features.length > 0) {
+            const feature = e.features[0];
+            setHoverInfo({
+              lngLat: [e.lngLat.lng, e.lngLat.lat],
+              farm: feature.properties as Farm
+            });
+          } else {
+            setHoverInfo(null);
+          }
+        }}
+        onMouseLeave={() => setHoverInfo(null)}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        />
-        {farms.map((farm) => {
-          if (!farm.boundary?.coordinates?.[0]) return null;
-          const positions = farm.boundary.coordinates[0].map((coord: number[]) => 
-            [coord[1], coord[0]] as [number, number]
-          );
-          
-          return (
-            <Polygon 
-              key={farm.id} 
-              positions={positions}
-              pathOptions={{ 
-                color: getStatusColor(farm.compliance_status),
-                fillOpacity: 0.4,
-                weight: 2
-              }}
-            >
-              <Popup>
-                <div className="text-sm p-1">
-                  <strong className="block text-foreground">{farm.farmer_name}</strong>
-                  <span className="text-muted-foreground">{farm.community}</span>
-                  {farm.area_hectares && (
-                    <span className="block text-muted-foreground">{farm.area_hectares.toFixed(2)} ha</span>
-                  )}
-                  <span 
-                    className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium"
-                    style={{ 
-                      backgroundColor: getStatusColor(farm.compliance_status) + '20',
-                      color: getStatusColor(farm.compliance_status),
-                    }}
-                  >
-                    {farm.compliance_status}
-                  </span>
-                </div>
-              </Popup>
-            </Polygon>
-          );
-        })}
-      </MapContainer>
+        <Source type="geojson" data={geojsonData as any}>
+          <Layer
+            id="farms-fill"
+            type="fill"
+            paint={{
+              'fill-color': ['get', 'color'],
+              'fill-opacity': 0.4
+            }}
+          />
+          <Layer
+            id="farms-outline"
+            type="line"
+            paint={{
+              'line-color': ['get', 'color'],
+              'line-width': 2
+            }}
+          />
+        </Source>
+
+        {hoverInfo && (
+          <Popup
+            longitude={hoverInfo.lngLat[0]}
+            latitude={hoverInfo.lngLat[1]}
+            closeButton={false}
+            closeOnClick={false}
+            anchor="bottom"
+            className="z-50"
+          >
+            <div className="text-sm p-1">
+              <strong className="block text-foreground">{hoverInfo.farm.farmer_name}</strong>
+              <span className="text-muted-foreground">{hoverInfo.farm.community}</span>
+              {hoverInfo.farm.area_hectares && (
+                <span className="block text-muted-foreground">{Number(hoverInfo.farm.area_hectares).toFixed(2)} ha</span>
+              )}
+              <span
+                className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium"
+                style={{
+                  backgroundColor: getStatusColor(hoverInfo.farm.compliance_status || 'pending') + '20',
+                  color: getStatusColor(hoverInfo.farm.compliance_status || 'pending'),
+                }}
+              >
+                {hoverInfo.farm.compliance_status}
+              </span>
+            </div>
+          </Popup>
+        )}
+      </Map>
     </div>
   );
 }
@@ -125,11 +146,11 @@ export function LiveSupplyMap() {
         const { data, error } = await supabase
           .from('farms')
           .select('id, farmer_name, community, compliance_status, boundary, area_hectares')
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .not('boundary', 'is', null);
 
         if (!error && data) {
-          setFarms(data);
+          setFarms(data as unknown as Farm[]);
         }
       } catch (error) {
         console.error('Failed to fetch farms:', error);

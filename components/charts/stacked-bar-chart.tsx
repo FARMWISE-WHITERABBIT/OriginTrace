@@ -1,26 +1,11 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-
-const ORIGIN_TRACE_COLORS = [
-  '#2E7D6B',
-  '#1F5F52',
-  '#6FB8A8',
-  '#3A9B8A',
-  '#8ECDC0',
-  '#164A40',
-  '#A8DDD3',
-  '#4EAFA0',
-];
+import { VIZ_COLORS } from '@/lib/chart-colors';
+import { ChartTooltip } from './chart-tooltip';
 
 interface StackedBarChartProps {
   data: Array<Record<string, string | number>>;
@@ -32,11 +17,9 @@ interface StackedBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--card))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '6px',
-  color: 'hsl(var(--foreground))',
+const TICK_STYLE = {
+  fontSize: 11,
+  fill: 'hsl(var(--muted-foreground))',
 };
 
 export function StackedBarChart({
@@ -50,44 +33,63 @@ export function StackedBarChart({
 }: StackedBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
         {showGrid && (
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <CartesianGrid
+            strokeDasharray="4 4"
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.7}
+            vertical={false}
+          />
         )}
         <XAxis
           dataKey={categoryKey}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))', strokeOpacity: 0.6 }}
+          dy={4}
         />
-        <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+        <YAxis
+          tick={TICK_STYLE}
+          tickLine={false}
+          axisLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={tooltipStyle}
-          formatter={(value: unknown, name: unknown) => [
-            valueFormatter ? valueFormatter(Number(value)) : Number(value).toLocaleString(),
-            String(name),
-          ]}
+          content={
+            <ChartTooltip
+              valueFormatter={valueFormatter ? (v, n) => valueFormatter(v) : undefined}
+            />
+          }
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
         />
         {showLegend && (
           <Legend
             verticalAlign="bottom"
-            iconType="rect"
-            iconSize={10}
-            wrapperStyle={{ fontSize: '12px' }}
+            iconType="circle"
+            iconSize={7}
+            wrapperStyle={{ fontSize: '11px', paddingTop: '10px', color: 'hsl(var(--muted-foreground))' }}
           />
         )}
-        {series.map((s, index) => (
-          <Bar
-            key={s.dataKey}
-            dataKey={s.dataKey}
-            name={s.label}
-            stackId="stack"
-            fill={s.color || ORIGIN_TRACE_COLORS[index % ORIGIN_TRACE_COLORS.length]}
-            radius={
-              index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-            }
-            maxBarSize={60}
-          />
-        ))}
+        {series.map((s, index) => {
+          const isFirst = index === 0;
+          const isLast = index === series.length - 1;
+          return (
+            <Bar
+              key={s.dataKey}
+              dataKey={s.dataKey}
+              name={s.label}
+              stackId="stack"
+              fill={s.color || VIZ_COLORS[index % VIZ_COLORS.length]}
+              // Round top of full stack only
+              radius={isLast ? [4, 4, 0, 0] : isFirst ? [0, 0, 0, 0] : [0, 0, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={500}
+              animationEasing="ease-out"
+            />
+          );
+        })}
       </BarChart>
     </ResponsiveContainer>
   );

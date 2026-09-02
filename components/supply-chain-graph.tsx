@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,6 @@ interface GraphNode {
   type: 'farm' | 'batch' | 'processing' | 'finished_good' | 'shipment' | 'buyer';
   label: string;
   metadata: Record<string, any>;
-  x?: number;
-  y?: number;
-  vx?: number;
-  vy?: number;
-  fx?: number | null;
-  fy?: number | null;
 }
 
 interface GraphEdge {
@@ -49,163 +43,56 @@ const NODE_LABELS: Record<string, string> = {
   buyer: 'Buyer',
 };
 
-const NODE_RADIUS = 24;
+// Stages run left to right in the order goods actually move through the
+// supply chain — this is the whole fix for the old force-directed layout,
+// which had no notion of flow direction and just settled into a tangle.
+const STAGE_ORDER: GraphNode['type'][] = ['farm', 'batch', 'processing', 'finished_good', 'shipment', 'buyer'];
 
-function useForceSimulation(nodes: GraphNode[], edges: GraphEdge[], width: number, height: number) {
-  const [simulatedNodes, setSimulatedNodes] = useState<GraphNode[]>([]);
-  const animationRef = useRef<number | null>(null);
-  const nodesRef = useRef<GraphNode[]>([]);
-  const alpha = useRef(1);
+const NODE_RADIUS = 22;
+const COLUMN_HEADER_HEIGHT = 36;
+const COLUMN_WIDTH = 220;
+const ROW_HEIGHT = 90;
+const MIN_HEIGHT = 360;
 
-  useEffect(() => {
-    if (nodes.length === 0) {
-      setSimulatedNodes([]);
-      return;
-    }
-
-    const simNodes: GraphNode[] = nodes.map((n, i) => ({
-      ...n,
-      x: width / 2 + (Math.random() - 0.5) * Math.min(width, 600),
-      y: height / 2 + (Math.random() - 0.5) * Math.min(height, 400),
-      vx: 0,
-      vy: 0,
-      fx: null,
-      fy: null,
-    }));
-
-    nodesRef.current = simNodes;
-    alpha.current = 1;
-
-    const nodeMap = new Map(simNodes.map(n => [n.id, n]));
-
-    function tick() {
-      if (alpha.current < 0.001) {
-        setSimulatedNodes([...nodesRef.current]);
-        return;
-      }
-
-      alpha.current *= 0.99;
-      const dampening = 0.6;
-
-      for (const node of nodesRef.current) {
-        if (node.fx != null) { node.x = node.fx; node.vx = 0; }
-        if (node.fy != null) { node.y = node.fy; node.vy = 0; }
-      }
-
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const centerStrength = 0.01 * alpha.current;
-      for (const node of nodesRef.current) {
-        if (node.fx != null) continue;
-        node.vx! += (centerX - (node.x || 0)) * centerStrength;
-        node.vy! += (centerY - (node.y || 0)) * centerStrength;
-      }
-
-      const repulsionStrength = -300 * alpha.current;
-      for (let i = 0; i < nodesRef.current.length; i++) {
-        for (let j = i + 1; j < nodesRef.current.length; j++) {
-          const a = nodesRef.current[i];
-          const b = nodesRef.current[j];
-          let dx = (b.x || 0) - (a.x || 0);
-          let dy = (b.y || 0) - (a.y || 0);
-          let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          if (dist < 1) dist = 1;
-          const force = repulsionStrength / (dist * dist);
-          const fx = force * dx / dist;
-          const fy = force * dy / dist;
-          if (a.fx == null) { a.vx! += fx; a.vy! += fy; }
-          if (b.fx == null) { b.vx! -= fx; b.vy! -= fy; }
-        }
-      }
-
-      const linkStrength = 0.05 * alpha.current;
-      const idealDist = 120;
-      for (const edge of edges) {
-        const source = nodeMap.get(edge.source);
-        const target = nodeMap.get(edge.target);
-        if (!source || !target) continue;
-        let dx = (target.x || 0) - (source.x || 0);
-        let dy = (target.y || 0) - (source.y || 0);
-        let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const diff = (dist - idealDist) * linkStrength;
-        const fx = diff * dx / dist;
-        const fy = diff * dy / dist;
-        if (source.fx == null) { source.vx! += fx; source.vy! += fy; }
-        if (target.fx == null) { target.vx! -= fx; target.vy! -= fy; }
-      }
-
-      for (const node of nodesRef.current) {
-        if (node.fx != null || node.fy != null) continue;
-        node.vx! *= dampening;
-        node.vy! *= dampening;
-        node.x = (node.x || 0) + (node.vx || 0);
-        node.y = (node.y || 0) + (node.vy || 0);
-        node.x = Math.max(NODE_RADIUS, Math.min(width - NODE_RADIUS, node.x));
-        node.y = Math.max(NODE_RADIUS, Math.min(height - NODE_RADIUS, node.y));
-      }
-
-      setSimulatedNodes([...nodesRef.current]);
-      animationRef.current = requestAnimationFrame(tick);
-    }
-
-    animationRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, [nodes, edges, width, height]);
-
-  const setNodePosition = useCallback((nodeId: string, x: number, y: number) => {
-    const node = nodesRef.current.find(n => n.id === nodeId);
-    if (node) {
-      node.fx = x;
-      node.fy = y;
-      node.x = x;
-      node.y = y;
-      alpha.current = 0.3;
-    }
-  }, []);
-
-  const releaseNode = useCallback((nodeId: string) => {
-    const node = nodesRef.current.find(n => n.id === nodeId);
-    if (node) {
-      node.fx = null;
-      node.fy = null;
-    }
-  }, []);
-
-  return { simulatedNodes, setNodePosition, releaseNode };
+interface PositionedNode extends GraphNode {
+  x: number;
+  y: number;
 }
 
-export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGraphProps) {
+function layoutColumns(nodes: GraphNode[]): { positioned: PositionedNode[]; stages: GraphNode['type'][]; width: number; height: number } {
+  const stages = STAGE_ORDER.filter((stage) => nodes.some((n) => n.type === stage));
+  const columnsOf: Record<string, GraphNode[]> = {};
+  for (const stage of stages) columnsOf[stage] = nodes.filter((n) => n.type === stage);
+
+  const width = Math.max(stages.length * COLUMN_WIDTH, COLUMN_WIDTH);
+  const maxRows = Math.max(1, ...stages.map((s) => columnsOf[s].length));
+  const height = Math.max(MIN_HEIGHT, COLUMN_HEADER_HEIGHT + (maxRows + 1) * ROW_HEIGHT);
+
+  const positioned: PositionedNode[] = [];
+  stages.forEach((stage, colIndex) => {
+    const colNodes = columnsOf[stage];
+    const x = colIndex * COLUMN_WIDTH + COLUMN_WIDTH / 2;
+    const rowSpacing = (height - COLUMN_HEADER_HEIGHT) / (colNodes.length + 1);
+    colNodes.forEach((node, rowIndex) => {
+      positioned.push({
+        ...node,
+        x,
+        y: COLUMN_HEADER_HEIGHT + rowSpacing * (rowIndex + 1),
+      });
+    });
+  });
+
+  return { positioned, stages, width, height };
+}
+
+export function SupplyChainGraph({ shipmentId, batchId }: SupplyChainGraphProps) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [draggingNode, setDraggingNode] = useState<string | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const obs = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      setDimensions({ width: Math.max(400, width), height: Math.max(300, height) });
-    });
-    obs.observe(container);
-    return () => obs.disconnect();
-  }, []);
-
-  const { simulatedNodes, setNodePosition, releaseNode } = useForceSimulation(
-    nodes, edges, dimensions.width, dimensions.height
-  );
 
   useEffect(() => {
     async function fetchGraph() {
@@ -232,67 +119,16 @@ export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGr
     fetchGraph();
   }, [shipmentId, batchId]);
 
-  const nodeMap = useMemo(() => new Map(simulatedNodes.map(n => [n.id, n])), [simulatedNodes]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (draggingNode) return;
-    setIsPanning(true);
-    setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  }, [pan, draggingNode]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (draggingNode) {
-      const svg = svgRef.current;
-      if (!svg) return;
-      const rect = svg.getBoundingClientRect();
-      const x = (e.clientX - rect.left - pan.x) / zoom;
-      const y = (e.clientY - rect.top - pan.y) / zoom;
-      setNodePosition(draggingNode, x, y);
-      return;
-    }
-    if (isPanning) {
-      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-    }
-  }, [isPanning, panStart, draggingNode, pan, zoom, setNodePosition]);
-
-  const handleMouseUp = useCallback(() => {
-    if (draggingNode) {
-      releaseNode(draggingNode);
-      setDraggingNode(null);
-    }
-    setIsPanning(false);
-  }, [draggingNode, releaseNode]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.max(0.2, Math.min(3, z * delta)));
-  }, []);
-
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    setDraggingNode(nodeId);
-  }, []);
-
-  const handleNodeClick = useCallback((e: React.MouseEvent, node: GraphNode) => {
-    e.stopPropagation();
-    if (!draggingNode) {
-      setSelectedNode(prev => prev?.id === node.id ? null : node);
-    }
-  }, [draggingNode]);
-
-  const resetView = useCallback(() => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
+  const { positioned, stages, width, height } = useMemo(() => layoutColumns(nodes), [nodes]);
+  const nodeMap = useMemo(() => new Map(positioned.map((n) => [n.id, n])), [positioned]);
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const n of nodes) {
-      counts[n.type] = (counts[n.type] || 0) + 1;
-    }
+    for (const n of nodes) counts[n.type] = (counts[n.type] || 0) + 1;
     return counts;
   }, [nodes]);
+
+  const resetZoom = () => setZoom(1);
 
   if (isLoading) {
     return (
@@ -340,13 +176,13 @@ export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGr
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.min(3, z * 1.2))} aria-label="Zoom in" data-testid="button-zoom-in">
+          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.min(2, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" data-testid="button-zoom-in">
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setZoom(z => Math.max(0.2, z * 0.8))} aria-label="Zoom out" data-testid="button-zoom-out">
+          <Button size="icon" variant="ghost" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.2).toFixed(2)))} aria-label="Zoom out" data-testid="button-zoom-out">
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={resetView} aria-label="Reset view" data-testid="button-reset-view">
+          <Button size="icon" variant="ghost" onClick={resetZoom} aria-label="Reset zoom" data-testid="button-reset-view">
             <Maximize2 className="h-4 w-4" />
           </Button>
         </div>
@@ -355,112 +191,104 @@ export function SupplyChainGraph({ shipmentId, batchId, isBuyer }: SupplyChainGr
       <div className="flex gap-4">
         <div
           ref={containerRef}
-          className="flex-1 border rounded-md overflow-hidden bg-muted/20 relative"
-          style={{ minHeight: '500px' }}
+          className="flex-1 border rounded-md overflow-auto bg-muted/20"
+          style={{ minHeight: '420px' }}
         >
           <svg
-            ref={svgRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="cursor-grab active:cursor-grabbing"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
+            width={width * zoom}
+            height={height * zoom}
+            viewBox={`0 0 ${width} ${height}`}
             data-testid="svg-supply-chain-graph"
           >
             <defs>
-              <marker
-                id="arrowhead"
-                viewBox="0 0 10 7"
-                refX="10"
-                refY="3.5"
-                markerWidth="8"
-                markerHeight="6"
-                orient="auto"
-              >
+              <marker id="arrowhead" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
                 <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--muted-foreground))" opacity="0.5" />
               </marker>
             </defs>
-            <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-              {edges.map((edge, i) => {
-                const source = nodeMap.get(edge.source);
-                const target = nodeMap.get(edge.target);
-                if (!source || !target || source.x == null || target.x == null) return null;
 
-                const dx = (target.x || 0) - (source.x || 0);
-                const dy = (target.y || 0) - (source.y || 0);
-                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                const offsetX = (dx / dist) * NODE_RADIUS;
-                const offsetY = (dy / dist) * NODE_RADIUS;
+            {stages.map((stage, i) => (
+              <text
+                key={stage}
+                x={i * COLUMN_WIDTH + COLUMN_WIDTH / 2}
+                y={COLUMN_HEADER_HEIGHT - 14}
+                textAnchor="middle"
+                fontSize={12}
+                fontWeight={600}
+                fill="hsl(var(--foreground))"
+                data-testid={`column-header-${stage}`}
+              >
+                {NODE_LABELS[stage] || stage}
+              </text>
+            ))}
+            {stages.slice(1).map((stage, i) => (
+              <line
+                key={`divider-${stage}`}
+                x1={(i + 1) * COLUMN_WIDTH}
+                y1={0}
+                x2={(i + 1) * COLUMN_WIDTH}
+                y2={height}
+                stroke="hsl(var(--border))"
+                strokeDasharray="4 4"
+              />
+            ))}
 
-                return (
-                  <g key={`edge-${i}`}>
-                    <line
-                      x1={(source.x || 0) + offsetX}
-                      y1={(source.y || 0) + offsetY}
-                      x2={(target.x || 0) - offsetX}
-                      y2={(target.y || 0) - offsetY}
-                      stroke="hsl(var(--muted-foreground))"
-                      strokeWidth={1.5}
-                      strokeOpacity={0.3}
-                      markerEnd="url(#arrowhead)"
-                    />
-                    {edge.label && zoom > 0.6 && (
-                      <text
-                        x={((source.x || 0) + (target.x || 0)) / 2}
-                        y={((source.y || 0) + (target.y || 0)) / 2 - 6}
-                        textAnchor="middle"
-                        fontSize={9}
-                        fill="hsl(var(--muted-foreground))"
-                        opacity={0.6}
-                      >
-                        {edge.label}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
+            {edges.map((edge, i) => {
+              const source = nodeMap.get(edge.source);
+              const target = nodeMap.get(edge.target);
+              if (!source || !target) return null;
 
-              {simulatedNodes.map(node => {
-                const isSelected = selectedNode?.id === node.id;
-                return (
-                  <g
-                    key={node.id}
-                    transform={`translate(${node.x || 0}, ${node.y || 0})`}
-                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                    onClick={(e) => handleNodeClick(e, node)}
-                    className="cursor-pointer"
-                    data-testid={`node-${node.id}`}
+              const dx = target.x - source.x;
+              const dy = target.y - source.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              const offsetX = (dx / dist) * NODE_RADIUS;
+              const offsetY = (dy / dist) * NODE_RADIUS;
+
+              return (
+                <line
+                  key={`edge-${i}`}
+                  x1={source.x + offsetX}
+                  y1={source.y + offsetY}
+                  x2={target.x - offsetX}
+                  y2={target.y - offsetY}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1.5}
+                  strokeOpacity={0.4}
+                  markerEnd="url(#arrowhead)"
+                />
+              );
+            })}
+
+            {positioned.map((node) => {
+              const isSelected = selectedNode?.id === node.id;
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onClick={() => setSelectedNode((prev) => (prev?.id === node.id ? null : node))}
+                  className="cursor-pointer"
+                  data-testid={`node-${node.id}`}
+                >
+                  <circle
+                    r={NODE_RADIUS}
+                    fill={NODE_COLORS[node.type] || '#6b7280'}
+                    fillOpacity={0.15}
+                    stroke={NODE_COLORS[node.type] || '#6b7280'}
+                    strokeWidth={isSelected ? 3 : 2}
+                    strokeOpacity={isSelected ? 1 : 0.7}
+                  />
+                  <circle r={7} fill={NODE_COLORS[node.type] || '#6b7280'} />
+                  <text
+                    y={NODE_RADIUS + 14}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill="hsl(var(--foreground))"
+                    fontWeight={isSelected ? 600 : 400}
                   >
-                    <circle
-                      r={NODE_RADIUS}
-                      fill={NODE_COLORS[node.type] || '#6b7280'}
-                      fillOpacity={0.15}
-                      stroke={NODE_COLORS[node.type] || '#6b7280'}
-                      strokeWidth={isSelected ? 3 : 2}
-                      strokeOpacity={isSelected ? 1 : 0.7}
-                    />
-                    <circle
-                      r={8}
-                      fill={NODE_COLORS[node.type] || '#6b7280'}
-                    />
-                    {zoom > 0.5 && (
-                      <text
-                        y={NODE_RADIUS + 14}
-                        textAnchor="middle"
-                        fontSize={10}
-                        fill="hsl(var(--foreground))"
-                        fontWeight={isSelected ? 600 : 400}
-                      >
-                        {node.label.length > 18 ? node.label.substring(0, 16) + '...' : node.label}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
+                    {node.label.length > 20 ? node.label.substring(0, 18) + '...' : node.label}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
         </div>
 

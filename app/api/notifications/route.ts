@@ -10,12 +10,17 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get('unread') === 'true';
-    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const summaryOnly = url.searchParams.get('summary') === 'true';
+    const requestedLimit = parseInt(url.searchParams.get('limit') || '20');
+    const limit = summaryOnly ? 1 : requestedLimit;
 
     let notifications: any[] = [];
     let unreadCount = 0;
 
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_user_notifications', {
+    // NOTE: 'get_user_notifications' RPC is not present in the generated DB types
+    // (not deployed to the live DB) — falls through to the direct-query path below,
+    // which is the actual runtime behavior today.
+    const { data: rpcData, error: rpcError } = await (supabase as any).rpc('get_user_notifications', {
       p_user_id: user.id,
       p_unread_only: unreadOnly,
       p_limit: limit,
@@ -50,6 +55,10 @@ export async function GET(request: NextRequest) {
       unreadCount = count || 0;
     }
 
+    if (summaryOnly) {
+      return NextResponse.json({ unread_count: unreadCount });
+    }
+
     return NextResponse.json({ notifications, unread_count: unreadCount });
   } catch (error: any) {
     console.error('Notifications GET error:', error);
@@ -68,7 +77,9 @@ export async function PATCH(request: NextRequest) {
     if (validationError) return validationError;
     const { notification_id, mark_all_read } = body;
 
-    const { error: rpcError } = await supabase.rpc('mark_notification_read', {
+    // NOTE: 'mark_notification_read' RPC is not present in the generated DB types
+    // (not deployed to the live DB) — falls through to the direct-update path below.
+    const { error: rpcError } = await (supabase as any).rpc('mark_notification_read', {
       p_user_id: user.id,
       p_notification_id: notification_id || null,
       p_mark_all: mark_all_read || false,

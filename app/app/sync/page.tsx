@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,11 +26,15 @@ import {
   Scale,
   ChevronDown,
   ChevronUp,
+  Upload,
+  FileText,
 } from 'lucide-react';
 import { StatusBadge } from '@/lib/status-badge';
+import { useApiResource } from '@/hooks/use-api-resource';
 
 interface LocalBatch {
   id: string;
+  org_id: number | string;
   local_id: string;
   batch_id?: string;
   farm_id?: string;
@@ -45,10 +49,18 @@ interface LocalBatch {
   bags: any[];
   notes?: string;
   collected_at: string;
-  status: 'pending' | 'syncing' | 'synced' | 'error';
+  status: 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
   error_message?: string;
   created_at: string;
   synced_at?: string;
+}
+
+interface QueueStats {
+  pending: number;
+  syncing: number;
+  synced: number;
+  error: number;
+  conflict?: number;
 }
 
 interface SyncStats {
@@ -56,77 +68,212 @@ interface SyncStats {
   syncing: number;
   synced: number;
   error: number;
+  conflict?: number;
+  batches?: QueueStats;
+  farms?: QueueStats;
+  boundaries?: QueueStats;
+  uploads?: QueueStats;
+  ocr?: QueueStats;
 }
+
+type QueueItemType = 'farm' | 'upload' | 'ocr' | 'boundary';
+
+interface QueueItem {
+  id: string;
+  org_id: number | string;
+  type: QueueItemType;
+  label: string;
+  detail: string;
+  status: 'pending' | 'syncing' | 'synced' | 'error' | 'conflict';
+  error_message?: string;
+  created_at: string;
+}
+
+const EMPTY_QUEUE = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
+const EMPTY_STATS: SyncStats = { pending: 0, syncing: 0, synced: 0, error: 0, conflict: 0 };
 
 export default function SyncDashboardPage() {
   const { organization, profile, isLoading: orgLoading } = useOrg();
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
+  const organizationId = organization?.id ?? null;
+  const activeOrganizationIdRef = useRef<number | null>(organizationId);
+  activeOrganizationIdRef.current = organizationId;
 
-  const [batches, setBatches] = useState<LocalBatch[]>([]);
-  const [stats, setStats] = useState<SyncStats>({ pending: 0, syncing: 0, synced: 0, error: 0 });
+  const [storedBatches, setBatches] = useState<LocalBatch[]>([]);
+  const [storedQueueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [storedStats, setStats] = useState<SyncStats>(EMPTY_STATS);
+  const [loadedOrganizationId, setLoadedOrganizationId] = useState<number | null>(null);
+  const [quarantinedCount, setQuarantinedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [discardConfirmId, setDiscardConfirmId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [serverMetrics, setServerMetrics] = useState<{
+  const dataMatchesActiveOrganization = organizationId !== null && loadedOrganizationId === organizationId;
+  const batches = dataMatchesActiveOrganization ? storedBatches : [];
+  const queueItems = dataMatchesActiveOrganization ? storedQueueItems : [];
+  const stats = dataMatchesActiveOrganization ? storedStats : EMPTY_STATS;
+  const { data: serverMetrics } = useApiResource<{
     pendingConflicts: number;
     unsyncedBags: number;
     agentCount: number;
-  } | null>(null);
+  }>(!orgLoading && organization?.id && isOnline ? '/api/sync-metrics' : null, {
+    enabled: !orgLoading && !!organization?.id && isOnline,
+    scopeKey: organization?.id,
+    deps: [organization?.id, isOnline],
+    showErrorToast: false,
+  });
 
   const loadData = useCallback(async () => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      setBatches([]);
+      setQueueItems([]);
+      setStats(EMPTY_STATS);
+      setLoadedOrganizationId(null);
+      setQuarantinedCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { getAllBatches, getSyncStats } = await import('@/lib/offline/sync-store');
-      const [batchList, syncStats] = await Promise.all([getAllBatches(), getSyncStats()]);
+      const {
+        getAllBatches,
+        getAllOfflineFarms,
+        getAllBoundaries,
+        getAllUploads,
+        getAllOcrJobs,
+        getSyncStats,
+        getQuarantinedQueueStats,
+      } = await import('@/lib/offline/sync-store');
+      const [batchList, farmList, boundaryList, uploadList, ocrList, syncStats, quarantined] = await Promise.all([
+        getAllBatches(requestedOrganizationId),
+        getAllOfflineFarms(requestedOrganizationId),
+        getAllBoundaries(requestedOrganizationId),
+        getAllUploads(requestedOrganizationId),
+        getAllOcrJobs(requestedOrganizationId),
+        getSyncStats(requestedOrganizationId),
+        getQuarantinedQueueStats(),
+      ]);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+      const fieldItems: QueueItem[] = [
+        ...farmList.map((farm: any) => ({
+          id: farm.id,
+          org_id: farm.org_id,
+          type: 'farm' as const,
+          label: farm.farmer_name || 'Offline farmer',
+          detail: [farm.community, farm.phone].filter(Boolean).join(' - ') || farm.local_id,
+          status: farm.status,
+          error_message: farm.error_message,
+          created_at: farm.created_at,
+        })),
+        ...uploadList.map((upload: any) => ({
+          id: upload.id,
+          org_id: upload.org_id,
+          type: 'upload' as const,
+          label: upload.file_name || upload.file_type || 'Queued file',
+          detail: `${upload.file_type || 'file'} for ${upload.local_farm_id || upload.farm_id}`,
+          status: upload.status,
+          error_message: upload.error_message,
+          created_at: upload.created_at,
+        })),
+        ...ocrList.map((job: any) => ({
+          id: job.id,
+          org_id: job.org_id,
+          type: 'ocr' as const,
+          label: 'Offline OCR job',
+          detail: `Runs after ${job.local_farm_id || job.farm_id} syncs`,
+          status: job.status,
+          error_message: job.error_message,
+          created_at: job.created_at,
+        })),
+        ...boundaryList.map((boundary: any) => ({
+          id: boundary.id,
+          org_id: boundary.org_id,
+          type: 'boundary' as const,
+          label: 'Farm boundary',
+          detail: `${boundary.area_hectares ?? 0} ha for ${boundary.local_farm_id || boundary.farm_id}`,
+          status: boundary.status,
+          error_message: boundary.error_message,
+          created_at: boundary.created_at,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setBatches(batchList as any);
+      setQueueItems(fieldItems);
       setStats(syncStats);
+      setQuarantinedCount(quarantined.total);
+      setLoadedOrganizationId(requestedOrganizationId);
     } catch (error) {
       console.error('Failed to load sync data:', error);
     } finally {
-      setIsLoading(false);
+      if (activeOrganizationIdRef.current === requestedOrganizationId) setIsLoading(false);
     }
-  }, []);
-
-  const loadServerMetrics = useCallback(async () => {
-    try {
-      const response = await fetch('/api/sync-metrics');
-      if (response.ok) {
-        const data = await response.json();
-        setServerMetrics(data);
-      }
-    } catch (error) {
-      console.error('Failed to load server metrics:', error);
-    }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
-    if (!orgLoading) {
-      loadData();
-      if (isOnline) loadServerMetrics();
-    }
-  }, [orgLoading, loadData, isOnline, loadServerMetrics]);
+    if (orgLoading) return;
+    setLoadedOrganizationId(null);
+    setBatches([]);
+    setQueueItems([]);
+    setStats(EMPTY_STATS);
+    setQuarantinedCount(0);
+    setDiscardConfirmId(null);
+    setExpandedId(null);
+    void loadData();
+  }, [organizationId, orgLoading, loadData]);
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let disposed = false;
+
+    import('@/lib/offline/sync-service')
+      .then(({ addSyncListener }) => {
+        if (disposed) return;
+        cleanup = addSyncListener(() => {
+          void loadData();
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
+  }, [loadData]);
 
   const handleSyncAll = async () => {
     if (!isOnline) {
       toast({ title: 'Offline', description: 'You need to be online to sync.', variant: 'destructive' });
       return;
     }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
 
     setIsSyncing(true);
     try {
       const { syncPendingBatches } = await import('@/lib/offline/sync-service');
-      const result = await syncPendingBatches();
+      const result = await syncPendingBatches(
+        requestedOrganizationId,
+        () => activeOrganizationIdRef.current === requestedOrganizationId,
+      );
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       if (result.synced > 0) {
-        toast({ title: 'Sync Complete', description: `${result.synced} batch(es) synced successfully.` });
+        toast({ title: 'Sync Complete', description: `${result.synced} item(s) synced successfully.` });
       }
       if (result.failed > 0) {
-        toast({ title: 'Some Syncs Failed', description: `${result.failed} batch(es) failed to sync.`, variant: 'destructive' });
+        toast({ title: 'Some Syncs Failed', description: `${result.failed} item(s) failed to sync.`, variant: 'destructive' });
       }
       if (result.synced === 0 && result.failed === 0) {
         toast({ title: 'Nothing to Sync', description: 'All data is up to date.' });
+      }
+      const quarantineWarning = result.warnings.find((warning) => warning.type === 'legacy_unscoped_queue');
+      if (quarantineWarning) {
+        toast({ title: 'Legacy Offline Data Blocked', description: quarantineWarning.message, variant: 'destructive' });
       }
       await loadData();
     } catch (error) {
@@ -142,24 +289,59 @@ export default function SyncDashboardPage() {
       toast({ title: 'Offline', description: 'You need to be online to retry.', variant: 'destructive' });
       return;
     }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
 
     try {
       const { updateBatchStatus } = await import('@/lib/offline/sync-store');
-      await updateBatchStatus(batchId, 'pending');
+      await updateBatchStatus(batchId, requestedOrganizationId, 'pending');
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       await loadData();
-      handleSyncAll();
+      void handleSyncAll();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to retry.', variant: 'destructive' });
     }
   };
 
+  const handleRetryQueueItem = async (item: QueueItem) => {
+    if (!isOnline) {
+      toast({ title: 'Offline', description: 'You need to be online to retry.', variant: 'destructive' });
+      return;
+    }
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
+
+    try {
+      const {
+        updateFarmStatus,
+        updateUploadStatus,
+        updateOcrJobStatus,
+        updateBoundaryStatus,
+      } = await import('@/lib/offline/sync-store');
+
+      if (String(item.org_id) !== String(requestedOrganizationId)) throw new Error('Queue item belongs to another organization.');
+      if (item.type === 'farm') await updateFarmStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'upload') await updateUploadStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'ocr') await updateOcrJobStatus(item.id, requestedOrganizationId, 'pending');
+      if (item.type === 'boundary') await updateBoundaryStatus(item.id, requestedOrganizationId, 'pending');
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+      await loadData();
+      void handleSyncAll();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to retry item.', variant: 'destructive' });
+    }
+  };
+
   const handleClearSynced = async () => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
     setIsClearing(true);
     try {
-      const { deleteSyncedBatches } = await import('@/lib/offline/sync-store');
-      await deleteSyncedBatches();
+      const { deleteSyncedQueueItems } = await import('@/lib/offline/sync-store');
+      await deleteSyncedQueueItems(requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       await loadData();
-      toast({ title: 'Cleared', description: 'Synced batches removed from local storage.' });
+      toast({ title: 'Cleared', description: 'Synced offline items removed from local storage.' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to clear.', variant: 'destructive' });
     } finally {
@@ -167,10 +349,42 @@ export default function SyncDashboardPage() {
     }
   };
 
+  const handleDiscardQueueItem = async (item: QueueItem) => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
+    try {
+      const {
+        deleteFarm,
+        deleteUpload,
+        deleteOcrJob,
+        deleteBoundary,
+      } = await import('@/lib/offline/sync-store');
+
+      if (String(item.org_id) !== String(requestedOrganizationId)) throw new Error('Queue item belongs to another organization.');
+      if (item.type === 'farm') await deleteFarm(item.id, requestedOrganizationId);
+      if (item.type === 'upload') await deleteUpload(item.id, requestedOrganizationId);
+      if (item.type === 'ocr') await deleteOcrJob(item.id, requestedOrganizationId);
+      if (item.type === 'boundary') await deleteBoundary(item.id, requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
+      setDiscardConfirmId(null);
+      await loadData();
+      toast({ title: 'Discarded', description: 'Queued item removed from local storage.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to discard item.', variant: 'destructive' });
+    }
+  };
+
   const handleDiscard = async (batchId: string) => {
+    const requestedOrganizationId = organizationId;
+    if (requestedOrganizationId === null || activeOrganizationIdRef.current !== requestedOrganizationId) return;
     try {
       const { deleteBatch } = await import('@/lib/offline/sync-store');
-      await deleteBatch(batchId);
+      const batch = batches.find((item) => item.id === batchId);
+      if (!batch || String(batch.org_id) !== String(requestedOrganizationId)) {
+        throw new Error('Batch belongs to another organization.');
+      }
+      await deleteBatch(batchId, requestedOrganizationId);
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) return;
       setDiscardConfirmId(null);
       await loadData();
       toast({ title: 'Discarded', description: 'Batch removed from local queue.' });
@@ -200,11 +414,29 @@ export default function SyncDashboardPage() {
       case 'pending': return <Clock className="h-4 w-4 text-amber-500" />;
       case 'syncing': return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
       case 'synced': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'conflict': return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'error': return <XCircle className="h-4 w-4 text-red-500" />;
       default: return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
+  const getQueueIcon = (type: QueueItemType) => {
+    switch (type) {
+      case 'farm': return <Users className="h-4 w-4 text-emerald-600" />;
+      case 'upload': return <Upload className="h-4 w-4 text-blue-600" />;
+      case 'ocr': return <FileText className="h-4 w-4 text-violet-600" />;
+      case 'boundary': return <MapPin className="h-4 w-4 text-amber-600" />;
+    }
+  };
+
+  const getQueueTypeLabel = (type: QueueItemType) => {
+    switch (type) {
+      case 'farm': return 'Farmer';
+      case 'upload': return 'File';
+      case 'ocr': return 'OCR';
+      case 'boundary': return 'Boundary';
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -283,31 +515,52 @@ export default function SyncDashboardPage() {
         </div>
       )}
 
+      {dataMatchesActiveOrganization && quarantinedCount > 0 && (
+        <Card role="alert" className="border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20">
+          <CardContent className="flex items-start gap-3 py-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-none text-amber-600" />
+            <div>
+              <p className="font-medium">Legacy offline data is quarantined</p>
+              <p className="text-sm text-muted-foreground">
+                {quarantinedCount} older item(s) have no organization owner and will not sync automatically.
+                They remain stored locally for administrator-assisted recovery and will never be assigned to the active organization automatically.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-amber-600 font-mono" data-testid="text-stat-pending">{stats.pending}</div>
-            <div className="text-xs text-muted-foreground">Pending</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-600 font-mono" data-testid="text-stat-syncing">{stats.syncing}</div>
-            <div className="text-xs text-muted-foreground">Syncing</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-green-600 font-mono" data-testid="text-stat-synced">{stats.synced}</div>
-            <div className="text-xs text-muted-foreground">Synced</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-red-600 font-mono" data-testid="text-stat-error">{stats.error}</div>
-            <div className="text-xs text-muted-foreground">Failed</div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Pending', value: stats.pending, accent: 'card-accent-amber', color: 'text-amber-600', testId: 'text-stat-pending' },
+          { label: 'Syncing', value: stats.syncing, accent: 'card-accent-blue', color: 'text-blue-600', testId: 'text-stat-syncing' },
+          { label: 'Synced', value: stats.synced, accent: 'card-accent-emerald', color: 'text-green-600', testId: 'text-stat-synced' },
+          { label: 'Failed', value: stats.error, accent: 'card-accent-red', color: 'text-red-600', testId: 'text-stat-error' },
+        ].map(s => (
+          <Card key={s.label} className={s.accent}>
+            <CardContent className="pt-4 pb-3 text-center">
+              <div className={`text-2xl font-bold font-mono ${s.color}`} data-testid={s.testId}>{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: 'Farmers', value: (stats.farms || EMPTY_QUEUE).pending + (stats.farms || EMPTY_QUEUE).error, testId: 'text-queue-farms' },
+          { label: 'Files', value: (stats.uploads || EMPTY_QUEUE).pending + (stats.uploads || EMPTY_QUEUE).error, testId: 'text-queue-uploads' },
+          { label: 'OCR', value: (stats.ocr || EMPTY_QUEUE).pending + (stats.ocr || EMPTY_QUEUE).error, testId: 'text-queue-ocr' },
+          { label: 'Boundaries', value: (stats.boundaries || EMPTY_QUEUE).pending + (stats.boundaries || EMPTY_QUEUE).error, testId: 'text-queue-boundaries' },
+          { label: 'Batches', value: (stats.batches || EMPTY_QUEUE).pending + (stats.batches || EMPTY_QUEUE).error, testId: 'text-queue-batches' },
+        ].map(item => (
+          <Card key={item.label}>
+            <CardContent className="pt-3 pb-3 text-center">
+              <div className="text-lg font-bold font-mono" data-testid={item.testId}>{item.value}</div>
+              <div className="text-[11px] text-muted-foreground">{item.label}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="flex gap-3">
@@ -344,6 +597,103 @@ export default function SyncDashboardPage() {
         </Button>
       </div>
 
+      {!isLoading && queueItems.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Field Work Queue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {queueItems.map((item) => {
+              const confirmId = `${item.type}:${item.id}`;
+              return (
+                <div key={confirmId} className="rounded-md border p-3 space-y-3" data-testid={`queue-item-${confirmId}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {getQueueIcon(item.type)}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">{item.label}</span>
+                          <Badge variant="secondary" className="text-xs">{getQueueTypeLabel(item.type)}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground break-all">{item.detail}</div>
+                        <div className="text-xs text-muted-foreground">{formatTime(item.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {getStatusIcon(item.status)}
+                      <StatusBadge domain="sync" status={item.status} />
+                    </div>
+                  </div>
+
+                  {item.status === 'error' && (
+                    <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Sync Error
+                      </div>
+                      {item.error_message && (
+                        <p className="text-xs text-muted-foreground font-mono break-all">{item.error_message}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{getErrorGuidance(item.error_message)}</p>
+                    </div>
+                  )}
+
+                  {discardConfirmId === confirmId ? (
+                    <div className="rounded-md bg-muted p-3 space-y-2">
+                      <p className="text-xs font-medium">Discard this queued item? This cannot be undone.</p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => handleDiscardQueueItem(item)}
+                          data-testid={`button-discard-queue-confirm-${confirmId}`}
+                        >
+                          Yes, Discard
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setDiscardConfirmId(null)}
+                          data-testid={`button-discard-queue-cancel-${confirmId}`}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => handleRetryQueueItem(item)}
+                        disabled={!isOnline || item.status === 'syncing'}
+                        data-testid={`button-retry-queue-${confirmId}`}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-7 text-xs text-destructive hover:text-destructive"
+                        onClick={() => setDiscardConfirmId(confirmId)}
+                        data-testid={`button-discard-queue-${confirmId}`}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Discard
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -352,8 +702,12 @@ export default function SyncDashboardPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-2">
             <Package className="h-10 w-10 text-muted-foreground mx-auto" />
-            <div className="font-medium">No offline data</div>
-            <div className="text-sm text-muted-foreground">Batches collected offline will appear here.</div>
+            <div className="font-medium">{stats.pending > 0 || stats.error > 0 ? 'Offline field work queued' : 'No offline data'}</div>
+            <div className="text-sm text-muted-foreground">
+              {stats.pending > 0 || stats.error > 0
+                ? 'Queued farmers, files, OCR jobs, or boundaries are shown in the summary above.'
+                : 'Batches collected offline will appear here.'}
+            </div>
           </CardContent>
         </Card>
       ) : (

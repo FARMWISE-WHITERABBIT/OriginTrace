@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { validateApiKey, checkRateLimit } from '@/lib/api-auth';
+import { validateApiKey } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { emptyAsNull } from '@/lib/api/validation';
 import { z } from 'zod';
 import { enforceTier } from '@/lib/api/tier-guard';
 
@@ -18,13 +20,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient scope. Required: read' }, { status: 403 });
     }
 
-    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-        { status: 429, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)) } }
-      );
-    }
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
 
     const supabase = createAdminClient();
 
@@ -54,11 +55,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: batches || [],
       meta: { total: count || 0, limit, offset },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
     });
   } catch (error) {
     console.error('V1 Batches API error:', error);
@@ -67,7 +63,7 @@ export async function GET(request: NextRequest) {
 }
 
 const createBatchSchema = z.object({
-  farm_id: z.number().int().positive(),
+  farm_id: z.string().uuid(),
   agent_id: z.string().uuid(),
   status: z.string().optional().default('collecting'),
   total_weight: z.number().optional().default(0),
@@ -75,10 +71,11 @@ const createBatchSchema = z.object({
   notes: z.string().optional(),
   commodity: z.string().optional(),
   batch_id: z.string().optional(),
-  gps_lat: z.number().optional(),
-  gps_lng: z.number().optional(),
+  gps_lat: emptyAsNull(z.number().nullable().optional()),
+  gps_lng: emptyAsNull(z.number().nullable().optional()),
+  gps_accuracy: z.number().optional(),
   estimated_bags: z.number().int().optional(),
-  estimated_weight: z.number().optional(),
+  estimated_weight: emptyAsNull(z.number().nullable().optional()),
 });
 
 export async function POST(request: NextRequest) {
@@ -95,13 +92,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient scope. Required: write' }, { status: 403 });
     }
 
-    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-        { status: 429, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)) } }
-      );
-    }
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createBatchSchema.safeParse(body);
@@ -122,6 +118,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found or does not belong to your organization' }, { status: 404 });
     }
 
+    // TODO(schema-drift): 'gps_lat', 'gps_lng', 'estimated_bags', 'estimated_weight' are
+    // accepted in the public API request body but have no equivalent columns on
+    // 'collection_batches' — they are currently silently dropped on insert (same as
+    // before this typing pass). 'batch_id' is stored in 'local_id', the closest existing
+    // equivalent (client-supplied external identifier). Needs a product decision on
+    // whether to add columns for the GPS/estimate fields.
     const { data: batch, error } = await supabase
       .from('collection_batches')
       .insert({
@@ -129,15 +131,11 @@ export async function POST(request: NextRequest) {
         farm_id: parsed.data.farm_id,
         agent_id: parsed.data.agent_id,
         status: parsed.data.status,
-        total_weight: String(parsed.data.total_weight),
+        total_weight: parsed.data.total_weight,
         bag_count: parsed.data.bag_count,
         notes: parsed.data.notes || null,
         commodity: parsed.data.commodity || null,
-        batch_id: parsed.data.batch_id || null,
-        gps_lat: parsed.data.gps_lat != null ? String(parsed.data.gps_lat) : null,
-        gps_lng: parsed.data.gps_lng != null ? String(parsed.data.gps_lng) : null,
-        estimated_bags: parsed.data.estimated_bags || null,
-        estimated_weight: parsed.data.estimated_weight != null ? String(parsed.data.estimated_weight) : null,
+        local_id: parsed.data.batch_id || null,
       })
       .select()
       .single();
@@ -147,13 +145,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create batch' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: batch }, {
-      status: 201,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: batch }, { status: 201 });
   } catch (error) {
     console.error('V1 Batches POST API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

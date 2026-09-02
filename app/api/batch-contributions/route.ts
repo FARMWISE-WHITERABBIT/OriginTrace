@@ -2,8 +2,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { z } from 'zod';
+import { checkFarmEligibility } from '@/lib/services/farm-eligibility';
+import { normalizeMarketCodes } from '@/lib/services/market-normalization';
+import { logAuditEvent } from '@/lib/audit';
 
 const ALLOWED_READ_ROLES = ['admin', 'aggregator', 'agent', 'quality_manager', 'compliance_officer'];
+const ALLOWED_WRITE_ROLES = ['admin', 'aggregator', 'agent'];
 
 const batchContributionSchema = z.object({
   batch_id:     z.string().uuid({ message: 'batch_id must be a valid UUID' }),
@@ -12,6 +16,8 @@ const batchContributionSchema = z.object({
   weight_kg:    z.number().min(0).default(0),
   bag_count:    z.number().int().min(0).default(0),
   notes:        z.string().nullable().optional(),
+  target_markets: z.array(z.string()).optional(),
+  compliance_override_reason: z.string().trim().min(10, 'Override reason must be at least 10 characters').optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -22,7 +28,6 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
-
     if (!ALLOWED_READ_ROLES.includes(profile.role)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
@@ -69,6 +74,9 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    if (!ALLOWED_WRITE_ROLES.includes(profile.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
 
     const body = await request.json();
     const parsed = batchContributionSchema.safeParse(body);
@@ -80,7 +88,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes } = parsed.data;
+    const { batch_id, farm_id, farmer_name, weight_kg, bag_count, notes, target_markets, compliance_override_reason } = parsed.data;
 
     const { data: batch } = await supabaseAdmin
       .from('collection_batches')
@@ -95,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     const { data: farm } = await supabaseAdmin
       .from('farms')
-      .select('id, compliance_status')
+      .select('id, compliance_status, boundary_geo, deforestation_check, consent_timestamp')
       .eq('id', farm_id)
       .eq('org_id', profile.org_id)
       .single();
@@ -104,7 +112,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
-    const complianceStatus = farm.compliance_status === 'approved' ? 'verified' : 'pending';
+    // Compliance gate is advisory at collection time — collection is never blocked.
+    // Eligibility warnings are returned in the response and logged for the audit trail.
+    const resolvedTargetMarkets = normalizeMarketCodes(target_markets ?? []);
+    const eligibility = checkFarmEligibility(farm as any, resolvedTargetMarkets);
+
+    if (eligibility.warnings.length > 0 || !eligibility.eligible) {
+      await logAuditEvent({
+        orgId: batch.org_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'farm.compliance_warning',
+        resourceType: 'farm',
+        resourceId: farm_id,
+        metadata: {
+          batch_id,
+          eligibility_status: eligibility.status,
+          blockers: eligibility.blockers,
+          blocker_codes: eligibility.blocker_codes,
+          warnings: eligibility.warnings,
+          warning_codes: eligibility.warning_codes,
+          note: 'Collection not blocked; compliance check deferred to export stage.',
+        },
+      });
+    }
+
+    const complianceStatus =
+      eligibility.status === 'eligible' && farm.compliance_status === 'approved'
+        ? 'verified'
+        : 'pending';
 
     const { data: contribution, error } = await supabaseAdmin
       .from('batch_contributions')
@@ -126,7 +162,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to add contribution', details: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ contribution });
+    return NextResponse.json({
+      contribution,
+      complianceWarnings: eligibility.eligible ? eligibility.warnings : eligibility.blockers,
+      complianceWarningCodes: eligibility.eligible ? eligibility.warning_codes : eligibility.blocker_codes,
+      complianceStatus: eligibility.status,
+    });
   } catch (error) {
     console.error('Batch contributions POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

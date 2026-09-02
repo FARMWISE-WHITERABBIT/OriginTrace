@@ -31,13 +31,13 @@ async function resolveAuth(request: NextRequest) {
     .select('id')
     .eq('user_id', user.id)
     .single();
-  if (adminRow) return { userId: user.id, orgId: null as number | null, isSysAdmin: true };
+  if (adminRow) return { userId: user.id, orgId: null as string | null, isSysAdmin: true };
 
   // 2. Regular users need a profile with an org
   if (!profile) return { userId: user.id, orgId: null, isSysAdmin: false, noProfile: true };
   if (!profile.org_id) return { userId: user.id, orgId: null, isSysAdmin: false, noOrg: true };
 
-  return { userId: user.id, orgId: profile.org_id as number, isSysAdmin: false };
+  return { userId: user.id, orgId: profile.org_id, isSysAdmin: false };
 }
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
 
     const canCreateGlobal = auth.isSysAdmin || is_global === false ? auth.isSysAdmin : false;
     const derivedCode = (code || name).toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
-    const insertData: Record<string, unknown> = {
-      name, code: derivedCode,
+    const insertData = {
+      name, code: derivedCode as string,
       category: category || 'tree_crop',
       unit: unit || 'kg',
       is_active: true,
@@ -159,7 +159,7 @@ export async function PATCH(request: NextRequest) {
     if (moisture_max !== undefined) updates.moisture_max = moisture_max ? parseFloat(String(moisture_max)) : null;
     if (collection_metrics !== undefined) updates.collection_metrics = collection_metrics;
 
-    const { data: commodity, error } = await supabase.from('commodity_master').update(updates).eq('id', id).select().single();
+    const { data: commodity, error } = await supabase.from('commodity_master').update(updates).eq('id', Number(id)).select().single();
     if (error) { console.error('Commodity update error:', error); return NextResponse.json({ error: error.message }, { status: 500 }); }
     return NextResponse.json({ commodity: normalise(commodity as Record<string, unknown>) });
   } catch {
@@ -181,7 +181,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    const { error } = await supabase.from('commodity_master').update({ is_active: false }).eq('id', id);
+    const { error } = await supabase.from('commodity_master').update({ is_active: false }).eq('id', Number(id));
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch {

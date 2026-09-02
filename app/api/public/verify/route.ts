@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/api-auth';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/api/rate-limit';
 
 export async function GET(request: NextRequest) {
+  const rateCheck = await checkRateLimit(request, null, RATE_LIMIT_PRESETS.auth);
+  if (rateCheck) return rateCheck;
+
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code') || '';

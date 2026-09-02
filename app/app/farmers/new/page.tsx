@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOrg } from '@/lib/contexts/org-context';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOnlineStatus } from '@/components/online-status';
 import {
@@ -36,15 +35,16 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { OCRCapture } from '@/components/ocr-capture';
 
-interface LocationState { id: number; name: string; }
-interface LocationLGA { id: number; name: string; state_id: number; }
-interface LocationVillage { id: number; name: string; lga_id: number; }
+interface LocationState { id: string; name: string; }
+interface LocationLGA { id: string; name: string; state_id: string; }
+interface LocationVillage { id: string; name: string; lga_id: string; }
 
 export default function FarmerRegistrationPage() {
   const router = useRouter();
   const { organization, profile, isLoading: orgLoading } = useOrg();
+  const activeOrganizationIdRef = useRef<number | null>(organization?.id ?? null);
+  activeOrganizationIdRef.current = organization?.id ?? null;
   const { toast } = useToast();
-  const supabase = createClient();
   const isOnline = useOnlineStatus();
   const [commodityList, setCommodityList] = useState<{name: string; slug: string}[]>([]);
 
@@ -59,6 +59,8 @@ export default function FarmerRegistrationPage() {
   const [consentData, setConsentData] = useState<{ hasConsent: boolean; signature?: string; timestamp: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [queuedOffline, setQueuedOffline] = useState(false);
+  const [savedFarmId, setSavedFarmId] = useState<string | null>(null);
 
   const [farmerPhoto, setFarmerPhoto] = useState<File | null>(null);
   const [farmerPhotoPreview, setFarmerPhotoPreview] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export default function FarmerRegistrationPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const idInputRef = useRef<HTMLInputElement>(null);
   const [complianceData, setComplianceData] = useState<Record<string, boolean | string>>({});
+  const [complianceFiles, setComplianceFiles] = useState<Record<string, File | null>>({});
   const [showOcr, setShowOcr] = useState(true);
 
   const [states, setStates] = useState<LocationState[]>([]);
@@ -143,21 +146,37 @@ export default function FarmerRegistrationPage() {
     }
   };
 
+  const handleComplianceFileSelect = (file: File, fileType: string) => {
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: 'File too large', description: 'Maximum file size is 5MB.', variant: 'destructive' });
+      return;
+    }
+    setComplianceFiles(prev => ({ ...prev, [fileType]: file }));
+  };
+
+  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
   const uploadKycFile = async (farmId: string, file: File, fileType: string) => {
-    if (!organization || !supabase) return null;
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `kyc/${organization.id}/${farmId}/${fileType}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from('compliance-files')
-      .upload(path, file, { upsert: true });
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', fileType);
+    const response = await fetch(`/api/farmers/${farmId}/files`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      console.error('Upload error:', data.error || response.statusText);
       return null;
     }
-    const { data: urlData } = supabase.storage
-      .from('compliance-files')
-      .getPublicUrl(path);
-    return urlData?.publicUrl || path;
+    const data = await response.json();
+    return data.file?.file_url || null;
   };
 
   const canSave = fullName.trim().length >= 2 && selectedState && selectedLGA && community.trim() && hasConsent;
@@ -176,6 +195,16 @@ export default function FarmerRegistrationPage() {
     if (!hasConsent) errs.consent = 'Farmer consent is required';
     if (phone.trim() && !PHONE_REGEX.test(phone.trim())) errs.phone = 'Enter a valid Nigerian phone number (e.g. 08012345678)';
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    const requestedOrganizationId = organization?.id ?? null;
+    if (requestedOrganizationId === null) {
+      toast({ title: 'Organization unavailable', description: 'Wait for your organization to load and try again.', variant: 'destructive' });
+      return;
+    }
+    const assertOrganizationUnchanged = () => {
+      if (activeOrganizationIdRef.current !== requestedOrganizationId) {
+        throw new Error('The active organization changed while saving offline data.');
+      }
+    };
     setFieldErrors({});
     setIsSaving(true);
 
@@ -190,6 +219,8 @@ export default function FarmerRegistrationPage() {
             phone: phone || null,
             commodity: commodity || null,
             community: community || selectedLGA || selectedState,
+            state_id: states.find(s => s.name === selectedState)?.id ?? null,
+            lga_id: lgas.find(l => l.name === selectedLGA)?.id ?? null,
             consent_timestamp: consentData?.timestamp ?? null,
             consent_signature: consentData?.signature ?? null,
           }),
@@ -219,60 +250,165 @@ export default function FarmerRegistrationPage() {
         if (data?.id && (farmerPhoto || idDocument)) {
           const farmId = String(data.id);
           if (farmerPhoto) {
-            const photoUrl = await uploadKycFile(farmId, farmerPhoto, 'farmer_photo');
-            if (photoUrl) {
-              await fetch('/api/compliance-files', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  farm_id: data.id,
-                  file_type: 'farmer_photo',
-                  file_url: photoUrl,
-                  verification_status: 'pending',
-                }),
-              });
-            }
+            await uploadKycFile(farmId, farmerPhoto, 'farmer_photo');
           }
           if (idDocument) {
-            const idUrl = await uploadKycFile(farmId, idDocument, 'id_document');
-            if (idUrl) {
-              await fetch('/api/compliance-files', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  farm_id: data.id,
-                  file_type: 'id_document',
-                  file_url: idUrl,
-                  verification_status: 'pending',
-                }),
-              });
-            }
+            await uploadKycFile(farmId, idDocument, 'id_document');
+          }
+        }
+
+        if (data?.id) {
+          const farmId = String(data.id);
+          for (const [fileType, file] of Object.entries(complianceFiles)) {
+            if (file) await uploadKycFile(farmId, file, fileType);
           }
         }
 
         toast({ title: 'Farmer Registered', description: `${fullName} has been registered successfully.` });
+        setQueuedOffline(false);
+        setSavedFarmId(data?.id ? String(data.id) : null);
         setIsSuccess(true);
       } else {
-        const { getCachedFarms, cacheFarms } = await import('@/lib/offline/sync-store');
-        const existingFarms = await getCachedFarms();
-        const offlineFarm = {
-          id: `offline-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        const {
+          generateLocalId,
+          saveFarmOffline,
+          saveUploadOffline,
+          saveOcrJobOffline,
+        } = await import('@/lib/offline/sync-store');
+        const localId = generateLocalId('farm');
+
+        assertOrganizationUnchanged();
+        await saveFarmOffline({
+          local_id: localId,
+          org_id: requestedOrganizationId,
           farmer_name: fullName.trim(),
+          farmer_id: undefined,
+          phone: phone || null,
           community: community || selectedLGA || selectedState,
           commodity: commodity || null,
-          compliance_status: 'pending',
-        };
-        await cacheFarms([...existingFarms, offlineFarm]);
-        toast({ title: 'Saved Offline', description: `${fullName} will be synced when online.` });
+          consent_timestamp: consentData?.timestamp ?? null,
+          consent_signature: consentData?.signature ?? null,
+          compliance_data: complianceData,
+        });
+
+        if (Object.keys(complianceData).length > 0) {
+          assertOrganizationUnchanged();
+          await saveUploadOffline({
+            org_id: requestedOrganizationId,
+            farm_id: localId,
+            local_farm_id: localId,
+            upload_kind: 'record',
+            file_type: 'compliance_attestation',
+            payload: complianceData,
+          });
+        }
+
+        if (farmerPhoto) {
+          assertOrganizationUnchanged();
+          await saveUploadOffline({
+            org_id: requestedOrganizationId,
+            farm_id: localId,
+            local_farm_id: localId,
+            upload_kind: 'file',
+            file_type: 'farmer_photo',
+            file_name: farmerPhoto.name || 'farmer-photo.jpg',
+            file_mime: farmerPhoto.type,
+            file_size: farmerPhoto.size,
+            blob: farmerPhoto,
+          });
+        }
+
+        if (idDocument) {
+          assertOrganizationUnchanged();
+          const upload = await saveUploadOffline({
+            org_id: requestedOrganizationId,
+            farm_id: localId,
+            local_farm_id: localId,
+            upload_kind: 'file',
+            file_type: 'id_document',
+            file_name: idDocument.name || 'id-document.jpg',
+            file_mime: idDocument.type,
+            file_size: idDocument.size,
+            blob: idDocument,
+          });
+
+          if (idDocument.type.startsWith('image/')) {
+            try {
+              assertOrganizationUnchanged();
+              await saveOcrJobOffline({
+                org_id: requestedOrganizationId,
+                farm_id: localId,
+                local_farm_id: localId,
+                upload_id: upload.id,
+                image_data: await fileToDataUrl(idDocument),
+              });
+            } catch (ocrQueueError) {
+              console.warn('Failed to queue offline OCR job:', ocrQueueError);
+            }
+          }
+        }
+
+        for (const [fileType, file] of Object.entries(complianceFiles)) {
+          if (!file) continue;
+          assertOrganizationUnchanged();
+          await saveUploadOffline({
+            org_id: requestedOrganizationId,
+            farm_id: localId,
+            local_farm_id: localId,
+            upload_kind: 'file',
+            file_type: fileType,
+            file_name: file.name || `${fileType}.bin`,
+            file_mime: file.type,
+            file_size: file.size,
+            blob: file,
+          });
+        }
+
+        assertOrganizationUnchanged();
+        toast({ title: 'Saved Offline', description: `${fullName} and field files will sync when online.` });
+        setQueuedOffline(true);
+        setSavedFarmId(localId);
         setIsSuccess(true);
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast({ title: 'Error', description: 'Failed to register farmer. Please try again.', variant: 'destructive' });
+      if (activeOrganizationIdRef.current === requestedOrganizationId) {
+        toast({ title: 'Error', description: 'Failed to register farmer. Please try again.', variant: 'destructive' });
+      }
     } finally {
       setIsSaving(false);
     }
   };
+
+  const renderComplianceFileControl = (fileType: string, testId: string) => (
+    <div className="space-y-2">
+      <Input
+        type="file"
+        accept="image/*,.pdf"
+        data-testid={testId}
+        className="text-sm"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleComplianceFileSelect(file, fileType);
+        }}
+      />
+      {complianceFiles[fileType] && (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs">
+          <span className="truncate">{complianceFiles[fileType]?.name}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2"
+            onClick={() => setComplianceFiles(prev => ({ ...prev, [fileType]: null }))}
+            data-testid={`button-remove-${fileType}`}
+          >
+            Remove
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   if (orgLoading) {
     return (
@@ -286,13 +422,17 @@ export default function FarmerRegistrationPage() {
     return (
       <div className="max-w-md mx-auto py-12 text-center space-y-6">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold">Farmer Registered</h2>
-        <p className="text-muted-foreground">{fullName} has been added to the system.</p>
+        <h2 className="text-2xl font-bold">{queuedOffline ? 'Farmer Queued Offline' : 'Farmer Registered'}</h2>
+        <p className="text-muted-foreground">
+          {queuedOffline
+            ? `${fullName} is saved on this device and will sync with files when the network returns.`
+            : `${fullName} has been added to the system.`}
+        </p>
         <div className="space-y-3">
-          <Button onClick={() => { setIsSuccess(false); setFullName(''); setPhone(''); setCommodity(''); setCommunity(''); setCommunityMode('select'); setHasConsent(false); setConsentData(null); setFarmerPhoto(null); setFarmerPhotoPreview(null); setIdDocument(null); setIdDocPreview(null); }} className="w-full" data-testid="button-register-another">
+          <Button onClick={() => { setIsSuccess(false); setQueuedOffline(false); setSavedFarmId(null); setFullName(''); setPhone(''); setCommodity(''); setCommunity(''); setCommunityMode('select'); setHasConsent(false); setConsentData(null); setComplianceData({}); setComplianceFiles({}); setFarmerPhoto(null); setFarmerPhotoPreview(null); setIdDocument(null); setIdDocPreview(null); }} className="w-full" data-testid="button-register-another">
             Register Another Farmer
           </Button>
-          <Link href="/app/farms/map" className="block">
+          <Link href={savedFarmId ? `/app/farms/map?farm_id=${encodeURIComponent(savedFarmId)}` : '/app/farms/map'} className="block">
             <Button variant="outline" className="w-full" data-testid="button-map-farm">
               <MapPin className="h-4 w-4 mr-2" />
               Map This Farmer's Farm
@@ -322,7 +462,7 @@ export default function FarmerRegistrationPage() {
             setShowOcr(false);
             toast({
               title: 'ID scanned successfully',
-              description: `Extracted: ${result.farmerName || 'name'}${result.idNumber ? ` • ${result.idNumber}` : ''}`,
+              description: `Extracted: ${result.farmerName || 'name'}${result.idNumber ? ` - ${result.idNumber}` : ''}`,
             });
           }}
           onCancel={() => setShowOcr(false)}
@@ -436,6 +576,9 @@ export default function FarmerRegistrationPage() {
               data-testid="select-lga"
             >
               <option value="">Select LGA</option>
+              {selectedState && filteredLGAs.length === 0 && (
+                <option value="" disabled>No LGAs configured for selected state</option>
+              )}
               {filteredLGAs.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
             {fieldErrors.lga && <p id="err-lga" className="text-xs text-destructive mt-1" role="alert">{fieldErrors.lga}</p>}
@@ -539,7 +682,7 @@ export default function FarmerRegistrationPage() {
                     <Badge variant="outline" className="text-xs">EU Organic</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">Upload valid organic certificate for this farmer/farm</p>
-                  <Input type="file" accept="image/*,.pdf" data-testid="input-organic-cert" className="text-sm" />
+                  {renderComplianceFileControl('organic_cert', 'input-organic-cert')}
                 </div>
               )}
               {hasCS3D && (
@@ -572,7 +715,7 @@ export default function FarmerRegistrationPage() {
                     <Badge variant="outline" className="text-xs">RA</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">Upload RA certificate or group membership document</p>
-                  <Input type="file" accept="image/*,.pdf" data-testid="input-ra-cert" className="text-sm" />
+                  {renderComplianceFileControl('ra_cert', 'input-ra-cert')}
                 </div>
               )}
               {hasFT && (
@@ -582,7 +725,7 @@ export default function FarmerRegistrationPage() {
                     <Badge variant="outline" className="text-xs">FT</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">Upload Fairtrade certification or cooperative membership</p>
-                  <Input type="file" accept="image/*,.pdf" data-testid="input-ft-cert" className="text-sm" />
+                  {renderComplianceFileControl('ft_cert', 'input-ft-cert')}
                 </div>
               )}
             </CardContent>
@@ -639,6 +782,7 @@ export default function FarmerRegistrationPage() {
             ref={idInputRef}
             type="file"
             accept="image/*,.pdf"
+            capture="environment"
             className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0], 'id'); }}
             data-testid="input-id-document"
@@ -672,8 +816,8 @@ export default function FarmerRegistrationPage() {
                 onClick={() => idInputRef.current?.click()}
                 data-testid="button-upload-id"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload ID Document
+                <Camera className="h-4 w-4 mr-2" />
+                Capture / Upload ID
               </Button>
             )}
           </div>

@@ -1,0 +1,26 @@
+{
+  "skill_name": "testing",
+  "evals": [
+    {
+      "id": 0,
+      "name": "unit-test-generation",
+      "prompt": "Write a Vitest unit test for the computeShipmentReadiness function in lib/services/scoring/index.ts.",
+      "expected_output": "A Vitest unit test file that mocks dependencies and tests multiple decision paths (go, conditional, no_go).",
+      "files": ["lib/services/scoring/index.ts"]
+    },
+    {
+      "id": 1,
+      "name": "e2e-test-generation",
+      "prompt": "Create a Playwright E2E test that verifies an admin can log in and view the shipments dashboard.",
+      "expected_output": "A Playwright spec file using the auth setup pattern and data-testid selectors.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "fixture-creation",
+      "prompt": "Create a test fixture for a Farmer profile with some custom metadata using the buildFarmer helper pattern.",
+      "expected_output": "A TypeScript fixture file with a default mock object and a buildFarmer helper function.",
+      "files": []
+    }
+  ]
+}

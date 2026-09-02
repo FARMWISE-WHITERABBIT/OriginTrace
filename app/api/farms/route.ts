@@ -6,13 +6,17 @@ import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { dispatchIntegrationEvent } from '@/lib/integrations/dispatcher';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { parsePagination } from '@/lib/api/validation';
+import { requireRole, ROLES } from '@/lib/rbac';
 import { z } from 'zod';
 
 const farmCreateSchema = z.object({
+  local_id: z.string().min(1).optional(),
   farmer_name: z.string().min(1, 'Farmer name is required'),
   farmer_id: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
   community: z.string().min(1, 'Community is required'),
+  state_id: z.string().uuid().optional().nullable(),
+  lga_id: z.string().uuid().optional().nullable(),
   boundary: z.object({
     type: z.string().optional(),
     coordinates: z.array(z.any()).optional(),
@@ -110,7 +114,10 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
-    const tierBlock = await enforceTier(profile.org_id, 'farm_mapping');
+    const roleError = requireRole(profile, ROLES.FIELD_ROLES);
+    if (roleError) return roleError;
+
+    const tierBlock = await enforceTier(profile.org_id, 'farmer_registration');
     if (tierBlock) return tierBlock;
 
     const body = await request.json();
@@ -123,7 +130,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { farmer_name, phone, community, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+    const { local_id, farmer_name, phone, community, state_id, lga_id, boundary, area_hectares, legality_doc_url, consent_timestamp, consent_signature, commodity } = parsed.data;
+
+    if (local_id) {
+      const { data: existingFarm, error: existingError } = await supabaseAdmin
+        .from('farms')
+        .select('*')
+        .eq('org_id', profile.org_id)
+        .eq('local_id', local_id)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Farm idempotency lookup error:', existingError);
+        return NextResponse.json(
+          { error: 'Failed to check offline farm sync status' },
+          { status: 500 }
+        );
+      }
+
+      if (existingFarm) {
+        return NextResponse.json({ farm: existingFarm, success: true, status: 'already_synced' });
+      }
+    }
+
+    const { data: org } = await supabaseAdmin
+      .from('organizations')
+      .select('settings')
+      .eq('id', profile.org_id)
+      .single();
+
+    const settings = (org?.settings || {}) as {
+      require_polygon?: boolean;
+      require_national_id?: boolean;
+      require_land_deed?: boolean;
+    };
+
+    if (settings.require_national_id && !parsed.data.farmer_id) {
+      return NextResponse.json(
+        { error: 'Farmer National ID or identity document is required by your organization' },
+        { status: 400 }
+      );
+    }
 
     // Auto-generate a farmer ID if not explicitly provided
     let farmer_id = parsed.data.farmer_id;
@@ -135,24 +182,10 @@ export async function POST(request: NextRequest) {
       farmer_id = `FRM-${yr}${mo}-${suffix}`;
     }
 
-    const { data: org } = await supabaseAdmin
-      .from('organizations')
-      .select('settings')
-      .eq('id', profile.org_id)
-      .single();
-
-    const settings = org?.settings || {};
 
     if (settings.require_polygon && (!boundary || !boundary.coordinates || boundary.coordinates[0]?.length < 4)) {
       return NextResponse.json(
         { error: 'GPS polygon boundary is required by your organization' },
-        { status: 400 }
-      );
-    }
-
-    if (settings.require_national_id && !farmer_id) {
-      return NextResponse.json(
-        { error: 'National ID is required by your organization' },
         { status: 400 }
       );
     }
@@ -172,6 +205,9 @@ export async function POST(request: NextRequest) {
         farmer_id: farmer_id,
         phone: phone || null,
         community,
+        local_id: local_id || null,
+        state_id: state_id || null,
+        lga_id: lga_id || null,
         commodity: commodity || null,
         boundary: boundary || null,
         area_hectares: area_hectares || null,
@@ -185,6 +221,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
+      if (local_id && insertError.code === '23505') {
+        const { data: existingFarm } = await supabaseAdmin
+          .from('farms')
+          .select('*')
+          .eq('org_id', profile.org_id)
+          .eq('local_id', local_id)
+          .maybeSingle();
+
+        if (existingFarm) {
+          return NextResponse.json({ farm: existingFarm, success: true, status: 'already_synced' });
+        }
+      }
+
       console.error('Farm creation error:', insertError);
       return NextResponse.json(
         { error: 'Failed to create farm', details: insertError.message },
@@ -255,11 +304,45 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const roleError = requireRole(profile, ROLES.COMPLIANCE_ROLES);
+    if (roleError) return roleError;
     const supabaseAdmin = createAdminClient();
 
     const updateData: any = {};
     if (compliance_status) updateData.compliance_status = compliance_status;
     if (compliance_notes !== undefined) updateData.compliance_notes = compliance_notes;
+
+    if (compliance_status === 'approved') {
+      const { data: existingFarm } = await supabaseAdmin
+        .from('farms')
+        .select('farmer_id, area_hectares, legality_doc_url, boundary')
+        .eq('id', id)
+        .eq('org_id', profile.org_id)
+        .single();
+
+      if (!existingFarm) {
+        return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
+      }
+
+      const missing: string[] = [];
+      if (!existingFarm.farmer_id?.trim()) missing.push('National ID');
+      if (existingFarm.area_hectares == null || Number(existingFarm.area_hectares) <= 0) missing.push('Area (Hectares)');
+      if (!existingFarm.legality_doc_url?.trim()) missing.push('Legality Document');
+      const boundary = existingFarm.boundary as { type?: string; coordinates?: unknown[][][] } | null;
+      if (boundary?.type !== 'Polygon' || !Array.isArray(boundary.coordinates?.[0]) || boundary.coordinates[0].length < 4) {
+        missing.push('GPS Boundary');
+      }
+
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Farm cannot be approved until all required documentation is provided.',
+            missing,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const { data: updatedFarm, error: updateError } = await supabaseAdmin
       .from('farms')

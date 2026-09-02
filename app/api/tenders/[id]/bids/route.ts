@@ -42,6 +42,12 @@ export async function GET(
       .eq('user_id', user.id)
       .single();
 
+    if (exporterProfile) {
+      const { enforceTier } = await import('@/lib/api/tier-guard');
+      const tierBlock = await enforceTier(exporterProfile.org_id, 'spot_market');
+      if (tierBlock) return tierBlock;
+    }
+
     let bids: any[] = [];
 
     if (buyerProfile) {
@@ -99,6 +105,10 @@ export async function POST(
     if (!exporterProfile) {
       return NextResponse.json({ error: 'Only exporters can submit bids' }, { status: 403 });
     }
+
+    const { enforceTier } = await import('@/lib/api/tier-guard');
+    const tierBlock = await enforceTier(exporterProfile.org_id, 'spot_market');
+    if (tierBlock) return tierBlock;
 
     const { data: tender } = await supabaseAdmin
       .from('tenders')

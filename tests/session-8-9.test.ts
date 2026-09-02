@@ -19,7 +19,7 @@ function readRoute(rel: string) {
 }
 
 function readMigration(name: string) {
-  return readFileSync(join(__dirname, '..', 'migrations', name), 'utf8');
+  return readFileSync(join(__dirname, '..', 'supabase', 'migrations', name), 'utf8');
 }
 
 // =============================================================================
@@ -234,11 +234,11 @@ describe('Session 9B — sync PUT: atomic RPC', () => {
 
   it('handles RPC error and returns 500', () => {
     expect(src).toContain('syncError');
-    expect(src).toContain("status: 500");
+    expect(src).toContain("ApiError.internal");
   });
 
-  it('still checks farm compliance warnings after sync', () => {
-    expect(src).toContain('farm_compliance_changed');
+  it('still checks farm compliance warnings', () => {
+    expect(src).toContain('checkFarmEligibility');
     expect(src).toContain('compliance_status');
   });
 

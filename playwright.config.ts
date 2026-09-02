@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { getE2eBaseUrl } from './tests/e2e/helpers/local-environment';
+
+const baseURL = getE2eBaseUrl();
 
 /**
  * Playwright E2E configuration — Session 10
@@ -12,10 +15,10 @@ import { defineConfig, devices } from '@playwright/test';
  *   npx playwright test tests/e2e/auth.spec.ts   (single file)
  *   npx playwright show-report             (HTML report)
  *
- * Credentials (set in .env.test or env vars):
- *   E2E_BASE_URL      — defaults to Replit URL below
- *   E2E_ADMIN_EMAIL   — defaults to obemog@gmail.com
- *   E2E_ADMIN_PASSWORD
+ * Credentials (set in environment variables for local QA only):
+ *   E2E_BASE_URL       — http://localhost:5000 or http://127.0.0.1:5000
+ *   E2E_ADMIN_EMAIL    — optional .test user; defaults to admin@demo.test
+ *   E2E_ADMIN_PASSWORD - optional local demo password
  */
 
 export default defineConfig({
@@ -33,7 +36,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
+    baseURL,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
@@ -62,6 +65,11 @@ export default defineConfig({
       name: 'chromium-public',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /marketing\.spec\.ts/,
+    },
+    {
+      name: 'red-team',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /red-team-probe\.spec\.ts/,
     },
   ],
 });

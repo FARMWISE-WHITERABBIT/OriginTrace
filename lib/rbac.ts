@@ -35,8 +35,9 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/collect': ['admin', 'aggregator', 'agent'],
   '/app/farmers/new': ['admin', 'aggregator', 'agent'],
   '/app/farmers': ['admin', 'aggregator', 'quality_manager'],
+  '/app/farms/new': ['admin', 'aggregator', 'agent'],
   '/app/farms/map': ['admin', 'aggregator', 'agent'],
-  '/app/farms': ['admin', 'quality_manager', 'compliance_officer'],
+  '/app/farms': ['admin', 'aggregator', 'quality_manager', 'compliance_officer'],
   '/app/sync': ['admin', 'aggregator', 'agent'],
   '/app/bags': ['admin', 'aggregator', 'quality_manager', 'logistics_coordinator', 'warehouse_supervisor'],
   '/app/compliance': ['admin', 'quality_manager', 'compliance_officer'],
@@ -48,19 +49,21 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/yield-alerts': ['admin', 'aggregator', 'quality_manager'],
   '/app/conflicts': ['admin', 'compliance_officer'],
   '/app/delegations': ['admin'],
-  '/app/data-vault': ['admin'],
+  '/app/data-vault': ['admin', 'compliance_officer'],
   '/app/pedigree': ['admin', 'compliance_officer'],
-  '/app/processing': ['admin', 'compliance_officer'],
+  '/app/processing': ['admin', 'quality_manager', 'compliance_officer', 'warehouse_supervisor'],
   '/app/inventory': ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'],
   '/app/verify': ['admin', 'aggregator', 'agent', 'quality_manager', 'warehouse_supervisor'],
-  '/app/resolve': ['admin', 'aggregator', 'compliance_officer'],
+  '/app/resolve': ['admin', 'aggregator', 'agent', 'compliance_officer'],
   '/app/dispatch': ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'],
   '/app/agents': ['admin', 'aggregator'],
   '/app/shipments': ['admin', 'logistics_coordinator', 'compliance_officer'],
   '/app/documents': ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer', 'warehouse_supervisor'],
   '/app/payments': ['admin', 'aggregator'],
+  '/app/payments/pay': ['admin', 'aggregator'],
   '/app/compliance-profiles': ['admin', 'compliance_officer'],
   '/app/dpp': ['admin', 'compliance_officer'],
+  '/app/evidence': ['admin', 'compliance_officer'],
   '/app/analytics': ['admin', 'aggregator', 'quality_manager', 'compliance_officer'],
   '/app/analytics/reports': ['admin', 'compliance_officer'],
   '/app/contracts': ['admin'],
@@ -73,6 +76,7 @@ const routePermissions: Record<string, AppRole[]> = {
   '/app/buyer/documents': ['buyer'],
   '/app/buyer/suppliers': ['buyer'],
   '/app/buyer/tenders': ['buyer'],
+  '/app/buyer/compliance': ['buyer'],
   '/app/tenders': ['admin', 'aggregator', 'logistics_coordinator', 'compliance_officer'],
   '/app/audit': ['admin', 'compliance_officer'],
   '/app/farmer': ['farmer'],
@@ -135,7 +139,7 @@ export interface ProfileWithRole {
  */
 export function requireRole(
   profile: ProfileWithRole | null | undefined,
-  allowedRoles: (AppRole | SystemRole)[]
+  allowedRoles: readonly (AppRole | SystemRole)[]
 ): NextResponse | null {
   if (!profile) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -159,7 +163,9 @@ export const ROLES = {
   ADMIN_QUALITY:    ['admin', 'quality_manager'] as const,
   FIELD_ROLES:      ['admin', 'aggregator', 'agent'] as const,
   COMPLIANCE_ROLES: ['admin', 'quality_manager', 'compliance_officer'] as const,
+  DISPATCH_ROLES:   ['admin', 'aggregator', 'logistics_coordinator', 'warehouse_supervisor'] as const,
   LOGISTICS_ROLES:  ['admin', 'logistics_coordinator', 'warehouse_supervisor'] as const,
+  SHIPMENT_ROLES:   ['admin', 'logistics_coordinator', 'compliance_officer'] as const,
   DOC_ROLES:        ['admin', 'quality_manager', 'logistics_coordinator', 'compliance_officer'] as const,
   ALL_INTERNAL:     ['admin', 'aggregator', 'agent', 'quality_manager', 'logistics_coordinator',
                      'compliance_officer', 'warehouse_supervisor'] as const,

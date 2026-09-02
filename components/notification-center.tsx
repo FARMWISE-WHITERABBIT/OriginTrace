@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useRouter } from 'next/navigation';
+import { runWhenIdle } from '@/lib/utils/idle';
 
 interface Notification {
   id: number;
@@ -52,8 +53,17 @@ export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications?summary=true&unread=true');
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.unread_count || 0);
+      }
+    } catch {}
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -67,10 +77,20 @@ export function NotificationCenter() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    const refreshIfVisible = () => {
+      if (!document.hidden) void fetchUnreadCount();
+    };
+
+    const cancelIdle = runWhenIdle(refreshIfVisible);
+    const interval = setInterval(refreshIfVisible, 60_000);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      cancelIdle();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [fetchUnreadCount]);
 
   useEffect(() => {
     if (isOpen) {

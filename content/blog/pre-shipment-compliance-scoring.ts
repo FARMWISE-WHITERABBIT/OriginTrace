@@ -10,12 +10,14 @@ export const post: BlogPost = {
   readingTime: '7 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-stephanefabricebass-10319259.jpg',
+  coverImageAlt: 'Two workers in safety gear examine crops in a field',
   coverGradient: 'from-violet-900/20 to-slate-800/50',
   tags: ['Pre-Shipment', 'Compliance Scoring', 'Cargo Rejection', 'Export Readiness', 'Risk Management'],
   content: [
     {
       type: 'paragraph',
-      text: 'A container of agricultural commodities turned away at a European or Chinese port is not a compliance problem — it is a business crisis. By that point, you have paid for the freight, the insurance, and the logistics to move the cargo halfway around the world. Rerouting or disposing of a refused container costs tens of thousands of dollars and can permanently damage your relationship with the buyer.',
+      text: 'A container of agricultural commodities turned away at a European or Chinese port is not a compliance problem — it is a business crisis. By that point, you have paid for the freight, the insurance, and the logistics to move the cargo halfway around the world. Rerouting or disposing of a refused container costs tens of thousands of dollars and can permanently damage your relationship with the buyer. For food commodities specifically, our [farm-to-fork traceability guide](/blog/food-supply-chain-traceability) covers the hazard-specific data (allergens, mycotoxins, residues) that compounds this risk.',
     },
     {
       type: 'paragraph',
@@ -23,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Why Cargo Gets Rejected',
+      text: 'Why Does Agricultural Cargo Get Rejected at the Border?',
     },
     {
       type: 'paragraph',
@@ -50,7 +52,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Pre-Shipment Compliance Scoring Is',
+      text: 'What Is Pre-Shipment Compliance Scoring?',
     },
     {
       type: 'paragraph',
@@ -92,7 +94,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Can you trace every kilogram in this container back to its source farms? Is the chain of custody unbroken from farm to export lot? Are the farm GPS coordinates linked to the batch records that link to this shipment? A traceability gap — even a partial one — can create problems if the shipment is selected for enhanced inspection.',
+      text: 'Can you trace every kilogram in this container back to its source farms? Is the [chain of custody](/blog/supply-chain-traceability-global-trade) unbroken from farm to export lot? Are the farm GPS coordinates linked to the batch records that link to this shipment? A traceability gap — even a partial one — can create problems if the shipment is selected for enhanced inspection.',
     },
     {
       type: 'h3',
@@ -112,7 +114,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'When to Conduct the Pre-Shipment Check',
+      text: 'When Should You Conduct a Pre-Shipment Compliance Check?',
     },
     {
       type: 'paragraph',
@@ -167,6 +169,24 @@ export const post: BlogPost = {
         'A traceability system that can generate a per-shipment origin report',
         'A named person responsible for completing the pre-shipment check for every container',
         'A clear go/no-go decision rule — the shipment does not load until the checklist is complete',
+      ],
+    },
+    {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'How far before a shipment should a pre-shipment compliance check happen?',
+          a: "In stages, not the night before departure. Start with a contract-review check 4–6 weeks out to confirm buyer and market requirements, a pre-loading check 2–3 weeks out on GPS coverage and traceability, document assembly 1–2 weeks out, and a final pre-clearance check 48–72 hours before loading — each stage gives you enough time left to actually fix what it finds.",
+        },
+        {
+          q: 'What are the most common reasons agricultural cargo gets rejected at a port?',
+          a: 'Mostly documentation, not product quality: a missing or expired phytosanitary certificate, an invalid certificate of origin, no due diligence statement submitted for EUDR-covered commodities, or a missing GACC registration number for China-bound shipments. Lab results showing MRL violations and physical contamination round out the list, but paperwork failures are the majority.',
+        },
+        {
+          q: 'Does pre-shipment scoring actually pay for itself?',
+          a: 'For most exporters, yes, easily. A single 20-foot container refusal can cost $3,000–$8,000 in return freight alone, plus $500–$2,000 a week in demurrage, re-inspection fees, and often the full lost sale value of $20,000–$80,000 or more. A pre-shipment system that costs a few hundred dollars per shipment to run only needs to catch one refusal a year to be worth it many times over.',
+        },
       ],
     },
     {

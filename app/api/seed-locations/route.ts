@@ -104,12 +104,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: statesError.message }, { status: 500 });
     }
 
-    const stateIdMap: Record<string, number> = {};
+    const stateIdMap: Record<string, string> = {};
     insertedStates?.forEach(state => {
       stateIdMap[state.name] = state.id;
     });
 
-    const lgasToInsert: { name: string; state_id: number }[] = [];
+    const lgasToInsert: { name: string; state_id: string }[] = [];
     for (const [stateName, lgas] of Object.entries(SAMPLE_LGAS)) {
       const stateId = stateIdMap[stateName];
       if (stateId) {

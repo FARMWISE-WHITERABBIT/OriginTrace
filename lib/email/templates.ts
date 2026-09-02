@@ -245,6 +245,103 @@ origintrace.trade`;
   return { html, text };
 }
 
+export function buildExporterSignupInvitationEmail(params: {
+  buyerCompanyName: string;
+  invitedOrgName: string;
+  acceptUrl: string;
+}) {
+  const { buyerCompanyName, invitedOrgName, acceptUrl } = params;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're invited to OriginTrace</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1F5F52;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+              <p style="margin:8px 0 0;color:#6FB8A8;font-size:13px;letter-spacing:1px;text-transform:uppercase;">You're Invited</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:600;">Join the OriginTrace family for ${buyerCompanyName}</h2>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                Hello ${invitedOrgName} Team,
+              </p>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                <strong style="color:#111827;">${buyerCompanyName}</strong> has invited your organization, ${invitedOrgName}, to join OriginTrace as a supplier. Creating your account takes a couple of minutes and lets you share traceability data, shipments, and compliance documentation directly with ${buyerCompanyName}.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 24px;">
+                    <a href="${acceptUrl}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;letter-spacing:0.3px;">Create Your Account</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Note -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0;color:#1E40AF;font-size:13px;line-height:1.5;">
+                      <strong>What happens next?</strong> Set up your organization and admin account using the button above. This invitation link expires in 14 days. Once you're signed up, you'll automatically be connected to ${buyerCompanyName} on OriginTrace.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F9FAFB;padding:24px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0 0 4px;color:#9CA3AF;font-size:12px;text-align:center;">
+                &copy; 2026 OriginTrace. All rights reserved.
+              </p>
+              <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">
+                EUDR Compliance Ready &bull; origintrace.trade
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `You're Invited - OriginTrace
+
+Hello ${invitedOrgName} Team,
+
+${buyerCompanyName} has invited your organization, ${invitedOrgName}, to join OriginTrace as a supplier. Creating your account lets you share traceability data, shipments, and compliance documentation directly with ${buyerCompanyName}.
+
+Create your account: ${acceptUrl}
+
+This invitation link expires in 14 days. Once you're signed up, you'll automatically be connected to ${buyerCompanyName} on OriginTrace.
+
+© 2026 OriginTrace. All rights reserved.
+origintrace.trade`;
+
+  return { html, text };
+}
+
 export function buildYieldFlagEmail(params: {
   recipientName: string;
   orgName: string;
@@ -711,5 +808,341 @@ IMPORTANT: Expired or missing documents may impact your compliance scores.
 © 2026 OriginTrace. All rights reserved.
 origintrace.trade`;
 
+  return { html, text };
+}
+
+// ─── Stage transition notification ───────────────────────────────────────────
+
+const STAGE_NAMES: Record<number, string> = {
+  1: 'Preparation',
+  2: 'Quality & Certification',
+  3: 'Documentation',
+  4: 'Customs & Clearance',
+  5: 'Freight & Vessel',
+  6: 'Container Stuffing',
+  7: 'Departure',
+  8: 'Arrival & Clearance',
+  9: 'Close',
+};
+
+const STAGE_NEXT_ACTIONS: Record<number, string> = {
+  1: 'Commission lab tests and arrange pre-shipment inspection.',
+  2: 'Collect all required export documents (commercial invoice, packing list, COO, phytosanitary certificate).',
+  3: 'Assign clearing agent and file NCS/NESS customs declaration.',
+  4: 'Confirm vessel booking, ETD and ETA with freight forwarder.',
+  5: 'Record container number and seal number after container stuffing.',
+  6: 'Confirm actual vessel departure and upload Bill of Lading.',
+  7: 'Monitor transit and record actual arrival date.',
+  8: 'Confirm customs clearance at destination and record shipment outcome.',
+  9: 'Shipment is at the close stage. Record the final outcome to complete.',
+};
+
+export function buildShipmentStageEmail(params: {
+  recipientName: string;
+  recipientRole: 'exporter' | 'buyer' | 'freight_forwarder' | 'internal';
+  shipmentCode: string;
+  previousStage: number;
+  newStage: number;
+  dashboardUrl: string;
+  orgName: string;
+}) {
+  const {
+    recipientName,
+    recipientRole,
+    shipmentCode,
+    previousStage,
+    newStage,
+    dashboardUrl,
+    orgName,
+  } = params;
+
+  const stageName = STAGE_NAMES[newStage] ?? `Stage ${newStage}`;
+  const prevStageName = STAGE_NAMES[previousStage] ?? `Stage ${previousStage}`;
+  const nextAction = STAGE_NEXT_ACTIONS[newStage] ?? '';
+
+  const roleLabel =
+    recipientRole === 'buyer'
+      ? 'As the buyer, you can view the shipment status and compliance documentation in your buyer portal.'
+      : recipientRole === 'freight_forwarder'
+      ? 'As the freight forwarder, please ensure all vessel and container details are up to date in the system.'
+      : 'Log in to OriginTrace to review the current stage and complete required actions.';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipment ${shipmentCode} — Stage Advanced</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color:#1F5F52;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+              <p style="margin:8px 0 0;color:#6FB8A8;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Shipment Pipeline Update</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:600;">Shipment Advanced to Stage ${newStage}</h2>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">Hello ${recipientName},</p>
+              <p style="margin:0 0 24px;color:#4B5563;font-size:15px;line-height:1.6;">
+                Shipment <strong style="color:#111827;font-family:'Courier New',monospace;">${shipmentCode}</strong> has advanced from
+                <strong>Stage ${previousStage}: ${prevStageName}</strong> to
+                <strong>Stage ${newStage}: ${stageName}</strong>.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 4px;color:#166534;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Current Stage</p>
+                    <p style="margin:0;color:#111827;font-size:18px;font-weight:700;">Stage ${newStage}: ${stageName}</p>
+                    <p style="margin:8px 0 0;color:#166534;font-size:13px;">${orgName}</p>
+                  </td>
+                </tr>
+              </table>
+
+              ${nextAction ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 8px;color:#92400E;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Next Actions</p>
+                    <p style="margin:0;color:#78350F;font-size:14px;line-height:1.6;">${nextAction}</p>
+                  </td>
+                </tr>
+              </table>` : ''}
+
+              <p style="margin:0 0 24px;color:#4B5563;font-size:14px;line-height:1.6;">${roleLabel}</p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 24px;">
+                    <a href="${dashboardUrl}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;letter-spacing:0.3px;">View Shipment</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#F9FAFB;padding:24px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0 0 4px;color:#9CA3AF;font-size:12px;text-align:center;">&copy; 2026 OriginTrace. All rights reserved.</p>
+              <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">EUDR Compliance Ready &bull; origintrace.trade</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `Shipment ${shipmentCode} — Stage Advanced to ${stageName}
+
+Hello ${recipientName},
+
+Shipment ${shipmentCode} has advanced from Stage ${previousStage}: ${prevStageName} to Stage ${newStage}: ${stageName}.
+
+${nextAction ? `Next actions: ${nextAction}` : ''}
+
+${roleLabel}
+
+View shipment: ${dashboardUrl}
+
+© 2026 OriginTrace. All rights reserved.
+origintrace.trade`;
+
+  return { html, text };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SALES FUNNEL: Nurture drip emails
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EMAIL_HEADER = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAF9;padding:40px 20px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr><td style="background-color:#1F5F52;padding:28px 40px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">OriginTrace</h1>
+          <p style="margin:6px 0 0;color:#6FB8A8;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Supply Chain Traceability</p>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+`;
+
+const EMAIL_FOOTER = `
+        </td></tr>
+        <tr><td style="background-color:#F9FAFB;padding:20px 40px;border-top:1px solid #E5E7EB;">
+          <p style="margin:0;color:#9CA3AF;font-size:12px;text-align:center;">&copy; 2026 OriginTrace &bull; origintrace.trade</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+`;
+
+const CTA_BUTTON = (link: string, label: string) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
+    <tr><td align="center">
+      <a href="${link}" style="display:inline-block;background-color:#2E7D6B;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:600;">${label}</a>
+    </td></tr>
+  </table>`;
+
+/**
+ * Nurture Email 1 — T+24h
+ * Short, single CTA. Sent to leads who haven't booked within 24h.
+ */
+export function buildNurtureEmail1(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We received your request for a demo — still happy to show you exactly how OriginTrace handles traceability and EUDR compliance for your operation.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">It takes 30 minutes and you'll leave knowing whether the platform is a fit. No pressure, no pitch deck.</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a time that works →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply to this email if you have questions first.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe received your demo request and we're still happy to show you OriginTrace.\n\nBook a 30-minute call: ${calcomLink}\n\nOr just reply to this email.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * Nurture Email 2 — T+72h
+ * Personalised with commodity and org type. Lead with a compliance insight.
+ */
+export function buildNurtureEmail2(
+  name: string,
+  commodity: string | null,
+  orgType: string | null,
+  calcomLink: string
+) {
+  const firstName = name.split(' ')[0];
+  const commodityStr = commodity || 'your commodity';
+  const orgStr = orgType || 'your organisation';
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">One question worth thinking about: <strong>what does a single rejected shipment cost ${orgStr}?</strong></p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">For ${commodityStr} exporters, EUDR non-compliance means shipment holds, demurrage fees, and the risk of losing buyer relationships that took years to build. The regulation is being enforced now — and buyers are already requesting due diligence documentation.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">In a 30-minute call we'll walk through your current traceability stack, identify exactly where the gaps are, and show you what OriginTrace does to close them.</p>
+  ${CTA_BUTTON(calcomLink, 'Book your free assessment →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWhat does a rejected shipment actually cost ${orgStr}?\n\nFor ${commodityStr} exporters, EUDR non-compliance is a growing risk. In 30 minutes we can review your traceability gaps and show you how OriginTrace addresses them.\n\nBook here: ${calcomLink}\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * Nurture Email 3 — T+7d
+ * Final email. Scarcity framing — pilot slot expires.
+ */
+export function buildNurtureEmail3(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We hold pilot slots for 7 days after a demo request — yours expires tomorrow.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">If now isn't the right time, no problem at all — just let us know and we'll follow up when you're ready. But if you'd like to see the platform before the slot closes, you can book in the next 24 hours:</p>
+  ${CTA_BUTTON(calcomLink, 'Secure your pilot slot →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Either way, reply to this email and we'll make a note for whenever works best.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nYour OriginTrace pilot slot expires tomorrow (we hold them for 7 days).\n\nBook before it closes: ${calcomLink}\n\nOr just reply and we'll follow up when the timing is better.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * No-show recovery email — sent when a lead misses their booked call.
+ */
+export function buildNoShowRecoveryEmail(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We missed you on today's call — these things happen.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">Happy to reschedule at a time that works better for you:</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a new time →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply and we'll sort something out directly.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe missed you on today's call — no worries at all.\n\nPick a new time: ${calcomLink}\n\nOr just reply and we'll sort it out.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+/**
+ * Buyer-persona nurture sequence (P3 — docs/IMPORTER-FUNNEL-PLAN.md).
+ * The exporter drip talks about EUDR gaps in *your* operation; buyers carry a
+ * different pain: supplier claims they can't verify, and payment terms that
+ * expose them. Same cadence (T+24h / T+72h / T+7d), buyer-voiced copy.
+ */
+export function buildBuyerNurtureEmail1(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">We received your request — still happy to walk you through how buyers use OriginTrace to verify suppliers at origin: farm records, batch traceability, lab results, and compliance documents, all in one workspace.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">It takes 30 minutes, we walk through a real supplier record, and you'll leave knowing whether it fits how you buy. No pressure, no pitch deck.</p>
+  ${CTA_BUTTON(calcomLink, 'Pick a time that works →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Or just reply to this email if you have questions first.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWe received your request — happy to show you how buyers use OriginTrace to verify suppliers at origin.\n\nBook a 30-minute call: ${calcomLink}\n\nOr just reply to this email.\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+export function buildBuyerNurtureEmail2(
+  name: string,
+  commodity: string | null,
+  calcomLink: string
+) {
+  const firstName = name.split(' ')[0];
+  const commodityStr = commodity || 'the commodities you buy';
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">One question worth thinking about: <strong>when a supplier says they're compliant, how do you actually check?</strong></p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">For ${commodityStr}, the liability sits with you as the importer — rejected consignments bill the importer of record, and due-diligence regulations fine the buyer, not the supplier. A PDF pack assembled the week you asked for it proves very little.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">In a 30-minute call we'll show you a supplier risk snapshot on a real counterparty — registration signals, plot geodata cross-checked against satellite records, and the batch-level evidence your compliance team needs.</p>
+  ${CTA_BUTTON(calcomLink, 'See a supplier risk snapshot →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nWhen a supplier says they're compliant, how do you actually check?\n\nFor ${commodityStr}, the liability sits with you as the importer. In 30 minutes we'll show you a supplier risk snapshot on a real counterparty.\n\nBook here: ${calcomLink}\n\n— The OriginTrace Team`;
+  return { html, text };
+}
+
+export function buildBuyerNurtureEmail3(name: string, calcomLink: string) {
+  const firstName = name.split(' ')[0];
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F8FAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+${EMAIL_HEADER}
+  <p style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;">Hi ${firstName},</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">Last note from us. Buyer workspaces are set up by our team after a call, and we hold your slot for 7 days — yours closes tomorrow.</p>
+  <p style="margin:0 0 16px;color:#4B5563;font-size:15px;line-height:1.7;">If the timing isn't right, just reply and we'll come back when it is. But if you'd like your suppliers documenting their supply chain where you can see it — one data pack, every market you answer to — grab the slot:</p>
+  ${CTA_BUTTON(calcomLink, 'Set up my buyer workspace →')}
+  <p style="margin:20px 0 0;color:#6B7280;font-size:13px;">Either way, reply to this email and we'll make a note for whenever works best.</p>
+  <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">— The OriginTrace Team</p>
+${EMAIL_FOOTER}
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nLast note from us — we hold buyer-workspace slots for 7 days and yours closes tomorrow.\n\nBook here: ${calcomLink}\n\nOr reply and we'll follow up when the timing is right.\n\n— The OriginTrace Team`;
   return { html, text };
 }

@@ -6,20 +6,23 @@ export const post: BlogPost = {
   description: 'If you import cocoa into the EU, EUDR makes you directly responsible for verifying deforestation-free origin — not just your suppliers. This guide explains your obligations, what to demand from suppliers, and how to prepare your due diligence system.',
   date: 'February 10, 2026',
   dateISO: '2026-02-10',
+  dateModifiedISO: '2026-07-09',
   category: 'EUDR',
-  readingTime: '10 min read',
+  readingTime: '11 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-zeal-creative-studios-58866141-31283908.jpg',
+  coverImageAlt: 'Cocoa beans drying outside a mud-brick building',
   coverGradient: 'from-amber-800/20 to-slate-800/50',
   tags: ['EUDR', 'Cocoa', 'Importers', 'Due Diligence', 'EU Compliance', 'Supply Chain'],
   content: [
     {
       type: 'paragraph',
-      text: 'Most of the discussion around the EU Deforestation Regulation focuses on exporters in producing countries — the farmers, cooperatives, and trading companies in Ghana, Ivory Coast, or Nigeria who are scrambling to collect GPS data. But the regulation places equally significant obligations on the other end of the supply chain: the companies that import cocoa into the European Union.',
+      text: 'Most of the discussion around the [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide) focuses on exporters in producing countries — the farmers, cooperatives, and trading companies in Ghana, Ivory Coast, or Nigeria who are scrambling to collect GPS data. But the regulation places equally significant obligations on the other end of the supply chain: the companies that import cocoa into the European Union.',
     },
     {
       type: 'paragraph',
-      text: 'If your business brings cocoa beans, cocoa butter, cocoa powder, chocolate, or any other cocoa-derived product into the EU, you are an "operator" under EUDR. That means the legal responsibility for verifying deforestation-free origin rests with you — not just with your supplier.',
+      text: 'If your business brings cocoa beans, cocoa butter, cocoa powder, chocolate, or any other cocoa-derived product into the EU, you are an "operator" under EUDR. That means the legal responsibility for verifying deforestation-free origin rests with you — not just with your supplier. Those obligations apply from 30 December 2026 for large and medium operators, and from 30 June 2027 for micro and small ones — Regulation (EU) 2025/2650, the second delay adopted in December 2025, pushed both dates back a year.',
     },
     {
       type: 'callout',
@@ -49,7 +52,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'For each shipment of covered cocoa products you import, you must submit a due diligence statement (DDS) to the EU Information System (EU TRACES) before the goods are placed on the market. This statement references the GPS data from the source farms, the supply chain entities involved, and your assessment that the cocoa is deforestation-free and legally produced.',
+      text: 'Before covered cocoa products are placed on the EU market, a due diligence statement (DDS) must be submitted to the EU Information System (EU TRACES). Under EUDR, only the first operator placing the product on the market files the DDS — and for imported cocoa, that is almost always you, the importer. Since the 2025 amendment, you can also file an annual DDS covering recurring shipments instead of one statement per consignment. The statement references the GPS data from the source farms, the supply chain entities involved, and your assessment that the cocoa is deforestation-free and legally produced.',
     },
     {
       type: 'paragraph',
@@ -60,6 +63,13 @@ export const post: BlogPost = {
       variant: 'warning',
       title: 'You Cannot Simply Pass Responsibility to Your Supplier',
       text: 'EUDR explicitly makes the importer responsible for conducting their own due diligence. Receiving a certificate from your supplier is not sufficient — you must independently assess the risk and verify the information. If your supplier provides false data and you import based on it, you bear legal exposure unless you can demonstrate you took reasonable steps to verify the information.',
+    },
+    {
+      type: 'cta',
+      heading: 'Verify a Supplier Before You Commit',
+      text: 'Request a supplier risk snapshot — plot geodata, satellite cross-checks, and batch traceability — before you sign a contract you can\'t independently verify.',
+      buttonText: 'Request a Supplier Risk Snapshot',
+      href: '/demo?role=buyer',
     },
     {
       type: 'h2',
@@ -82,7 +92,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'In practice, the best suppliers are now providing this data through a supplier portal or as a data export from their traceability platform — a structured file that you can use directly in your own due diligence system rather than manually reviewing hundreds of paper documents.',
+      text: 'In practice, the best suppliers are now providing this data through a supplier portal or as a data export from their traceability platform — a structured file that you can use directly in your own due diligence system rather than manually reviewing hundreds of paper documents. Our [guide to verifying a supplier\'s "EUDR-ready" claim](/blog/how-to-verify-supplier-eudr-claims) walks through how to independently check what a supplier hands you, and our [practical guide for cocoa exporters](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) shows you exactly what a well-run supplier\'s data pipeline looks like on their end.',
     },
     {
       type: 'h2',
@@ -90,7 +100,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'EUDR\'s risk classification system divides countries into three tiers: low, standard, and high risk. Currently, most West African cocoa-producing countries fall into the standard risk category, meaning you must conduct full due diligence but are not subject to enhanced scrutiny. If a country is classified as high risk, you face more intensive obligations including potential on-site checks.',
+      text: 'EUDR\'s risk classification system divides countries into three tiers: low, standard, and high risk. The Commission\'s country benchmarking (CIR 2025/1093) classifies Ghana as low risk, while Nigeria and Côte d\'Ivoire are standard risk. The tier sets the minimum share of operators competent authorities must check — 1% for low-risk sourcing, 3% for standard risk. You must still conduct full due diligence on standard-risk origins; if a country is classified as high risk, you face more intensive obligations including potential on-site checks.',
     },
     {
       type: 'paragraph',
@@ -151,7 +161,7 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'EUDR is not a one-time compliance exercise. Each shipment requires a fresh due diligence process. However, you can streamline ongoing compliance by pre-qualifying your suppliers and establishing a monitoring framework:',
+      text: 'EUDR is not a one-time compliance exercise. Your due diligence has to stay current for everything you import — although since the 2025 amendment, an annual DDS covering recurring shipments is possible, so you no longer have to file a fresh statement for every consignment. Either way, you can streamline ongoing compliance by pre-qualifying your suppliers and establishing a monitoring framework:',
     },
     {
       type: 'bullets',
@@ -176,11 +186,28 @@ export const post: BlogPost = {
       text: 'When an auditor asks to see your EUDR compliance records for a specific cocoa shipment, you should be able to produce: the DDS reference number and submission confirmation, the GPS data underlying the DDS, your risk assessment record, and the supplier documentation you relied on. If this data is scattered across email attachments, spreadsheets, and shared drives, assembling it under audit pressure is difficult. Centralised storage from the point of the first import is the only reliable approach.',
     },
     {
+      type: 'faq',
+      items: [
+        {
+          q: 'Who files the DDS — the importer or the supplier?',
+          a: 'The first operator placing the cocoa on the EU market, which for imported cocoa is almost always the importer. Your supplier provides the geolocation and traceability data behind the statement, but the legal filing — and the liability — sits with you. Since the 2025 amendment, an annual DDS covering recurring shipments is also possible.',
+        },
+        {
+          q: 'How long do I need to keep EUDR due diligence records?',
+          a: 'At least five years. That covers the DDS itself, the GPS polygon data, supplier traceability reports, your documented risk assessment, and any risk mitigation evidence — all of it accessible for audit.',
+        },
+        {
+          q: 'Is a certificate from my supplier enough to prove deforestation-free origin?',
+          a: 'No. EUDR requires you to conduct your own due diligence. A supplier certificate can support your assessment, but you must independently verify the information and assess the risk. If the data turns out to be false, you bear the legal exposure unless you can show you took reasonable steps to verify it.',
+        },
+      ],
+    },
+    {
       type: 'cta',
-      heading: 'Give Your Buyers Full Traceability Access',
-      text: 'OriginTrace includes a Buyer Portal that gives your EU customers direct access to supply chain data, GPS evidence, and DDS documentation — exactly what their compliance teams need.',
-      buttonText: 'See the Buyer Portal',
-      href: '/demo',
+      heading: 'Make Your Cocoa Suppliers Show, Not Tell',
+      text: 'Onboard your West African suppliers onto OriginTrace and get direct access to their supply chain: farm polygons, GPS evidence, batch records, and DDS-ready documentation, maintained at origin and visible from your buyer workspace before every shipment.',
+      buttonText: 'Bring Your Suppliers Onto OriginTrace',
+      href: '/importers',
     },
   ],
 };

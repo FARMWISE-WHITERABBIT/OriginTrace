@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { analyzeBoundaryAuthenticity } from '@/lib/services/boundary-analysis';
 import { z } from 'zod';
+import type { Json } from '@/lib/supabase/database.types';
 
 const boundaryCheckSchema = z.object({
   farm_id: z.union([z.string(), z.number()]),
@@ -34,14 +35,14 @@ export async function POST(request: NextRequest) {
     const { data: farm } = await supabaseAdmin
       .from('farms')
       .select('id, org_id, boundary, commodity, area_hectares')
-      .eq('id', farm_id)
+      .eq('id', String(farm_id))
       .single();
 
     if (!farm || farm.org_id !== profile.org_id) {
       return NextResponse.json({ error: 'Farm not found' }, { status: 404 });
     }
 
-    const boundaryToAnalyze = providedBoundary || farm.boundary;
+    const boundaryToAnalyze = (providedBoundary || farm.boundary) as { type: string; coordinates: number[][][] } | null;
 
     if (!boundaryToAnalyze || boundaryToAnalyze.type !== 'Polygon' || !boundaryToAnalyze.coordinates?.length) {
       return NextResponse.json(
@@ -50,12 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = analyzeBoundaryAuthenticity(boundaryToAnalyze, farm.commodity);
+    const result = analyzeBoundaryAuthenticity(boundaryToAnalyze, farm.commodity || undefined);
 
     const { error: updateError } = await supabaseAdmin
       .from('farms')
-      .update({ boundary_analysis: result })
-      .eq('id', farm_id);
+      .update({ boundary_analysis: result as unknown as Json })
+      .eq('id', String(farm_id));
 
     if (updateError) {
       console.error('Failed to store boundary analysis:', updateError);

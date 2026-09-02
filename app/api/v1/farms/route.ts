@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { validateApiKey, checkRateLimit } from '@/lib/api-auth';
+import { validateApiKey } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 import { enforceTier } from '@/lib/api/tier-guard';
 import { z } from 'zod';
 
@@ -18,13 +19,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient scope. Required: read' }, { status: 403 });
     }
 
-    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-        { status: 429, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)) } }
-      );
-    }
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
 
     const supabase = createAdminClient();
 
@@ -54,11 +54,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: farms || [],
       meta: { total: count || 0, limit, offset },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
     });
   } catch (error) {
     console.error('V1 Farms API error:', error);
@@ -73,7 +68,7 @@ const createFarmSchema = z.object({
   legality_doc_url: z.string().url().optional(),
   commodity: z.string().optional().default('cocoa'),
   area_hectares: z.number().positive().optional(),
-  community: z.string().optional(),
+  community: z.string().min(1, 'community is required'),
   consent_timestamp: z.string().optional(),
   consent_photo_url: z.string().url().optional(),
   consent_signature: z.string().optional(),
@@ -93,13 +88,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient scope. Required: write' }, { status: 403 });
     }
 
-    const rateLimit = await checkRateLimit(auth.keyPrefix!, auth.rateLimitPerHour);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retry_after: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-        { status: 429, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)) } }
-      );
-    }
+    const limited = await checkRateLimit(request, auth.orgId, {
+      max: auth.rateLimitPerHour ?? 1000,
+      windowSecs: 3600,
+      keyPrefix: `apk:${auth.keyPrefix}`,
+    });
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createFarmSchema.safeParse(body);
@@ -109,17 +103,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // TODO(schema-drift): 'location_id' is accepted in the public API request body but
+    // has no equivalent column on 'farms' (which uses separate lga_id/state_id/village_id
+    // FKs instead of a single flat location id) — it is currently silently dropped on
+    // insert (same as before this typing pass). Needs a product decision on which of the
+    // three location FKs (if any) this should map to.
     const { data: farm, error } = await supabase
       .from('farms')
       .insert({
         org_id: auth.orgId,
         farmer_name: parsed.data.farmer_name,
         boundary: parsed.data.boundary,
-        location_id: parsed.data.location_id || null,
         legality_doc_url: parsed.data.legality_doc_url || null,
         commodity: parsed.data.commodity,
-        area_hectares: parsed.data.area_hectares != null ? String(parsed.data.area_hectares) : null,
-        community: parsed.data.community || null,
+        area_hectares: parsed.data.area_hectares ?? null,
+        community: parsed.data.community,
         consent_timestamp: parsed.data.consent_timestamp || null,
         consent_photo_url: parsed.data.consent_photo_url || null,
         consent_signature: parsed.data.consent_signature || null,
@@ -132,13 +130,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create farm' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: farm }, {
-      status: 201,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimit.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-      },
-    });
+    return NextResponse.json({ data: farm }, { status: 201 });
   } catch (error) {
     console.error('V1 Farms POST API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

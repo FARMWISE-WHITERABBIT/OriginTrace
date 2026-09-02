@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldCheck, Search, QrCode, Package, ArrowRight, Camera } from 'lucide-react';
 import { QRScanner } from '@/components/qr-scanner';
-import Image from 'next/image';
+import { Logo } from '@/components/logo';
 
 export default function VerifyLandingPage() {
   const router = useRouter();
@@ -46,21 +46,10 @@ export default function VerifyLandingPage() {
     <div className="min-h-screen bg-[#F8FAF9] dark:bg-slate-950">
       <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <Image
-            src="/images/logo-green.png"
-            alt="OriginTrace"
+          <Logo
             width={120}
             height={32}
-            className="dark:hidden"
-            style={{ width: 'auto', height: '28px' }}
-          />
-          <Image
-            src="/images/logo-white.png"
-            alt="OriginTrace"
-            width={120}
-            height={32}
-            className="hidden dark:block"
-            style={{ width: 'auto', height: '28px' }}
+            className="h-7 w-auto"
           />
           <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
             Public Verification Portal

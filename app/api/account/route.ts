@@ -32,7 +32,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check if user is the sole admin of an org
     const { data: profile } = await supabaseAdmin
-      .from('profiles').select('role, org_id, full_name, email').eq('user_id', user.id).single();
+      .from('profiles').select('role, org_id, full_name').eq('user_id', user.id).single();
 
     if (profile?.role === 'admin' && profile?.org_id) {
       const { count } = await supabaseAdmin
@@ -46,12 +46,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Log the deletion request before wiping
-    void supabaseAdmin.from('audit_logs').insert({
+    await supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'account.delete_requested',
       resource_type: 'user',
       resource_id: user.id,
-      metadata: { reason: parsed.data.reason, email: profile?.email },
+      metadata: { reason: parsed.data.reason, email: user.email },
     });
 
     // Delete profile (cascade will handle related records per FK rules)

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
 import { enforceTier } from '@/lib/api/tier-guard';
+import { requireRole, ROLES } from '@/lib/rbac';
 import { z } from 'zod';
 
 const dataVaultExportSchema = z.object({
@@ -17,6 +18,8 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
 
     const tierBlock = await enforceTier(profile.org_id, 'data_vault');
     if (tierBlock) return tierBlock;
@@ -90,6 +93,8 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
 
     const tierBlock = await enforceTier(profile.org_id, 'data_vault');
     if (tierBlock) return tierBlock;
@@ -113,16 +118,25 @@ export async function POST(request: NextRequest) {
 
     for (const table of selectedTables) {
       const { data, error } = await supabaseAdmin
-        .from(table)
+        .from(table as any)
         .select('*')
         .eq('org_id', profile.org_id);
 
       if (!error && data) {
         if (table === 'profiles') {
-          exportData[table] = data.map((p: Record<string, unknown>) => ({
+          const profileRows = data as unknown as Record<string, unknown>[];
+          // profiles has no email column — it lives on auth.users, keyed by user_id.
+          const emails = await Promise.all(
+            profileRows.map(async (p) => {
+              if (!p.user_id) return null;
+              const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(p.user_id as string);
+              return authUser?.user?.email ?? null;
+            })
+          );
+          exportData[table] = profileRows.map((p, i) => ({
             id: p.id,
             full_name: p.full_name,
-            email: p.email,
+            email: emails[i],
             role: p.role,
             created_at: p.created_at
           }));

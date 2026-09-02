@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         .select('active_lgas')
         .eq('id', profile.org_id)
         .single();
-      
+
       const activeLgas = organization?.active_lgas || [];
       
       const lgasWithStatus = lgas?.map(lga => ({

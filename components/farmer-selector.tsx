@@ -10,16 +10,16 @@ import { useOrg } from '@/lib/contexts/org-context';
 import { createClient } from '@/lib/supabase/client';
 
 interface Farm {
-  id: number;
+  id: string;
   farmer_name: string;
   community: string;
-  commodity?: string;
-  area_hectares?: number;
-  compliance_status: string;
+  commodity?: string | null;
+  area_hectares?: number | null;
+  compliance_status: string | null;
 }
 
 interface FarmerSelectorProps {
-  selectedFarmId: number | null;
+  selectedFarmId: string | null;
   onSelect: (farm: Farm | null) => void;
   filterApproved?: boolean;
   showCreateNew?: boolean;
@@ -50,7 +50,7 @@ export function FarmerSelector({
         let query = supabase
           .from('farms')
           .select('id, farmer_name, community, commodity, area_hectares, compliance_status')
-          .eq('org_id', organization.id)
+          .eq('org_id', String(organization.id))
           .order('farmer_name');
 
         if (filterApproved) {
@@ -104,7 +104,7 @@ export function FarmerSelector({
       const { data, error } = await supabase
         .from('farms')
         .insert({
-          org_id: organization.id,
+          org_id: String(organization.id),
           farmer_name: newFarmer.name.trim(),
           community: newFarmer.community.trim(),
           boundary: { type: 'Polygon', coordinates: [] },

@@ -50,6 +50,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     pending: { label: 'Pending', variant: 'outline', className: 'text-amber-600 border-amber-300' },
     syncing: { label: 'Syncing', variant: 'outline', className: 'text-blue-600 border-blue-300' },
     synced: { label: 'Synced', variant: 'outline', className: 'text-green-600 border-green-300' },
+    conflict: { label: 'Conflict', variant: 'outline', className: 'text-amber-600 border-amber-300' },
     error: { label: 'Failed', variant: 'outline', className: 'text-red-600 border-red-300' },
   },
   batch: {

@@ -1,49 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { useSyncStatus } from '@/components/sync-status-provider';
 
 type ConnectionStatus = 'online' | 'syncing' | 'offline';
 
 export function ConnectivityIndicator() {
-  const [status, setStatus] = useState<ConnectionStatus>('online');
-  const [pendingSync, setPendingSync] = useState(0);
-
-  useEffect(() => {
-    const updateStatus = async () => {
-      if (!navigator.onLine) {
-        setStatus('offline');
-        return;
-      }
-      
-      try {
-        const { getSyncStats } = await import('@/lib/offline/sync-store');
-        const stats = await getSyncStats();
-        const pendingCount = stats.pending + stats.syncing;
-        if (pendingCount > 0) {
-          setStatus('syncing');
-          setPendingSync(pendingCount);
-          return;
-        }
-      } catch {}
-      
-      setStatus('online');
-      setPendingSync(0);
-    };
-
-    updateStatus();
-    
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    
-    const interval = setInterval(updateStatus, 5000);
-
-    return () => {
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
-      clearInterval(interval);
-    };
-  }, []);
+  const { isOnline, pendingCount, stats } = useSyncStatus();
+  const status: ConnectionStatus = !isOnline
+    ? 'offline'
+    : pendingCount > 0 || stats.syncing > 0
+      ? 'syncing'
+      : 'online';
 
   const statusConfig = {
     online: {
@@ -56,7 +24,7 @@ export function ConnectivityIndicator() {
       color: 'bg-orange-500',
       pulseColor: 'bg-orange-400',
       icon: RefreshCw,
-      label: `Syncing - ${pendingSync} item${pendingSync !== 1 ? 's' : ''} pending`
+      label: `Syncing - ${pendingCount || stats.syncing} item${(pendingCount || stats.syncing) !== 1 ? 's' : ''} pending`
     },
     offline: {
       color: 'bg-red-500',

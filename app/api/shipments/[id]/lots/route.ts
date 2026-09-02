@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
+import type { TablesInsert } from '@/lib/supabase/database.types';
 
 export async function GET(
   request: NextRequest,
@@ -113,7 +114,7 @@ export async function POST(
       lot_code = `LOT-${shipment.shipment_code}-${index}`;
     }
 
-    const insertData: Record<string, any> = {
+    const insertData: TablesInsert<'shipment_lots'> = {
       shipment_id: id,
       org_id: profile.org_id,
       lot_code,
@@ -196,7 +197,7 @@ export async function PATCH(
 
     if (add_items && Array.isArray(add_items)) {
       const insertRows = add_items.map((item: any) => {
-        const row: Record<string, any> = {
+        const row: TablesInsert<'shipment_lot_items'> = {
           lot_id,
           shipment_item_id: item.shipment_item_id,
         };

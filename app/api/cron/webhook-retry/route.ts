@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
           endpoint,
           delivery.event_type,
           delivery.payload as Record<string, any>,
-          delivery.attempts + 1,
+          (delivery.attempts ?? 0) + 1,
           delivery.id  // update the existing row in place
         );
         succeeded++;

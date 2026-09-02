@@ -79,7 +79,7 @@ export default function VerifyPage() {
             )
           )
         `)
-        .eq('org_id', organization.id)
+        .eq('org_id', String(organization.id))
         .eq('serial', searchCode.trim().toUpperCase())
         .single();
 
@@ -97,7 +97,7 @@ export default function VerifyPage() {
       setBagDetails({
         id: bag.id,
         bag_id: (bag as any).serial,
-        status: bag.status,
+        status: bag.status || 'unknown',
         farm: batchData?.farm as any,
         collection: {
           weight: (bag as any).weight_kg,

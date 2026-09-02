@@ -6,16 +6,19 @@ export const post: BlogPost = {
   description: 'Soy is one of the seven commodities explicitly covered by the EU Deforestation Regulation. For Nigerian and West African soybean exporters, EUDR compliance is mandatory for EU market access. Here is a practical guide to what that means and how to prepare.',
   date: 'January 10, 2026',
   dateISO: '2026-01-10',
+  dateModifiedISO: '2026-07-09',
   category: 'EUDR',
-  readingTime: '8 min read',
+  readingTime: '9 min read',
   author: 'OriginTrace Compliance Team',
   authorRole: 'Supply Chain Compliance',
+  coverImage: '/images/pexels-pedrofurtadoo-28903100.jpg',
+  coverImageAlt: 'Tractor moving through agricultural rows under a dramatic sky',
   coverGradient: 'from-green-900/20 to-slate-800/50',
   tags: ['Soybean', 'EUDR', 'Nigeria', 'West Africa', 'Export Compliance', 'Deforestation'],
   content: [
     {
       type: 'paragraph',
-      text: 'Soybean is one of the seven commodities explicitly listed in the EU Deforestation Regulation. Unlike herbs and spices where the EUDR position is still evolving, soy has no grey area — if you export soybeans, soy meal, soy oil, soy flour, or any product containing soy into the European Union, EUDR compliance is a legal requirement.',
+      text: 'Soybean is one of the seven commodities explicitly listed in the [EU Deforestation Regulation](/blog/eudr-regulation-complete-guide). Unlike sesame or ginger, which are not on the EUDR commodity list at all, soy has no grey area — if you export soybeans, soy meal, soy oil, soy flour, or any product containing soy into the European Union, EUDR compliance is a legal requirement.',
     },
     {
       type: 'paragraph',
@@ -25,7 +28,7 @@ export const post: BlogPost = {
       type: 'callout',
       variant: 'info',
       title: 'Soy is Explicitly Covered by EUDR',
-      text: 'Soybeans and soy-derived products (meal, oil, flour, lecithin) are all within scope of EUDR. Any operator placing these products on the EU market must conduct due diligence and submit a due diligence statement.',
+      text: 'Soybeans and soy-derived products (meal, oil, flour, lecithin) are all within scope of EUDR. Any operator placing these products on the EU market must conduct due diligence and submit a due diligence statement. The obligations apply from 30 December 2026 for large and medium operators and from 30 June 2027 for micro and small ones — both dates pushed back a year by the second delay, Regulation (EU) 2025/2650.',
     },
     {
       type: 'h2',
@@ -57,7 +60,7 @@ export const post: BlogPost = {
         'GPS geolocation data for all plots of land where the soy was grown. For plots over 4 hectares, GPS polygon coordinates are required.',
         'Evidence that the land was not deforested after 31 December 2020 — typically demonstrated through a deforestation check of the GPS polygons against satellite data.',
         'Evidence that the soy was legally produced in compliance with the laws of the country of production.',
-        'A completed due diligence statement submitted to EU TRACES before the product is placed on the market.',
+        'A completed due diligence statement (DDS) submitted to EU TRACES before the product is placed on the market. Only the first operator placing the soy on the EU market files the DDS — usually the EU importer — but it is built on your GPS and batch data, and since the 2025 amendment an annual DDS covering recurring shipments is possible.',
       ],
     },
     {
@@ -66,11 +69,11 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The European Commission has published a country risk classification that determines the level of due diligence required. Nigeria currently falls in the "standard risk" category, which means you must conduct full due diligence but are not subject to the enhanced scrutiny applied to high-risk origins.',
+      text: 'The European Commission has published a country risk classification that determines the level of due diligence required. Under the benchmarking regulation (CIR 2025/1093), Nigeria falls in the "standard risk" category — alongside Côte d\'Ivoire, while Ghana is classified low risk. Standard risk means you must conduct full due diligence, and competent authorities must check at least 3% of operators sourcing from standard-risk countries (versus 1% for low risk) — but you are not subject to the enhanced scrutiny applied to high-risk origins.',
     },
     {
       type: 'paragraph',
-      text: 'Standard risk does not mean low effort. You still need GPS coordinates for source farms, a deforestation check, and a DDS for every shipment. But it does mean you are not automatically in a more scrutinised category the way some Latin American origins are.',
+      text: 'Standard risk does not mean low effort. You still need GPS coordinates for source farms, a deforestation check, and DDS coverage for everything you ship — even if an annual DDS now spares you a fresh filing per consignment. But it does mean you are not automatically in a more scrutinised category the way some Latin American origins are.',
     },
     {
       type: 'h2',
@@ -137,7 +140,7 @@ export const post: BlogPost = {
         'Phytosanitary certificates issued by NAFDAC or the equivalent national authority',
         'GMO documentation — EU regulations require non-GMO certification or GMO labelling. Nigerian soy is not currently GM (no GM soy is commercially approved in Nigeria), but documentation confirming this may be required by buyers.',
         'Moisture content certificates — soy with excessive moisture is rejected at ports. Ensure drying to the appropriate moisture level before export.',
-        'China GACC registration if you also sell to Chinese buyers — the June 2026 deadline applies to soy processors and storage facilities.',
+        'China GACC registration if you also sell to Chinese buyers — registration under Decree 248 is mandatory for soy processors and storage facilities, and enforcement has been live since 1 June 2026.',
       ],
     },
     {
@@ -150,7 +153,24 @@ export const post: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'But you can only tell that story if you have the data to back it up. GPS polygons, farmer registries, deforestation check records, and DDS documentation are what converts a narrative into verified evidence that an EU compliance team will accept.',
+      text: 'But you can only tell that story if you have the data to back it up. GPS polygons, farmer registries, deforestation check records, and DDS documentation are what converts a narrative into verified evidence that an EU compliance team will accept — our [practical guide to EUDR compliance tools](/blog/eudr-compliance-tools-cocoa-exporters-practical-guide) covers the same polygon-mapping and batch-traceability workflow in detail, and it applies just as directly to soy as it does to cocoa.',
+    },
+    {
+      type: 'faq',
+      items: [
+        {
+          q: 'Is soybean covered by EUDR?',
+          a: 'Yes. Soy is one of the seven commodities in EUDR\'s Annex I, alongside cattle, cocoa, coffee, oil palm, rubber, and wood. Soybeans and soy-derived products — meal, oil, flour, lecithin — are all in scope.',
+        },
+        {
+          q: 'When do Nigerian soy exporters need to be EUDR-ready?',
+          a: 'Large and medium operators placing soy on the EU market must comply from 30 December 2026; micro and small operators from 30 June 2027 (the second delay, Regulation (EU) 2025/2650). Because your EU buyer needs your GPS and traceability data to file their due diligence statement, expect them to ask for it well before those dates.',
+        },
+        {
+          q: 'What happens if some of my farms fail the deforestation check?',
+          a: 'Soy from land deforested after 31 December 2020 cannot enter the EU market — exclude that volume from your EU export lot and channel it to other markets. If you believe a satellite flag is incorrect, document your evidence (land title, historical imagery, local testimony) as part of your risk mitigation record.',
+        },
+      ],
     },
     {
       type: 'cta',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, FileCheck, Calendar, Package } from 'lucide-react';
+import { Loader2, Plus, Search, FileCheck, Calendar, Package, Info } from 'lucide-react';
+
+interface ComplianceProfileOption {
+  id: string;
+  exporter_org_id: string;
+  name: string;
+  destination_market: string;
+  regulation_framework: string;
+  version: string | null;
+  is_placeholder: boolean;
+  buyer_approved: boolean | null;
+  disclaimer: string | null;
+}
 
 interface Contract {
   id: string;
@@ -23,6 +36,8 @@ interface Contract {
   quality_requirements: Record<string, unknown>;
   notes: string | null;
   created_at: string;
+  compliance_profile_id: string | null;
+  compliance_profile?: ComplianceProfileOption | null;
   exporter_org?: { id: string; name: string; slug: string };
 }
 
@@ -40,22 +55,50 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
 };
 
 export default function BuyerContractsPage() {
+  const t = useTranslations('BuyerContracts');
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [profileOptions, setProfileOptions] = useState<ComplianceProfileOption[]>([]);
   const [links, setLinks] = useState<SupplyChainLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [newContract, setNewContract] = useState({
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const emptyContractForm = {
     exporter_org_id: '',
+    compliance_profile_id: '',
     commodity: '',
     quantity_mt: '',
     delivery_deadline: '',
     destination_port: '',
     quality_requirements: '',
     notes: '',
-  });
+  };
+  const [newContract, setNewContract] = useState(emptyContractForm);
   const { toast } = useToast();
+
+  const openCreateDialog = () => {
+    setEditingContractId(null);
+    setNewContract(emptyContractForm);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (contract: Contract) => {
+    setEditingContractId(contract.id);
+    setNewContract({
+      exporter_org_id: contract.exporter_org?.id || '',
+      compliance_profile_id: contract.compliance_profile_id || '',
+      commodity: contract.commodity || '',
+      quantity_mt: contract.quantity_mt != null ? String(contract.quantity_mt) : '',
+      delivery_deadline: contract.delivery_deadline ? contract.delivery_deadline.slice(0, 10) : '',
+      destination_port: contract.destination_port || '',
+      quality_requirements: contract.quality_requirements && Object.keys(contract.quality_requirements).length > 0
+        ? JSON.stringify(contract.quality_requirements)
+        : '',
+      notes: contract.notes || '',
+    });
+    setDialogOpen(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -66,6 +109,7 @@ export default function BuyerContractsPage() {
       if (contractsRes.ok) {
         const d = await contractsRes.json();
         setContracts(d.contracts || []);
+        setProfileOptions(d.compliance_profile_options || []);
       }
       if (linksRes.ok) {
         const d = await linksRes.json();
@@ -80,38 +124,51 @@ export default function BuyerContractsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleCreate = async () => {
-    if (!newContract.exporter_org_id || !newContract.commodity) {
-      toast({ title: 'Missing fields', description: 'Exporter and commodity are required.', variant: 'destructive' });
+  const handleSave = async () => {
+    const isEditing = !!editingContractId;
+    if (!isEditing && !newContract.exporter_org_id) {
+      toast({ title: 'Missing fields', description: 'Exporter is required.', variant: 'destructive' });
+      return;
+    }
+    if (!newContract.commodity) {
+      toast({ title: 'Missing fields', description: 'Commodity is required.', variant: 'destructive' });
       return;
     }
     setIsCreating(true);
     try {
       const body: Record<string, unknown> = {
-        exporter_org_id: newContract.exporter_org_id,
         commodity: newContract.commodity,
         notes: newContract.notes || undefined,
         destination_port: newContract.destination_port || undefined,
         delivery_deadline: newContract.delivery_deadline || undefined,
+        compliance_profile_id: newContract.compliance_profile_id || (isEditing ? null : undefined),
       };
+      if (!isEditing) body.exporter_org_id = newContract.exporter_org_id;
       if (newContract.quantity_mt) body.quantity_mt = parseFloat(newContract.quantity_mt);
       if (newContract.quality_requirements) {
         try { body.quality_requirements = JSON.parse(newContract.quality_requirements); } catch { /* skip */ }
       }
+      if (isEditing) body.contract_id = editingContractId;
 
       const response = await fetch('/api/contracts', {
-        method: 'POST',
+        method: isEditing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || 'Failed to create contract');
+        throw new Error(err.error || `Failed to ${isEditing ? 'update' : 'create'} contract`);
       }
       const data = await response.json();
-      toast({ title: 'Contract created', description: `Contract ${data.contract?.contract_reference || ''} created.` });
+      toast({
+        title: isEditing ? 'Contract updated' : 'Contract created',
+        description: isEditing
+          ? `Contract ${data.contract?.contract_reference || ''} updated.`
+          : `Contract ${data.contract?.contract_reference || ''} created.`,
+      });
       setDialogOpen(false);
-      setNewContract({ exporter_org_id: '', commodity: '', quantity_mt: '', delivery_deadline: '', destination_port: '', quality_requirements: '', notes: '' });
+      setEditingContractId(null);
+      setNewContract(emptyContractForm);
       fetchData();
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed', variant: 'destructive' });
@@ -145,6 +202,9 @@ export default function BuyerContractsPage() {
       || (c.commodity || '').toLowerCase().includes(q)
       || c.exporter_org?.name?.toLowerCase().includes(q);
   });
+  const selectedExporterProfiles = profileOptions.filter(
+    (option) => option.exporter_org_id === newContract.exporter_org_id
+  );
 
   return (
     <div className="flex-1 space-y-6">
@@ -154,21 +214,31 @@ export default function BuyerContractsPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage purchase contracts with your suppliers</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-new-contract">
-              <Plus className="h-4 w-4 mr-2" />
-              New Contract
-            </Button>
-          </DialogTrigger>
+          <Button onClick={openCreateDialog} data-testid="button-new-contract">
+            <Plus className="h-4 w-4 mr-2" />
+            New Contract
+          </Button>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>New Contract</DialogTitle>
-              <DialogDescription>Create a purchase contract with a linked exporter.</DialogDescription>
+              <DialogTitle>{editingContractId ? 'Edit Contract' : 'New Contract'}</DialogTitle>
+              <DialogDescription>
+                {editingContractId
+                  ? 'Update the terms of this draft contract.'
+                  : 'Create a purchase contract with a linked exporter.'}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Exporter</Label>
-                <Select value={newContract.exporter_org_id} onValueChange={v => setNewContract(c => ({ ...c, exporter_org_id: v }))}>
+                <Select
+                  value={newContract.exporter_org_id}
+                  onValueChange={v => setNewContract(c => ({
+                    ...c,
+                    exporter_org_id: v,
+                    compliance_profile_id: '',
+                  }))}
+                  disabled={!!editingContractId}
+                >
                   <SelectTrigger data-testid="select-exporter">
                     <SelectValue placeholder="Select linked exporter" />
                   </SelectTrigger>
@@ -180,6 +250,44 @@ export default function BuyerContractsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {editingContractId && (
+                  <p className="text-xs text-muted-foreground">The exporter on a contract can&apos;t be changed after creation.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>{t('complianceProfile')}</Label>
+                <Select
+                  value={newContract.compliance_profile_id || 'none'}
+                  onValueChange={(value) => setNewContract((contract) => ({
+                    ...contract,
+                    compliance_profile_id: value === 'none' ? '' : value,
+                  }))}
+                  disabled={!newContract.exporter_org_id}
+                >
+                  <SelectTrigger data-testid="select-compliance-profile">
+                    <SelectValue placeholder={t('selectComplianceProfile')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('noComplianceProfile')}</SelectItem>
+                    {selectedExporterProfiles.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {newContract.compliance_profile_id && (() => {
+                  const selected = selectedExporterProfiles.find(
+                    (option) => option.id === newContract.compliance_profile_id
+                  );
+                  if (!selected?.is_placeholder) return null;
+                  return (
+                    <p className="flex items-start gap-2 text-xs text-muted-foreground" role="note">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{selected.disclaimer || t('placeholderDisclaimer')}</span>
+                    </p>
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="commodity">Commodity</Label>
@@ -210,9 +318,9 @@ export default function BuyerContractsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-contract">Cancel</Button>
-              <Button onClick={handleCreate} disabled={isCreating} data-testid="button-confirm-contract">
+              <Button onClick={handleSave} disabled={isCreating} data-testid="button-confirm-contract">
                 {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Create Contract
+                {editingContractId ? 'Save Changes' : 'Create Contract'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -234,7 +342,7 @@ export default function BuyerContractsPage() {
             <p className="text-sm text-muted-foreground mb-4 max-w-md">
               Create a contract with one of your linked exporters to start tracking deliveries.
             </p>
-            <Button onClick={() => setDialogOpen(true)} data-testid="button-create-first-contract">
+            <Button onClick={openCreateDialog} data-testid="button-create-first-contract">
               <Plus className="h-4 w-4 mr-2" />
               Create First Contract
             </Button>
@@ -276,9 +384,43 @@ export default function BuyerContractsPage() {
                         )}
                         {contract.destination_port && <span>{contract.destination_port}</span>}
                       </div>
+                      {contract.compliance_profile && (
+                        <div
+                          className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
+                          data-testid={`contract-profile-${contract.id}`}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-foreground">
+                              {t('complianceProfile')}: {contract.compliance_profile.name}
+                            </span>
+                            {contract.compliance_profile.version && (
+                              <Badge variant="outline">{contract.compliance_profile.version}</Badge>
+                            )}
+                            {contract.compliance_profile.is_placeholder && (
+                              <Badge variant="secondary">{t('illustrativePlaceholder')}</Badge>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {contract.compliance_profile.destination_market}
+                          </p>
+                          {contract.compliance_profile.is_placeholder && (
+                            <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground" role="note">
+                              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                              <span>
+                                {contract.compliance_profile.disclaimer || t('placeholderDisclaimer')}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {contract.status === 'draft' && (
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(contract)} data-testid={`button-edit-${contract.id}`}>
+                        Edit
+                      </Button>
+                    )}
                     {contract.status === 'draft' && (
                       <Button variant="outline" size="sm" onClick={() => handleStatusChange(contract.id, 'active')} data-testid={`button-activate-${contract.id}`}>
                         Activate

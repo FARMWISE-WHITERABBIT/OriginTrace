@@ -34,6 +34,12 @@ const envSchema = z.object({
   // AI / external
   AI_INTEGRATIONS_OPENAI_API_KEY:  z.string().optional(),
   AI_INTEGRATIONS_OPENAI_BASE_URL: z.string().url().optional(),
+  GFW_COMPANY_API_KEY:             z.string().optional(),
+  GFW_API_KEY:                     z.string().optional(),
+  GFW_API_ORIGIN:                  z.string().url().optional(),
+  GFW_KEY_ALERT_WEBHOOK_URL:       z.string().url().optional(),
+  GFW_KEY_ALERT_EMAIL:             z.string().email().optional(),
+  GFW_KEY_ALERT_COOLDOWN_MS:       z.string().optional(),
 
   // Events
   EVENTS_ADMIN_KEY:   z.string().optional(),

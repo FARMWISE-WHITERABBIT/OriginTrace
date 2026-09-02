@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/webhook-retry",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/nurture-drip",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/reminder-check",
+      "schedule": "0 7 * * *"
     }
   ]
 }

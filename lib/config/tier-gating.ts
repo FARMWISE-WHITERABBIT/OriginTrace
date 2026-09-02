@@ -215,6 +215,7 @@ const API_ROUTE_TO_FEATURE: Record<string, TierFeature> = {
 };
 
 export function hasTierAccess(orgTier: string | undefined, feature: TierFeature): boolean {
+  // No tier set → default to starter (conservative — blocks pro/enterprise features in UI)
   const tier = (orgTier || 'starter') as SubscriptionTier;
   const currentLevel = TIER_HIERARCHY[tier] ?? 0;
   const requiredLevel = TIER_HIERARCHY[FEATURE_MIN_TIER[feature]] ?? 0;

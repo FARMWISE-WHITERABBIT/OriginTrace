@@ -11,14 +11,26 @@ import { NotificationCenter } from '@/components/notification-center';
 import { OnboardingProvider } from '@/lib/hooks/use-onboarding';
 import { MobileNav, AgentBottomNav } from '@/components/mobile-nav';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { CacheWarmer } from '@/components/cache-warmer';
-import { AutoSync } from '@/components/auto-sync';
 import { TenantThemeProvider } from '@/components/tenant-theme-provider';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { RouteProgressBar } from '@/components/route-progress';
 import { AppBreadcrumb } from '@/components/app-breadcrumb';
-import { CommandPalette } from '@/components/command-palette';
+import { SyncStatusProvider } from '@/components/sync-status-provider';
 import { Search } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const CacheWarmer = dynamic(() => import('@/components/cache-warmer').then((mod) => mod.CacheWarmer), {
+  ssr: false,
+});
+const AutoSync = dynamic(() => import('@/components/auto-sync').then((mod) => mod.AutoSync), {
+  ssr: false,
+});
+const CommandPalette = dynamic(() => import('@/components/command-palette').then((mod) => mod.CommandPalette), {
+  ssr: false,
+});
+const PWAInstallPrompt = dynamic(() => import('@/components/pwa-install-prompt').then((mod) => mod.PWAInstallPrompt), {
+  ssr: false,
+});
 
 function SearchTrigger() {
   const trigger = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
@@ -66,6 +78,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       </div>
       <AgentBottomNav />
       <CommandPalette />
+      <PWAInstallPrompt />
     </>
   );
 }
@@ -84,14 +97,16 @@ export default function AppLayout({
     <OnboardingProvider>
       <TooltipProvider>
         <TenantThemeProvider>
-          <SidebarProvider style={style as React.CSSProperties}>
-            <div className="flex h-screen w-full">
-              <AppSidebar />
-              <AppContent>{children}</AppContent>
-              <CacheWarmer />
-              <AutoSync />
-            </div>
-          </SidebarProvider>
+          <SyncStatusProvider>
+            <SidebarProvider style={style as React.CSSProperties}>
+              <div className="flex h-screen w-full">
+                <AppSidebar />
+                <AppContent>{children}</AppContent>
+                <CacheWarmer />
+                <AutoSync />
+              </div>
+            </SidebarProvider>
+          </SyncStatusProvider>
         </TenantThemeProvider>
       </TooltipProvider>
     </OnboardingProvider>

@@ -152,11 +152,8 @@ export default function YieldAlertsPage() {
     ) : (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <AlertTriangle className="h-6 w-6 text-amber-500" />
-          Yield Alerts & Predictions
-        </h1>
-        <p className="text-muted-foreground">Review flagged batches and view yield forecasts</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Yield Alerts & Predictions</h1>
+        <p className="text-sm text-muted-foreground mt-1">Review flagged batches and view yield forecasts</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -173,10 +170,12 @@ export default function YieldAlertsPage() {
 
         <TabsContent value="alerts" className="space-y-6 mt-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="card-accent-amber transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-amber shrink-0">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tracking-tight">{flaggedBatches.length}</div>
@@ -184,9 +183,12 @@ export default function YieldAlertsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-accent-blue">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Yield Standards</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-blue shrink-0"><Scale className="h-3.5 w-3.5" /></div>
+              Yield Standards
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
@@ -200,9 +202,12 @@ export default function YieldAlertsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-accent-violet">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Flagging Rule</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md flex items-center justify-center icon-bg-violet shrink-0"><TrendingUp className="h-3.5 w-3.5" /></div>
+              Flagging Rule
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
@@ -212,9 +217,14 @@ export default function YieldAlertsPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="card-accent-amber">
         <CardHeader>
-          <CardTitle>Flagged Batches</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center icon-bg-amber shrink-0">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            Flagged Batches
+          </CardTitle>
           <CardDescription>Review and approve or reject batches with yield anomalies</CardDescription>
         </CardHeader>
         <CardContent>

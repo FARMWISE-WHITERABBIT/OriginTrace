@@ -2,112 +2,44 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { parsePagination } from '@/lib/api/validation';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
+import { enforceTier } from '@/lib/api/tier-guard';
+import { requireRole, ROLES } from '@/lib/rbac';
+import { COMPLIANCE_TEMPLATES } from '@/lib/compliance-templates';
+import { buyerProfileCustomRulesSchema } from '@/lib/compliance/buyer-profile';
 
+// Convert shared ComplianceTemplate format to the legacy TEMPLATES format expected by this route
+const TEMPLATES = Object.fromEntries(
+  Object.entries(COMPLIANCE_TEMPLATES).map(([key, tpl]) => [
+    key,
+    {
+      name: tpl.market_name,
+      destination_market: tpl.destination_market,
+      regulation_framework: tpl.regulation_framework,
+      required_documents: tpl.docs.filter(d => d.required).map(d => d.label),
+      required_certifications: tpl.required_certifications,
+      geo_verification_level: tpl.geo_verification_level,
+      min_traceability_depth: tpl.min_traceability_depth,
+    },
+  ])
+);
 
-const TEMPLATES: Record<string, {
-  name: string;
-  destination_market: string;
-  regulation_framework: string;
-  required_documents: string[];
-  required_certifications: string[];
-  geo_verification_level: string;
-  min_traceability_depth: number;
-}> = {
-  EU: {
-    name: 'EU EUDR Compliance',
-    destination_market: 'European Union',
-    regulation_framework: 'EUDR',
-    required_documents: [
-      'Deforestation-free declaration',
-      'GPS polygon boundaries',
-      'Land title / ownership proof',
-      'Farmer ID verification',
-      'Traceability chain documentation',
-      'Due diligence statement',
-    ],
-    required_certifications: ['Rainforest Alliance', 'UTZ', 'Fairtrade'],
-    geo_verification_level: 'satellite',
-    min_traceability_depth: 3,
-  },
-  UK: {
-    name: 'UK Environment Act Compliance',
-    destination_market: 'United Kingdom',
-    regulation_framework: 'UK_Environment_Act',
-    required_documents: [
-      'Due diligence assessment',
-      'Risk assessment report',
-      'Supply chain mapping',
-      'Farmer registration records',
-      'Land use documentation',
-    ],
-    required_certifications: ['Rainforest Alliance', 'Fairtrade'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 2,
-  },
-  US: {
-    name: 'US FSMA 204 Compliance',
-    destination_market: 'United States',
-    regulation_framework: 'FSMA_204',
-    required_documents: [
-      'Key Data Elements (KDE) records',
-      'Critical Tracking Events (CTE) log',
-      'Lot traceability records',
-      'Supplier verification',
-      'Food safety plan',
-    ],
-    required_certifications: ['FDA Registration', 'HACCP'],
-    geo_verification_level: 'basic',
-    min_traceability_depth: 1,
-  },
-  LACEY_UFLPA: {
-    name: 'US Lacey Act / UFLPA Compliance',
-    destination_market: 'United States',
-    regulation_framework: 'Lacey_Act_UFLPA',
-    required_documents: [
-      'Certificate of Origin',
-      'Species / product identification',
-      'Import declaration',
-      'Forced labor declaration',
-      'Supply chain mapping',
-      'Country-of-origin documentation',
-    ],
-    required_certifications: ['Chain of Custody', 'FSC/PEFC'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 3,
-  },
-  CHINA: {
-    name: 'China Green Trade Compliance',
-    destination_market: 'China',
-    regulation_framework: 'China_Green_Trade',
-    required_documents: [
-      'GACC registration certificate',
-      'Phytosanitary certificate',
-      'Fumigation certificate',
-      'Certificate of origin',
-      'GB standards compliance report',
-      'Inspection report',
-    ],
-    required_certifications: ['GACC Registration', 'GB Standards'],
-    geo_verification_level: 'polygon',
-    min_traceability_depth: 2,
-  },
-  UAE: {
-    name: 'UAE / Halal Compliance',
-    destination_market: 'UAE / Middle East',
-    regulation_framework: 'UAE_Halal',
-    required_documents: [
-      'Halal certificate (accredited body)',
-      'ESMA compliance certificate',
-      'MOCCAE import permit',
-      'Certificate of origin',
-      'Health certificate',
-      'Arabic labeling compliance',
-    ],
-    required_certifications: ['Halal Certification', 'ESMA Compliance'],
-    geo_verification_level: 'basic',
-    min_traceability_depth: 1,
-  },
-};
+// A buyer has no compliance_profiles of their own org — they view/manage
+// profiles that live under a *linked* exporter's org_id. Verifies an active
+// supply_chain_links row exists before allowing that cross-org read/write.
+async function requireActiveLink(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  buyerOrgId: string,
+  exporterOrgId: string
+) {
+  const { data: link } = await supabaseAdmin
+    .from('supply_chain_links')
+    .select('id')
+    .eq('buyer_org_id', buyerOrgId)
+    .eq('exporter_org_id', exporterOrgId)
+    .eq('status', 'active')
+    .maybeSingle();
+  return !!link;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -121,10 +53,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { from, to, page, limit } = parsePagination(searchParams);
 
+    let targetOrgId = profile.org_id;
+
+    if (profile.role === 'buyer') {
+      const exporterOrgId = searchParams.get('exporter_org_id');
+      if (!exporterOrgId) {
+        return NextResponse.json({ error: 'exporter_org_id is required' }, { status: 400 });
+      }
+      if (!(await requireActiveLink(supabaseAdmin, profile.org_id, exporterOrgId))) {
+        return NextResponse.json({ error: 'No active supply chain link with this exporter' }, { status: 403 });
+      }
+      targetOrgId = exporterOrgId;
+    }
+
+    const tierBlock = await enforceTier(targetOrgId, 'compliance_profiles');
+    if (tierBlock) return tierBlock;
+
     const { data: profiles, error, count } = await supabaseAdmin
       .from('compliance_profiles')
       .select('*', { count: 'exact' })
-      .eq('org_id', profile.org_id)
+      .eq('org_id', targetOrgId)
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -133,7 +81,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch compliance profiles' }, { status: 500 });
     }
 
-    return NextResponse.json({ profiles: profiles || [], templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });
+    // Exporters viewing their own profile list need to know which ones were
+    // set up by a buyer (not just which fields to lock) so the UI can label
+    // them and guard against an exporter unilaterally deleting a buyer's
+    // requirement profile.
+    const buyerOrgIds = [
+      ...new Set((profiles || []).map((p) => p.buyer_org_id).filter((id): id is string => !!id)),
+    ];
+    let buyerOrgNames = new Map<string, string>();
+    if (profile.role !== 'buyer' && buyerOrgIds.length > 0) {
+      const { data: buyerOrgs } = await supabaseAdmin
+        .from('buyer_organizations')
+        .select('id, name')
+        .in('id', buyerOrgIds);
+      buyerOrgNames = new Map((buyerOrgs || []).map((b) => [b.id, b.name]));
+    }
+
+    const withOwnership = (profiles || []).map((p) => ({
+      ...p,
+      is_own_buyer_profile: profile.role === 'buyer' ? p.buyer_org_id === profile.org_id : undefined,
+      buyer_org_name: p.buyer_org_id ? buyerOrgNames.get(p.buyer_org_id) ?? null : null,
+    }));
+
+    return NextResponse.json({ profiles: withOwnership, templates: TEMPLATES, pagination: { page, limit, total: count ?? 0 } });
   } catch (error) {
     console.error('Compliance profiles API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -150,6 +120,75 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
 
     const body = await request.json();
+
+    if (profile.role === 'buyer') {
+      const { data: buyerProfile } = await supabaseAdmin
+        .from('buyer_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      if (!buyerProfile || buyerProfile.role !== 'buyer_admin') {
+        return NextResponse.json({ error: 'Only buyer admins can set up compliance profiles' }, { status: 403 });
+      }
+
+      const { exporter_org_id, template, custom_rules: buyerCustomRules } = body;
+      if (!exporter_org_id) {
+        return NextResponse.json({ error: 'exporter_org_id is required' }, { status: 400 });
+      }
+      if (!template || !TEMPLATES[template]) {
+        return NextResponse.json(
+          { error: 'A regulatory template must be selected — the baseline requirements cannot be hand-written' },
+          { status: 400 }
+        );
+      }
+      if (!(await requireActiveLink(supabaseAdmin, profile.org_id, exporter_org_id))) {
+        return NextResponse.json({ error: 'No active supply chain link with this exporter' }, { status: 403 });
+      }
+
+      const tierBlock = await enforceTier(exporter_org_id, 'compliance_profiles');
+      if (tierBlock) return tierBlock;
+
+      if (
+        buyerCustomRules &&
+        typeof buyerCustomRules === 'object' &&
+        !buyerProfileCustomRulesSchema.safeParse(buyerCustomRules).success
+      ) {
+        return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
+      }
+
+      const t = TEMPLATES[template];
+      const { data: created, error } = await supabaseAdmin
+        .from('compliance_profiles')
+        .insert({
+          org_id: exporter_org_id,
+          buyer_org_id: profile.org_id,
+          name: t.name,
+          destination_market: t.destination_market,
+          regulation_framework: t.regulation_framework,
+          required_documents: t.required_documents,
+          required_certifications: t.required_certifications,
+          geo_verification_level: t.geo_verification_level,
+          min_traceability_depth: t.min_traceability_depth,
+          custom_rules: buyerCustomRules || {},
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Buyer compliance profile creation error:', error);
+        return NextResponse.json({ error: 'Failed to create compliance profile' }, { status: 500 });
+      }
+
+      return NextResponse.json({ profile: created }, { status: 201 });
+    }
+
+    const roleError = requireRole(profile, ROLES.ADMIN_COMPLIANCE);
+    if (roleError) return roleError;
+
+    const tierBlock = await enforceTier(profile.org_id, 'compliance_profiles');
+    if (tierBlock) return tierBlock;
+
     const {
       name,
       destination_market,
@@ -195,9 +234,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'UAE_Halal', 'custom'];
+    const validFrameworks = ['EUDR', 'FSMA_204', 'UK_Environment_Act', 'Lacey_Act_UFLPA', 'China_Green_Trade', 'GACC', 'UAE_Halal', 'custom'];
     if (!validFrameworks.includes(regulation_framework)) {
       return NextResponse.json({ error: 'Invalid regulation_framework' }, { status: 400 });
+    }
+
+    if (
+      custom_rules &&
+      typeof custom_rules === 'object' &&
+      'buyer_profile' in custom_rules &&
+      !buyerProfileCustomRulesSchema.safeParse(custom_rules).success
+    ) {
+      return NextResponse.json({ error: 'Invalid buyer profile metadata' }, { status: 400 });
     }
 
     const { data: created, error } = await supabaseAdmin

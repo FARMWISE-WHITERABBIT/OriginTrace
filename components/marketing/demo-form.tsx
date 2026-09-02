@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -130,13 +131,52 @@ function SubmittedState({ name }: { name: string }) {
   );
 }
 
-export function DemoFormWidget() {
+const exporterOrgTypes = [
+  { value: 'exporter', label: 'Exporter' },
+  { value: 'processor', label: 'Processor / Crusher' },
+  { value: 'both', label: 'Both Exporter & Processor' },
+  { value: 'aggregator', label: 'Aggregator / Trader' },
+  { value: 'cooperative', label: 'Cooperative' },
+  { value: 'other', label: 'Other' },
+];
+
+const buyerOrgTypes = [
+  { value: 'importer', label: 'Importer' },
+  { value: 'trading_house', label: 'Trading House / Distributor' },
+  { value: 'manufacturer', label: 'Food & Beverage Manufacturer' },
+  { value: 'retailer', label: 'Retailer' },
+  { value: 'other', label: 'Other' },
+];
+
+const exporterConcerns = [
+  { value: 'farm_mapping', label: 'Farm polygon mapping' },
+  { value: 'traceability', label: 'Bag-level traceability' },
+  { value: 'documentation', label: 'DDS documentation' },
+  { value: 'processing', label: 'Processing mass balance' },
+  { value: 'audits', label: 'Audit preparation' },
+  { value: 'all', label: 'All of the above' },
+];
+
+const buyerConcerns = [
+  { value: 'supplier_verification', label: "Verifying suppliers' compliance claims" },
+  { value: 'counterparty_risk', label: 'Payment / counterparty risk' },
+  { value: 'documentation', label: 'Traceability documentation (DDS/EUDR)' },
+  { value: 'facility_registration', label: 'Facility & registration verification (e.g. GACC)' },
+  { value: 'all', label: 'All of the above' },
+];
+
+export function DemoFormWidget({
+  initialPersona = 'exporter',
+}: {
+  initialPersona?: 'exporter' | 'buyer';
+}) {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    persona: initialPersona,
     full_name: '',
     company: '',
     role: '',
@@ -149,6 +189,10 @@ export function DemoFormWidget() {
     phone: '',
     message: '',
   });
+
+  const isBuyer = formData.persona === 'buyer';
+  const orgTypeOptions = isBuyer ? buyerOrgTypes : exporterOrgTypes;
+  const concernOptions = isBuyer ? buyerConcerns : exporterConcerns;
 
   const handleNext = () => {
     if (step === 1) {
@@ -176,13 +220,34 @@ export function DemoFormWidget() {
     }
     setSubmitting(true);
     try {
+      // First-party attribution (P3 measurement): the page the lead submitted
+      // from (persona variant included via query) and the on-site referrer.
+      const sourcePath = window.location.pathname + window.location.search;
+      let referrerPath: string | null = null;
+      try {
+        referrerPath = document.referrer ? new URL(document.referrer).pathname : null;
+      } catch {
+        referrerPath = null;
+      }
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, source: 'demo' }),
+        body: JSON.stringify({ ...formData, source: 'demo', source_path: sourcePath, referrer_path: referrerPath }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error('Submission failed');
-      setSubmitted(true);
+      // GA4 conversion event — persona-split demo submissions (consent-gated
+      // gtag is loaded by the marketing layout; guard for its absence).
+      const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+      if (typeof gtag === 'function') {
+        gtag('event', 'generate_lead', {
+          persona: formData.persona,
+          organization_type: formData.organization_type,
+          source_path: sourcePath,
+        });
+      }
+      // Redirect to booking confirm page while intent is hot
+      router.push(data.redirect || `/demo/confirm?name=${encodeURIComponent(formData.full_name)}&email=${encodeURIComponent(formData.email)}`);
     } catch {
       toast({
         title: 'Submission failed',
@@ -194,10 +259,6 @@ export function DemoFormWidget() {
     }
   }
 
-  // Success: render inline (no extra Nav/Footer — page.tsx already has them)
-  if (submitted) {
-    return <SubmittedState name={formData.full_name} />;
-  }
 
   return (
     <FadeIn direction="left" delay={0.2}>
@@ -248,6 +309,29 @@ export function DemoFormWidget() {
                   Tell us who you are so we can tailor your demo.
                 </p>
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="persona">I am a…</Label>
+                    <Select
+                      value={formData.persona}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          persona: value as 'exporter' | 'buyer',
+                          // Selected org type / concern may not exist in the other persona's list.
+                          organization_type: '',
+                          biggest_concern: '',
+                        })
+                      }
+                    >
+                      <SelectTrigger data-testid="select-persona">
+                        <SelectValue placeholder="Select one" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="exporter" data-testid="option-persona-exporter">Exporter / Producer</SelectItem>
+                        <SelectItem value="buyer" data-testid="option-persona-buyer">Buyer / Importer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label htmlFor="full_name">Full Name *</Label>
                     <Input
@@ -337,7 +421,9 @@ export function DemoFormWidget() {
                     Back
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6">Help us understand your supply chain.</p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {isBuyer ? 'Help us understand what and how you buy.' : 'Help us understand your supply chain.'}
+                </p>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="organization_type">Organization Type *</Label>
@@ -349,18 +435,15 @@ export function DemoFormWidget() {
                         <SelectValue placeholder="Select organization type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="exporter">Exporter</SelectItem>
-                        <SelectItem value="processor">Processor / Crusher</SelectItem>
-                        <SelectItem value="both">Both Exporter & Processor</SelectItem>
-                        <SelectItem value="aggregator">Aggregator / Trader</SelectItem>
-                        <SelectItem value="cooperative">Cooperative</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {orgTypeOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="commodity">Primary Commodity</Label>
+                      <Label htmlFor="commodity">{isBuyer ? 'Primary Commodity You Buy' : 'Primary Commodity'}</Label>
                       <Select
                         value={formData.commodity}
                         onValueChange={(value) => setFormData({ ...formData, commodity: value })}
@@ -393,19 +476,23 @@ export function DemoFormWidget() {
                       />
                     </div>
                   </div>
+                  {!isBuyer && (
+                    <div>
+                      <Label htmlFor="farmer_count">Number of Farmers</Label>
+                      <Input
+                        id="farmer_count"
+                        type="number"
+                        value={formData.farmer_count}
+                        onChange={(e) => setFormData({ ...formData, farmer_count: e.target.value })}
+                        placeholder="e.g., 2500"
+                        data-testid="input-farmer-count"
+                      />
+                    </div>
+                  )}
                   <div>
-                    <Label htmlFor="farmer_count">Number of Farmers</Label>
-                    <Input
-                      id="farmer_count"
-                      type="number"
-                      value={formData.farmer_count}
-                      onChange={(e) => setFormData({ ...formData, farmer_count: e.target.value })}
-                      placeholder="e.g., 2500"
-                      data-testid="input-farmer-count"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="biggest_concern">Biggest Compliance Challenge</Label>
+                    <Label htmlFor="biggest_concern">
+                      {isBuyer ? 'Biggest Sourcing Challenge' : 'Biggest Compliance Challenge'}
+                    </Label>
                     <Select
                       value={formData.biggest_concern}
                       onValueChange={(value) => setFormData({ ...formData, biggest_concern: value })}
@@ -414,12 +501,9 @@ export function DemoFormWidget() {
                         <SelectValue placeholder="Select challenge" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="farm_mapping">Farm polygon mapping</SelectItem>
-                        <SelectItem value="traceability">Bag-level traceability</SelectItem>
-                        <SelectItem value="documentation">DDS documentation</SelectItem>
-                        <SelectItem value="processing">Processing mass balance</SelectItem>
-                        <SelectItem value="audits">Audit preparation</SelectItem>
-                        <SelectItem value="all">All of the above</SelectItem>
+                        {concernOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

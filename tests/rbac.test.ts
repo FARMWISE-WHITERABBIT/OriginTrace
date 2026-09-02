@@ -108,6 +108,10 @@ describe('hasAccess — buyer is isolated to /app/buyer/*', () => {
     expect(hasAccess('buyer', '/app/buyer/traceability')).toBe(true);
   });
 
+  it('allows buyer on /app/buyer/compliance', () => {
+    expect(hasAccess('buyer', '/app/buyer/compliance')).toBe(true);
+  });
+
   const blockedFromBuyer = [
     '/app',
     '/app/farmers',
@@ -136,6 +140,7 @@ describe('hasAccess — compliance_officer access', () => {
     '/app/dpp',
     '/app/audit',
     '/app/conflicts',
+    '/app/data-vault',
     '/app/processing',
     '/app/shipments',
     '/app/traceability',
@@ -152,7 +157,6 @@ describe('hasAccess — compliance_officer access', () => {
     '/app/agents',
     '/app/payments',
     '/app/settings',
-    '/app/data-vault',
     '/app/delegations',
     '/app/contracts',
   ];

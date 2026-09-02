@@ -155,12 +155,12 @@ export default function ExporterTendersPage() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredTenders.map(tender => (
-            <Card key={tender.id} data-testid={`card-tender-${tender.id}`}>
+            <Card key={tender.id} className="card-accent-blue transition-shadow hover:shadow-md" data-testid={`card-tender-${tender.id}`}>
               <CardContent className="py-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                      <Store className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-10 w-10 rounded-md icon-bg-blue flex items-center justify-center shrink-0">
+                      <Store className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

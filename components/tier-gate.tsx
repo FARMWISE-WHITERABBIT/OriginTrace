@@ -1,7 +1,8 @@
 'use client';
 
 import { useOrg } from '@/lib/contexts/org-context';
-import { hasTierAccess, TIER_LABELS, type TierFeature, type SubscriptionTier } from '@/lib/config/tier-gating';
+import { hasTierAccess } from '@/modules/identity-access/domain/tier-policy';
+import { TIER_LABELS, type TierFeature, type SubscriptionTier } from '@/lib/config/tier-gating';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Lock, ArrowUpCircle } from 'lucide-react';

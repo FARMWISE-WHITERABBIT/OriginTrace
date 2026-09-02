@@ -126,9 +126,14 @@ export async function POST(request: NextRequest) {
     if (!profile.org_id) return NextResponse.json({ error: 'No organization assigned' }, { status: 403 });
     const supabaseAdmin = createAdminClient();
 
+    const tierBlock = await enforceTier(profile.org_id, 'bags');
+    if (tierBlock) return tierBlock;
+
     const bagRows = Array.from({ length: count }, () => ({
       org_id: profile.org_id,
-      status: 'empty',
+      // `empty` is not a valid bags.status value; unused is the initial state.
+      status: 'unused',
+      serial: crypto.randomUUID(),
     }));
 
     const { data: createdBags, error: insertError } = await supabaseAdmin

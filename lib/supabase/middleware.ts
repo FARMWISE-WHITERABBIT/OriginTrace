@@ -33,6 +33,7 @@ import { hasAccess, type AppRole } from '@/lib/rbac';
 import { checkRouteAccess } from '@/lib/config/tier-gating';
 import { createClient } from '@supabase/supabase-js';
 import { verifyCookiePayload } from '@/lib/security/signed-cookie';
+import type { Database } from './database.types';
 
 // ---------------------------------------------------------------------------
 // JWT claim helpers
@@ -40,7 +41,7 @@ import { verifyCookiePayload } from '@/lib/security/signed-cookie';
 
 interface AppClaims {
   app_role:      string | null;
-  org_id:        number | null;
+  org_id:        number | string | null;
   org_tier:      string | null;
   is_superadmin: boolean;
 }
@@ -66,7 +67,7 @@ function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
-  return createClient(url, key, {
+  return createClient<Database>(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
@@ -82,16 +83,16 @@ async function fetchClaimsFromDb(userId: string): Promise<AppClaims> {
       .from('profiles')
       .select('role, org_id')
       .eq('user_id', userId)
-      .single(),
+      .maybeSingle(),
     admin
       .from('system_admins')
       .select('id')
       .eq('user_id', userId)
-      .single(),
+      .maybeSingle(),
   ]);
 
-  const role   = profileResult.data?.role   ?? null;
-  const org_id = profileResult.data?.org_id ?? null;
+  let role   = profileResult.data?.role   ?? null;
+  let org_id = profileResult.data?.org_id ?? null;
   const is_superadmin = !!superadminResult.data;
 
   let org_tier = 'starter';
@@ -108,6 +109,21 @@ async function fetchClaimsFromDb(userId: string): Promise<AppClaims> {
     org_tier   = VALID.includes(col ?? '') ? col! : VALID.includes(stg ?? '') ? stg! : 'starter';
   }
 
+  if (!role && !is_superadmin) {
+    const { data: buyerProfile } = await admin
+      .from('buyer_profiles')
+      .select('buyer_org_id, buyer_organization:buyer_organizations!buyer_profiles_buyer_org_id_fkey(settings)')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (buyerProfile) {
+      const settings = (buyerProfile as any).buyer_organization?.settings || {};
+      role = 'buyer';
+      org_id = buyerProfile.buyer_org_id;
+      org_tier = settings.subscription_tier || 'pro';
+    }
+  }
+
   return { app_role: role, org_id, org_tier, is_superadmin };
 }
 
@@ -122,7 +138,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -153,19 +169,20 @@ export async function updateSession(request: NextRequest) {
   const isSuperadminPage = pathname.startsWith('/superadmin');
   const isSuperadminLogin = pathname === '/superadmin/login';
   const isResetPasswordPage = pathname === '/auth/reset-password';
-  const isPublicPage =
-    ['/', '/solutions', '/pedigree', '/demo', '/processors', '/api-docs', '/superadmin/login'].includes(pathname) ||
-    pathname.startsWith('/verify') ||
-    pathname.startsWith('/compliance') ||
-    pathname.startsWith('/industries') ||
-    pathname.startsWith('/legal') ||
-    pathname.startsWith('/pedigree');
+  // Only /app/* and /superadmin/* (besides its own login) actually require a
+  // session. Everything else this proxy sees is either a marketing/public
+  // route the matcher didn't already exclude (e.g. a typo'd or removed URL)
+  // or a route this file gates more precisely further down. Gating those on
+  // an explicit public-page allowlist meant any URL missing from that list —
+  // including plain 404s — silently redirected to /auth/login instead of
+  // rendering a real 404 (confirmed live on origintrace.trade).
+  const isProtectedPage = pathname.startsWith('/app') || (isSuperadminPage && !isSuperadminLogin);
 
   // API routes do their own auth
   if (isApiRoute) return supabaseResponse;
 
   // Unauthenticated redirect
-  if (!user && !isAuthPage && !isPublicPage && !isResetPasswordPage) {
+  if (!user && !isAuthPage && isProtectedPage && !isResetPasswordPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
     return NextResponse.redirect(url);
@@ -232,6 +249,11 @@ export async function updateSession(request: NextRequest) {
 
   // Role + tier gates on /app
   if (pathname.startsWith('/app') && !is_superadmin) {
+    if (role === 'buyer' && !pathname.startsWith('/app/buyer')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/app/buyer';
+      return NextResponse.redirect(url);
+    }
     if (role === 'farmer' && !pathname.startsWith('/app/farmer')) {
       const url = request.nextUrl.clone();
       url.pathname = '/app/farmer';

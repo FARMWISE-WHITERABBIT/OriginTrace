@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, getAuthenticatedProfile, checkTierAccess } from '@/lib/api-auth';
 import { shipmentOutcomeSchema, parseBody } from '@/lib/api/validation';
+import type { TablesInsert } from '@/lib/supabase/database.types';
 
 export async function GET(
   request: NextRequest,
@@ -41,7 +42,7 @@ export async function GET(
       .select('*')
       .eq('shipment_id', id)
       .eq('org_id', profile.org_id)
-      .order('outcome_date', { ascending: false });
+      .order('recorded_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching shipment outcomes:', error);
@@ -99,7 +100,7 @@ export async function POST(
       return NextResponse.json({ error: 'Outcome is required' }, { status: 400 });
     }
 
-    const validOutcomes = ['approved', 'rejected', 'delayed', 'conditional_release'];
+    const validOutcomes = ['accepted', 'approved', 'rejected', 'delayed', 'conditional', 'conditional_release', 'withdrawn'];
     if (!validOutcomes.includes(outcome)) {
       return NextResponse.json({ error: `Outcome must be one of: ${validOutcomes.join(', ')}` }, { status: 400 });
     }
@@ -113,7 +114,7 @@ export async function POST(
       return NextResponse.json({ error: `Rejection category must be one of: ${validRejectionCategories.join(', ')}` }, { status: 400 });
     }
 
-    const insertData: Record<string, any> = {
+    const insertData: TablesInsert<'shipment_outcomes'> = {
       shipment_id: id,
       org_id: profile.org_id,
       recorded_by: profile.id,
@@ -126,7 +127,7 @@ export async function POST(
     if (body.port_of_entry !== undefined) insertData.port_of_entry = body.port_of_entry;
     if (body.customs_reference !== undefined) insertData.customs_reference = body.customs_reference;
     if (body.inspector_notes !== undefined) insertData.inspector_notes = body.inspector_notes;
-    if (body.financial_impact_usd !== undefined) insertData.financial_impact_usd = body.financial_impact_usd;
+    if (body.financial_impact_usd !== undefined) insertData.financial_impact_usd = body.financial_impact_usd as number;
 
     const { data: outcomeRecord, error: insertError } = await supabase
       .from('shipment_outcomes')
@@ -139,7 +140,7 @@ export async function POST(
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    if (outcome === 'approved') {
+    if (outcome === 'approved' || outcome === 'accepted') {
       const { error: updateError } = await supabase
         .from('shipments')
         .update({ status: 'shipped' })
