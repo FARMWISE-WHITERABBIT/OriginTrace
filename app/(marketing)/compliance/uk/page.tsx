@@ -14,14 +14,14 @@ import { ImporterCallout } from '@/components/marketing/importer-callout';
 export const metadata: Metadata = {
   title: 'UK Due Diligence (UKDDS) Compliance',
   description:
-    'The UK Environment Act 2021 requires due diligence on forest-risk commodities. OriginTrace gives you farm-level evidence from first collection to export declaration.',
+    'The UK\'s forest-risk commodity due diligence rules aren\'t in force yet — here\'s the real status, and how OriginTrace gives you farm-level evidence ready for when they are.',
 };
 
 const faqs = [
   {
     question: 'What is the UK Environment Act 2021 due diligence requirement?',
     answer:
-      'The UK Environment Act 2021 introduced a forest risk commodity due diligence obligation that prohibits larger businesses from using certain commodities or derived products unless they have conducted due diligence to ensure those goods come from legally harvested land. Businesses must establish and implement a due diligence system and report on it annually.',
+      'Schedule 17 of the UK Environment Act 2021 would prohibit larger businesses from using certain commodities or derived products unless they can show due diligence that those goods came from legally harvested land, with an annual due diligence report. It\'s not in force yet — Schedule 17 requires secondary legislation, and the current government reopened the policy process with a June 2026 announcement, promising new rules with a further consultation expected later in 2026.',
   },
   {
     question: 'Which commodities are covered under the UK due diligence rules?',
@@ -31,7 +31,7 @@ const faqs = [
   {
     question: 'Which businesses must comply with the UK due diligence requirement?',
     answer:
-      'Large businesses operating in the UK that use forest-risk commodities or derived products in their operations or supply chains must comply. A large business is generally defined as one with more than £36 million in annual turnover or more than 250 employees. Smaller businesses are encouraged to prepare voluntarily.',
+      'None yet — the obligation isn\'t in force. When it is, it\'s expected to apply to large businesses operating in the UK that use forest-risk commodities or derived products in their operations or supply chains, based on a turnover or employee-count threshold, with smaller businesses encouraged to prepare voluntarily. The exact threshold hasn\'t been confirmed under the current government\'s process — check DEFRA\'s consultation once it\'s published rather than relying on figures from the original 2021–2023 proposal.',
   },
   {
     question: 'What does &apos;legally harvested&apos; mean under the UK rules?',
@@ -46,7 +46,7 @@ const faqs = [
   {
     question: 'What penalties apply for non-compliance with UK due diligence rules?',
     answer:
-      'The UK regulations provide for financial penalties of up to £50,000 per offence for businesses that fail to comply with the due diligence requirements. Enforcement is carried out by the Office for Product Safety and Standards (OPSS).',
+      'None yet, because the requirement itself hasn\'t commenced. The original 2021–2023 proposal set out financial penalties and OPSS enforcement, but Schedule 17 still needs secondary legislation to take effect, and the current government reopened the policy process with a June 2026 announcement and a further consultation expected later in 2026. Treat any specific penalty figure as provisional until DEFRA confirms the final rules.',
   },
   {
     question: 'Do UK rules apply to exporters from African origins?',
@@ -56,13 +56,13 @@ const faqs = [
   {
     question: 'How often must businesses report on their due diligence?',
     answer:
-      'Businesses must produce an annual due diligence report describing the steps taken to identify and address risk in their forest-risk commodity supply chains. OriginTrace&apos;s audit-ready data vault makes it straightforward to produce this report from your verified traceability records.',
+      'Once the rules take effect, in-scope businesses are expected to produce an annual due diligence report describing the steps taken to identify and address risk in their forest-risk commodity supply chains — but there\'s no live reporting obligation yet. OriginTrace&apos;s audit-ready data vault makes it straightforward to produce this report from your verified traceability records as soon as it is required.',
   },
 ];
 
 const stats = [
-  { label: 'UK regulated commodities', value: '7+' },
-  { label: 'Penalty for non-compliance', value: 'Up to £50k' },
+  { label: 'UK regulated commodities (proposed)', value: '7+' },
+  { label: 'Regime status', value: 'Pre-consultation' },
   { label: 'Farm-level evidence', value: '100%' },
 ];
 
@@ -106,10 +106,10 @@ const capabilities = [
 
 const timeline = [
   { date: 'Nov 2021', event: 'UK Environment Act enacted', active: false },
-  { date: '2023', event: 'Secondary regulations consulted', active: false },
-  { date: '2024', event: 'Large business obligations take effect', active: true },
-  { date: '2025', event: 'Enforcement and penalty regime active', active: false },
-  { date: 'Ongoing', event: 'Annual due diligence reporting required', active: false },
+  { date: '2023', event: 'Secondary regulations first consulted', active: false },
+  { date: 'Jun 2026', event: 'Government reopens the policy process, announces new GB deforestation rules', active: true },
+  { date: 'Late 2026', event: 'Further DEFRA consultation expected', active: false },
+  { date: 'TBD', event: 'Secondary legislation, commencement date, and enforcement not yet set', active: false },
 ];
 
 export default function UKCompliancePage() {
@@ -158,7 +158,7 @@ export default function UKCompliancePage() {
                         className="margin-bottom margin-xlarge"
                         style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.0625rem)', lineHeight: 1.75, maxWidth: '40ch', color: 'var(--mk-text-on-dark)' }}
                       >
-                        The UK Environment Act 2021 prohibits large businesses from using forest-risk commodities unless they have conducted due diligence to ensure they come from legally harvested land. OriginTrace gives you the farm-level evidence trail the regulations require.
+                        Schedule 17 of the UK Environment Act 2021 will prohibit large businesses from using forest-risk commodities unless they can show due diligence that they come from legally harvested land — once secondary legislation brings it into force. OriginTrace gives you the farm-level evidence trail those rules will require.
                       </p>
                     </FadeIn>
                     <FadeIn delay={0.3}>
@@ -215,7 +215,7 @@ export default function UKCompliancePage() {
                     </div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>UK Large Businesses</h3>
                     <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
-                      Businesses with &gt;£36m turnover or &gt;250 employees that use forest-risk commodities in their UK operations or supply chains must conduct and report due diligence.
+                      Once in force, businesses above a turnover or employee-count threshold (not yet confirmed under the current policy process) that use forest-risk commodities in their UK operations or supply chains will need to conduct and report due diligence.
                     </p>
                   </div>
 
@@ -225,7 +225,7 @@ export default function UKCompliancePage() {
                     </div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--mk-text-primary)', marginBottom: '0.5rem' }}>UK-Based Importers</h3>
                     <p style={{ fontSize: '0.9375rem', color: 'var(--mk-text-secondary)', lineHeight: 1.7 }}>
-                      Companies importing cocoa, coffee, palm oil, soy, cattle, leather, rubber, or timber products into the UK must evidence that goods come from legally harvested land.
+                      Companies importing cocoa, coffee, palm oil, soy, cattle, leather, rubber, or timber products into the UK will need to evidence that goods come from legally harvested land once the rules take effect.
                     </p>
                   </div>
 
