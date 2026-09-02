@@ -55,7 +55,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Your Due Diligence Statement Still Needs',
+      text: 'What Does Your Due Diligence Statement Still Need?',
     },
     {
       type: 'paragraph',

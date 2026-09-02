@@ -56,7 +56,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Sesame Seeds and GACC: What the Registration Process Looks Like',
+      text: 'What Does GACC Registration Actually Involve for Sesame Seeds?',
     },
     {
       type: 'paragraph',
@@ -99,7 +99,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Your Chinese Buyers Are Actually Asking For — Beyond GACC Registration',
+      text: 'What Are Chinese Buyers Actually Asking For — Beyond GACC Registration?',
     },
     {
       type: 'paragraph',
@@ -157,7 +157,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Documents Checklist: What You Need for Every China-Bound Sesame or Gum Arabic Shipment',
+      text: 'What Documents Do You Need for Every China-Bound Sesame or Gum Arabic Shipment?',
     },
     {
       type: 'table',
@@ -192,40 +192,26 @@ export const post: BlogPost = {
       text: 'For gum arabic specifically, regional provenance is a genuine commercial differentiator. Borno and Yobe gum arabic from wild Acacia senegal trees commands a premium over plantation gum from other origins. An exporter who can document and verify that regional origin — with collection records and GPS sourcing data — can justify a better price and attract buyers who pay for traceable, authentic Nigerian origin.',
     },
     {
-      type: 'h2',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'h3',
-      text: 'I am a Lagos-based export trader. I do not own a processing facility. Do I need GACC registration?',
-    },
-    {
-      type: 'paragraph',
-      text: 'If you only trade (buy and re-sell without physically processing or storing product at your own facility), you may not need your own GACC registration. However, the facility that cleans, grades, or stores the sesame or gum arabic before it ships must be registered. If you use a third-party processing facility or warehouse, check whether that facility is GACC-registered. Your Chinese buyer will ask for the registration number of the facility where the product was processed — and if no one in your supply chain has it, you cannot export.',
-    },
-    {
-      type: 'h3',
-      text: 'How do I find a NAFDAC-accredited laboratory to test my sesame for Chinese MRL standards?',
-    },
-    {
-      type: 'paragraph',
-      text: 'NAFDAC maintains a list of accredited laboratories on its website (nafdac.gov.ng). For sesame destined for China, you need a laboratory that can test against Chinese national standard (GB) MRL limits, which differ from Codex or EU limits in some categories. Laboratories such as the NAFDAC central laboratory in Lagos, SGS Nigeria, and Bureau Veritas Nigeria can typically perform the required testing. Specify "for export to China — Chinese GB standard MRLs" when commissioning the analysis.',
-    },
-    {
-      type: 'h3',
-      text: 'My Northern Nigeria suppliers are small aggregators. How do I trace supply back through them?',
-    },
-    {
-      type: 'paragraph',
-      text: 'You do not need to trace back to individual farmer level for GACC compliance — what you need is to be able to identify which aggregator or buying agent supplied a specific lot, where they operate, and that they are part of your registered supplier network. A simple supplier register with GPS-verified locations, plus collection records at the aggregator level, is sufficient for most Chinese buyer requirements. For premium buyers or those under EUDR-like due diligence in Europe, you would need to go further to farm level.',
-    },
-    {
-      type: 'h3',
-      text: 'Does gum arabic need a phytosanitary certificate for export to China?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Yes. Gum arabic is a plant-derived product (tree exudate) and is subject to phytosanitary requirements. NAQS (National Agricultural Quarantine Service) issues phytosanitary certificates for gum arabic exports. The certificate confirms the product is free from regulated pests and diseases. Chinese customs requires this document for clearance. Apply to your nearest NAQS quarantine office in Lagos or the exporting state — processing takes 3–7 working days.',
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'I am a Lagos-based export trader. I do not own a processing facility. Do I need GACC registration?',
+          a: 'If you only trade (buy and re-sell without physically processing or storing product at your own facility), you may not need your own GACC registration. However, the facility that cleans, grades, or stores the sesame or gum arabic before it ships must be registered. If you use a third-party processing facility or warehouse, check whether that facility is GACC-registered. Your Chinese buyer will ask for the registration number of the facility where the product was processed — and if no one in your supply chain has it, you cannot export.',
+        },
+        {
+          q: 'How do I find a NAFDAC-accredited laboratory to test my sesame for Chinese MRL standards?',
+          a: 'NAFDAC maintains a list of accredited laboratories on its website (nafdac.gov.ng). For sesame destined for China, you need a laboratory that can test against Chinese national standard (GB) MRL limits, which differ from Codex or EU limits in some categories. Laboratories such as the NAFDAC central laboratory in Lagos, SGS Nigeria, and Bureau Veritas Nigeria can typically perform the required testing. Specify "for export to China — Chinese GB standard MRLs" when commissioning the analysis.',
+        },
+        {
+          q: 'My Northern Nigeria suppliers are small aggregators. How do I trace supply back through them?',
+          a: 'You do not need to trace back to individual farmer level for GACC compliance — what you need is to be able to identify which aggregator or buying agent supplied a specific lot, where they operate, and that they are part of your registered supplier network. A simple supplier register with GPS-verified locations, plus collection records at the aggregator level, is sufficient for most Chinese buyer requirements. For premium buyers or those under EUDR-like due diligence in Europe, you would need to go further to farm level.',
+        },
+        {
+          q: 'Does gum arabic need a phytosanitary certificate for export to China?',
+          a: 'Yes. Gum arabic is a plant-derived product (tree exudate) and is subject to phytosanitary requirements. NAQS (National Agricultural Quarantine Service) issues phytosanitary certificates for gum arabic exports. The certificate confirms the product is free from regulated pests and diseases. Chinese customs requires this document for clearance. Apply to your nearest NAQS quarantine office in Lagos or the exporting state — processing takes 3–7 working days.',
+        },
+      ],
     },
     {
       type: 'cta',

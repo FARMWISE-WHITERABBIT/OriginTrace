@@ -37,7 +37,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Offline-First Actually Means',
+      text: 'What Does "Offline-First" Actually Mean?',
     },
     {
       type: 'paragraph',
@@ -59,7 +59,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Why This Matters for Regulatory Compliance',
+      text: 'Why Does Offline-First Matter for Regulatory Compliance?',
     },
     {
       type: 'paragraph',
@@ -106,7 +106,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What to Look for in an Offline-First Traceability Tool',
+      text: 'What Should You Look for in an Offline-First Traceability Tool?',
     },
     {
       type: 'paragraph',
@@ -134,6 +134,24 @@ export const post: BlogPost = {
     {
       type: 'paragraph',
       text: 'This is why the most effective traceability platforms for West African agricultural exporters are built from the ground up for mobile-first, offline-capable field operations — rather than adapted from enterprise platforms designed for different conditions.',
+    },
+    {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'Does GPS mapping require internet or mobile data to work?',
+          a: "No. A phone's GPS receiver uses satellite signals and works anywhere with a clear view of the sky, with no data connection needed. What actually requires connectivity is uploading the captured coordinates to a server afterward — an offline-first app captures the GPS data without a connection and syncs it later.",
+        },
+        {
+          q: 'What happens if two field agents record conflicting data while both are offline?',
+          a: "A well-designed offline-first system handles this with conflict-resolution logic on sync: for GPS polygon data, the most recently captured version typically takes precedence, while conflicting farmer registry entries get flagged for manual review rather than silently overwritten.",
+        },
+        {
+          q: 'Is a Progressive Web App (PWA) as reliable as a native mobile app for offline field data collection?',
+          a: 'For this use case, often more so. A PWA installs from a URL rather than an app store, works across any Android device regardless of price point, and updates automatically for every field agent the next time they connect — no manual install or update process to manage across a large field team using a mix of devices.',
+        },
+      ],
     },
     {
       type: 'cta',

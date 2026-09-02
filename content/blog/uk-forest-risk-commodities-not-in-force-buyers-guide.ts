@@ -55,7 +55,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What the Proposed Rules Would Cover',
+      text: 'What Would the Proposed UK Rules Actually Cover?',
     },
     {
       type: 'paragraph',

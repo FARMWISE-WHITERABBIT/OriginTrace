@@ -49,7 +49,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What "Registered" Actually Means',
+      text: 'What Does "Registered" Actually Mean?',
     },
     {
       type: 'paragraph',

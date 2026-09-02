@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Buyers Are Actually Checking Before They Buy',
+      text: 'What Are Buyers Actually Checking Before They Buy?',
     },
     {
       type: 'paragraph',
@@ -51,7 +51,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'How Each Major Import Market Is Enforcing Transparency',
+      text: 'How Is Each Major Import Market Enforcing Transparency?',
     },
     {
       type: 'table',
@@ -113,24 +113,18 @@ export const post: BlogPost = {
       ],
     },
     {
-      type: 'h2',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'h3',
-      text: 'Which Nigerian export commodities have the most urgent traceability requirements right now?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Cocoa exporters face the most immediate pressure from both EUDR (EU buyers) and GACC (China buyers). Sesame exporters face GACC registration requirements for China access. Cashew exporters targeting Europe and China face certification and traceability requirements from buyers. Timber exporters face EUDR compliance. All of these are urgent in 2026.',
-    },
-    {
-      type: 'h3',
-      text: 'How can a small Nigerian cooperative compete on traceability with larger exporters?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen — the same records a buyer would check in our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy).',
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'Which Nigerian export commodities have the most urgent traceability requirements right now?',
+          a: 'Cocoa exporters face the most immediate pressure from both EUDR (EU buyers) and GACC (China buyers). Sesame exporters face GACC registration requirements for China access. Cashew exporters targeting Europe and China face certification and traceability requirements from buyers. Timber exporters face EUDR compliance. All of these are urgent in 2026.',
+        },
+        {
+          q: 'How can a small Nigerian cooperative compete on traceability with larger exporters?',
+          a: 'Cooperatives have a structural advantage: they already aggregate from multiple smallholder farmers and can build shared traceability infrastructure that individual farmers cannot afford alone. A cooperative that maps all its member farms, tracks collections per farmer, and maintains a digital record of its entire supply chain is actually better-positioned to demonstrate traceability than a large exporter sourcing from hundreds of independent middlemen — the same records a buyer would check in our [guide to verifying a Nigerian exporter](/blog/verify-nigerian-exporter-legitimacy).',
+        },
+      ],
     },
     {
       type: 'cta',

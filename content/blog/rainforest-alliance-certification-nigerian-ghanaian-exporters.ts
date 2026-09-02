@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Rainforest Alliance Certification Actually Covers',
+      text: 'What Does Rainforest Alliance Certification Actually Cover?',
     },
     {
       type: 'paragraph',
@@ -83,7 +83,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Timeline and Cost: What to Expect in Nigeria and Ghana',
+      text: 'How Long Does Rainforest Alliance Certification Take, and What Does It Cost?',
     },
     {
       type: 'paragraph',
@@ -136,32 +136,22 @@ export const post: BlogPost = {
       text: 'For cashew exporters in Nigeria\'s Kogi, Enugu, and Oyo states targeting EU buyers, the most common buyer requirements are: HACCP certification for processing facilities, Fairtrade certification for cooperatives wishing to access the fair-trade premium market, and documented chain of custody from nut collection through kernel processing to export. For sesame targeting China, [GACC registration](/blog/gacc-compliance-traceability-sesame-gum-arabic-nigeria) is the dominant compliance requirement alongside phytosanitary certification from NAQS (National Agricultural Quarantine Service).',
     },
     {
-      type: 'h2',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'h3',
-      text: 'Can a small Nigerian cocoa cooperative get Rainforest Alliance certified?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Yes. Rainforest Alliance certification is specifically designed for smallholder cooperative structures. In fact, the RA model for West Africa typically certifies cooperative groups rather than individual farms. The certification body audits a sample of member farms and assesses the cooperative\'s internal management system. Many successful certified cooperatives in Ghana, Nigeria, and Ivory Coast have fewer than 500 members.',
-    },
-    {
-      type: 'h3',
-      text: 'Is Rainforest Alliance required by law in the EU or UK?',
-    },
-    {
-      type: 'paragraph',
-      text: 'No — Rainforest Alliance certification is not a legal requirement under EUDR or the UK Environment Act. However, it is increasingly a contractual requirement imposed by private buyers. The practical effect is the same: if your target buyers require it, you need it to do business with them.',
-    },
-    {
-      type: 'h3',
-      text: 'How does OriginTrace help with Rainforest Alliance certification preparation?',
-    },
-    {
-      type: 'paragraph',
-      text: 'OriginTrace helps exporters build the farm registration, GPS mapping, batch traceability, and documentation systems that are required both for Rainforest Alliance certification and for EUDR compliance. The data your field agents collect using OriginTrace — GPS coordinates, farmer consent records, collection weights, batch records — is exactly the evidence base that RA auditors and EUDR due diligence requirements are looking for.',
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'Can a small Nigerian cocoa cooperative get Rainforest Alliance certified?',
+          a: 'Yes. Rainforest Alliance certification is specifically designed for smallholder cooperative structures. In fact, the RA model for West Africa typically certifies cooperative groups rather than individual farms. The certification body audits a sample of member farms and assesses the cooperative\'s internal management system. Many successful certified cooperatives in Ghana, Nigeria, and Ivory Coast have fewer than 500 members.',
+        },
+        {
+          q: 'Is Rainforest Alliance required by law in the EU or UK?',
+          a: 'No — Rainforest Alliance certification is not a legal requirement under EUDR or the UK Environment Act. However, it is increasingly a contractual requirement imposed by private buyers. The practical effect is the same: if your target buyers require it, you need it to do business with them.',
+        },
+        {
+          q: 'How does OriginTrace help with Rainforest Alliance certification preparation?',
+          a: 'OriginTrace helps exporters build the farm registration, GPS mapping, batch traceability, and documentation systems that are required both for Rainforest Alliance certification and for EUDR compliance. The data your field agents collect using OriginTrace — GPS coordinates, farmer consent records, collection weights, batch records — is exactly the evidence base that RA auditors and EUDR due diligence requirements are looking for.',
+        },
+      ],
     },
     {
       type: 'cta',

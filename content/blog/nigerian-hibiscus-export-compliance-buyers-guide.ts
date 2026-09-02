@@ -51,7 +51,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What to Actually Require From a Nigerian Hibiscus Supplier',
+      text: 'What Should You Actually Require From a Nigerian Hibiscus Supplier?',
     },
     {
       type: 'table',

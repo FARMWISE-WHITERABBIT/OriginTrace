@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Why Food Traceability Is Different From Other Industries',
+      text: 'Why Is Food Traceability Different From Other Industries?',
     },
     {
       type: 'paragraph',
@@ -125,7 +125,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'GPS and Geolocation in Food Traceability',
+      text: 'Why Does GPS Matter for Food Traceability?',
     },
     {
       type: 'paragraph',
@@ -154,6 +154,24 @@ export const post: BlogPost = {
     {
       type: 'paragraph',
       text: 'OriginTrace is purpose-built for the food export supply chains that operate across Africa, Southeast Asia, and Latin America — supply chains that start at smallholder farms, run through multi-layered aggregation networks, and must meet complex, simultaneous regulatory requirements across different destination markets. The platform handles farm registration and GPS mapping, buying centre lot intake and aggregation records, processing lot management and document linking, and export compliance documentation for EUDR, GACC, FSMA, and other frameworks — in a single integrated system that works in low-connectivity field environments and generates audit-ready reports on demand.',
+    },
+    {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: "What's the difference between lot traceability and batch traceability?",
+          a: 'A lot is a defined quantity of product collected, processed, or shipped under uniform conditions from a defined source — the unit of identity in a traceable supply chain. A batch is a set of products manufactured together in one production run, more commonly used at the processing stage. Lot-level traceability is the actual goal: following a specific quantity from origin to final sale via a persistent identifier, with batch records linked both backward to source lots and forward to export lots.',
+        },
+        {
+          q: 'Where does food traceability usually break down first?',
+          a: "At the aggregation layer — buying centres and collection points where product from multiple farms is pooled. Once beans, seeds, or nuts from fifty farms sit in one heap without per-farm weighting records and a lot identifier that carries the originating farm data forward, no amount of paperwork afterward can reconstruct which specific farms a given export lot actually came from.",
+        },
+        {
+          q: 'Do I need GPS polygon data for every crop, or just EUDR-covered commodities?',
+          a: "Legally, GPS polygon mapping is an EUDR requirement only for its seven covered commodities (cattle, cocoa, coffee, oil palm, rubber, soya, wood) on farms of 4 hectares or more. But GACC increasingly cross-checks submitted origin claims against satellite data regardless of commodity, and buyers across markets are asking for GPS-anchored traceability as a quality and fraud-prevention signal even where no law requires it.",
+        },
+      ],
     },
     {
       type: 'cta',

@@ -25,7 +25,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'What Supply Chain Traceability Actually Means',
+      text: 'What Does Supply Chain Traceability Actually Mean?',
     },
     {
       type: 'paragraph',
@@ -139,7 +139,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'Where Most Exporters Break Down',
+      text: 'Where Do Most Exporters\' Traceability Chains Break Down?',
     },
     {
       type: 'paragraph',
@@ -167,6 +167,24 @@ export const post: BlogPost = {
     {
       type: 'paragraph',
       text: 'The goal is not to replace the operations of exporters and processors — it is to make their existing operations auditable. Traceability that lives in spreadsheets and folders becomes traceability that lives in a system built to meet the verification requirements of today\'s global trade regulations.',
+    },
+    {
+      type: 'faq',
+      title: 'Frequently Asked Questions',
+      items: [
+        {
+          q: 'What does it actually mean for a supply chain to be "traceable"?',
+          a: "Being able to answer four questions for any consignment, at any time, with supporting evidence produced within hours rather than weeks: where the product came from, who handled it and when, what happened to it at each stage, and what documents back up those claims. A supply chain that can't answer all four on demand isn't traceable yet, even with good intentions and partial records.",
+        },
+        {
+          q: 'Is traceability just a compliance cost, or does it pay for itself commercially?',
+          a: 'Both, but the commercial case is usually stronger. Verified traceability supports premium pricing, faster customs clearance, and access to sustainability-linked trade finance — buyers paying the highest prices for coffee, cocoa, and other commodities are increasingly selecting suppliers on verified origin specifically, not just on price.',
+        },
+        {
+          q: "What's the single most common point where a traceability chain actually breaks?",
+          a: 'Aggregation — the point where product from many smallholder farms gets pooled at a buying centre or cooperative collection point. Farm-level data can be thorough and processing records can be solid, but if the link between incoming raw-material lots and outgoing processed lots isn\'t documented at that pooling step, the whole chain breaks there regardless of how good the rest of the system is.',
+        },
+      ],
     },
     {
       type: 'cta',
