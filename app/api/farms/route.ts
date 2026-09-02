@@ -1,3 +1,7 @@
+// NOTE: despite the "farms" name, POST below is what app/app/farmers/new/page.tsx calls to
+// create a farmer/farm record — this is the real farmer-registration endpoint. If you're
+// looking for "farmer creation" logic, it's here, not in app/api/farmers/route.ts (which is
+// GET-only/read-only — see that file's header).
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
@@ -5,34 +9,8 @@ import { logAuditEvent, getClientIp } from '@/lib/audit';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { dispatchIntegrationEvent } from '@/lib/integrations/dispatcher';
 import { enforceTier } from '@/lib/api/tier-guard';
-import { parsePagination } from '@/lib/api/validation';
+import { parsePagination, farmCreateSchema, farmPatchSchema } from '@/lib/api/validation';
 import { requireRole, ROLES } from '@/lib/rbac';
-import { z } from 'zod';
-
-const farmCreateSchema = z.object({
-  local_id: z.string().min(1).optional(),
-  farmer_name: z.string().min(1, 'Farmer name is required'),
-  farmer_id: z.string().optional(),
-  phone: z.string().optional().nullable(),
-  community: z.string().min(1, 'Community is required'),
-  state_id: z.string().uuid().optional().nullable(),
-  lga_id: z.string().uuid().optional().nullable(),
-  boundary: z.object({
-    type: z.string().optional(),
-    coordinates: z.array(z.any()).optional(),
-  }).nullable().optional(),
-  area_hectares: z.number().positive().nullable().optional(),
-  legality_doc_url: z.string().url().nullable().optional(),
-  consent_timestamp: z.string().optional().nullable(),
-  consent_signature: z.string().optional().nullable(),
-  commodity: z.string().optional().nullable(),
-});
-
-const farmPatchSchema = z.object({
-  id: z.string().uuid({ message: 'Farm ID must be a valid UUID' }),
-  compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  compliance_notes: z.string().optional(),
-});
 
 export async function GET(request: NextRequest) {
   try {

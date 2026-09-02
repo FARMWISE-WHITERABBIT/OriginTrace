@@ -73,20 +73,26 @@ export const exporterActivateSchema = z.object({
 // Farms
 // ---------------------------------------------------------------------------
 export const farmCreateSchema = z.object({
-  farmer_name:     z.string().min(1, 'Farmer name is required'),
-  farmer_id:       z.string().optional(),
-  phone:           z.string().optional(),
-  community:       z.string().min(1, 'Community is required'),
+  local_id:          z.string().min(1).optional(),
+  farmer_name:       z.string().min(1, 'Farmer name is required'),
+  farmer_id:         z.string().optional(),
+  phone:             z.string().optional().nullable(),
+  community:         z.string().min(1, 'Community is required'),
+  state_id:          uuidSchema.optional().nullable(),
+  lga_id:            uuidSchema.optional().nullable(),
   boundary: z.object({
     type:        z.string().optional(),
-    coordinates: z.array(z.unknown()).optional(),
+    coordinates: z.array(z.any()).optional(),
   }).nullable().optional(),
-  area_hectares:    emptyAsUndefined(z.number().positive().nullable().optional()),
-  legality_doc_url: emptyAsUndefined(z.string().url().nullable().optional()),
+  area_hectares:     z.number().positive().nullable().optional(),
+  legality_doc_url:  z.string().url().nullable().optional(),
+  consent_timestamp: z.string().optional().nullable(),
+  consent_signature: z.string().optional().nullable(),
+  commodity:         z.string().optional().nullable(),
 });
 
 export const farmPatchSchema = z.object({
-  id:                z.union([z.string(), z.number()]).transform(v => Number(v)),
+  id:                z.string().uuid({ message: 'Farm ID must be a valid UUID' }),
   compliance_status: z.enum(['pending', 'approved', 'rejected']).optional(),
   compliance_notes:  z.string().optional(),
 });

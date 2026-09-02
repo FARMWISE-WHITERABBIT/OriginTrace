@@ -251,16 +251,22 @@ describe('farmCreateSchema', () => {
 });
 
 describe('farmPatchSchema', () => {
-  it('accepts a valid patch', () => {
-    const result = farmPatchSchema.safeParse({ id: 42, compliance_status: 'approved' });
+  const validId = '11111111-1111-4111-8111-111111111111';
+
+  it('accepts a valid patch with a UUID id', () => {
+    const result = farmPatchSchema.safeParse({ id: validId, compliance_status: 'approved' });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.id).toBe(42);
+    if (result.success) expect(result.data.id).toBe(validId);
   });
 
-  it('coerces string id to number', () => {
+  it('rejects a plain integer id (must be a UUID string)', () => {
+    const result = farmPatchSchema.safeParse({ id: 42, compliance_status: 'approved' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a non-UUID string id', () => {
     const result = farmPatchSchema.safeParse({ id: '99' });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.id).toBe(99);
+    expect(result.success).toBe(false);
   });
 
   it('rejects missing id', () => {
@@ -269,7 +275,7 @@ describe('farmPatchSchema', () => {
   });
 
   it('rejects invalid compliance_status', () => {
-    const result = farmPatchSchema.safeParse({ id: 1, compliance_status: 'maybe' });
+    const result = farmPatchSchema.safeParse({ id: validId, compliance_status: 'maybe' });
     expect(result.success).toBe(false);
   });
 });

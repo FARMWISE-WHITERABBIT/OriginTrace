@@ -1,3 +1,9 @@
+// READ-ONLY: this route only lists/aggregates farmers (GET) for reporting — it has no POST.
+// Farmer/farm CREATION happens in app/api/farms/route.ts, which the registration UI
+// (app/app/farmers/new/page.tsx) actually posts to.
+// Why the split: "farms" is the CRUD entity table (one row per registered farm/farmer), while
+// this route is a read-side aggregation over farmer_performance_ledger / a farmers RPC / the
+// farms table, built for the farmers list & performance views rather than for writing data.
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedProfile } from '@/lib/api-auth';
