@@ -65,6 +65,13 @@ export const post: BlogPost = {
       text: 'EUDR explicitly makes the importer responsible for conducting their own due diligence. Receiving a certificate from your supplier is not sufficient — you must independently assess the risk and verify the information. If your supplier provides false data and you import based on it, you bear legal exposure unless you can demonstrate you took reasonable steps to verify the information.',
     },
     {
+      type: 'cta',
+      heading: 'Verify a Supplier Before You Commit',
+      text: 'Request a supplier risk snapshot — plot geodata, satellite cross-checks, and batch traceability — before you sign a contract you can\'t independently verify.',
+      buttonText: 'Request a Supplier Risk Snapshot',
+      href: '/demo?role=buyer',
+    },
+    {
       type: 'h2',
       text: 'What You Must Demand from Your Cocoa Suppliers',
     },
@@ -200,7 +207,7 @@ export const post: BlogPost = {
       heading: 'Make Your Cocoa Suppliers Show, Not Tell',
       text: 'Onboard your West African suppliers onto OriginTrace and get direct access to their supply chain: farm polygons, GPS evidence, batch records, and DDS-ready documentation, maintained at origin and visible from your buyer workspace before every shipment.',
       buttonText: 'Bring Your Suppliers Onto OriginTrace',
-      href: '/demo',
+      href: '/importers',
     },
   ],
 };

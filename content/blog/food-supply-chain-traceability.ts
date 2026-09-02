@@ -93,6 +93,13 @@ export const post: BlogPost = {
       text: 'Food traceability is only as strong as its weakest link. If your farm-level data is thorough but your processing records do not document which incoming lots were used in which outgoing lots, the entire chain breaks at that point. Regulators and buyers require an unbroken audit trail — gaps cannot be retroactively filled.',
     },
     {
+      type: 'cta',
+      heading: 'Find Your Weakest Link Before a Regulator Does',
+      text: 'OriginTrace links farm data through processing to your export lots, so the chain of custody stays intact instead of breaking at aggregation.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
       type: 'h2',
       text: 'Lot Traceability vs. Batch Traceability',
     },
@@ -152,8 +159,8 @@ export const post: BlogPost = {
       type: 'cta',
       heading: 'Start Building Farm-to-Export Traceability',
       text: 'OriginTrace gives food exporters the tools to capture, manage, and prove their supply chain from farm to shipment — meeting EUDR, GACC, FSMA, and buyer due diligence requirements in one platform.',
-      buttonText: 'Explore Agriculture Solutions',
-      href: '/industries/agriculture',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
   ],
 };

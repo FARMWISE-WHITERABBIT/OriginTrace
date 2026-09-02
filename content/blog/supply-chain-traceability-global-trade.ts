@@ -99,6 +99,13 @@ export const post: BlogPost = {
       ],
     },
     {
+      type: 'cta',
+      heading: 'See How Ready Your Next Shipment Is',
+      text: 'OriginTrace scores your traceability chain against EUDR, GACC, and FSMA requirements before a gap turns into a refused container.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
       type: 'h2',
       text: 'Five Building Blocks of Effective Traceability',
     },
@@ -163,10 +170,10 @@ export const post: BlogPost = {
     },
     {
       type: 'cta',
-      heading: 'Build Traceability That Meets Global Standards',
+      heading: 'See How Ready Your Supply Chain Is',
       text: 'See how OriginTrace helps exporters across West Africa, East Africa, and Southeast Asia build supply chain traceability that satisfies EUDR, GACC, FSMA, and buyer due diligence requirements.',
-      buttonText: 'Explore the Platform',
-      href: '/solutions',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
   ],
 };

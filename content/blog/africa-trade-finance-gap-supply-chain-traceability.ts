@@ -56,6 +56,13 @@ export const post: BlogPost = {
       text: 'Banks in many African markets finance just 25% of goods trade, compared to 60–80% financing rates in developed economies. The continent faces an annual trade finance gap of $100–120 billion, with SMEs — which comprise 80–90% of African businesses — bearing the brunt of this shortage. Globally, half of all SME trade finance requests are rejected outright.',
     },
     {
+      type: 'cta',
+      heading: 'Get Your Farms Mapped and Your Documents in One Place',
+      text: 'The exporters closing this gap fastest are the ones who can hand a bank or buyer verified GPS origin data and a complete document trail — not a promise.',
+      buttonText: 'Book a Demo',
+      href: '/demo',
+    },
+    {
       type: 'paragraph',
       text: 'Critically, this trust gap is not primarily about the solvency or competence of African businesses. It is about information asymmetry. A foreign supplier or financing bank cannot independently verify the claims an African exporter makes about the origin, quality, or compliance status of the goods they are trading. When that verifiability is absent, lenders price the uncertainty through higher costs, tighter terms, or outright rejection. The 2024 Euromoney analysis found that 77% of African banks cited a shortage of low-cost funding as a barrier to trade finance — but it also found that funding alone does not solve the problem when correspondent banks will not extend credit lines to institutions they cannot adequately assess.',
     },
@@ -199,10 +206,10 @@ export const post: BlogPost = {
     },
     {
       type: 'cta',
-      heading: 'Build the Infrastructure That Makes Your Supply Chain Financeable',
+      heading: 'See How Ready Your Supply Chain Is to Finance',
       text: 'OriginTrace helps agricultural exporters across Africa and Southeast Asia build GPS-verified, lot-traceable, compliance-ready supply chains — the infrastructure that closes the trust gap and opens the door to global market access and trade finance.',
-      buttonText: 'Explore the Platform',
-      href: '/solutions',
+      buttonText: 'Book a Demo',
+      href: '/demo',
     },
     {
       type: 'references',
