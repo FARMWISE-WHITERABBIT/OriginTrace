@@ -1,5 +1,12 @@
 # OriginTrace — Claude Code Project Guide
 
+> **Before scoping, planning, or implementing any non-trivial change, read [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md).**
+> It's the standing verification discipline for this repo (risk triage, evidence standards per claim type, hard
+> gates before touching production/secrets, and a running log of real incidents and the bug classes they
+> revealed — migration-committed-never-applied, orphaned shared schemas, route-name/behavior mismatches). It
+> exists because this exact class of bug has shipped to production more than once. Trivial changes (copy,
+> styling, comments) don't need it; anything else does.
+
 ## Project Overview
 
 **OriginTrace** is a Next.js 16 (App Router) agricultural supply chain traceability platform built for African commodity cooperatives and agri-businesses.
@@ -120,7 +127,7 @@ Develop on the branch assigned to your current task (the harness names it per-se
 
 ## Database Migrations
 
-Migrations live in **`supabase/migrations/`** (58 files as of 2026-07-09). Historically they were applied manually via the Supabase SQL editor rather than `supabase db push` — Supabase's own migration-tracking table only recorded 2 of them before 2026-07-09, even though dozens more were live. This caused real drift: several migration files existed in the repo but were **never actually run against the live DB**, so code referencing their tables/columns compiled but 500'd in production (or, worse, failed silently). All known cases of this were found and resolved on 2026-07-09 — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for the full list, including two RPC functions (`create_shipment_atomic`, `sync_batches_atomic`) that had to be rewritten (not just applied) because they were written against a pre-UUID schema.
+Migrations live in **`supabase/migrations/`** (58 files as of 2026-07-09). Historically they were applied manually via the Supabase SQL editor rather than `supabase db push` — Supabase's own migration-tracking table only recorded 2 of them before 2026-07-09, even though dozens more were live. This caused real drift: several migration files existed in the repo but were **never actually run against the live DB**, so code referencing their tables/columns compiled but 500'd in production (or, worse, failed silently). Known cases as of 2026-07-09 were found and resolved — see `docs/FRICTION-AUDIT.md` §0 "C1 result" for that list, including two RPC functions (`create_shipment_atomic`, `sync_batches_atomic`) that had to be rewritten (not just applied) because they were written against a pre-UUID schema. **This is not a closed problem**: the same class recurred on 2026-09-03 (`farms.local_id` — see `docs/ORCHESTRATOR.md`'s Log), breaking farmer registration in production. Two CI jobs now guard against it going forward — `db-schema-local-check` (active, no secret needed) and `db-schema-check` (stub, needs a human-provisioned `SUPABASE_DB_URL` secret to activate) — but **read `docs/ORCHESTRATOR.md` before trusting that any migration you write has actually reached production**; don't assume from a clean `npm run check`.
 
 Before writing code against a table, **verify the live schema** — don't guess column names. Use the `schema-verify` skill, `scripts/check-db.ts` / `scripts/probe-constraints.ts`, or the Supabase MCP `list_tables`. `lib/supabase/database.types.ts` **is generated and committed**, and all 4 client factories (`lib/supabase/{client,server,admin,middleware}.ts`) are typed with `createClient<Database>(...)` — a wrong column name now fails `npm run check`, not just production.
 
